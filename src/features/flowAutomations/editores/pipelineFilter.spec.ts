@@ -5,7 +5,7 @@ import {
   validateRule,
   formatConditionSummary,
   type AutomationResources,
-} from './LeadAutomationsEditors';
+} from '@/features/flowAutomations/editores/LeadAutomationsEditors';
 import type { LeadAutomationCondition } from '@/services/leadAutomation/leadAutomationService';
 
 const funil = (id: string): LeadAutomationCondition =>

@@ -5,7 +5,7 @@ import { FlowBlocksMenu } from './FlowBlocksMenu';
 import { FLOW_TRIGGER_GROUPS } from '@/features/flowAutomations/trigger';
 import { personalTriggerGroups, personalBlockState, PERSONAL_TRIGGERS } from '@/features/flowAutomations/personal';
 import { podeSoltarBloco } from '@/features/flowAutomations/palette';
-import type { AutomationResources } from '@/pages/Customer/Settings/LeadAutomations/LeadAutomationsEditors';
+import type { AutomationResources } from '@/features/flowAutomations/editores/LeadAutomationsEditors';
 
 const resources: AutomationResources = {
   labels: [], sequences: [], followupFlows: [], users: [{ id: 'u1', name: 'Ana' }], pipelines: [], stagesByPipeline: {}, quickReplies: [],

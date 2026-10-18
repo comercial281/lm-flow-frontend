@@ -25,7 +25,7 @@ const recursos = vi.hoisted(() => ({
   users: [], pipelines: [], stagesByPipeline: {},
   reloadLabels: () => {}, reloadFunnels: () => {},
 }));
-vi.mock('../LeadAutomations/LeadAutomationsEditors', () => ({ useAutomationResources: () => recursos }));
+vi.mock('@/features/flowAutomations/editores/LeadAutomationsEditors', () => ({ useAutomationResources: () => recursos }));
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
 import LeadAdsForms from './LeadAdsForms';

@@ -263,6 +263,7 @@ export default function ClientFollowupRolloutModal({
             </p>
           )}
           {error && <p className="text-sm text-destructive">{error}</p>}
+          <p className="text-xs text-muted-foreground">A entrada do funil se monta em Automações.</p>
         </div>
 
         <div className="flex justify-between items-center px-6 py-4 border-t border-border">

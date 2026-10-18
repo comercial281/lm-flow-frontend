@@ -52,12 +52,11 @@ export const SOBRA = [
   'src/components/channels/forms/SmsForm.tsx', 'src/components/channels/EmailForm.tsx',
   'src/components/channels/WebWidgetForm.tsx', 'src/components/channels/FacebookChannelForm.tsx',
   'src/components/channels/InstagramForm.tsx', 'src/pages/OAuth/', 'src/pages/Shared/Documentation/',
-  'src/pages/Shared/Marketplace/',
 ];
 export const NAMESPACES_SOBRA = new Set([
   'aiAgents', 'agents', 'accessTokens', 'apiKeys', 'api', 'telegram', 'sms', 'email', 'webWidget',
   'widget', 'messenger', 'instagram', 'customMcpServers', 'customerMcpServers', 'mcpServers',
-  'customTools', 'tools', 'marketplace', 'documentation', 'oauth',
+  'customTools', 'tools', 'documentation', 'oauth',
 ]);
 export const noEscopo = rel =>
   /\.(ts|tsx)$/.test(rel) &&

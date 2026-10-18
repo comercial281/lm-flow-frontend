@@ -240,17 +240,6 @@ export const followupSequencesService = {
     return (res.data as { data: FollowupEntriesPayload }).data;
   },
 
-  /** Cria ou atualiza — o backend decide pelo `id`, e a tela usa o mesmo
-   *  formulário nos dois casos. */
-  async saveEntry(id: string, entry: FollowupEntryFormData): Promise<FollowupEntry> {
-    const res = await api.post(`${BASE}/${id}/entries`, { entry });
-    return (res.data as { data: FollowupEntry }).data;
-  },
-
-  async deleteEntry(id: string, entryId: number): Promise<void> {
-    await api.delete(`${BASE}/${id}/entries/${entryId}`);
-  },
-
   async testSend(id: string, phone: string, name = 'Teste'): Promise<{
     contact_id: string;
     sequence_slug: string;

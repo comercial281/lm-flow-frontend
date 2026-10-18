@@ -50,8 +50,6 @@ export const SEND_FROM_NEEDS_NUMBER = 'Escolha o número em "Enviar pelo número
 export const SEND_FROM_LOAD_FAILED = 'Não consegui carregar os números agora. Salvar mantém a escolha que já estava.';
 export const SEND_FROM_KEEPS_CONVERSATION =
   'Se o lead já conversa num número em que o responsável pelo lead atende, a conversa continua nele.';
-/** Quanto tempo o aviso do salvar fica na tela (E33). */
-export const SEND_FROM_WARNING_MS = 10000;
 
 const HINTS: Record<SendFromMode, string> = {
   '': 'Sai pelo número da conversa do lead; lead sem conversa sai pelo número que o sistema escolher.',
@@ -157,10 +155,4 @@ export function sendNumbersFrom(data: Partial<SendNumbers> | null | undefined): 
     number_owner_rule: data?.number_owner_rule === true,
     numbers: Array.isArray(data?.numbers) ? (data!.numbers as SendNumberOption[]) : [],
   };
-}
-
-/** Os avisos que o servidor devolve no salvar (E33). */
-export function sendFromWarnings(saved: { send_from_warnings?: unknown } | null | undefined): string[] {
-  const lista = saved?.send_from_warnings;
-  return Array.isArray(lista) ? lista.filter((w): w is string => typeof w === 'string' && w.trim() !== '') : [];
 }

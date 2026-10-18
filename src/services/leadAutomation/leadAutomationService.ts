@@ -11,75 +11,9 @@ export interface LeadAutomationAction {
   params?: Record<string, string | number>;
 }
 
-export interface LeadAutomationRule {
-  id: string;
-  name: string;
-  description?: string;
-  trigger: string;
-  conditions: LeadAutomationCondition[];
-  actions: LeadAutomationAction[];
-  is_active: boolean;
-  archived?: boolean;
-  archived_at?: string | null;
-  favorite?: boolean;
-  priority: number;
-  pipeline_id?: string | null;
-  created_by?: { id: string; name: string } | null;
-  created_at: string;
-  updated_at: string;
-  /** "Enviar pelo número" (fase 2b.2): avisos do servidor, só na resposta do salvar. */
-  send_from_warnings?: string[];
-}
-
-export interface LeadAutomationRuleFormData {
-  name: string;
-  description?: string;
-  trigger: string;
-  conditions: LeadAutomationCondition[];
-  actions: LeadAutomationAction[];
-  is_active: boolean;
-  favorite?: boolean;
-  priority: number;
-  pipeline_id?: string | null;
-}
-
 const BASE = '/lead_automation_rules';
 
 export const leadAutomationService = {
-  async getAll(archived = false): Promise<LeadAutomationRule[]> {
-    const res = await api.get(BASE, { params: archived ? { archived: 'true' } : {} });
-    return (res.data as { data: LeadAutomationRule[] }).data ?? [];
-  },
-
-  async create(data: LeadAutomationRuleFormData): Promise<LeadAutomationRule> {
-    const res = await api.post(BASE, { lead_automation_rule: data });
-    return (res.data as { data: LeadAutomationRule }).data;
-  },
-
-  async update(id: string, data: Partial<LeadAutomationRuleFormData>): Promise<LeadAutomationRule> {
-    const res = await api.put(`${BASE}/${id}`, { lead_automation_rule: data });
-    return (res.data as { data: LeadAutomationRule }).data;
-  },
-
-  async delete(id: string): Promise<void> {
-    await api.delete(`${BASE}/${id}`);
-  },
-
-  async toggle(id: string): Promise<LeadAutomationRule> {
-    const res = await api.post(`${BASE}/${id}/toggle`);
-    return (res.data as { data: LeadAutomationRule }).data;
-  },
-
-  async archive(id: string): Promise<LeadAutomationRule> {
-    const res = await api.post(`${BASE}/${id}/archive`);
-    return (res.data as { data: LeadAutomationRule }).data;
-  },
-
-  async unarchive(id: string): Promise<LeadAutomationRule> {
-    const res = await api.post(`${BASE}/${id}/unarchive`);
-    return (res.data as { data: LeadAutomationRule }).data;
-  },
-
   // Anúncios já recebidos (CTWA + formulário) pra montar rota de funil por anúncio.
   async getAdOrigins(): Promise<AdOrigin[]> {
     const res = await api.get(`${BASE}/ad_origins`);
@@ -114,76 +48,7 @@ export const leadAutomationService = {
     const res = await api.get('/super/evolution_instances');
     return (res.data as { data: EvolutionInstance[] }).data ?? [];
   },
-
-  // Botão "Testar": roda SÓ esta regra contra um lead real e devolve o diagnóstico.
-  // Sem contactId o backend usa o último lead que entrou. No teste apenas os avisos
-  // saem de verdade — nada que mexa no card ou fale com o lead é executado.
-  async testRun(id: string, contactId?: string): Promise<AutomationTestResult> {
-    const res = await api.post(`${BASE}/${id}/test_run`, contactId ? { contact_id: contactId } : {});
-    return (res.data as { data: AutomationTestResult }).data;
-  },
-
-  // Botão "O que aconteceu": o que ESTA regra fez com os leads que entraram de
-  // verdade. Diferente do Testar, que responde sobre um lead-cobaia forçado.
-  async getLogs(id: string, limit?: number): Promise<AutomationLog[]> {
-    const res = await api.get(`${BASE}/${id}/logs`, { params: limit ? { limit } : {} });
-    return (res.data as { data?: AutomationLog[] }).data ?? [];
-  },
 };
-
-// Uma linha do histórico da regra. `status` tem TRÊS valores, e é a distinção
-// que faltava: 'fired' (disparou e o quê), 'failed' (tentou e o servidor recusou)
-// e 'skipped' (nem foi considerado — a condição que barrou está na descrição).
-export interface AutomationLog {
-  id: string;
-  status: 'fired' | 'failed' | 'skipped' | 'tested' | string;
-  level: string;
-  occurred_at: string;
-  title: string;
-  description: string | null;
-  lead: string | null;
-  contact_id: string | null;
-  trigger: string | null;
-  deferred?: boolean;
-  // 'failed' aqui é a NÃO-ENTREGA: a mensagem saiu do CRM e o WhatsApp recusou
-  // depois. Pede providência diferente da falha da regra — é o número do canal.
-  delivery?: string | null;
-}
-
-// Resultado do teste de uma regra, como a tela mostra.
-export interface AutomationTestResult {
-  rule: { id: string; name: string; trigger: string; is_active: boolean };
-  lead: { id: string | null; name: string | null; phone: string | null; conversation_id: string | null };
-  // CRM ainda sem nenhum lead: o teste rodou com dados de exemplo, e os filtros
-  // não tiveram contra o que ser conferidos.
-  lead_de_exemplo?: boolean;
-  origem: {
-    source?: string;
-    form_id?: string;
-    form_name?: string;
-    campaign_name?: string;
-    ad_name?: string;
-  };
-  // Em qual funil o card do lead está. Nulo = o lead ainda não entrou em funil
-  // nenhum — que é diferente de "está em outro funil", e é a diferença que
-  // explica por que uma regra filtrada por funil não disparou.
-  funil?: { id: string; nome: string | null } | null;
-  // Se um lead igual a este entrasse agora, a regra dispararia sozinha?
-  dispararia_sozinho: boolean;
-  condicoes: Array<{
-    campo: string;
-    operador: string;
-    esperado: string | string[];
-    encontrado: string | null;
-    casou: boolean;
-  }>;
-  avisos_ligados: boolean;
-  acoes: Array<{
-    type: string;
-    status: 'sent' | 'failed' | 'skipped' | 'simulated';
-    detail: string | null;
-  }>;
-}
 
 export interface WaGroup {
   id: string;   // JID …@g.us
@@ -221,15 +86,6 @@ export interface FormOrigin {
   count: number;
 }
 
-// Origens que o backend resolve pro lead no gatilho "Lead criado". Mesmos valores
-// do seletor "Origem do lead" — usados também pra traduzir o resultado do teste.
-export const ORIGIN_LABELS: Record<string, string> = {
-  formulario:      'Formulário (Meta Lead Ads)',
-  formulario_site: 'Formulário do site / landing',
-  lead_whats_meta: 'Lead de anúncio no WhatsApp',
-  organico:        'Orgânico (sem anúncio)',
-};
-
 // Triggers emitidos pelo backend Rails (LeadAutomationExecutorJob.perform_later).
 // 'lead.no_reply_after' é emitido por Followup::NoReplyEnrollJob (roda a cada 1 min).
 export const TRIGGER_LABELS: Record<string, string> = {
@@ -252,10 +108,6 @@ export const TRIGGER_LABELS: Record<string, string> = {
   'lead.no_reply_after':       'Sem resposta após X minutos',
   'lead.roleta_accepted':      'Corretor aceitou o lead (roleta)',
 };
-
-// Gatilhos que só existem no construtor de fluxos: o servidor recusa regra antiga
-// (Automações de Lead) com eles. Ficam em TRIGGER_LABELS só pra exibir o nome.
-export const FLOW_ONLY_TRIGGERS: string[] = ['lead.book_requested', 'lead.visit_rescheduled'];
 
 // Actions processadas pelo LeadAutomation::Executor.
 export const ACTION_TYPE_LABELS: Record<string, string> = {
@@ -289,12 +141,6 @@ export const ACTION_TYPE_LABELS: Record<string, string> = {
 // tem a ação continua igual, com o aviso no cartão.
 export const RETIRED_ACTION_TYPES = new Set(['wait']);
 
-// Ações que continuam valendo, mas não são oferecidas pra regra ou bloco novo.
-// "Iniciar sequência de follow-up" escolhia um funil antigo; desde a sprint 3
-// (03/10/2026) o follow-up é um fluxo e a ação é "Iniciar follow-up"
-// (`start_followup_flow`). A regra antiga continua igual: o servidor manda o
-// funil convertido pro fluxo novo.
-export const LEGACY_ACTION_TYPES = new Set(['start_followup_sequence']);
 export const WAIT_ACTION_NOTICE = 'Esta etapa não espera: as ações seguintes saem na hora';
 
 // Params obrigatórios por action.type — chaves exatas do backend (LeadAutomation::Executor).

@@ -5,4 +5,3 @@ export * from './automation';
 export * from './flows';
 export * from './macros';
 export * from './scheduledActions';
-export * from './whatsappReminders';

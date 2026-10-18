@@ -10,7 +10,7 @@ const sendNumbers = vi.hoisted(() => vi.fn());
 vi.mock('@/services/numbers/numbersService', () => ({ default: { sendNumbers } }));
 vi.mock('@/hooks/useIsSuperAdmin', () => ({ useIsSuperAdmin: () => false }));
 
-import { ActionEditor, type AutomationResources } from './LeadAutomationsEditors';
+import { ActionEditor, type AutomationResources } from '@/features/flowAutomations/editores/LeadAutomationsEditors';
 import type { LeadAutomationAction } from '@/services/leadAutomation/leadAutomationService';
 
 const resources: AutomationResources = {

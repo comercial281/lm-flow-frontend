@@ -33,7 +33,7 @@ import {
   formatActionSummary,
   formatConditionSummary,
   useAutomationResources,
-} from '@/pages/Customer/Settings/LeadAutomations/LeadAutomationsEditors';
+} from '@/features/flowAutomations/editores/LeadAutomationsEditors';
 import {
   FLOW_TRIGGER_GROUPS, LEAD_CREATED_HINT, normalizeTrigger, serializeTrigger, triggerEvents, triggerOneLine, triggerProblem,
   type FlowTrigger,

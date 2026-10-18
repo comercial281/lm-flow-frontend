@@ -82,7 +82,6 @@ const THEME_BY_GROUP: Record<string, string> = {
   automations: 'automacoes',
   ai_agents: 'automacoes',
   disparos: 'automacoes',
-  marketplace: 'extras',
   tutorials: 'extras',
   settings: 'extras',
 };

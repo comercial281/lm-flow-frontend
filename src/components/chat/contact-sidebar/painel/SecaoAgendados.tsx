@@ -18,7 +18,7 @@ import {
 import type { ScheduledAction } from '@/types/automation';
 import Secao from './Secao';
 
-// A mesma janela do card do lead e da tela Ações agendadas, no modo edição.
+// A mesma janela do card do lead, no modo edição.
 const ScheduleActionModal = lazyWithRetry(() =>
   import('@/components/scheduledActions/ScheduleActionModal').then(m => ({ default: m.ScheduleActionModal })),
 );

@@ -343,6 +343,7 @@ function StepTemplates({ state, set, templates, loading }: { state: WizardState;
   return (
     <div className="space-y-4">
       <p className="text-xs text-muted-foreground">Selecione as automacoes que serao aplicadas automaticamente ao criar o CRM.</p>
+      <p className="text-xs text-muted-foreground">A entrada do funil se monta em Automações.</p>
       {Object.entries(byCategory).map(([cat, tpls]) => (
         <div key={cat}>
           <p className="text-xs font-semibold text-primary uppercase tracking-wide mb-2">{cat}</p>

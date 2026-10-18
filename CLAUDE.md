@@ -4179,10 +4179,9 @@ As regras estão em [GLOSSARIO.md → As peças da casa](GLOSSARIO.md#as-peças-
   - **O "voltar" do navegador NÃO é coberto:** `<BrowserRouter>`, sem `useBlocker`. Migrar pro roteador de dados é outra frente.
 - **`Abas`:** com `para` em todas as abas vira navegação com guarda; sem `para`, é tablist. Estreou em `AutomationsLayout`; desde o menu novo, quem a usa nas páginas do menu é a `PaginaComAbas`. `exata` faz a aba só acender no endereço exato. O modo tablist **ainda não tem navegação por setas**: o primeiro consumidor acrescenta.
 - **`EmptyState`:** `tipo` pode ser `vazio`, `semResultado` ou `erro`. Erro nunca vira lista vazia.
-- **Telas de referência:** `Settings/Account/AccountSettings.tsx` e `Settings/WhatsappReminders/WhatsappReminders.tsx`. Os specs `*.base.spec.tsx` delas são a régua.
+- **Tela de referência:** `Settings/Account/AccountSettings.tsx`. O spec `AccountSettings.base.spec.tsx` é a régua. (A tela de Lembretes, que era a segunda referência, foi eliminada em 2026-10-17.)
   - Em Conta, ligar a resolução automática pergunta o tempo e já grava; os ajustes esperam a barra.
   - Ligar/desligar a resolução atualiza só os campos dela, e alteração não salva de outro campo não se perde. Não chame `loadAccountData()` depois de uma chave: ele apaga o que está na barra.
-  - Em Lembretes, a chave da lista grava só o `enabled`, e o Excluir fica no menu "…".
 - **Botões só-ícone:** os 202 que existiam ganharam `aria-label` + `title` (3.4). Botão novo usa `IconActionButton`, e a trava reprova botão sem nome.
 
 ## Origem do lead: Portal e Site (desde 2026-09-30)
@@ -4217,7 +4216,7 @@ O que aparece na tela:
 - **Todo item leva direto a uma página.** O terceiro nível virou **abas no topo
   da página** (Bolsão: Pegar leads,
   Listas e regras · Fluxos de mensagem: Editor de funis, FlowBuilder ·
-  Automações: Regras de lead, Lembretes · Campos personalizados: Atributos,
+  Automações: Regras de lead e Lembretes (telas eliminadas em 2026-10-17) · Campos personalizados: Atributos,
   Variáveis). A segunda coluna ao lado do menu acabou. Integrações deixou de ter abas em 07/10/2026: ver "Integrações em cartões".
 - **Automações deixou de ser uma página de 7 abas**, sem mudar endereço:
   Follow-up, Roleta de leads e Formulários são páginas sozinhas. `/automations` puro
@@ -5623,8 +5622,9 @@ O que aparece na tela:
   uma página só com o editor de funis (sem abas). **Automações** abre direto a
   lista de fluxos do construtor, com o título "Automações" (o nome "FlowBuilder"
   sumiu da tela; cada item é um "fluxo"). *Regras de lead* e *Lembretes* saíram do
-  menu e abrem só pelo endereço (`/automations/lead-automations` e
-  `/automations/whatsapp-reminders`), pro suporte e pros avisos do Follow-up.
+  menu e abriam só pelo endereço. **Desde 2026-10-17 as duas telas foram
+  eliminadas** e os endereços antigos levam pra `/automations` (ver "Telas
+  escondidas eliminadas").
   `/automations` puro abre Automações quando a pessoa a vê.
 - **Paleta com todas as ações das Automações**, nos grupos Mensagem pro lead ·
   Lead · Avisos · Controle: Mandar áudio, imagem, vídeo, documento, figurinha,
@@ -8316,7 +8316,7 @@ Pedido do dono: escolher o melhor jeito de cada peça e padronizar, pra que **te
 - **Formulário de configuração sem dados não pode ser salvo:** Pixel/Conversões e Quem não respondeu mostravam o formulário vazio quando a leitura falhava e o Salvar gravava vazio por cima da configuração real. Agora a falha mostra só o erro. Repita isso em toda tela de configuração nova.
 - `soMouse` (outra sessão, app inteiro) e `soNoMouse` (peça 16) convivem: `toque:` só como `toque:hidden` (camada sobre foto) e fora da tela do cliente; o resto segue a peça 16.
 - O pop-up "Lead novo pra você" da Roleta respeita a área segura do iPhone no topo fixo (conferir em aparelho).
-- `NoReplyRobot` (Quem não respondeu) não é aberto por nenhuma tela desde o #225: corrigido mesmo assim; apagar ou religar está no `_MELHORIAS`.
+- `NoReplyRobot` (Quem não respondeu) não é aberto por nenhuma tela desde o #225: corrigido mesmo assim; a página foi apagada em 2026-10-17 (ver "Telas escondidas eliminadas").
 
 **Testes que já falhavam antes das peças** (não são delas): PipelineKanban "link de card fora da aba"/"fechar a janela de um card FORA da aba", ScheduleVisitDialog "horário ocupado riscado", ScheduleVisitDialog.agenda "os horários vêm do servidor", JanelaDaTarefa (3), CadastroDoImovel "arrastar o alfinete". Com a máquina carregada estouram tempo: SiteBuilder, RoletaLista/RoletaPagina; rodar com `--minWorkers=1 --maxWorkers=2` (só `--maxWorkers` dá RangeError nesta versão do vitest).
 
@@ -8416,7 +8416,7 @@ Armadilhas:
 
 Origem: a automação "Visita agendada" disparava pra qualquer visita, da IA ou à mão, e remarcar não disparava nada. Desenho aprovado pelo dono em 11/10. A metade do servidor é o PR `comercial281/lm-flow#459`; esta tela só funciona de ponta a ponta com ele no ar.
 
-- **Filtro "Quem marcou"** nos gatilhos "Visita agendada" e "Visita remarcada", no mesmo lugar da Origem e da Etiqueta (`bookedByFilter.ts` em `LeadAutomations/`, editor `ConditionEditor`). Três opções: **Qualquer um** (nenhuma condição gravada, o comportamento de sempre), **A IA** (`booked_by eq ia`) e **Uma pessoa** (`booked_by eq pessoa`). Os valores são fixos porque a condição compara ao pé da letra.
+- **Filtro "Quem marcou"** nos gatilhos "Visita agendada" e "Visita remarcada", no mesmo lugar da Origem e da Etiqueta (`bookedByFilter.ts` em `src/features/flowAutomations/editores/`, editor `ConditionEditor`). Três opções: **Qualquer um** (nenhuma condição gravada, o comportamento de sempre), **A IA** (`booked_by eq ia`) e **Uma pessoa** (`booked_by eq pessoa`). Os valores são fixos porque a condição compara ao pé da letra.
 - **Sem condição = Qualquer um.** Por isso o filtro é opcional no `validateRule`, também na tela antiga de Automações: regra antiga com "Visita agendada" continua válida e não muda.
 - **Gatilho "Visita remarcada"** (`lead.visit_rescheduled`): entra no grupo Visita, logo depois de "Visita agendada". Só existe no construtor (como "Pediu o book no site"); a tela antiga de regras não oferece.
 - **Trocar entre os dois gatilhos de visita zera o filtro.** É o comportamento de sempre do `conditionsOnTriggerChange` (troca de gatilho limpa as condições), não uma regra nova.
@@ -9269,3 +9269,35 @@ Armadilhas:
 9. **Servidor reiniciando no meio de um envio** (todo merge publica sozinho): o lead que estava saindo fica em "Enviando" e nunca sai de novo. Depois de 30 minutos ele vira "Falhou: Envio interrompido" (pode ter saído ou não, por isso não volta pra fila: mandar em dobro é o pior erro).
 
 Código: `src/components/pipelines/BulkDispatchModal.tsx` e `src/components/pipelines/disparo/` (`PassoQuemRecebe`, `PassoMensagem`, `PassoRitmo`, `FunilDoDisparo`, `ritmo.ts`), `src/pages/Customer/Disparos/` (`Disparos`, `DisparoDetalhe`). Testes: `BulkDispatchModal.spec.tsx`, `Disparos.spec.tsx`, `DisparoDetalhe.spec.tsx`.
+
+## Telas escondidas eliminadas (desde 2026-10-17)
+
+Spec: `LM FLOW/specs/2026-10-17-eliminar-telas-escondidas-design.md`. Três PRs: backend #500 e #501 (comercial281/lm-flow) e este do frontend. Merge é deploy: só com ok do Tony, backend antes.
+
+O que aparece na tela:
+
+- **Saíram, tela e endereço:** Regras de lead, Lembretes, a página órfã do Robô Sem Resposta, Interesses, Ações agendadas e Marketplace. Nenhuma estava no menu; só abriam por endereço direto.
+- **Para onde cada endereço antigo leva (redirect):**
+  - `/automations/lead-automations`, `/settings/lead-automations`, `/automations/whatsapp-reminders` e `/settings/whatsapp-reminders` levam pra `/automations`.
+  - `/property-interests` leva pra `/pipelines`.
+  - `/contacts/scheduled-actions` leva pra `/conversations`.
+  - `/marketplace` leva pra `/settings/integrations`.
+- **Área do Admin:** a escolha de modelo em Novo cliente › "Selecione as automações" continua. O que mudou: ganhou a linha "A entrada do funil se monta em Automações." e os modelos que só traziam regra (Recepção de Lead Meta Ads, Recepção + Roleta de Corretores, Lembretes de visita) deixaram de ser oferecidos, porque regra não é mais criada. Os que trazem etiquetas ou funis seguem. O mesmo vale pra "Aplicar funil de follow-up nos clientes".
+- **Continuam fora do menu, mas vivas:** Propostas, Contratos, Captação (redirect) e Plano. Não foram tocadas.
+- **Ficam:** o construtor de Automações, o card de interesse no lead (`propertyInterestsService`), o `ScheduleActionModal` (Agendar envio) com `scheduledActionsService` e `scheduledTemplatesService`, e as rotas GET `/lead_automation_rules/{ad_origins,form_origins,groups,send_numbers}` que o construtor usa.
+
+Decisões (não reabrir sem o dono pedir):
+
+1. **A entrada do funil de follow-up é fluxo do construtor.** Regra de lead não roda mais no servidor: o `LeadAutomation::Executor` só dispara fluxos. Não existe mais porta que crie regra.
+2. **O motor de Lembretes de WhatsApp saiu do servidor.** O que um lembrete fazia se monta em Automações.
+3. **Tabelas ficam.** `lead_automation_rules` e `whatsapp_reminders*` seguem no banco com o dado que tiverem. Apagar é PR próprio no backend, só com ok do dono.
+4. **Os editores de ação do construtor** moveram para `src/features/flowAutomations/editores/` (antes moravam na pasta das Regras de lead).
+5. **Os avisos do Follow-up** não apontam mais pra Regras de lead: a tela não existe.
+
+Armadilhas:
+
+1. **Trava:** `src/routes/telasEliminadas.source.spec.ts` reprova se uma dessas telas ou rotas voltar. Quem quiser ressuscitar uma delas começa pela spec e pelo dono do produto.
+2. **Voltar o backend** pra antes do #501 religa a execução das regras, mas sem tela pra editá-las. Voltar a tela junto não resolve: ela não existe mais. Corrigir pra frente.
+3. **Marketplace e Interesses** tinham serviços de API próprios; os que ainda têm uso (card do lead, Agendar envio) ficaram.
+
+Não reabrir sem o dono pedir.

@@ -42,7 +42,6 @@ export const ROUTE_PERMISSIONS: readonly RoutePermission[] = [
   { path: '/equipe/cargos/lista', resource: 'roles', action: 'read' },
   { path: '/contacts', resource: 'contacts', action: 'read' },
   { path: '/contacts/:contactId', resource: 'contacts', action: 'read' },
-  { path: '/contacts/scheduled-actions', resource: 'contacts', action: 'read' },
   { path: '/pipelines', resource: 'pipelines', action: 'read' },
   { path: '/pipelines/:pipelineId', resource: 'pipelines', action: 'read' },
   // Card completo (E4): a página do lead.
@@ -65,11 +64,9 @@ export const ROUTE_PERMISSIONS: readonly RoutePermission[] = [
   { path: 'flow-builder/:id', resource: 'flow_automations', action: 'read', permissions: FLOW_BUILDER_PERMISSIONS, automationsChild: true },
   { path: 'template-variables', resource: 'canned_responses', action: 'read', automationsChild: true },
   { path: 'origem', resource: 'lead_ads_form_configs', action: 'read', automationsChild: true },
-  { path: 'lead-automations', resource: 'lead_automation_rules', action: 'read', automationsChild: true },
   { path: 'lead-ads-forms', resource: 'lead_ads_form_configs', action: 'read', automationsChild: true },
   { path: 'follow-ups', resource: 'followup_sequences', action: 'read', automationsChild: true },
   { path: 'follow-ups/:id', resource: 'followup_sequences', action: 'read', automationsChild: true },
-  { path: 'whatsapp-reminders', resource: 'whatsapp_reminders', action: 'read', automationsChild: true },
   { path: 'roleta-config', resource: 'roleta_configs', action: 'read', automationsChild: true },
   // A página de uma roleta.
   { path: 'roleta-config/:id', resource: 'roleta_configs', action: 'read', automationsChild: true },
@@ -80,11 +77,9 @@ export const ROUTE_PERMISSIONS: readonly RoutePermission[] = [
   { path: '/settings/listas', resource: 'pipelines', action: 'read' },
   { path: '/settings/attributes', resource: 'custom_attribute_definitions', action: 'read' },
   { path: '/settings/template-variables', resource: 'canned_responses', action: 'read' },
-  { path: '/settings/lead-automations', resource: 'lead_automation_rules', action: 'read' },
   { path: '/settings/lead-ads-forms', resource: 'lead_ads_form_configs', action: 'read' },
   { path: '/settings/site-builder', resource: 'sites', action: 'read' },
   { path: '/settings/macros', resource: 'macros', action: 'read' },
-  { path: '/settings/whatsapp-reminders', resource: 'whatsapp_reminders', action: 'read' },
   { path: '/settings/pixel-capi', resource: 'capi_configs', action: 'read' },
   { path: '/settings/portals', resource: 'portals', action: 'read' },
   { path: '/settings/portals/:portalKey', resource: 'portals', action: 'read' },
@@ -116,7 +111,6 @@ export const ROUTE_PERMISSIONS: readonly RoutePermission[] = [
   { path: '/proposals', resource: 'proposals', action: 'read' },
   { path: '/contracts', resource: 'contracts', action: 'read' },
   { path: '/property-capture-requests', resource: 'property_capture_requests', action: 'read' },
-  { path: '/property-interests', resource: 'property_interests', action: 'read' },
 ] as const;
 
 /** Endereço completo (o que o navegador e o menu enxergam). */

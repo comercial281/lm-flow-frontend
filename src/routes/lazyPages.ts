@@ -15,7 +15,6 @@ import { lazyWithRetry } from '@/utils/chunkReload';
 // /dashboard: a Dashboard nova, para todos desde 01/10/2026 (fase 4, jornada 1).
 export const Dashboard = lazyWithRetry(() => import('@/pages/Customer/DashboardNova'));
 export const Contacts = lazyWithRetry(() => import('@/pages/Customer/Contacts'));
-export const ScheduledActions = lazyWithRetry(() => import('@/pages/Customer/Contacts/ScheduledActions'));
 export const WhatsappOficial = lazyWithRetry(() => import('@/pages/Customer/Settings/Integrations/WhatsappOficial'));
 export const IntegracoesEntrada = lazyWithRetry(() => import('@/pages/Customer/Settings/Integrations/IntegracoesEntrada'));
 export const Channels = lazyWithRetry(() => import('@/pages/Customer/Channels').then(m => ({ default: m.Channels })));
@@ -43,13 +42,11 @@ export const Visits = lazyWithRetry(() => import('@/pages/Customer/Visits').then
 export const Tarefas = lazyWithRetry(() => import('@/pages/Customer/Tarefas/Tarefas'));
 export const Proposals = lazyWithRetry(() => import('@/pages/Customer/Proposals').then(m => ({ default: m.Proposals })));
 export const Contracts = lazyWithRetry(() => import('@/pages/Customer/Contracts').then(m => ({ default: m.Contracts })));
-export const PropertyInterests = lazyWithRetry(() => import('@/pages/Customer/PropertyInterests').then(m => ({ default: m.PropertyInterests })));
 export const AutomationsLayout = lazyWithRetry(() => import('@/pages/Customer/Automations/AutomationsLayout'));
 export const SalesAgents = lazyWithRetry(() => import('@/pages/Customer/Automations/SalesAgents/SalesAgents'));
 export const PortalsList = lazyWithRetry(() => import('../pages/Customer/Settings/Portals/PortalsList'));
 export const DashboardAppPage = lazyWithRetry(() => import('../pages/Customer/DashboardApp'));
 export const Tutorials = lazyWithRetry(() => import('@/pages/Customer/Tutorials'));
-export const Marketplace = lazyWithRetry(() => import('@/pages/Shared/Marketplace'));
 
 /**
  * path -> função de prefetch (mesmo __preload do lazyWithRetry, com retry
@@ -60,7 +57,6 @@ export const routePrefetchMap: Record<string, () => Promise<unknown>> = {
   '/dashboard': Dashboard.__preload,
   '/conversations': ChatPage.__preload,
   '/contacts': Contacts.__preload,
-  '/contacts/scheduled-actions': ScheduledActions.__preload,
   '/pipelines': Pipelines.__preload,
   '/bolsao': Bolsao.__preload,
   '/bolsao/listas': BolsaoBatches.__preload,
@@ -74,12 +70,10 @@ export const routePrefetchMap: Record<string, () => Promise<unknown>> = {
   '/tarefas': Tarefas.__preload,
   '/proposals': Proposals.__preload,
   '/contracts': Contracts.__preload,
-  '/property-interests': PropertyInterests.__preload,
   '/settings/integrations': IntegracoesEntrada.__preload,
   '/settings/whatsapp-oficial': WhatsappOficial.__preload,
   '/channels': Channels.__preload,
   '/automations': AutomationsLayout.__preload,
-  '/marketplace': Marketplace.__preload,
   '/tutorials': Tutorials.__preload,
   '/settings/account': AccountSettings.__preload,
   '/settings/labels': Labels.__preload,

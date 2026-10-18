@@ -266,7 +266,7 @@ describe('Automações · sprint 2 (03/10/2026)', () => {
     expect(dono?.aba).toBeUndefined();
   });
 
-  it('Regras de lead e Lembretes saíram do menu (abrem só pelo endereço), e "FlowBuilder" não aparece', () => {
+  it('Regras de lead e Lembretes não estão no menu, e "FlowBuilder" não aparece', () => {
     const hrefs = todos.map(i => i.href);
     expect(hrefs).not.toContain('/automations/lead-automations');
     expect(hrefs).not.toContain('/automations/whatsapp-reminders');

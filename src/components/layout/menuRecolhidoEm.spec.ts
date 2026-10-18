@@ -53,7 +53,7 @@ describe('ROTA_RECOLHE_MENU', () => {
     for (const url of ['/automations/flow-builder/abc', '/automations/message-funnels/abc', '/automations/follow-ups/abc'])
       expect(ROTA_RECOLHE_MENU.test(url)).toBe(true);
     for (const url of ['/automations', '/automations/flow-builder', '/automations/message-funnels', '/automations/follow-ups',
-      '/automations/follow-ups/', '/automations/lead-automations'])
+      '/automations/follow-ups/'])
       expect(ROTA_RECOLHE_MENU.test(url)).toBe(false);
   });
 });

@@ -10,7 +10,6 @@ import { lazyWithRetry } from '@/utils/chunkReload';
 import {
   Dashboard,
   Contacts,
-  ScheduledActions,
   Channels,
   IntegracoesEntrada,
   ChatPage,
@@ -34,13 +33,11 @@ import {
   Tarefas,
   Proposals,
   Contracts,
-  PropertyInterests,
   AutomationsLayout,
   SalesAgents,
   PortalsList,
   DashboardAppPage,
   Tutorials,
-  Marketplace,
 } from './lazyPages';
 import RedirecionaAssistente from '@/pages/Customer/Automations/SalesAgents/RedirecionaAssistente';
 import PrivateRoute from './PrivateRoute';
@@ -77,11 +74,11 @@ import SurveyResponse from '@/pages/Public/Survey/SurveyResponse';
 
 // Páginas customer — lazy (code-splitting): cada página vira um chunk próprio,
 // baixado só quando a rota é acessada. Reduz o bundle inicial (era ~7MB num arquivo).
-// (Dashboard, Contacts, ScheduledActions, Channels, ChatPage, Pipelines, Disparos,
+// (Dashboard, Contacts, Channels, ChatPage, Pipelines, Disparos,
 // TeamAccess, AccountSettings, Labels, CustomAttributes, SiteBuilder,
 // Properties, Visits, Proposals, Contracts,
-// PropertyInterests, AutomationsLayout, SalesAgents, PortalsList,
-// DashboardAppPage, Tutorials, Marketplace — importadas de
+// AutomationsLayout, SalesAgents, PortalsList,
+// DashboardAppPage, Tutorials — importadas de
 // ./lazyPages, ver import acima.)
 // Lista completa e antiga de cargos (editar/duplicar/histórico/excluir), fora da aba Cargos.
 const RolesFullList = lazyWithRetry(() => import('@/pages/Customer/Team/roles/RolesFullListPage'));
@@ -103,7 +100,6 @@ const FlowAutomationsList = lazyWithRetry(() => import('@/pages/Customer/Automat
 const FlowAutomationCanvas = lazyWithRetry(() => import('@/pages/Customer/Automations/FlowBuilder/FlowAutomationCanvas'));
 const Origem = lazyWithRetry(() => import('@/pages/Customer/Automations/Origem/Origem'));
 const WelcomeAutomations = lazyWithRetry(() => import('@/pages/Customer/Settings/WelcomeAutomations').then(m => ({ default: m.WelcomeAutomations })));
-const LeadAutomations = lazyWithRetry(() => import('@/pages/Customer/Settings/LeadAutomations').then(m => ({ default: m.LeadAutomations })));
 const LeadAdsForms = lazyWithRetry(() => import('@/pages/Customer/Settings/LeadAdsForms'));
 const LandingPageEditor = lazyWithRetry(() => import('@/pages/Customer/Properties/LandingPageEditor/LandingPageEditorPage'));
 const LandingByIdEditor = lazyWithRetry(() => import('@/pages/Customer/Properties/LandingPageEditor/LandingByIdEditorPage'));
@@ -184,7 +180,6 @@ const IntegracoesSistemas = lazyWithRetry(() => import('@/pages/Customer/Setting
 const CvcrmConexao = lazyWithRetry(() => import('@/pages/Customer/Settings/Integrations/Cvcrm/CvcrmConexao'));
 const SiteDaImobiliaria = lazyWithRetry(() => import('@/pages/Customer/Settings/Integrations/SiteDaImobiliaria/SiteDaImobiliaria'));
 const Macros = lazyWithRetry(() => import('@/pages/Customer/Settings/Macros').then(m => ({ default: m.Macros })));
-const WhatsappReminders = lazyWithRetry(() => import('@/pages/Customer/Settings/WhatsappReminders'));
 const EmailTemplateEditor = lazyWithRetry(() => import('@/pages/Customer/Settings/EmailTemplateEditor'));
 // import { Overview, Conversations } from '../pages/Customer/Reports';
 // import * as Reports from '../pages/Customer/Reports';
@@ -193,7 +188,7 @@ const EmailTemplateEditor = lazyWithRetry(() => import('@/pages/Customer/Setting
 const AcademiaHomePage = lazyWithRetry(() => import('@/pages/Customer/Academia'));
 const AcademiaCoursePage = lazyWithRetry(() => import('@/pages/Customer/Academia/CoursePage'));
 
-// Páginas compartilhadas (Tutorials e Marketplace vêm de ./lazyPages, ver import acima)
+// Páginas compartilhadas (Tutorials vem de ./lazyPages, ver import acima)
 const Documentation = lazyWithRetry(() => import('@/pages/Shared/Documentation'));
 const Profile = lazyWithRetry(() => import('@/pages/Shared/Profile'));
 
@@ -550,14 +545,7 @@ const AppRouter = () => {
               }
             />
 
-            <Route
-              path="/contacts/scheduled-actions"
-              element={
-                <PermissionRoute resource="contacts" action="read">
-                  <ScheduledActions />
-                </PermissionRoute>
-              }
-            />
+            <Route path="/contacts/scheduled-actions" element={<Navigate to="/conversations" replace />} />
 
             <Route
               path="/pipelines"
@@ -737,16 +725,7 @@ const AppRouter = () => {
                   </Suspense>
                 }
               />
-              <Route
-                path="lead-automations"
-                element={
-                  <Suspense fallback={outletSuspenseFallback}>
-                    <PermissionRoute resource="lead_automation_rules" action="read">
-                      <LeadAutomations />
-                    </PermissionRoute>
-                  </Suspense>
-                }
-              />
+              <Route path="lead-automations" element={<Navigate to="/automations" replace />} />
               <Route
                 path="lead-ads-forms"
                 element={
@@ -788,16 +767,7 @@ const AppRouter = () => {
                   ele e a chave de disparo decidem quem entra no funil, e separados uma
                   desligava a regra da outra em silêncio. */}
               <Route path="no-reply-robot" element={<Navigate to="/automations/follow-ups" replace />} />
-              <Route
-                path="whatsapp-reminders"
-                element={
-                  <Suspense fallback={outletSuspenseFallback}>
-                    <PermissionRoute resource="whatsapp_reminders" action="read">
-                      <WhatsappReminders />
-                    </PermissionRoute>
-                  </Suspense>
-                }
-              />
+              <Route path="whatsapp-reminders" element={<Navigate to="/automations" replace />} />
               {/* A API já exige `roleta_configs.read` (PermissionRegistry deriva a
                   permissão por convenção). Sem o guard aqui o corretor abre a tela
                   e toma 403 em cada chamada, o que parece bug em vez de acesso
@@ -921,14 +891,7 @@ const AppRouter = () => {
                 nesta task — ver relatório da task B4. */}
             <Route path="/settings/welcome-automations" element={<WelcomeAutomations />} />
 
-            <Route
-              path="/settings/lead-automations"
-              element={
-                <PermissionRoute resource="lead_automation_rules" action="read">
-                  <LeadAutomations />
-                </PermissionRoute>
-              }
-            />
+            <Route path="/settings/lead-automations" element={<Navigate to="/automations" replace />} />
 
             <Route
               path="/settings/lead-ads-forms"
@@ -960,14 +923,7 @@ const AppRouter = () => {
               }
             />
 
-            <Route
-              path="/settings/whatsapp-reminders"
-              element={
-                <PermissionRoute resource="whatsapp_reminders" action="read">
-                  <WhatsappReminders />
-                </PermissionRoute>
-              }
-            />
+            <Route path="/settings/whatsapp-reminders" element={<Navigate to="/automations" replace />} />
 
             {/* Integrações em cartões (07/10/2026): a entrada tem um cartão por assunto
                 (WhatsApp, Facebook, Portais, Sistemas) e as telas de dentro ficam na
@@ -1312,14 +1268,7 @@ const AppRouter = () => {
               }
             />
 
-            <Route
-              path="/property-interests"
-              element={
-                <PermissionRoute resource="property_interests" action="read">
-                  <PropertyInterests />
-                </PermissionRoute>
-              }
-            />
+            <Route path="/property-interests" element={<Navigate to="/pipelines" replace />} />
 
             {/* Settings — roleta de corretores. Montagem antiga da mesma tela de
                 /automations/roleta-config; faltava CustomerRoute e PermissionRoute,
@@ -1355,7 +1304,7 @@ const AppRouter = () => {
             {/* Rotas Compartilhadas */}
             <Route path="/documentation" element={<Documentation />} />
 
-            <Route path="/marketplace" element={<Marketplace />} />
+            <Route path="/marketplace" element={<Navigate to="/settings/integrations" replace />} />
 
             <Route path="/profile" element={<Profile />} />
           </Route>

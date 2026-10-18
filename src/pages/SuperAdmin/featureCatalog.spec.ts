@@ -66,7 +66,7 @@ describe('organização do catálogo de Funções', () => {
     expect(secao.all.map(i => i.key)).toContain('chat_reacao_emoji');
   });
 
-  // Menu que só tem o toggle (Dashboard, Marketplace, Tutoriais) continua sendo
+  // Menu que só tem o toggle (Dashboard, Tutoriais) continua sendo
   // um bloco de um item — é um menu de verdade, não um chute.
   it('menu sem funções dentro continua sendo bloco próprio', () => {
     const [secao] = groupCatalogByTheme([
