@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { bookedByCondition, bookedByOf, bookedBySummary, BOOKED_BY_TRIGGERS } from './bookedByFilter';
 import { conditionsOnTriggerChange, triggerNeedsCondition, validateRule } from './LeadAutomationsEditors';
-import { TRIGGER_LABELS, FLOW_ONLY_TRIGGERS } from '@/services/leadAutomation/leadAutomationService';
+import { TRIGGER_LABELS } from '@/services/leadAutomation/leadAutomationService';
 import { FLOW_TRIGGER_GROUPS } from '@/features/flowAutomations/trigger';
 
 const envio = [{ type: 'send_whatsapp_message', params: { message: 'Oi {{nome}}' } }];
@@ -36,7 +36,6 @@ describe('filtro "Quem marcou"', () => {
 
   it('Visita remarcada: nome, só no construtor, no grupo Visita logo depois de agendada', () => {
     expect(TRIGGER_LABELS['lead.visit_rescheduled']).toBe('Visita remarcada');
-    expect(FLOW_ONLY_TRIGGERS).toContain('lead.visit_rescheduled');
     const visita = FLOW_TRIGGER_GROUPS.find(g => g.label === 'Visita')!;
     expect(visita.events.slice(0, 2)).toEqual(['lead.visit_scheduled', 'lead.visit_rescheduled']);
   });

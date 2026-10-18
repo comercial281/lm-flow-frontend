@@ -144,7 +144,7 @@ A lista de leads **sem dono** que o gestor abastece por planilha e o corretor se
 serve. Duas telas, dois cargos: *Bolsão → Pegar leads* (corretor) e
 *Bolsão → Listas e regras* (gestor), no grupo **Principal** do menu.
 
-Decisões (não reabrir sem o dono pedir):
+Decisões:
 
 - **O contato fica escondido até o corretor puxar.** O cartão mostra primeiro
   nome, cidade, interesse e há quanto tempo o lead espera; telefone e e-mail
@@ -4216,7 +4216,7 @@ O que aparece na tela:
 - **Todo item leva direto a uma página.** O terceiro nível virou **abas no topo
   da página** (Bolsão: Pegar leads,
   Listas e regras · Fluxos de mensagem: Editor de funis, FlowBuilder ·
-  Automações: Regras de lead, Lembretes · Campos personalizados: Atributos,
+  Automações: Regras de lead e Lembretes (telas eliminadas em 2026-10-17) · Campos personalizados: Atributos,
   Variáveis). A segunda coluna ao lado do menu acabou. Integrações deixou de ter abas em 07/10/2026: ver "Integrações em cartões".
 - **Automações deixou de ser uma página de 7 abas**, sem mudar endereço:
   Follow-up, Roleta de leads e Formulários são páginas sozinhas. `/automations` puro
@@ -8316,7 +8316,7 @@ Pedido do dono: escolher o melhor jeito de cada peça e padronizar, pra que **te
 - **Formulário de configuração sem dados não pode ser salvo:** Pixel/Conversões e Quem não respondeu mostravam o formulário vazio quando a leitura falhava e o Salvar gravava vazio por cima da configuração real. Agora a falha mostra só o erro. Repita isso em toda tela de configuração nova.
 - `soMouse` (outra sessão, app inteiro) e `soNoMouse` (peça 16) convivem: `toque:` só como `toque:hidden` (camada sobre foto) e fora da tela do cliente; o resto segue a peça 16.
 - O pop-up "Lead novo pra você" da Roleta respeita a área segura do iPhone no topo fixo (conferir em aparelho).
-- `NoReplyRobot` (Quem não respondeu) não é aberto por nenhuma tela desde o #225: corrigido mesmo assim; apagar ou religar está no `_MELHORIAS`.
+- `NoReplyRobot` (Quem não respondeu) não é aberto por nenhuma tela desde o #225: corrigido mesmo assim; a página foi apagada em 2026-10-17 (ver "Telas escondidas eliminadas").
 
 **Testes que já falhavam antes das peças** (não são delas): PipelineKanban "link de card fora da aba"/"fechar a janela de um card FORA da aba", ScheduleVisitDialog "horário ocupado riscado", ScheduleVisitDialog.agenda "os horários vêm do servidor", JanelaDaTarefa (3), CadastroDoImovel "arrastar o alfinete". Com a máquina carregada estouram tempo: SiteBuilder, RoletaLista/RoletaPagina; rodar com `--minWorkers=1 --maxWorkers=2` (só `--maxWorkers` dá RangeError nesta versão do vitest).
 
@@ -8416,7 +8416,7 @@ Armadilhas:
 
 Origem: a automação "Visita agendada" disparava pra qualquer visita, da IA ou à mão, e remarcar não disparava nada. Desenho aprovado pelo dono em 11/10. A metade do servidor é o PR `comercial281/lm-flow#459`; esta tela só funciona de ponta a ponta com ele no ar.
 
-- **Filtro "Quem marcou"** nos gatilhos "Visita agendada" e "Visita remarcada", no mesmo lugar da Origem e da Etiqueta (`bookedByFilter.ts` em `LeadAutomations/`, editor `ConditionEditor`). Três opções: **Qualquer um** (nenhuma condição gravada, o comportamento de sempre), **A IA** (`booked_by eq ia`) e **Uma pessoa** (`booked_by eq pessoa`). Os valores são fixos porque a condição compara ao pé da letra.
+- **Filtro "Quem marcou"** nos gatilhos "Visita agendada" e "Visita remarcada", no mesmo lugar da Origem e da Etiqueta (`bookedByFilter.ts` em `src/features/flowAutomations/editores/`, editor `ConditionEditor`). Três opções: **Qualquer um** (nenhuma condição gravada, o comportamento de sempre), **A IA** (`booked_by eq ia`) e **Uma pessoa** (`booked_by eq pessoa`). Os valores são fixos porque a condição compara ao pé da letra.
 - **Sem condição = Qualquer um.** Por isso o filtro é opcional no `validateRule`, também na tela antiga de Automações: regra antiga com "Visita agendada" continua válida e não muda.
 - **Gatilho "Visita remarcada"** (`lead.visit_rescheduled`): entra no grupo Visita, logo depois de "Visita agendada". Só existe no construtor (como "Pediu o book no site"); a tela antiga de regras não oferece.
 - **Trocar entre os dois gatilhos de visita zera o filtro.** É o comportamento de sempre do `conditionsOnTriggerChange` (troca de gatilho limpa as condições), não uma regra nova.
@@ -9282,7 +9282,7 @@ O que aparece na tela:
   - `/property-interests` leva pra `/pipelines`.
   - `/contacts/scheduled-actions` leva pra `/conversations`.
   - `/marketplace` leva pra `/settings/integrations`.
-- **Área do Admin:** em "Aplicar funil de follow-up nos clientes" e em Novo cliente › "Selecione as automações", o que era escolha de regras agora mostra "A entrada do funil se monta em Automações."
+- **Área do Admin:** a escolha de modelo em Novo cliente › "Selecione as automações" continua. O que mudou: ganhou a linha "A entrada do funil se monta em Automações." e os modelos que só traziam regra (Recepção de Lead Meta Ads, Recepção + Roleta de Corretores, Lembretes de visita) deixaram de ser oferecidos, porque regra não é mais criada. Os que trazem etiquetas ou funis seguem. O mesmo vale pra "Aplicar funil de follow-up nos clientes".
 - **Continuam fora do menu, mas vivas:** Propostas, Contratos, Captação (redirect) e Plano. Não foram tocadas.
 - **Ficam:** o construtor de Automações, o card de interesse no lead (`propertyInterestsService`), o `ScheduleActionModal` (Agendar envio) com `scheduledActionsService` e `scheduledTemplatesService`, e as rotas GET `/lead_automation_rules/{ad_origins,form_origins,groups,send_numbers}` que o construtor usa.
 
@@ -9299,3 +9299,5 @@ Armadilhas:
 1. **Trava:** `src/routes/telasEliminadas.source.spec.ts` reprova se uma dessas telas ou rotas voltar. Quem quiser ressuscitar uma delas começa pela spec e pelo dono do produto.
 2. **Voltar o backend** pra antes do #501 religa a execução das regras, mas sem tela pra editá-las. Voltar a tela junto não resolve: ela não existe mais. Corrigir pra frente.
 3. **Marketplace e Interesses** tinham serviços de API próprios; os que ainda têm uso (card do lead, Agendar envio) ficaram.
+
+Não reabrir sem o dono pedir.

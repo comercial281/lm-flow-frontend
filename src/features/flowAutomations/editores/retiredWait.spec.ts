@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
   ACTION_TYPE_LABELS,
-  LEGACY_ACTION_TYPES,
   RETIRED_ACTION_TYPES,
   WAIT_ACTION_NOTICE,
 } from '@/services/leadAutomation/leadAutomationService';
@@ -27,8 +26,6 @@ describe('Aguardar (delay) nas Automações', () => {
 describe('Iniciar follow-up nas Automações', () => {
   it('a ação nova escolhe um fluxo de follow-up', () => {
     expect(ACTION_TYPE_LABELS.start_followup_flow).toBe('Iniciar follow-up');
-    expect(LEGACY_ACTION_TYPES.has('start_followup_sequence')).toBe(true);
-    expect(LEGACY_ACTION_TYPES.has('start_followup_flow')).toBe(false);
   });
 
   it('o cartão da regra mostra o nome do follow-up', () => {

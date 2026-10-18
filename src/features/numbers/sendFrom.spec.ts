@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   SEND_FROM_AUTO, SEND_FROM_FOLLOWUP_DEFAULT, SEND_FROM_LABEL, SEND_FROM_LOAD_FAILED, SEND_FROM_NEEDS_NUMBER,
   SEND_FROM_OWNER, SEND_FROM_SPECIFIC_GROUP, applySendFrom, fromSelectValue, missingSelection, missingSelectionLabel,
-  numberOptionLabel, selectValue, sendFromAutoLabel, sendFromHint, sendFromOf, sendFromProblem, sendFromWarnings,
+  numberOptionLabel, selectValue, sendFromAutoLabel, sendFromHint, sendFromOf, sendFromProblem,
   sendNumbersFrom, showsOwnerOption, valueForScope, type SendNumberOption,
 } from './sendFrom';
 
@@ -146,11 +146,5 @@ describe('o que vem do servidor', () => {
   it('lista malformada vira lista vazia, sem a regra', () => {
     expect(sendNumbersFrom(null)).toEqual({ number_owner_rule: false, numbers: [] });
     expect(sendNumbersFrom({ number_owner_rule: true, numbers: [loja] })).toEqual({ number_owner_rule: true, numbers: [loja] });
-  });
-
-  it('os avisos do salvar: só textos de verdade', () => {
-    expect(sendFromWarnings({ send_from_warnings: ['O número Loja…', '', 3] })).toEqual(['O número Loja…']);
-    expect(sendFromWarnings({})).toEqual([]);
-    expect(sendFromWarnings(null)).toEqual([]);
   });
 });

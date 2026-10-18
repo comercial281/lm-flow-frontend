@@ -11,26 +11,6 @@ export interface LeadAutomationAction {
   params?: Record<string, string | number>;
 }
 
-export interface LeadAutomationRule {
-  id: string;
-  name: string;
-  description?: string;
-  trigger: string;
-  conditions: LeadAutomationCondition[];
-  actions: LeadAutomationAction[];
-  is_active: boolean;
-  archived?: boolean;
-  archived_at?: string | null;
-  favorite?: boolean;
-  priority: number;
-  pipeline_id?: string | null;
-  created_by?: { id: string; name: string } | null;
-  created_at: string;
-  updated_at: string;
-  /** "Enviar pelo número" (fase 2b.2): avisos do servidor, só na resposta do salvar. */
-  send_from_warnings?: string[];
-}
-
 const BASE = '/lead_automation_rules';
 
 export const leadAutomationService = {
@@ -106,15 +86,6 @@ export interface FormOrigin {
   count: number;
 }
 
-// Origens que o backend resolve pro lead no gatilho "Lead criado". Mesmos valores
-// do seletor "Origem do lead" — usados também pra traduzir o resultado do teste.
-export const ORIGIN_LABELS: Record<string, string> = {
-  formulario:      'Formulário (Meta Lead Ads)',
-  formulario_site: 'Formulário do site / landing',
-  lead_whats_meta: 'Lead de anúncio no WhatsApp',
-  organico:        'Orgânico (sem anúncio)',
-};
-
 // Triggers emitidos pelo backend Rails (LeadAutomationExecutorJob.perform_later).
 // 'lead.no_reply_after' é emitido por Followup::NoReplyEnrollJob (roda a cada 1 min).
 export const TRIGGER_LABELS: Record<string, string> = {
@@ -137,10 +108,6 @@ export const TRIGGER_LABELS: Record<string, string> = {
   'lead.no_reply_after':       'Sem resposta após X minutos',
   'lead.roleta_accepted':      'Corretor aceitou o lead (roleta)',
 };
-
-// Gatilhos que só existem no construtor de fluxos: o servidor recusa regra antiga
-// (Automações de Lead) com eles. Ficam em TRIGGER_LABELS só pra exibir o nome.
-export const FLOW_ONLY_TRIGGERS: string[] = ['lead.book_requested', 'lead.visit_rescheduled'];
 
 // Actions processadas pelo LeadAutomation::Executor.
 export const ACTION_TYPE_LABELS: Record<string, string> = {
@@ -174,12 +141,6 @@ export const ACTION_TYPE_LABELS: Record<string, string> = {
 // tem a ação continua igual, com o aviso no cartão.
 export const RETIRED_ACTION_TYPES = new Set(['wait']);
 
-// Ações que continuam valendo, mas não são oferecidas pra regra ou bloco novo.
-// "Iniciar sequência de follow-up" escolhia um funil antigo; desde a sprint 3
-// (03/10/2026) o follow-up é um fluxo e a ação é "Iniciar follow-up"
-// (`start_followup_flow`). A regra antiga continua igual: o servidor manda o
-// funil convertido pro fluxo novo.
-export const LEGACY_ACTION_TYPES = new Set(['start_followup_sequence']);
 export const WAIT_ACTION_NOTICE = 'Esta etapa não espera: as ações seguintes saem na hora';
 
 // Params obrigatórios por action.type — chaves exatas do backend (LeadAutomation::Executor).
