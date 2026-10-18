@@ -144,7 +144,7 @@ A lista de leads **sem dono** que o gestor abastece por planilha e o corretor se
 serve. Duas telas, dois cargos: *Bolsão → Pegar leads* (corretor) e
 *Bolsão → Listas e regras* (gestor), no grupo **Principal** do menu.
 
-Decisões:
+Decisões (não reabrir sem o dono pedir):
 
 - **O contato fica escondido até o corretor puxar.** O cartão mostra primeiro
   nome, cidade, interesse e há quanto tempo o lead espera; telefone e e-mail
