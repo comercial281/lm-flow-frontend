@@ -186,12 +186,11 @@ export const MENU_FREE_BY_DESIGN = ['/tutorials'];
  *   - Captação ............. /property-capture-requests (vira a aba Novas
  *     captações da Gestão de proprietários, que voltou ao menu em 03/10/2026)
  *   - Plano/assinatura (ainda sem tela)
- * Sem plano de voltar:
- *   - Interesses ........... /property-interests
- *   - Ações agendadas ...... /contacts/scheduled-actions
- *   - Marketplace .......... /marketplace
  * Regras de lead e Lembretes saíram em 03/10/2026 (Automações · sprint 2) e as
  * telas foram apagadas em 17/10/2026: os endereços antigos levam pra Automações.
+ * Interesses, Ações agendadas e Marketplace também tiveram tela e endereço
+ * apagados em 17/10/2026 (Interesses leva pro Funil, Ações agendadas pras
+ * Conversas, Marketplace pras Integrações).
  *
  * Também saiu o "Personalizar menu" (esconder/favoritar/reordenar): com seções
  * fixas ele quebrava os rótulos. Ver a seção "Menu novo" no CLAUDE.md.

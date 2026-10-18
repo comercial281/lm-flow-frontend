@@ -65,7 +65,6 @@ const namespaces = [
   'labels',
   'layout',
   'macros',
-  'marketplace',
   'mcpServers',
   'messenger',
   'notFound',

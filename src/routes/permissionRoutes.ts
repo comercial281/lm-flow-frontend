@@ -42,7 +42,6 @@ export const ROUTE_PERMISSIONS: readonly RoutePermission[] = [
   { path: '/equipe/cargos/lista', resource: 'roles', action: 'read' },
   { path: '/contacts', resource: 'contacts', action: 'read' },
   { path: '/contacts/:contactId', resource: 'contacts', action: 'read' },
-  { path: '/contacts/scheduled-actions', resource: 'contacts', action: 'read' },
   { path: '/pipelines', resource: 'pipelines', action: 'read' },
   { path: '/pipelines/:pipelineId', resource: 'pipelines', action: 'read' },
   // Card completo (E4): a página do lead.
@@ -112,7 +111,6 @@ export const ROUTE_PERMISSIONS: readonly RoutePermission[] = [
   { path: '/proposals', resource: 'proposals', action: 'read' },
   { path: '/contracts', resource: 'contracts', action: 'read' },
   { path: '/property-capture-requests', resource: 'property_capture_requests', action: 'read' },
-  { path: '/property-interests', resource: 'property_interests', action: 'read' },
 ] as const;
 
 /** Endereço completo (o que o navegador e o menu enxergam). */

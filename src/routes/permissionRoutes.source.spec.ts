@@ -73,7 +73,6 @@ describe('toda rota do CRM confere o cargo', () => {
     ['/proposals', 'proposals', 'read'],
     ['/contracts', 'contracts', 'read'],
     ['/property-capture-requests', 'property_capture_requests', 'read'],
-    ['/property-interests', 'property_interests', 'read'],
     ['/settings/portals', 'portals', 'read'],
     ['/settings/portals/:portalKey', 'portals', 'read'],
     ['/settings/whatsapp-oficial', 'broadcasts', 'read'],

@@ -13,6 +13,9 @@ const ENDERECOS: { endereco: string; destino: string }[] = [
   { endereco: '/settings/lead-automations', destino: '/automations' },
   { endereco: 'whatsapp-reminders', destino: '/automations' },
   { endereco: '/settings/whatsapp-reminders', destino: '/automations' },
+  { endereco: '/property-interests', destino: '/pipelines' },
+  { endereco: '/contacts/scheduled-actions', destino: '/conversations' },
+  { endereco: '/marketplace', destino: '/settings/integrations' },
 ];
 
 const PASTAS_APAGADAS = [
@@ -21,6 +24,21 @@ const PASTAS_APAGADAS = [
   'src/pages/Customer/Automations/NoReplyRobot',
   'src/services/whatsappReminders',
   'src/services/noReplyRobot',
+  'src/pages/Customer/PropertyInterests',
+  'src/pages/Customer/Contacts/ScheduledActions.tsx',
+  'src/components/scheduledActions/ScheduledActionsHeader.tsx',
+  'src/components/scheduledActions/ScheduledActionsTable.tsx',
+  'src/components/scheduledActions/ScheduledActionsList.tsx',
+  'src/tours/ScheduledActionsTour.tsx',
+  'src/pages/Shared/Marketplace',
+  'src/i18n/locales/pt-BR/marketplace.json',
+];
+
+// A Área do Admin avisa: o funil de follow-up que ela leva não leva mais a regra de entrada.
+const AVISO_ENTRADA = 'A entrada do funil se monta em Automações.';
+const TELAS_ADMIN = [
+  'src/pages/SuperAdmin/PooledClients/ClientFollowupRolloutModal.tsx',
+  'src/pages/SuperAdmin/PooledClients/NewTenantWizard.tsx',
 ];
 
 describe('telas eliminadas', () => {
@@ -31,5 +49,15 @@ describe('telas eliminadas', () => {
 
   it.each(PASTAS_APAGADAS)('%s não existe mais', pasta => {
     expect(existsSync(resolve(raiz, pasta))).toBe(false);
+  });
+
+  it.each(TELAS_ADMIN)('%s avisa que a entrada do funil se monta em Automações', arq => {
+    const src = readFileSync(resolve(raiz, arq), 'utf8');
+    expect(src).toContain(AVISO_ENTRADA);
+  });
+
+  it('o namespace marketplace saiu do i18n', () => {
+    const cfg = readFileSync(resolve(raiz, 'src/i18n/config.ts'), 'utf8');
+    expect(cfg).not.toMatch(/'marketplace'/);
   });
 });

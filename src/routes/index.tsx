@@ -10,7 +10,6 @@ import { lazyWithRetry } from '@/utils/chunkReload';
 import {
   Dashboard,
   Contacts,
-  ScheduledActions,
   Channels,
   IntegracoesEntrada,
   ChatPage,
@@ -34,13 +33,11 @@ import {
   Tarefas,
   Proposals,
   Contracts,
-  PropertyInterests,
   AutomationsLayout,
   SalesAgents,
   PortalsList,
   DashboardAppPage,
   Tutorials,
-  Marketplace,
 } from './lazyPages';
 import RedirecionaAssistente from '@/pages/Customer/Automations/SalesAgents/RedirecionaAssistente';
 import PrivateRoute from './PrivateRoute';
@@ -77,11 +74,11 @@ import SurveyResponse from '@/pages/Public/Survey/SurveyResponse';
 
 // Páginas customer — lazy (code-splitting): cada página vira um chunk próprio,
 // baixado só quando a rota é acessada. Reduz o bundle inicial (era ~7MB num arquivo).
-// (Dashboard, Contacts, ScheduledActions, Channels, ChatPage, Pipelines, Disparos,
+// (Dashboard, Contacts, Channels, ChatPage, Pipelines, Disparos,
 // TeamAccess, AccountSettings, Labels, CustomAttributes, SiteBuilder,
 // Properties, Visits, Proposals, Contracts,
-// PropertyInterests, AutomationsLayout, SalesAgents, PortalsList,
-// DashboardAppPage, Tutorials, Marketplace — importadas de
+// AutomationsLayout, SalesAgents, PortalsList,
+// DashboardAppPage, Tutorials — importadas de
 // ./lazyPages, ver import acima.)
 // Lista completa e antiga de cargos (editar/duplicar/histórico/excluir), fora da aba Cargos.
 const RolesFullList = lazyWithRetry(() => import('@/pages/Customer/Team/roles/RolesFullListPage'));
@@ -191,7 +188,7 @@ const EmailTemplateEditor = lazyWithRetry(() => import('@/pages/Customer/Setting
 const AcademiaHomePage = lazyWithRetry(() => import('@/pages/Customer/Academia'));
 const AcademiaCoursePage = lazyWithRetry(() => import('@/pages/Customer/Academia/CoursePage'));
 
-// Páginas compartilhadas (Tutorials e Marketplace vêm de ./lazyPages, ver import acima)
+// Páginas compartilhadas (Tutorials vem de ./lazyPages, ver import acima)
 const Documentation = lazyWithRetry(() => import('@/pages/Shared/Documentation'));
 const Profile = lazyWithRetry(() => import('@/pages/Shared/Profile'));
 
@@ -548,14 +545,7 @@ const AppRouter = () => {
               }
             />
 
-            <Route
-              path="/contacts/scheduled-actions"
-              element={
-                <PermissionRoute resource="contacts" action="read">
-                  <ScheduledActions />
-                </PermissionRoute>
-              }
-            />
+            <Route path="/contacts/scheduled-actions" element={<Navigate to="/conversations" replace />} />
 
             <Route
               path="/pipelines"
@@ -1278,14 +1268,7 @@ const AppRouter = () => {
               }
             />
 
-            <Route
-              path="/property-interests"
-              element={
-                <PermissionRoute resource="property_interests" action="read">
-                  <PropertyInterests />
-                </PermissionRoute>
-              }
-            />
+            <Route path="/property-interests" element={<Navigate to="/pipelines" replace />} />
 
             {/* Settings — roleta de corretores. Montagem antiga da mesma tela de
                 /automations/roleta-config; faltava CustomerRoute e PermissionRoute,
@@ -1321,7 +1304,7 @@ const AppRouter = () => {
             {/* Rotas Compartilhadas */}
             <Route path="/documentation" element={<Documentation />} />
 
-            <Route path="/marketplace" element={<Marketplace />} />
+            <Route path="/marketplace" element={<Navigate to="/settings/integrations" replace />} />
 
             <Route path="/profile" element={<Profile />} />
           </Route>
