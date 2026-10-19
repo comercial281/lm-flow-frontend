@@ -14,7 +14,6 @@ vi.mock('@/hooks/useUserPermissions', () => ({ useUserPermissions: () => ({ can:
 vi.mock('@/hooks/useAccountUsers', () => ({ useAccountUsers: () => ({ users: [] }) }));
 vi.mock('@/contexts/AuthContext', () => ({ useAuth: () => ({ user: { id: 'u1' } }) }));
 vi.mock('@/features/contatos/useCorretorLogado', () => ({ useCorretorLogado: () => false }));
-vi.mock('@/tours', () => ({ ContactsTour: () => null }));
 // Mostra o que recebeu: a restauração precisa chegar até os filtros da tela.
 vi.mock('@/components/contacts/ContactsFiltros', () => ({
   default: (p: { pilula: string; filtros: unknown }) => <output data-testid="filtros-da-tela">{`${p.pilula}|${JSON.stringify(p.filtros)}`}</output>,

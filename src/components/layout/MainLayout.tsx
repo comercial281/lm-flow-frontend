@@ -36,7 +36,7 @@ import InstallAppPrompt from './components/InstallAppPrompt';
 import PendingOffersBanner from '@/components/roleta/PendingOffersBanner';
 import OfferPopup from '@/components/roleta/OfferPopup';
 import { PendingOffersProvider } from '@/contexts/PendingOffersContext';
-import { WelcomeTourModal } from '@/components/WelcomeTourModal';
+import { WelcomeModal } from '@/components/WelcomeModal';
 import ConnectNumberPrompt from '@/components/numbers/ConnectNumberPrompt';
 import GlobalCommandPalette from '@/components/command-palette/GlobalCommandPalette';
 import SupportWidget from '@/components/support/SupportWidget';
@@ -224,7 +224,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
       />
 
       {/* Tour */}
-      <WelcomeTourModal />
+      <WelcomeModal />
 
       {/* Quem ganhou número e ainda não leu o QR code (abre depois do tour) */}
       <ConnectNumberPrompt />

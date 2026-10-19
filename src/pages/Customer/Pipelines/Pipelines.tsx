@@ -27,7 +27,6 @@ import {
   DuplicatePipelineModal,
 } from '@/components/pipelines/index';
 import DeletePipelineModal from '@/components/pipelines/DeletePipelineModal';
-import { PipelinesTour } from '@/tours';
 import { prefetchPipeline } from './pipelinePayloadCache';
 
 const INITIAL_STATE: PipelinesState = {
@@ -342,7 +341,6 @@ export default function Pipelines() {
         </div>
       }
     >
-      <PipelinesTour />
 
       {/* Type Tabs — only shown when real-estate pipelines exist */}
       {hasRealEstatePipelines && (

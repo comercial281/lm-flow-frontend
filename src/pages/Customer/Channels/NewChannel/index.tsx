@@ -41,18 +41,6 @@ const ApiForm = lazyWithRetry(() =>
 // Import constants
 import { getChannelTypes } from '@/constants/channelTypes';
 
-// Import tours
-import { NewChannelTour } from '@/tours/NewChannelTour';
-import { ProviderSelectionTour } from '@/tours/ProviderSelectionTour';
-import { WhatsappProviderTour } from '@/tours/WhatsappProviderTour';
-import { TelegramChannelTour } from '@/tours/TelegramChannelTour';
-import { ApiChannelTour } from '@/tours/ApiChannelTour';
-import { WebWidgetChannelTour } from '@/tours/WebWidgetChannelTour';
-import { WhatsappCloudChannelTour } from '@/tours/WhatsappCloudChannelTour';
-import { SmsChannelTour } from '@/tours/SmsChannelTour';
-import { InstagramChannelTour } from '@/tours/InstagramChannelTour';
-import { FacebookChannelTour } from '@/tours/FacebookChannelTour';
-import { EmailChannelTour } from '@/tours/EmailChannelTour';
 
 export default function NewChannel() {
   const navigate = useNavigate();
@@ -299,25 +287,6 @@ export default function NewChannel() {
     }
   };
 
-  const renderChannelTour = () => {
-    if (!selectedChannel) return null;
-    switch (selectedChannel.type) {
-      case 'telegram': return <TelegramChannelTour />;
-      case 'api': return <ApiChannelTour />;
-      case 'web_widget': return <WebWidgetChannelTour />;
-      case 'whatsapp':
-        if (!selectedProvider) return null;
-        return selectedProvider.id === 'whatsapp_cloud'
-          ? <WhatsappCloudChannelTour />
-          : <WhatsappProviderTour providerId={selectedProvider.id} />;
-      case 'sms': return <SmsChannelTour />;
-      case 'instagram': return <InstagramChannelTour />;
-      case 'facebook': return <FacebookChannelTour />;
-      case 'email': return <EmailChannelTour />;
-      default: return null;
-    }
-  };
-
   const shouldShowFooter = () => {
     return (
       selectedChannel?.type !== 'facebook' &&
@@ -338,7 +307,6 @@ export default function NewChannel() {
   if (!selectedChannel) {
     return (
       <>
-        <NewChannelTour />
         <ChannelGrid
           acima={<ChannelBreadcrumb className="py-0" items={getBreadcrumbs()} onBack={handleGoBack} />}
           channels={channelTypes}
@@ -354,7 +322,6 @@ export default function NewChannel() {
   if (!selectedProvider && selectedChannel.providers) {
     return (
       <>
-        <ProviderSelectionTour channelType={selectedChannel.type} />
         <ProviderSelection
           channelName={selectedChannel?.name || ''}
           channelType={selectedChannel?.type || 'whatsapp'}
@@ -397,7 +364,6 @@ export default function NewChannel() {
       acima={<ChannelBreadcrumb className="py-0" items={getBreadcrumbs()} onBack={handleGoBack} />}
       cabecalho={<BaseHeader title={t('newChannel.configureTitle')} subtitle={t('newChannel.description')} />}
     >
-      {renderChannelTour()}
       <FormContainer
         selectedChannel={selectedChannel}
         selectedProvider={selectedProvider}

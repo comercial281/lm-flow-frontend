@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useLanguage } from '@/hooks/useLanguage';
-import { SettingsTeamsTour } from '@/tours';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Button } from '@/components/ui/ds';
 import { Grid3X3, List, Users } from 'lucide-react';
@@ -331,7 +330,6 @@ export default function Teams({ embutido = false }: { embutido?: boolean }) {
 
   return (
     <div className={embutido ? 'flex flex-col gap-6' : 'h-full flex flex-col p-4'} data-tour="settings-teams-page">
-      <SettingsTeamsTour />
       <div data-tour="settings-teams-header">
         <TeamsHeader
           totalCount={state.meta.pagination.total}
