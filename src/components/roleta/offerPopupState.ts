@@ -41,7 +41,8 @@ export function ofertasNaoVistas(offers: BrokerAssignmentDetail[], vistas: Set<s
  * no lead sem conversa (formulário, anúncio), o card do lead.
  */
 export function destinoDoLead(d: BrokerAssignmentDetail): string {
-  const conversa = d.conversation_display_id ?? d.conversation_id;
+  // Pelo id longo: a tela de Conversas joga o número curto pra lista.
+  const conversa = d.conversation_id;
   if (conversa) return `/conversations/${conversa}`;
   if (d.contact_id) return `/contacts/${d.contact_id}`;
   return '/conversations';

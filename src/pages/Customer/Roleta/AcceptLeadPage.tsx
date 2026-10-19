@@ -72,7 +72,8 @@ function AceiteDeVerdade() {
   }, [secsLeft, data, load, semPrazo]);
 
   const goToConversation = useCallback((d: BrokerAssignmentDetail) => {
-    const cid = d.conversation_display_id ?? d.conversation_id;
+    // Pelo id longo: a tela de Conversas joga o número curto pra lista.
+    const cid = d.conversation_id;
     if (cid) navigate(`/conversations/${cid}`);
     else navigate('/conversations');
   }, [navigate]);

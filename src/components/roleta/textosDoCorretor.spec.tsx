@@ -3,7 +3,7 @@
 // conversa no número dele (corretor sem número próprio recebe os dados).
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useParams } from 'react-router-dom';
 
 const ofertas = vi.hoisted(() => ({ lista: [] as unknown[] }));
 vi.mock('@/contexts/PendingOffersContext', () => ({ usePendingOffers: () => ({ offers: ofertas.lista }) }));
@@ -46,12 +46,17 @@ describe('faixa amarela', () => {
   });
 });
 
+function ConversaAberta() {
+  return <p>{`Conversa ${useParams().id}`}</p>;
+}
+
 describe('tela de aceite', () => {
   const abrir = () => render(
     <MemoryRouter initialEntries={['/roleta/aceite/ba-1']}>
       <Routes>
         <Route path="/roleta/aceite/:assignmentId" element={<AcceptLeadPage />} />
         <Route path="/conversations" element={<p>Conversas</p>} />
+        <Route path="/conversations/:id" element={<ConversaAberta />} />
       </Routes>
     </MemoryRouter>,
   );
@@ -64,6 +69,16 @@ describe('tela de aceite', () => {
     expect(screen.queryByText(/sai pelo seu número/)).toBeNull();
     // Pelo formato da casa, em qualquer fuso da máquina que roda o teste.
     expect(screen.getByText(`Chegou em ${dataHora('2026-10-06T12:00:00Z')}`)).toBeInTheDocument();
+  });
+
+  // A tela de Conversas só abre pelo id longo (UUID): pelo número curto ela
+  // voltava pra lista e o corretor não via o lead que acabou de aceitar.
+  it('aceitar leva à conversa do lead pelo id longo, não pelo número curto', async () => {
+    svc.get.mockResolvedValue(oferta());
+    svc.accept.mockResolvedValue(oferta({ status: 'accepted', conversation_id: 'conv-uuid', conversation_display_id: 42 }));
+    abrir();
+    fireEvent.click(await screen.findByRole('button', { name: /Aceitar/ }));
+    expect(await screen.findByText('Conversa conv-uuid')).toBeInTheDocument();
   });
 
   it('aceitar avisa "Lead aceito! Ele é seu."', async () => {
