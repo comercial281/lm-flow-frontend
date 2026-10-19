@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useLanguage } from '@/hooks/useLanguage';
-import { SettingsMacrosTour } from '@/tours';
 import { toast } from 'sonner';
 import {
   Dialog,
@@ -292,7 +291,6 @@ export default function Macros() {
 
   return (
     <div className="h-full flex flex-col p-4" data-tour="settings-macros-page">
-      <SettingsMacrosTour />
       <div data-tour="settings-macros-header">
         <MacrosHeader
           totalCount={state.meta.pagination.total}

@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useLanguage } from '@/hooks/useLanguage';
-import { SettingsCustomAttributesTour } from '@/tours';
 import { toast } from 'sonner';
 import {
   Dialog,
@@ -317,7 +316,6 @@ export default function CustomAttributes() {
         </div>
       }
     >
-      <SettingsCustomAttributesTour />
 
       {/* Tabs */}
       <div className="flex min-h-0 flex-1 flex-col" data-tour="settings-custom-attributes-tabs">

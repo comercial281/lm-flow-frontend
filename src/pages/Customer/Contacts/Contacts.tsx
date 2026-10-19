@@ -51,7 +51,6 @@ import { comListaNoEndereco, lerListaDoEndereco } from '@/features/contatos/list
 import ContactExportModal from '@/components/contacts/ContactExportModal';
 import ContactMergeModal from '@/components/contacts/ContactMergeModal';
 import { AxiosError } from 'axios';
-import { ContactsTour } from '@/tours';
 
 const INITIAL_STATE: ContactsState = {
   contacts: [],
@@ -875,7 +874,6 @@ export default function Contacts() {
         </div>
       }
     >
-      <ContactsTour />
 
       {/* Content */}
       <div className="flex-1 overflow-auto" data-tour="contacts-list">

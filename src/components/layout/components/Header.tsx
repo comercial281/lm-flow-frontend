@@ -140,8 +140,8 @@ export default function Header({
             vazava PRA ESQUERDA, por cima do centro — a lupa montava em cima da
             logo (print do iPhone, 16/07/2026). shrink-0 nas laterais + min-w-0 no
             centro faz o centro ceder espaço em vez de ser invadido.
-            TourFab e DemoModeToggle saíram daqui pro menu hambúrguer: não são
-            ações urgentes e eram 2 dos 6 ícones brigando por espaço.
+            DemoModeToggle saiu daqui pro menu hambúrguer (não é ação urgente).
+            O botão do tour saiu de vez em 19/10/2026, junto com o tour antigo.
             A lupa saiu em 15/10/2026 (topo enxuto, pedido do dono). */}
         <div className="shrink-0 flex justify-end items-center gap-1">
           <PlantaoToggle compact />

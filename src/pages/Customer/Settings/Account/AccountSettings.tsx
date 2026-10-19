@@ -35,7 +35,6 @@ import { Copy, Users2 } from 'lucide-react';
 import { CampoDaJanela, GrupoDaJanela } from '@/components/base/janela';
 import { useNavigate } from 'react-router-dom';
 
-import { SettingsTour } from '@/tours';
 
 // Tela piloto da Fase 3 (base de design e linguagem). Antes, três jeitos de
 // salvar conviviam aqui: "Transcrição de áudio" salvava na hora; "Resolução
@@ -426,7 +425,6 @@ export default function AccountSettings() {
         </div>
       }
     >
-      <SettingsTour />
 
       <div className="flex-1 overflow-auto">
         <div className="w-full max-w-5xl">

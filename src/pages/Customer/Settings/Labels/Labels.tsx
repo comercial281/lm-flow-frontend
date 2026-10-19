@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useLanguage } from '@/hooks/useLanguage';
-import { SettingsLabelsTour } from '@/tours';
 import { toast } from 'sonner';
 import { Tags } from 'lucide-react';
 import { Pagina } from '@/components/base';
@@ -178,7 +177,6 @@ export default function Labels() {
         </div>
       }
     >
-      <SettingsLabelsTour />
 
       <div className="flex-1 overflow-auto" data-tour="settings-labels-content">
         {loading ? (
