@@ -142,7 +142,7 @@ export default function CreateStageModal({
             <CampoDaJanela rotulo={t('createStage.stageType')} htmlFor="stage-type">
               <Select
                 value={formData.stage_type}
-                onValueChange={(value: 'active' | 'completed' | 'cancelled') =>
+                onValueChange={(value: CreateStageData['stage_type']) =>
                   setFormData({ ...formData, stage_type: value })
                 }
                 disabled={loading}
@@ -154,6 +154,7 @@ export default function CreateStageModal({
                   <SelectItem value="active">{t('createStage.stageTypes.active')}</SelectItem>
                   <SelectItem value="completed">{t('createStage.stageTypes.completed')}</SelectItem>
                   <SelectItem value="cancelled">{t('createStage.stageTypes.cancelled')}</SelectItem>
+                  <SelectItem value="followup">Follow-up</SelectItem>
                 </SelectContent>
               </Select>
             </CampoDaJanela>

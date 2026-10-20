@@ -22,6 +22,16 @@ describe('faixa de automação rodando', () => {
     expect(l.texto).toBe('Fluxo "Primeiro contato" · esperando até 04/10 às 09:00');
   });
 
+  it('follow-up pausado diz o motivo; na fila diz a hora da vez', () => {
+    expect(linhaDoFluxo(fluxo({ kind: 'followup', phase: 'paused', paused_reason: 'Número desconectado' }), agora).texto)
+      .toBe('Follow-up "Primeiro contato" · pausado: Número desconectado');
+    expect(linhaDoFluxo(fluxo({ kind: 'followup', phase: 'paused' }), agora).texto).toBe('Follow-up "Primeiro contato" · pausado');
+    expect(linhaDoFluxo(fluxo({ kind: 'followup', phase: 'queued', until: epoch(new Date(2026, 9, 3, 14, 5)) }), agora).texto)
+      .toBe('Follow-up "Primeiro contato" · na fila, sai às 14:05');
+    expect(linhaDoFluxo(fluxo({ kind: 'followup', phase: 'queued', until: epoch(new Date(2026, 9, 4, 9, 0)) }), agora).texto)
+      .toBe('Follow-up "Primeiro contato" · na fila, sai em 04/10 às 09:00');
+  });
+
   it('aguardando sem limite', () => {
     expect(linhaDoFluxo(fluxo({ phase: 'waiting_reply' }), agora).texto).toContain('aguardando resposta, sem limite');
   });
