@@ -210,6 +210,7 @@ import HubSpotCallback from '@/pages/HubSpotCallback';
 import PayPalCallback from '@/pages/PayPalCallback';
 import CanvaCallback from '@/pages/CanvaCallback';
 import SupabaseCallback from '@/pages/SupabaseCallback';
+import LinkSemPix from '@/features/links/LinkSemPix';
 // import ChangePassword from '../pages/ChangePassword';
 
 // Elemento da rota de Conversas (compartilhado entre /conversations e
@@ -234,6 +235,7 @@ const AppRouter = () => {
         <Suspense
           fallback={<LoadingScreen fullScreen />}
         >
+        <LinkSemPix>
         <Routes>
           {/* Redirecionamento inteligente da raiz baseado no tipo de usuário */}
           <Route
@@ -1593,6 +1595,7 @@ const AppRouter = () => {
           {/* Rota 404 - Página não encontrada */}
           <Route path="*" element={<NotFound />} />
         </Routes>
+        </LinkSemPix>
         </Suspense>
       </RouterGuard>
     </BrowserRouter>

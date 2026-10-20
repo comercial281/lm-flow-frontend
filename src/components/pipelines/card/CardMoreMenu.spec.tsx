@@ -109,6 +109,18 @@ describe('CardMoreMenu · página do card completo (E4)', () => {
     expect(escrever).toHaveBeenCalledWith(`${window.location.origin}/pipelines/p1?card=pi-1`);
   });
 
+  it('o link copiado leva o código no lugar do UUID (o WhatsApp lê UUID como chave Pix)', async () => {
+    const user = userEvent.setup();
+    const escrever = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText: escrever }, configurable: true });
+    montar({ linkDoCard: '/pipelines/829a6b1e-8259-4c3d-9e2f-0a1b2c3d4e5f?card=0b6f5c1a-3d2e-4f10-8a9b-c7d6e5f40312' });
+
+    await user.click(screen.getByRole('button', { name: 'Mais ações do card' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Copiar link do card' }));
+
+    expect(escrever).toHaveBeenCalledWith(`${window.location.origin}/pipelines/H8PhzFPbgreJefMBgig7ux?card=2Qu7ReJ5bTo99bHR2atWs3`);
+  });
+
   it('Arquivar e Desarquivar só aparecem quando a página pede', async () => {
     const onArquivar = vi.fn();
     montar({ onArquivar });

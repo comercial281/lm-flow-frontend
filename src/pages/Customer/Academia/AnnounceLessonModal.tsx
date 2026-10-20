@@ -25,6 +25,7 @@ import {
 } from '@/services/academy/academyAnnouncementsService';
 import { Seletor } from '@/components/base/Seletor';
 import Aviso from '@/components/base/Aviso';
+import { trocarUuidsPorCodigo } from '@/features/links/codigoDoLink';
 import {
   Button,
   Dialog,
@@ -47,7 +48,8 @@ function formatarData(iso: string): string {
 }
 
 export default function AnnounceLessonModal({ lesson, courseId, onClose }: Props) {
-  const path = `/academia/curso/${courseId}?lesson=${lesson.id}`;
+  // Vai pros grupos de WhatsApp: código no lugar do UUID, que o WhatsApp lê como chave Pix.
+  const path = trocarUuidsPorCodigo(`/academia/curso/${courseId}?lesson=${lesson.id}`);
 
   const [carregando, setCarregando] = useState(true);
   // Config + histórico vêm numa chamada só: se falha, não é "Nenhum aviso enviado ainda".

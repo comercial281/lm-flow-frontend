@@ -8909,7 +8909,8 @@ Armadilhas:
    ou corretor gravado. Sem ele, trocar de roleta deixava "o próximo da fila é
    a Ana" (da roleta anterior) debaixo da nova (`Destino.spec`).
 4. **`teste` é palavra reservada em `/roleta/aceite/:assignmentId`**: o id de
-   oferta é UUID, então não colide.
+   oferta é UUID (ou o código de 22 caracteres do link de WhatsApp, ver "Links
+   sem cara de chave Pix"), então não colide.
 5. Backend: `SalesAgents::HandoffTestNotice` (`POST
    /sales_agents/:id/handoff_test_notice`, permissão `sales_agents.update`,
    bloqueado pro MCP). O texto do corretor fixo sai do
@@ -9325,3 +9326,26 @@ Armadilhas:
 1. **Apagar ou mudar de curso a aula "LM Flow no celular"** deixa o botão abrindo o curso no começo (não quebra, mas não é a aula escolhida). Se o curso "Como usar o LM Flow" for apagado, o botão cai numa tela de curso vazia: trocar o id junto.
 2. **`react-joyride` ficou no `package.json`** sem uso (não entra no que vai pro ar). Tirar pede atualizar os arquivos de dependência; fica pra uma faxina própria.
 3. **Os `data-tour=` (e a prop `dataTour` dos componentes base) ficaram** espalhados pelas telas: não fazem nada. Tirar é faxina própria, sem efeito pra quem usa.
+
+## Links sem cara de chave Pix (desde 2026-10-19)
+
+O WhatsApp passou a reconhecer UUID (`8-4-4-4-12`) como **chave Pix aleatória**: no toque ele copia a "chave" e a URL inteira deixa de ser link. Quebrava o "Aceitar o lead" da roleta (Pinot, 19/10), o "Abrir" do "O lead é seu", o "Abrir no CRM" dos grupos, o `{{link_do_card}}` e o anúncio de aula. Diagnóstico completo em `LM FLOW/specs/2026-10-19-links-pix-whatsapp-diagnostico.md` (fora do git, na pasta do Tony).
+
+O que muda pra quem usa:
+
+- Link que sai no WhatsApp leva um **código de 22 letras e números** no lugar do id (ex.: `/roleta/aceite/H8PhzFPbgreJefMBgig7ux`). É o mesmo id escrito em base58: não expira e não tem tabela.
+- **Link antigo, com UUID, continua abrindo** (navegador, WhatsApp Web, celular sem o recurso). A mensagem que já chegou num celular com o recurso segue sem link: quem desenha é o WhatsApp do aparelho.
+- O **"Copiar link"** do card (menu ⋯ e cartão do quadro) e o **anúncio de aula** da Academia já geram o link com código. Dentro do app os endereços seguem com UUID; quem copia da barra do navegador ainda leva UUID (o caminho certo é o "Copiar link").
+- **Aceitar** (tela de aceite e pop-up) leva à conversa do lead pelo id longo. Antes ia pelo número curto e a tela de Conversas jogava o corretor na lista.
+
+Regras:
+
+1. **`src/features/links/codigoDoLink.ts` é o único lugar do formato.** Os mesmos pares UUID↔código estão no spec do backend (`Links::PublicId`): mudou um, muda o outro.
+2. **`LinkSemPix` envolve as `<Routes>`** e troca código → UUID **no render**, com `<Navigate replace>`, antes de qualquer tela montar. Não mover pra um `useEffect` (o efeito do `Chat.tsx`, filho, roda antes e joga o código pra lista) nem traduzir dentro de cada tela (há quem leia `window.location` direto). Trava: `LinkSemPix.spec.tsx` lê o `index.tsx`.
+3. **Só nas rotas que recebem id por link de fora**: `/roleta/aceite/:id`, `/conversations/:id`, `/contacts/:id`, `/pipelines/:p` + `?card=`, `/pipelines/:p/card/:i`, `/academia/curso/:c` + `?lesson=`. Slug (landing, imóvel, portal) pode ter 22 letras e fica de fora de propósito. Rota nova que recebe id por WhatsApp entra na lista de `ROTAS_COM_ID`.
+4. **Ordem de publicação:** esta tela vai pro ar **antes** do backend passar a mandar o código (o inverso da regra da casa). Backend na frente faria a tela de Conversas jogar o corretor na lista.
+5. **Fora daqui:** e-mail (não tem detecção de Pix), webhook pro sistema do cliente (contrato externo) e links de arquivo do Supabase (o caminho do arquivo é fixo; decisão separada no diagnóstico).
+
+Código: `codigoDoLink.ts`, `LinkSemPix.tsx`, `linkDoCard.ts`, `CardMoreMenu.tsx`, `AnnounceLessonModal.tsx`, `AcceptLeadPage.tsx`, `offerPopupState.ts`. Testes: `codigoDoLink.spec.ts`, `LinkSemPix.spec.tsx`, `linkDoCard.spec.ts`, `CardMoreMenu.spec.tsx`, `AnnounceLessonModal.link.spec.tsx`, `textosDoCorretor.spec.tsx`, `OfferPopup.spec.tsx`.
+
+Não reabrir sem o dono pedir.

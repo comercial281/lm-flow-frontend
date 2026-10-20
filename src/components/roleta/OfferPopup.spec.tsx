@@ -144,7 +144,8 @@ describe('OfferPopup', () => {
     destravar();
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Aceitar' })); });
     expect(accept).toHaveBeenCalledWith('a');
-    expect(navegar).toHaveBeenCalledWith('/conversations/42');
+    // Pelo id longo: a tela de Conversas joga o número curto (42) pra lista.
+    expect(navegar).toHaveBeenCalledWith('/conversations/conv-uuid');
   });
 
   it('Aceitar lead sem conversa leva ao card do lead', async () => {

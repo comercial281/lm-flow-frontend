@@ -32,6 +32,7 @@ import { roletaLabel, type RoletaConfig } from '@/services/roletaConfig/roletaCo
 import { PAGINA_DA_ROLETA } from '@/components/roleta/textosDaRoleta';
 import type { PipelineItem } from '@/types/analytics';
 import { contatoDoCard, semFunil } from '@/features/cardDoLead/cardDoLead';
+import { trocarUuidsPorCodigo } from '@/features/links/codigoDoLink';
 
 interface CardMoreMenuProps {
   item: PipelineItem;
@@ -82,7 +83,8 @@ export default function CardMoreMenu({
   const copiarLink = () => {
     const caminho = linkDoCard
       ?? (foraDoFunil ? `/contacts/${contatoId}` : `/pipelines/${item.pipeline_id}?card=${item.id}`);
-    navigator.clipboard.writeText(`${window.location.origin}${caminho}`)
+    // Código no lugar do UUID: o WhatsApp lê UUID como chave Pix (codigoDoLink.ts).
+    navigator.clipboard.writeText(`${window.location.origin}${trocarUuidsPorCodigo(caminho)}`)
       .then(() => toast.success('Link do card copiado'))
       .catch(() => toast.error('Não consegui copiar o link'));
   };
