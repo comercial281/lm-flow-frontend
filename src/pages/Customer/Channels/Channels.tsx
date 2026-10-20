@@ -29,7 +29,6 @@ import AlternadorDeVisao from '@/components/base/AlternadorDeVisao';
 import { Pagina, useExtrasDaMoldura } from '@/components/base';
 // table types imported where needed in ChannelsTable
 import { useNavigate } from 'react-router-dom';
-import { ChannelsTour } from '@/tours';
 import { useFeature } from '@/contexts/TenantFeaturesContext';
 
 export default function Channels() {
@@ -244,7 +243,6 @@ export default function Channels() {
         </div>
       }
     >
-      <ChannelsTour />
 
       <div className="flex items-center justify-end" data-tour="channels-view-toggle">
         <AlternadorDeVisao

@@ -8167,7 +8167,7 @@ O que a tela mostra:
 - **Ficha lateral** (`Team/person/PersonSheet.tsx`): nome, cargo, celular (recebe o link de acesso e os avisos de lead novo), números (cartões com nome, telefone, situação e "Dono do número" ou "Atende as conversas"), acesso (copiar link, enviar/reenviar link) e rodapé com desativar, excluir e Salvar.
 - **Criar número** (`numbers/CreateNumberDialog.tsx`): nome = pessoa, telefone, e quem lê o QR code: a própria pessoa no primeiro acesso (padrão) ou agora, nesta tela. Sem celular válido, a tela exige o celular antes de criar (o link precisa de destino).
 - **Adicionar pessoa** (assistente) já cria o número junto (bloco marcado por padrão quando há celular) e manda o acesso. **Adicionar várias** (`Team/bulk/`) cola linhas com nome, e-mail e celular, um cargo para o lote, até 50 por vez.
-- **Conecte seu número** (`numbers/ConnectNumberPrompt.tsx`): no primeiro acesso, depois do tour de boas-vindas, quem é dono de número nunca conectado vê o convite; "Depois" vale só na sessão. Mostra o número principal primeiro.
+- **Conecte seu número** (`numbers/ConnectNumberPrompt.tsx`): no primeiro acesso, depois da janela de boas-vindas, quem é dono de número nunca conectado vê o convite; "Depois" vale só na sessão. Mostra o número principal primeiro.
 - Abas: **Pessoas · Times · Cargos** (`?aba=pessoas|times|cargos`; as rotas antigas continuam redirecionando). Subtítulo "Quem atende, por qual número e em qual time". A rota `/equipe` e o item do menu pedem `users.read`.
 
 Decisões (não reabrir sem o dono pedir):
@@ -9302,6 +9302,30 @@ Armadilhas:
 3. **Marketplace e Interesses** tinham serviços de API próprios; os que ainda têm uso (card do lead, Agendar envio) ficaram.
 
 Não reabrir sem o dono pedir.
+
+## Boas-vindas leva pra primeira aula; o tour antigo saiu (desde 2026-10-19)
+
+Pedido do dono do produto: no primeiro acesso, em vez do tour, mandar a pessoa direto pra Área de Membros. O tour veio pronto do sistema original e quase não ensinava nada (5 balões na tela WhatsApp, dois deles sobre grade/tabela e troca de página; corretor sem acesso à tela WhatsApp caía numa tela que não podia abrir).
+
+O que aparece na tela:
+
+- **Primeiro acesso:** janela *Bem-vindo ao LM Flow!* (sem X, sem fechar por fora): "Preparamos aulas curtas mostrando como usar no dia a dia. Comece pela primeira: leva 1 minuto." e "Se preferir ver depois, as aulas ficam no Guia do LM Flow, no menu."
+  - **Assistir a primeira aula** abre a Área de Membros tocando **LM Flow no celular** (Introdução ao LM Flow). Ao voltar pro app, quem tem número nunca conectado vê o **Conecte seu número**, como antes.
+  - **Depois** fecha a janela de vez. As aulas seguem em **Guia do LM Flow → Aulas**.
+- **Saiu o tour inteiro:** os balões de todas as telas (WhatsApp, Novo canal, Conversas, Contatos, Funis, Configurações) e o botão "Ver tour desta página" (já estava fora do topo).
+
+Decisões (não reabrir sem o dono pedir):
+
+1. **A primeira aula é "LM Flow no celular"** (decisão do dono, 19/10), não "Como conectar seu WhatsApp", que continua a 1ª da lista lá dentro.
+2. **Todo cargo vê a janela** (gestor e corretor): a aula é da Introdução, que é pra todos.
+3. **Mesma marca do tour antigo** (`onboarding:welcome` em `user_tours`): quem já respondeu o tour não vê a janela nova. Só gente nova vê.
+4. **A aula está fixa por id** em `src/components/WelcomeModal.tsx` (`FIRST_LESSON_PATH`). Se a aula sumir ou for arquivada, a tela do curso abre na primeira aula ainda não vista, sem erro. Trocar a primeira aula = trocar o id ali.
+
+Armadilhas:
+
+1. **Apagar ou mudar de curso a aula "LM Flow no celular"** deixa o botão abrindo o curso no começo (não quebra, mas não é a aula escolhida). Se o curso "Como usar o LM Flow" for apagado, o botão cai numa tela de curso vazia: trocar o id junto.
+2. **`react-joyride` ficou no `package.json`** sem uso (não entra no que vai pro ar). Tirar pede atualizar os arquivos de dependência; fica pra uma faxina própria.
+3. **Os `data-tour=` (e a prop `dataTour` dos componentes base) ficaram** espalhados pelas telas: não fazem nada. Tirar é faxina própria, sem efeito pra quem usa.
 
 ## Links sem cara de chave Pix (desde 2026-10-19)
 

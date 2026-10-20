@@ -27,7 +27,6 @@ vi.mock('@/services/account/accountService', () => ({
 }));
 vi.mock('@/store/appDataStore', () => ({ useAppDataStore: { getState: () => ({ fetchAccount: mocks.fetchAccount }) } }));
 vi.mock('./NotificationCenter', () => ({ default: () => null }));
-vi.mock('@/tours', () => ({ SettingsTour: () => null }));
 vi.mock('sonner', () => ({ toast: { success: mocks.toastSuccess, error: mocks.toastError } }));
 
 import AccountSettings from './AccountSettings';

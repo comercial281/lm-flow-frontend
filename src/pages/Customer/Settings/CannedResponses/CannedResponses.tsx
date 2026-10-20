@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useLanguage } from '@/hooks/useLanguage';
-import { SettingsCannedResponsesTour } from '@/tours';
 import { toast } from 'sonner';
 import {
   Dialog,
@@ -278,7 +277,6 @@ export default function CannedResponses() {
 
   return (
     <div className="h-full flex flex-col p-4" data-tour="settings-canned-responses-page">
-      <SettingsCannedResponsesTour />
       <div data-tour="settings-canned-responses-header">
         <CannedResponsesHeader
           totalCount={searchFilteredCannedResponses.length}

@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useLanguage } from '@/hooks/useLanguage';
-import { SettingsAgentsTour } from '@/tours';
 import { toast } from 'sonner';
 import { Grid3X3, List, Users as UsersIcon } from 'lucide-react';
 import EmptyState from '@/components/base/EmptyState';
@@ -351,7 +350,6 @@ export default function Users() {
 
   return (
     <div className="h-full flex flex-col p-4" data-tour="settings-agents-page">
-      <SettingsAgentsTour />
       <div data-tour="settings-agents-header">
         <UsersHeader
           totalCount={state.meta.pagination.total}

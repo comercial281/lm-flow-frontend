@@ -31,7 +31,6 @@ import { toast } from 'sonner';
 import { AxiosError } from 'axios';
 
 import ErrorBoundary from '../../../components/ErrorBoundary';
-import { ChatTour } from '@/tours';
 
 // Novos componentes refatorados
 import ChatSidebar from '@/components/chat/chat-sidebar/ChatSidebar';
@@ -810,7 +809,6 @@ const Chat = () => {
 
   return (
     <ErrorBoundary>
-      <ChatTour />
       <div className="h-full w-full flex flex-col md:flex-row overflow-hidden">
         {/* Chat List Sidebar */}
         <ChatSidebar
