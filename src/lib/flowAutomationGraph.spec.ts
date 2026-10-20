@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import type { FlowAutomationNode } from '@/types/flowAutomations';
 import {
-  appendTarget,
   branchHandles,
+  insertAt,
   buildEdges,
   buildSaveFlowPayload,
   calculateLayout,
@@ -84,28 +84,63 @@ describe('Aguardar resposta tem duas saídas: Respondeu e Não respondeu', () =>
   });
 });
 
-describe('onde a paleta pendura o bloco novo', () => {
-  it('no fim da linha principal', () => {
-    const nodes = [node('s', 'send_whatsapp', { next_node_id: 'w' }), node('w', 'wait')];
-    expect(appendTarget(nodes, 's')).toEqual({ id: 'w', handle: 'out' });
+describe('"+" de uma saída: o bloco novo entra ali, mesmo com a saída ligada', () => {
+  it('saída vazia: só liga', () => {
+    const nodes = [node('s', 'send_whatsapp')];
+    const out = insertAt(nodes, { id: 's', handle: 'out' }, node('n', 'wait'));
+    expect(out.find(n => n.id === 's')?.next_node_id).toBe('n');
+    expect(out.find(n => n.id === 'n')?.next_node_id).toBeNull();
   });
 
-  it('depois de Aguardar resposta, na primeira saída livre (nunca na saída única que ele não tem)', () => {
+  it('saída ligada: encaixa no meio, e o que vinha depois continua depois do novo', () => {
+    // Barones: "Respondeu o follow-up?" → Não respondeu → Desliga a IA → roleta.
     const nodes = [
-      node('s', 'send_whatsapp', { next_node_id: 'w' }),
-      node('w', 'wait_for_reply', { config: { minutes: 30 }, next_yes_node_id: 'x' }),
-      node('x', 'add_label'),
+      node('w', 'wait_for_reply', { config: { minutes: 240 }, next_no_node_id: 'ia' }),
+      node('ia', 'disable_ai', { next_node_id: 'r' }),
+      node('r', 'assign_round_robin'),
     ];
-    expect(appendTarget(nodes, 's')).toEqual({ id: 'w', handle: 'no' });
+    const out = insertAt(nodes, { id: 'w', handle: 'no' }, node('n', 'send_whatsapp'));
+    expect(out.find(n => n.id === 'w')?.next_no_node_id).toBe('n');
+    expect(out.find(n => n.id === 'w')?.next_yes_node_id).toBeNull();
+    expect(out.find(n => n.id === 'n')?.next_node_id).toBe('ia');
+    expect(out.find(n => n.id === 'ia')?.next_node_id).toBe('r');
   });
 
-  it('sem saída livre, o bloco entra solto', () => {
+  it('bloco de duas saídas encaixado no meio: o resto vai pra saída de mesmo nome', () => {
     const nodes = [
-      node('c', 'condition', { next_yes_node_id: 'x', next_no_node_id: 'y' }),
-      node('x', 'wait'),
-      node('y', 'wait'),
+      node('w', 'wait_for_reply', { config: { minutes: 30 }, next_no_node_id: 'x' }),
+      node('x', 'send_whatsapp'),
     ];
-    expect(appendTarget(nodes, 'c')).toBeNull();
+    const out = insertAt(nodes, { id: 'w', handle: 'no' }, node('c', 'condition'));
+    expect(out.find(n => n.id === 'c')?.next_no_node_id).toBe('x');
+    expect(out.find(n => n.id === 'c')?.next_yes_node_id).toBeNull();
+  });
+
+  it('Aguardar resposta encaixado depois de um bloco simples: o resto vai pro Não respondeu', () => {
+    const nodes = [node('s', 'send_whatsapp', { next_node_id: 'f' }), node('f', 'send_whatsapp')];
+    const out = insertAt(nodes, { id: 's', handle: 'out' }, node('w', 'wait_for_reply', { config: { minutes: 30 } }));
+    expect(out.find(n => n.id === 's')?.next_node_id).toBe('w');
+    expect(out.find(n => n.id === 'w')?.next_no_node_id).toBe('f');
+    expect(out.find(n => n.id === 'w')?.next_yes_node_id).toBeNull();
+  });
+
+  it('Condição encaixada depois de um bloco simples: o resto vai pro Sim', () => {
+    const nodes = [node('s', 'send_whatsapp', { next_node_id: 'f' }), node('f', 'send_whatsapp')];
+    const out = insertAt(nodes, { id: 's', handle: 'out' }, node('c', 'condition'));
+    expect(out.find(n => n.id === 'c')?.next_yes_node_id).toBe('f');
+    expect(out.find(n => n.id === 'c')?.next_no_node_id).toBeNull();
+  });
+
+  it('Aguardar resposta sem limite (só Respondeu): o resto vai pro Respondeu', () => {
+    const nodes = [node('s', 'send_whatsapp', { next_node_id: 'f' }), node('f', 'send_whatsapp')];
+    const out = insertAt(nodes, { id: 's', handle: 'out' }, node('w', 'wait_for_reply', { config: { indefinite: true } }));
+    expect(out.find(n => n.id === 'w')?.next_yes_node_id).toBe('f');
+    expect(out.find(n => n.id === 'w')?.next_no_node_id).toBeNull();
+  });
+
+  it('o bloco novo entra na lista', () => {
+    const out = insertAt([node('s', 'send_whatsapp')], { id: 's', handle: 'out' }, node('n', 'wait'));
+    expect(out.map(n => n.id)).toEqual(['s', 'n']);
   });
 });
 

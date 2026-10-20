@@ -126,36 +126,43 @@ export function buildEdges(nodes: FlowAutomationNode[], initialNodeId: string | 
   return edges;
 }
 
-// Ao inserir um bloco novo, pendura no fim do caminho principal (último nó
-// não-ramificado a partir do gatilho) — mesma regra do Hub: a paleta nunca
-// pergunta "onde", ela sempre continua a linha principal.
-export function findChainEnd(nodes: FlowAutomationNode[], initialNodeId: string | null): string | null {
-  const byId = new Map(nodes.map(n => [n.id, n]));
-  let current = initialNodeId;
-  let last: string | null = null;
-  const seen = new Set<string>();
-  while (current && byId.has(current) && !seen.has(current)) {
-    seen.add(current);
-    last = current;
-    const node = byId.get(current)!;
-    current = isBranching(node) ? null : node.next_node_id; // bloco de duas saídas é fim de cadeia principal
-  }
-  return last;
+/** O bloco que uma saída aponta hoje (null = saída vazia). */
+function targetOf(node: FlowAutomationNode, handle: OutputHandle): string | null {
+  if (handle === 'yes') return node.next_yes_node_id;
+  if (handle === 'no') return node.next_no_node_id;
+  return node.next_node_id;
 }
 
 /**
- * Onde a paleta pendura o bloco novo: no fim do caminho principal. Se o fim é
- * um bloco de duas saídas, na primeira saída livre dele (Sim / Respondeu antes
- * de Não / Não respondeu). Sem saída livre, o bloco entra solto (null) — antes
- * ele ia pra uma saída "continuar" que esses blocos não desenham, e sumia.
+ * Em qual saída do bloco encaixado no meio fica o que vinha depois: a de mesmo
+ * nome, se ele tiver; senão o "Não respondeu" do Aguardar resposta (é ali que
+ * o follow-up mora); senão a primeira (Sim / Respondeu). Bloco simples: a única.
  */
-export function appendTarget(nodes: FlowAutomationNode[], initialNodeId: string | null): { id: string; handle: OutputHandle } | null {
-  const end = findChainEnd(nodes, initialNodeId);
-  if (!end) return null;
-  const node = nodes.find(n => n.id === end);
-  if (!node) return null;
-  const free = looseOutputs(node);
-  return free.length ? { id: end, handle: free[0] } : null;
+function continuationHandle(node: FlowAutomationNode, from: OutputHandle): OutputHandle {
+  if (!isBranching(node)) return 'out';
+  const handles = branchHandles(node);
+  if ((handles as OutputHandle[]).includes(from)) return from;
+  if (node.kind === 'wait_for_reply' && handles.includes('no')) return 'no';
+  return handles[0];
+}
+
+/**
+ * O "+" de uma saída (20/10/2026): o bloco novo entra nela. Saída vazia, só
+ * liga; saída já ligada, encaixa no meio (o que vinha depois passa a vir depois
+ * do novo). Sem "+", o bloco novo entra solto: quem liga é quem monta o fluxo
+ * (antes a paleta pendurava no primeiro Aguardar resposta do caminho, e todo
+ * bloco caía no "Respondeu" dele).
+ */
+export function insertAt(
+  nodes: FlowAutomationNode[],
+  from: { id: string; handle: OutputHandle },
+  newNode: FlowAutomationNode,
+): FlowAutomationNode[] {
+  const source = nodes.find(n => n.id === from.id);
+  if (!source) return [...nodes, newNode];
+  const after = targetOf(source, from.handle);
+  const placed = after ? link([newNode], newNode.id, continuationHandle(newNode, from.handle), after)[0] : newNode;
+  return link([...nodes, placed], from.id, from.handle, newNode.id);
 }
 
 export function link(nodes: FlowAutomationNode[], sourceId: string, handle: OutputHandle, targetId: string | null): FlowAutomationNode[] {
