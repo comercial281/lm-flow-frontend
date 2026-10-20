@@ -5437,8 +5437,8 @@ Armadilhas:
    `PipelineFilterEditor`, `useAutomationResources`, `formatConditionSummary`, em
    `LeadAutomationsEditors.tsx`). Mexer neles muda as duas telas.
 4. **Duas saídas = `branchHandles()`** em `lib/flowAutomationGraph.ts`: condição e
-   Aguardar resposta. Desenho, "+", layout, onde a paleta pendura o bloco novo
-   (`appendTarget`) e o corpo do save_flow (`buildSaveFlowPayload`) saem todos dele.
+   Aguardar resposta. Desenho, "+", layout, onde o "+" encaixa o bloco novo
+   (`insertAt`) e o corpo do save_flow (`buildSaveFlowPayload`) saem todos dele.
    Com *Sem limite* o `next_no_node_id` vai nulo (contrato).
 5. **Fluxo salvo antes** com Aguardar resposta de saída única: `normalizeLoadedNodes`
    põe a saída em *Respondeu*.
@@ -9171,11 +9171,22 @@ PR 5 do redesenho do construtor. O dono (Tony) reabriu em 16/10/2026 a decisão 
 - **Seis grupos.** A lista de blocos agora se divide em Mensagem, Lead, IA, Distribuição, Notificação e Controle (antes: Mensagem pro lead, Lead, Avisos, Controle). A composição continua em `palette.ts`; cada grupo tem a própria cor em `GROUP_COLORS`.
 - **Lista embaixo do botão.** O botão "Blocos" (canto do desenho, ao lado de "Simular") abre uma lista logo abaixo dele (`FlowBlocksMenu`, um Popover do design system), com busca "Buscar blocos..." e os grupos. O mapa não é mais empurrado pro lado.
 - **Começa fechada e não lembra.** A lista abre fechada toda vez que a tela abre; saiu o `blocksPanelState.ts` (a chave `lmflow:construtor:blocos-aberto` não é mais lida nem gravada). Escolher um bloco, soltar um bloco no mapa, Esc ou clicar fora fecham.
-- **"+ saída" do cartão** continua abrindo a lista e ligando o bloco escolhido àquela saída. A saída aparece no topo da própria lista ("Ligando na saída "Respondeu"", com "cancelar"): o aviso que ficava solto no mapa saiu, porque a lista aberta o cobria. Fechar a lista sem escolher (Esc, clique fora, o botão) esquece a saída: o próximo bloco vai pro fim do caminho, não pra saída antiga.
+- **"+ saída" do cartão** continua abrindo a lista e ligando o bloco escolhido àquela saída. A saída aparece no topo da própria lista ("Ligando na saída "Respondeu"", com "cancelar"): o aviso que ficava solto no mapa saiu, porque a lista aberta o cobria. Fechar a lista sem escolher (Esc, clique fora, o botão) esquece a saída: o próximo bloco entra solto, não na saída antiga (desde 20/10/2026, ver "Construtor: bloco novo entra solto").
 - **Arrastar** pro mapa continua: o bloco da lista é arrastável (`BLOCK_DRAG_TYPE`) e a lista fica aberta durante o arraste (só conferido por teste, falta olhar no navegador); o `onDrop` do mapa coloca o bloco e fecha. Corretor: bloco "fora" some e "Indisponível" fica cinza, sem clique nem arraste, como antes.
 - **Botão.** Passou a ter `aria-expanded` (saiu o `aria-pressed`). Celular: sem mudança, o construtor não abre no celular.
 
 Código: `src/components/flowAutomations/FlowBlocksMenu.tsx` (era `FlowBlocksPanel.tsx`) e `FlowAutomationCanvas.tsx`. Testes: describe "lista de blocos" em `FlowCanvasLayout.spec.tsx` e `FlowLayoutPieces.spec.tsx`.
+
+## Construtor: bloco novo entra solto, e toda saída tem "+" (desde 2026-10-20)
+
+Pedido do dono (Tony) em 20/10/2026, no fluxo "Boas-vindas da Júlia" do Barones. Só frontend.
+
+- **O problema.** O botão Blocos pendurava o bloco novo no "fim do caminho", e o fim era o PRIMEIRO bloco de duas saídas do fluxo. Num fluxo Mensagem → Respondeu em 2h? → (Não respondeu) Follow-up → Respondeu o follow-up? → Desliga a IA → roleta, todo bloco novo caía no "Respondeu" vazio do primeiro aguardar. E o "+" só aparecia em saída vazia: depois do "Desliga a IA" (que já seguia pra roleta) ou no "Não respondeu" ligado não havia como pôr nada.
+- **Blocos cria solto.** Decisão do dono: pelo botão Blocos (ou arrastando pro mapa) o bloco entra sem ligação nenhuma, no meio do que está na tela, e quem monta liga arrastando da saída. Única exceção: sem bloco nenhum ainda, o primeiro entra logo depois do Início.
+- **"+" em toda saída.** Livre ou ligada. Na ligada o bloco novo entra no meio: a saída passa a ir pro novo, e o que vinha depois passa a vir depois do novo. Bloco de duas saídas encaixado no meio: o resto vai pra saída de mesmo nome; se não tiver, pro "Não respondeu" do Aguardar resposta, senão pro "Sim"/"Respondeu".
+- **Não reabrir** a volta do "pendura sozinho" sem o dono pedir: ele quer escolher onde o bloco entra.
+
+Código: `insertAt` em `src/lib/flowAutomationGraph.ts` (saíram `findChainEnd`/`appendTarget`), `insertNode` e `visibleCenter` no `FlowAutomationCanvas.tsx`, rodapé do `FlowNodeCard.tsx`. Testes: describe "\"+\" de uma saída" em `flowAutomationGraph.spec.ts` e "onde o bloco novo entra" em `FlowCanvasLayout.spec.tsx`.
 
 ## Construtor: Nome, Corretor e Imóvel à vista, o resto em "Mais variáveis" (desde 2026-10-16)
 

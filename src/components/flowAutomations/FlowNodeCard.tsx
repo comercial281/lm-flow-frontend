@@ -361,15 +361,19 @@ export function FlowNodeCard({ id, data, selected }: NodeProps) {
         />
       ))}
 
-      {(branching || (loose.length > 0 && can.add)) && (
+      {/* "+" em toda saída, livre ou ligada (20/10/2026): na ligada, o bloco novo
+          entra no meio. Antes só a saída vazia tinha "+", e não dava pra pôr
+          nada depois de um bloco que já seguia pra outro. */}
+      {(branching || can.add) && (
         <div className="border-t border-border px-2 py-1.5 flex flex-wrap gap-1">
-          {(branching ? branches : loose).map(handle => {
+          {(branching ? branches : (['out'] as OutputHandle[])).map(handle => {
             const name = handleLabel(node.kind, handle);
             const dot = <span className="inline-block h-1.5 w-1.5 rounded-full mr-1 align-middle" style={{ backgroundColor: handleColor(node.kind, handle) }} />;
-            return loose.includes(handle) && can.add ? (
+            return can.add ? (
               <button
                 key={handle}
                 onClick={own(() => onAddFrom(id, handle))}
+                title={loose.includes(handle) ? undefined : 'Põe um bloco aqui, antes do que já vem depois'}
                 className="text-[10px] rounded border border-dashed border-border px-1.5 py-0.5 text-muted-foreground hover:border-primary hover:text-primary"
               >
                 {dot}+ {name}

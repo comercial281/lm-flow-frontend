@@ -13,8 +13,8 @@ import Faixa from '@/components/base/Faixa';
 import { flowAutomationsService } from '@/services/flowAutomations/flowAutomationsService';
 import type { FlowAutomation, FlowAutomationNode, TestRunResult } from '@/types/flowAutomations';
 import {
-  resolvedPositions, buildEdges, appendTarget, link, removeNode, moveNode, newTempId, TRIGGER_NODE_ID,
-  normalizeLoadedNodes, buildSaveFlowPayload, handleLabel, type OutputHandle,
+  resolvedPositions, buildEdges, insertAt, link, removeNode, moveNode, newTempId, TRIGGER_NODE_ID,
+  normalizeLoadedNodes, buildSaveFlowPayload, handleLabel, NODE_WIDTH, type OutputHandle,
 } from '@/lib/flowAutomationGraph';
 import { flowNodeTypes, type FlowLookups, type FlowStartNodeData } from '@/components/flowAutomations/FlowNodeCard';
 import { BLOCK_DRAG_TYPE, FlowBlocksMenu } from '@/components/flowAutomations/FlowBlocksMenu';
@@ -130,6 +130,7 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
   // A lista Blocos começa sempre fechada e não lembra como ficou (16/10/2026).
   const [blocksOpen, setBlocksOpen] = useState(false);
   const flowInstance = useRef<ReactFlowInstance | null>(null);
+  const canvasArea = useRef<HTMLDivElement | null>(null);
 
   const [automation, setAutomation] = useState<FlowAutomation | null>(null);
   const [trigger, setTrigger] = useState<FlowTrigger>({ event: '', conditions: [] });
@@ -271,10 +272,10 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
     from: { id: string; handle: OutputHandle } | null,
     position: { x: number; y: number } | null = null,
   ) => {
-    // Sem alvo explícito, pendura no fim do caminho principal (a paleta nunca
-    // pergunta "onde"). Sem NENHUM bloco ainda, o novo vira o primeiro, logo
-    // depois do Início. Arrastado pro canvas, fica onde foi solto.
-    const target = from || (initialNodeId ? appendTarget(nodes, initialNodeId) : null);
+    // Pelo "+" de uma saída, entra nela (encaixando no meio se ela já estava
+    // ligada). Pelo botão Blocos, entra solto e quem monta liga (20/10/2026).
+    // Sem NENHUM bloco ainda, o novo vira o primeiro, logo depois do Início.
+    // Arrastado pro canvas, fica onde foi solto.
     const newId = newTempId();
     const newNode: FlowAutomationNode = {
       // Cópia própria do bloco: o mesmo botão escolhido duas vezes não divide a sequência.
@@ -282,12 +283,8 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
       next_node_id: null, next_yes_node_id: null, next_no_node_id: null,
       pos_x: position?.x ?? null, pos_y: position?.y ?? null, steps: [],
     };
-    setNodes(prev => {
-      let next = [...prev, newNode];
-      if (target?.id) next = link(next, target.id, target.handle, newId);
-      return next;
-    });
-    if (!initialNodeId) setInitialNodeId(newId);
+    setNodes(prev => (from ? insertAt(prev, from, newNode) : [...prev, newNode]));
+    if (!initialNodeId && nodes.length === 0) setInitialNodeId(newId);
     setPendingSource(null);
     // Escolher (ou soltar) um bloco fecha a lista.
     setBlocksOpen(false);
@@ -396,6 +393,16 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
   const closeOrOpenBlocks = useCallback((next: boolean) => {
     setBlocksOpen(next);
     if (!next) setPendingSource(null);
+  }, []);
+
+  // Bloco solto (botão Blocos, sem "+"): aparece no meio do que está na tela,
+  // não lá na coluna dos órfãos, fora de vista.
+  const visibleCenter = useCallback((): { x: number; y: number } | null => {
+    const box = canvasArea.current?.getBoundingClientRect();
+    const flow = flowInstance.current;
+    if (!box || !flow || !box.width) return null;
+    const center = flow.screenToFlowPosition({ x: box.left + box.width / 2, y: box.top + box.height / 2 });
+    return { x: center.x - NODE_WIDTH / 2, y: center.y };
   }, []);
 
   // Arrastar um bloco do painel Blocos pro canvas (A.2).
@@ -757,7 +764,7 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
         )}
 
         <div className="flex-1 flex min-h-0">
-          <div className="flex-1 relative min-w-0" onDragOver={onDragOver} onDrop={onDrop}>
+          <div ref={canvasArea} className="flex-1 relative min-w-0" onDragOver={onDragOver} onDrop={onDrop}>
             <ReactFlowProvider>
               <ReactFlow
                 nodes={reactFlowNodes}
@@ -793,7 +800,7 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
               <FlowBlocksMenu
                 open={blocksOpen}
                 onOpenChange={closeOrOpenBlocks}
-                onPick={item => insertNode(item, pendingSource)}
+                onPick={item => insertNode(item, pendingSource, pendingSource || nodes.length === 0 ? null : visibleCenter())}
                 pendingLabel={pendingSource ? pendingLabel : null}
                 onCancelPending={() => setPendingSource(null)}
                 estadoDoBloco={estadoDoBloco}

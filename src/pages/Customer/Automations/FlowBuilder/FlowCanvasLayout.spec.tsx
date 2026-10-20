@@ -227,6 +227,72 @@ describe('lista de blocos pelo "+ saída"', () => {
   });
 });
 
+describe('onde o bloco novo entra (20/10/2026)', () => {
+  type Saved = { id: string; kind: string; next_node_id: string | null; next_yes_node_id: string | null; next_no_node_id: string | null };
+  const escolherESalvar = async (lista: HTMLElement) => {
+    fireEvent.click(within(lista).getByRole('button', { name: /Esperar/ }));
+    const painel = await screen.findByTestId('painel-do-bloco');
+    fireEvent.click(within(painel).getByRole('button', { name: 'Salvar' }));
+    await waitFor(() => expect(screen.queryByTestId('painel-do-bloco')).toBeNull());
+    fireEvent.click(screen.getByRole('button', { name: /^Salvar$/ }));
+    await waitFor(() => expect(saveFlow).toHaveBeenCalled());
+    return saveFlow.mock.calls[0][1] as { initial_node_id: string | null; nodes: Saved[] };
+  };
+
+  it('pelo botão Blocos, com o fluxo já montado, o bloco entra solto', async () => {
+    saveFlow.mockResolvedValue(undefined);
+    get.mockResolvedValue(flow());
+    renderCanvas();
+    await screen.findByTestId('bloco-inicio');
+    fireEvent.click(screen.getByRole('button', { name: /Blocos/ }));
+    const payload = await escolherESalvar(await screen.findByTestId('painel-blocos'));
+    const novo = payload.nodes.find(n => n.kind === 'wait');
+    expect(novo).toBeTruthy();
+    expect(payload.nodes.find(n => n.id === 'n1')?.next_node_id).toBeNull();
+    expect(payload.initial_node_id).toBe('n1');
+  });
+
+  it('pelo botão Blocos, sem bloco nenhum, o primeiro entra logo depois do Início', async () => {
+    saveFlow.mockResolvedValue(undefined);
+    get.mockResolvedValue(flow({ initial_node_id: null, nodes: [] }));
+    renderCanvas();
+    await screen.findByTestId('bloco-inicio');
+    fireEvent.click(screen.getByRole('button', { name: /Blocos/ }));
+    const payload = await escolherESalvar(await screen.findByTestId('painel-blocos'));
+    const novo = payload.nodes.find(n => n.kind === 'wait');
+    expect(payload.initial_node_id).toBe(novo?.id);
+  });
+
+  it('"+ Não respondeu" já ligado encaixa o bloco no meio', async () => {
+    saveFlow.mockResolvedValue(undefined);
+    get.mockResolvedValue(flow({
+      nodes: [
+        { id: 'n1', kind: 'wait_for_reply', label: null, config: {}, next_node_id: null, next_yes_node_id: null, next_no_node_id: 'n2', pos_x: null, pos_y: null, steps: [] },
+        { id: 'n2', kind: 'disable_ai', label: null, config: {}, next_node_id: null, next_yes_node_id: null, next_no_node_id: null, pos_x: null, pos_y: null, steps: [] },
+      ],
+    }));
+    renderCanvas();
+    await screen.findByTestId('bloco-inicio');
+    fireEvent.click(screen.getByText(/\+ Não respondeu/));
+    const payload = await escolherESalvar(await screen.findByTestId('painel-blocos'));
+    const novo = payload.nodes.find(n => n.kind === 'wait');
+    expect(payload.nodes.find(n => n.id === 'n1')?.next_no_node_id).toBe(novo?.id);
+    expect(novo?.next_node_id).toBe('n2');
+  });
+
+  it('bloco simples já ligado também tem "+"', async () => {
+    get.mockResolvedValue(flow({
+      nodes: [
+        { id: 'n1', kind: 'send_whatsapp', label: null, config: { text: 'Oi' }, next_node_id: 'n2', next_yes_node_id: null, next_no_node_id: null, pos_x: null, pos_y: null, steps: [] },
+        { id: 'n2', kind: 'disable_ai', label: null, config: {}, next_node_id: null, next_yes_node_id: null, next_no_node_id: null, pos_x: null, pos_y: null, steps: [] },
+      ],
+    }));
+    renderCanvas();
+    await screen.findByTestId('bloco-inicio');
+    expect(screen.getAllByText(/\+ Continuar/)).toHaveLength(2);
+  });
+});
+
 describe('duplicar bloco', () => {
   it('a cópia da Mensagem ganha config própria, com id novo em cada item', async () => {
     saveFlow.mockResolvedValue(undefined);
