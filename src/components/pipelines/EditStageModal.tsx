@@ -230,6 +230,7 @@ export default function EditStageModal({
                 <SelectItem value="active">{t('editStage.stageTypes.active')}</SelectItem>
                 <SelectItem value="completed">{t('editStage.stageTypes.completed')}</SelectItem>
                 <SelectItem value="cancelled">{t('editStage.stageTypes.cancelled')}</SelectItem>
+                <SelectItem value="followup">Follow-up</SelectItem>
               </SelectContent>
             </Select>
           </CampoDaJanela>

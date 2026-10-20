@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { Loader2, StopCircle, Rocket, ChevronDown, ChevronRight } from 'lucide-react';
+import { Loader2, StopCircle, Rocket, Play, ChevronDown, ChevronRight } from 'lucide-react';
 import { plural } from '@/lib/formato';
 import { toast } from 'sonner';
 import { Button, Popover, PopoverContent, PopoverTrigger } from '@/components/ui/ds';
@@ -19,7 +19,7 @@ import {
   type RunningFlow,
   type StartableFollowup,
 } from '@/services/flowAutomations/flowAutomationInstancesService';
-import { linhaDoFluxo, linhaDoFollowup } from '@/features/conversas/automacaoRodando';
+import { linhaDoFluxo, linhaDoFollowup, saiAs } from '@/features/conversas/automacaoRodando';
 
 /**
  * O bloco de FOLLOW-UP do card (Automações · sprint 3, 03/10/2026).
@@ -33,7 +33,9 @@ import { linhaDoFluxo, linhaDoFollowup } from '@/features/conversas/automacaoRod
  * - sem nada rodando, **Iniciar**: escolhe um dos follow-ups que o servidor
  *   lista em `meta.startable_followups` (o corretor não lê o construtor).
  *
- * Pausar e Retomar saíram (decisão do Tony, 02–03/10). O estado continua vindo
+ * Pausar manual saiu (decisão do Tony, 02–03/10). Desde 20/10/2026 o SERVIDOR
+ * pausa o follow-up quando o número cai ("Pausado: motivo" + **Retomar**) e
+ * segura a mensagem no gotejamento ("Na fila, sai às HH:MM"). O estado continua vindo
  * do servidor, nunca de etiqueta: a lição de 31/08 (o botão lia a etiqueta e a
  * lista lia a fila, e as duas discordavam na tela).
  */
@@ -47,6 +49,7 @@ const STATUS: Record<string, { label: string; cls: string; dot: string }> = {
 };
 
 const RUNNING = { label: 'Rodando', cls: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' };
+const PAUSED = { label: 'Follow-up pausado', cls: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' };
 const IDLE = { label: 'Sem follow-up', cls: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400' };
 // Leitura dos fluxos falhou: "Sem follow-up" mentiria (pode estar rodando).
 const UNKNOWN = { label: 'Não deu pra ler', cls: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400' };
@@ -77,6 +80,13 @@ interface Props extends LeadRef {
   /** A coluna fixa do card do lead. O bloco já é de uma linha por follow-up; fica pela compatibilidade. */
   compacto?: boolean;
 }
+
+/** A linha do follow-up: pausado e na fila falam por extenso; o resto é a frase da faixa da conversa. */
+const textoDoFluxo = (flow: RunningFlow): string => {
+  if (flow.phase === 'paused') return flow.paused_reason ? `Pausado: ${flow.paused_reason}` : 'Pausado';
+  if (flow.phase === 'queued') return flow.until ? `Na fila, ${saiAs(flow.until)}` : 'Na fila';
+  return linhaDoFluxo(flow).texto;
+};
 
 const failMessage = (e: unknown) =>
   serverErrorOf(e)
@@ -168,7 +178,7 @@ export default function FollowupTimeline({ contactId, conversationId, leadName, 
   }
 
   const canAct = !readOnly;
-  const headline = running ? RUNNING : erroFluxos ? UNKNOWN : IDLE;
+  const headline = flows.some(f => f.phase === 'paused') ? PAUSED : running ? RUNNING : erroFluxos ? UNKNOWN : IDLE;
 
   const stopButton = (onClick: () => void, label: string) => (
     <Button size="sm" variant="outline" className="text-xs gap-1.5 shrink-0" disabled={busy} onClick={onClick} aria-label={label}>
@@ -176,6 +186,15 @@ export default function FollowupTimeline({ contactId, conversationId, leadName, 
       Parar
     </Button>
   );
+
+  const resumeButton = (flow: RunningFlow) => flow.phase === 'paused' ? (
+    <Button size="sm" variant="default" className="text-xs gap-1.5 shrink-0" disabled={busy}
+      onClick={() => void act(() => flowAutomationInstancesService.resume(flow.id), 'Follow-up retomado.')}
+      aria-label="Retomar">
+      {busy ? <Loader2 className="h-3 w-3 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
+      Retomar
+    </Button>
+  ) : null;
 
   const legacyTimeline = (
     <div className="pt-1.5 border-t border-border/60">
@@ -237,10 +256,11 @@ export default function FollowupTimeline({ contactId, conversationId, leadName, 
   // sem follow-up pra iniciar, onde criar um.
   if (compacto) {
     const semOpcao = canAct && options.length === 0 && !erroFluxos;
-    const linhas: Array<{ chave: string; texto: string; parar?: () => ReactNode }> = [
+    const linhas: Array<{ chave: string; texto: string; retomar?: () => ReactNode; parar?: () => ReactNode }> = [
       ...flows.map(flow => ({
         chave: flow.id,
-        texto: linhaDoFluxo(flow).texto + (flow.progress_step ? ` · mensagem ${flow.progress_step} enviada` : ''),
+        texto: textoDoFluxo(flow) + (flow.progress_step ? ` · mensagem ${flow.progress_step} enviada` : ''),
+        retomar: () => resumeButton(flow),
         parar: () => stopButton(
           () => void act(() => flowAutomationInstancesService.stop(flow.id), 'Follow-up parado'),
           `Parar o follow-up ${flow.flow_name ?? ''}`.trim(),
@@ -262,6 +282,7 @@ export default function FollowupTimeline({ contactId, conversationId, leadName, 
         {linhas.map(l => (
           <div key={l.chave} data-linha-followup className="flex items-center gap-2">
             <span className="min-w-0 flex-1 text-xs text-foreground line-clamp-2">{l.texto}</span>
+            {canAct && l.retomar?.()}
             {canAct && l.parar?.()}
           </div>
         ))}
@@ -343,9 +364,10 @@ export default function FollowupTimeline({ contactId, conversationId, leadName, 
       {flows.map(flow => (
         <div key={flow.id} className="flex items-center gap-2">
           <span className="min-w-0 flex-1 text-xs text-muted-foreground line-clamp-2">
-            {linhaDoFluxo(flow).texto}
+            {textoDoFluxo(flow)}
             {flow.progress_step ? <span className="text-[10px]"> · mensagem {flow.progress_step} enviada</span> : null}
           </span>
+          {canAct && resumeButton(flow)}
           {canAct && stopButton(
             () => void act(() => flowAutomationInstancesService.stop(flow.id), 'Follow-up parado'),
             `Parar o follow-up ${flow.flow_name ?? ''}`.trim(),

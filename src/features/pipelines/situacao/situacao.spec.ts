@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  camposDaSituacao, cardFechado, comSituacaoNova, detalheDaSituacao, ehColunaDeGanho, mensagemDaRecusa, situacaoDe,
+  camposDaSituacao, cardFechado, comSituacaoNova, detalheDaSituacao, ehColunaDeFollowup, ehColunaDeGanho, mensagemDaRecusa, situacaoDe,
 } from './situacao';
 import type { PipelineItem } from '@/types/analytics';
 
@@ -11,6 +11,14 @@ describe('situação do card', () => {
     expect(ehColunaDeGanho({ stage_type: 'active' })).toBe(false);
     expect(ehColunaDeGanho({ stage_type: undefined })).toBe(false);
     expect(ehColunaDeGanho(undefined)).toBe(false);
+  });
+
+  it('a coluna do Follow-up é a de tipo Follow-up, e não é coluna de Ganho', () => {
+    expect(ehColunaDeFollowup({ stage_type: 'followup' })).toBe(true);
+    expect(ehColunaDeFollowup({ stage_type: 'completed' })).toBe(false);
+    expect(ehColunaDeFollowup({ stage_type: undefined })).toBe(false);
+    expect(ehColunaDeFollowup(undefined)).toBe(false);
+    expect(ehColunaDeGanho({ stage_type: 'followup' })).toBe(false);
   });
 
   it('card sem o campo (payload guardado de antes) conta como aberto', () => {

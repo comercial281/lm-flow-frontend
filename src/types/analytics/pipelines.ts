@@ -221,7 +221,7 @@ export interface UpdatePipelineData extends Partial<CreatePipelineData> {
 export interface CreateStageData {
   name: string;
   color: string;
-  stage_type: 'active' | 'completed' | 'cancelled';
+  stage_type: 'active' | 'completed' | 'cancelled' | 'followup';
   automation_rules?: {
     description?: string;
   };
@@ -238,6 +238,13 @@ export interface PipelineStats {
  * Proposta continua na coluna Proposta, com o selo PERDIDO.
  */
 export type PipelineItemStatus = 'open' | 'won' | 'lost';
+
+/** O follow-up de um card do quadro: rodando (`active`) ou parado (`paused`, com o motivo). */
+export interface FollowupDoCard {
+  state: 'active' | 'paused';
+  flow_name: string;
+  reason: string | null;
+}
 
 /** O que o quadro pede ao servidor por aba (`GET /pipelines/:id?status=`). */
 export type PipelineBoardStatus = PipelineItemStatus | 'all' | 'archived';
@@ -340,6 +347,11 @@ export interface PipelineItem {
    * entrega: sem o campo, o card conta como aberto (`situacaoDe`).
    */
   status?: PipelineItemStatus;
+  /**
+   * O follow-up do lead, vindo do servidor (Follow-up não morre calado, 20/10/2026).
+   * `null` = sem follow-up. Ausente = payload guardado de antes: o selo não aparece.
+   */
+  followup?: FollowupDoCard | null;
   status_changed_at?: string | null;
   won_at?: string | null;
   lost_at?: string | null;

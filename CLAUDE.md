@@ -9360,3 +9360,33 @@ Regras:
 Código: `codigoDoLink.ts`, `LinkSemPix.tsx`, `linkDoCard.ts`, `CardMoreMenu.tsx`, `AnnounceLessonModal.tsx`, `AcceptLeadPage.tsx`, `offerPopupState.ts`. Testes: `codigoDoLink.spec.ts`, `LinkSemPix.spec.tsx`, `linkDoCard.spec.ts`, `CardMoreMenu.spec.tsx`, `AnnounceLessonModal.link.spec.tsx`, `textosDoCorretor.spec.tsx`, `OfferPopup.spec.tsx`.
 
 Não reabrir sem o dono pedir.
+
+## Follow-up não morre calado (Fase 1, 20/10/2026)
+
+Quando o número do follow-up cai, o sistema deixou de mandar a mensagem por outro número e de fingir que está tudo bem. O lead fica **pausado**, e a tela mostra isso.
+
+O que aparece na tela:
+
+- **Coluna tipo Follow-up.** Nos dois modais da coluna (Nova etapa e Editar etapa) há a opção **"Follow-up"** no tipo, ao lado de Ativa, Concluída e Cancelada. Só uma por funil: marcar outra desmarca a anterior no servidor. A regra (spec §3/§4): o card **entra** na coluna quando o follow-up **começa** e **sai** quando ele para (respondeu, Parar, encerrou). **Na Fase 1 a coluna é só a marca**: nada ainda move o card por ela; o comportamento chega na Fase 2. O funil padrão novo já nasce com a "Follow-up Automático" marcada, e a migração marca a dos funis existentes uma vez por cliente (quem desmarcar depois não vê voltar).
+- **Selo no card do quadro**, ao lado do Ganho/Perdido: **"Follow-up ativo"** (o nome do follow-up no `title`) ou **"Pausado"** (o motivo no `title`). Sem follow-up, nada.
+- **Bloco Follow-up do card** (página, janela e compacto): pausado mostra **"Pausado: {motivo}"** com o botão **Retomar** (mais o Parar, que continua valendo); toast de sucesso com a frase que o servidor devolve ("Follow-up retomado.", "Esse follow-up não está pausado." ou o aviso de que o lead respondeu durante a pausa). Mensagem esperando a vez do número no gotejamento mostra **"Na fila, sai às HH:MM"** (outro dia: "sai em dd/mm às HH:MM"). Cabeçalho do bloco vira "Follow-up pausado" (âmbar).
+- A **faixa da conversa** (`linhaDoFluxo`) também fala "pausado: motivo" e "na fila, sai às…", pra não dizer "em andamento" de um follow-up parado.
+
+A regra (mora no servidor, a tela só mostra): em vez de sair por outro número, o follow-up **pausa**; quem é o responsável pelo lead recebe o aviso e o **grupo de logs** também; só a pausa por **número desconectado** volta sozinha quando o número reconecta (Evolution e Evolution Go); a pausa por **falha repetida** ("o envio falhou 5 vezes") ou por **nenhum número conectado** só sai pelo botão **Retomar** ou quando passa de **7 dias**, aí o servidor encerra. O aviso da pausa diz qual dos dois casos é. Retomar à mão (`POST /flow_automation_instances/:id/resume`) vale pra gestor e pra quem enxerga o lead; corretor com lead de outro recebe 403 "Esse lead não é seu." (o `act` do bloco já mostra a frase do servidor).
+
+Contrato com o servidor (backend, PR que entra **primeiro**):
+
+- Item do quadro: `item.followup = { state: 'active' | 'paused', flow_name, reason } | null`.
+- Instâncias (`GET /flow_automation_instances`): campo novo `paused_reason`; `phase` ganha `'paused'` (`until` nulo) e `'queued'` (`until` = epoch em segundos da vez no gotejamento); `state` pode ser `'paused'`.
+- Etapa: `stage_type` aceita `'followup'`.
+
+Este PR **depende do backend na frente**: com a tela nova e o servidor velho, a opção "Follow-up" do tipo da coluna é recusada ao salvar e o selo/Retomar simplesmente não aparecem (campo ausente = sem selo). O inverso (servidor novo, tela velha) não quebra: o bloco do card trata fase desconhecida como "em andamento".
+
+Armadilhas:
+
+1. **O selo vem do servidor** (`item.followup`), nunca de etiqueta do lead nem de inferência pela coluna. Card de payload guardado no navegador de antes da entrega não traz o campo: não tem selo, e tudo bem.
+2. **`followup` não é coluna final.** `ehColunaDeGanho` continua valendo só pra `completed`; o card na coluna Follow-up segue aberto, arrastável e com situação própria. Não tratar como Concluída/Cancelada em nenhum filtro.
+3. **Marcar uma coluna como Follow-up desmarca as outras sem avisar a tela** (o servidor usa `update_all`, sem websocket). Depois de salvar, o quadro recarrega as etapas (`loadPipelineData`, o mesmo do Editar etapa); sem isso a tela mostraria duas colunas marcadas.
+4. **Texto da opção é literal** ("Follow-up"), sem chave nova de i18n.
+
+Código: `features/followup/SeloDoFollowup.tsx`, `features/pipelines/situacao/situacao.ts` (`ehColunaDeFollowup`), `PipelineItemCard.tsx`, `FollowupTimeline.tsx`, `flowAutomationInstancesService.resume`, `features/conversas/automacaoRodando.ts`. Testes: `SeloDoFollowup.spec.tsx`, `situacao.spec.ts`, `FollowupTimeline.spec.tsx`, `automacaoRodando.spec.ts`.

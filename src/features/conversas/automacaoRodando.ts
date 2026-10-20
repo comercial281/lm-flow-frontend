@@ -29,6 +29,12 @@ export function quando(valor: unknown, agora: Date = new Date()): string {
   return mesmoDia ? hora(d) : `${dataCurta(d)} às ${hora(d)}`;
 }
 
+/** "sai às 14:32" hoje; "sai em 04/10 às 9:00" em outro dia (a vez do número no gotejamento). */
+export function saiAs(valor: unknown, agora: Date = new Date()): string {
+  const texto = quando(valor, agora);
+  return texto.includes('às') ? `sai em ${texto}` : `sai às ${texto}`;
+}
+
 export function linhaDoFluxo(fluxo: RunningFlow, agora: Date = new Date()): LinhaAutomatica {
   // Sprint 3: o fluxo da aba Follow-up aparece como "Follow-up "X"".
   // Sprint 4: o funil de conversa aparece como "Funil "X"".
@@ -41,6 +47,10 @@ export function linhaDoFluxo(fluxo: RunningFlow, agora: Date = new Date()): Linh
     fase = fluxo.until ? `aguardando resposta até ${quando(fluxo.until, agora)}` : 'aguardando resposta, sem limite';
   } else if (fluxo.phase === 'waiting') {
     fase = fluxo.until ? `esperando até ${quando(fluxo.until, agora)}` : 'esperando';
+  } else if (fluxo.phase === 'paused') {
+    fase = fluxo.paused_reason ? `pausado: ${fluxo.paused_reason}` : 'pausado';
+  } else if (fluxo.phase === 'queued') {
+    fase = fluxo.until ? `na fila, ${saiAs(fluxo.until, agora)}` : 'na fila';
   }
   return {
     key: `fluxo-${fluxo.id}`,

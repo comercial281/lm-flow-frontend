@@ -70,6 +70,17 @@ export function ehColunaDeGanho(etapa: { stage_type?: string | null } | null | u
   return etapa?.stage_type === 'completed';
 }
 
+/**
+ * A coluna Follow-up do funil (20/10/2026): o card entra nela quando o
+ * follow-up começa e sai quando ele para. Na Fase 1 é só a marca (nada ainda
+ * move o card por ela; o comportamento chega na Fase 2). Só uma por funil (o
+ * servidor desmarca as outras). NÃO é coluna final: o card nela continua
+ * aberto e segue o fluxo.
+ */
+export function ehColunaDeFollowup(etapa: { stage_type?: string | null } | null | undefined): boolean {
+  return etapa?.stage_type === 'followup';
+}
+
 /** O texto do selo ao passar o mouse: "Perdido em 05/10/2026 · Adiou a compra". */
 export function detalheDaSituacao(item: Partial<ComSituacao> | null | undefined): string | null {
   const situacao = situacaoDe(item);

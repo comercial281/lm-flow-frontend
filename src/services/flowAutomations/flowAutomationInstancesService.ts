@@ -6,7 +6,7 @@ import type { FlowAutomationKind } from '@/types/flowAutomations';
  * de mensagem mostra (03/10/2026). O caminho vai SEM `/api/v1`: a baseURL do
  * cliente HTTP já tem.
  */
-export type FlowInstancePhase = 'waiting_reply' | 'waiting' | 'running';
+export type FlowInstancePhase = 'waiting_reply' | 'waiting' | 'running' | 'paused' | 'queued';
 
 export interface RunningFlow {
   id: string;
@@ -15,8 +15,10 @@ export interface RunningFlow {
   state: string;
   active: boolean;
   phase: FlowInstancePhase;
-  /** Fim da espera, epoch em segundos. */
+  /** Fim da espera, epoch em segundos. Na fase `queued`, a vez do número no gotejamento. */
   until: number | null;
+  /** Fase `paused`: por que o follow-up parou ("Número desconectado"…). */
+  paused_reason?: string | null;
   started_at: number | null;
   /** Sprint 3: `followup` = fluxo da aba Follow-up (a faixa e o card falam "Follow-up"). Ausente = automação. */
   kind?: FlowAutomationKind | null;
@@ -83,6 +85,12 @@ export const flowAutomationInstancesService = {
 
   async stop(id: string): Promise<{ message?: string }> {
     const { data } = await api.post(`${BASE}/${id}/stop`);
+    return { message: (data as { message?: string } | null)?.message };
+  },
+
+  /** Retoma o follow-up pausado. A frase do servidor ("Follow-up retomado.") vai pro aviso. */
+  async resume(id: string): Promise<{ message?: string }> {
+    const { data } = await api.post(`${BASE}/${id}/resume`);
     return { message: (data as { message?: string } | null)?.message };
   },
 };

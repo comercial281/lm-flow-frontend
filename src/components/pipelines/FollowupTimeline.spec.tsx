@@ -8,6 +8,7 @@ const legacyStop = vi.fn();
 const running = vi.fn();
 const instanceStart = vi.fn();
 const instanceStop = vi.fn();
+const instanceResume = vi.fn();
 // Os follow-ups que dá pra iniciar vêm na mesma leitura (meta.startable_followups).
 let startable: Array<{ id: string; name: string }> = [];
 
@@ -29,6 +30,7 @@ vi.mock('@/services/flowAutomations/flowAutomationInstancesService', () => ({
     forCard: async (...a: unknown[]) => ({ flows: await running(...a), startable }),
     start: (...a: unknown[]) => instanceStart(...a),
     stop: (...a: unknown[]) => instanceStop(...a),
+    resume: (...a: unknown[]) => instanceResume(...a),
   },
 }));
 
@@ -70,7 +72,7 @@ const instance = (over: Record<string, unknown> = {}) => ({
 const flow = (over: Record<string, unknown> = {}) => ({ id: 'f1', name: 'Follow-up longo', ...over });
 
 beforeEach(() => {
-  [get, legacyStop, running, instanceStart, instanceStop].forEach(m => m.mockReset());
+  [get, legacyStop, running, instanceStart, instanceStop, instanceResume].forEach(m => m.mockReset());
   get.mockResolvedValue({ jobs: [], state: state() });
   running.mockResolvedValue([]);
   startable = [];
@@ -163,6 +165,53 @@ describe('Follow-up do card — fluxo de follow-up', () => {
  * Quem já estava na fila de um funil antigo termina nele. O card mostra essa
  * fila (formato antigo), com Parar e a linha do tempo, sem Pausar/Retomar.
  */
+describe('Follow-up do card — pausado e na fila', () => {
+  it('pausado mostra o motivo e o botão Retomar chama o resume', async () => {
+    running.mockResolvedValue([instance({ state: 'paused', phase: 'paused', paused_reason: 'Número desconectado' })]);
+    instanceResume.mockResolvedValue({ message: 'Follow-up retomado.' });
+
+    render(<FollowupTimeline contactId="c-1" />);
+
+    expect(await screen.findByText('Pausado: Número desconectado')).toBeInTheDocument();
+    // Pausado não é "Rodando" nem "Sem follow-up".
+    expect(screen.queryByText('Rodando')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Iniciar follow-up/ })).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Retomar' }));
+    await waitFor(() => expect(instanceResume).toHaveBeenCalledWith('i1'));
+    const { toast } = await import('sonner');
+    await waitFor(() => expect(toast.success).toHaveBeenCalledWith('Follow-up retomado.'));
+    expect(running).toHaveBeenCalledTimes(2);
+    // Parar continua valendo no pausado.
+    expect(screen.getByRole('button', { name: /Parar o follow-up/ })).toBeInTheDocument();
+  });
+
+  it('pausado sem motivo ainda diz Pausado, e somente leitura não vê Retomar', async () => {
+    running.mockResolvedValue([instance({ state: 'paused', phase: 'paused', paused_reason: null })]);
+    render(<FollowupTimeline contactId="c-1" readOnly />);
+    expect(await screen.findByText('Pausado')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Retomar' })).not.toBeInTheDocument();
+  });
+
+  it('pausado no compacto também tem Retomar', async () => {
+    running.mockResolvedValue([instance({ state: 'paused', phase: 'paused', paused_reason: 'Número desconectado' })]);
+    render(<FollowupTimeline contactId="c-1" compacto />);
+    expect(await screen.findByText('Pausado: Número desconectado')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Retomar' })).toBeInTheDocument();
+  });
+
+  it('na fila mostra o horário', async () => {
+    const vez = new Date(2026, 9, 20, 14, 5);
+    running.mockResolvedValue([instance({ state: 'waiting', phase: 'queued', until: vez.getTime() / 1000 })]);
+
+    render(<FollowupTimeline contactId="c-1" />);
+
+    expect(await screen.findByText(/Na fila, sai às 14:05/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Retomar' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Parar o follow-up/ })).toBeInTheDocument();
+  });
+});
+
 describe('Follow-up do card — formato antigo terminando', () => {
   it('mostra a fila antiga só com Parar', async () => {
     get.mockResolvedValue({
