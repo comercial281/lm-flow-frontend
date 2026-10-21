@@ -4,11 +4,14 @@ import { MemoryRouter } from 'react-router-dom';
 import SalaDemonstracao from './SalaDemonstracao';
 
 const s = vi.hoisted(() => ({
-  get: vi.fn(), start: vi.fn(), followupNow: vi.fn(), reset: vi.fn(), admin: { value: true },
+  get: vi.fn(), start: vi.fn(), followupNow: vi.fn(), reset: vi.fn(), preflight: vi.fn(), msgs: vi.fn(), admin: { value: true },
 }));
 vi.mock('@/services/demoRoom/demoRoomService', () => ({
-  demoRoomService: { get: s.get, start: s.start, followupNow: s.followupNow, reset: s.reset },
+  demoRoomService: { get: s.get, start: s.start, followupNow: s.followupNow, reset: s.reset, preflight: s.preflight, saveConfig: vi.fn() },
 }));
+vi.mock('@/services/conversations/conversationService', () => ({ conversationAPI: { getMessages: s.msgs } }));
+vi.mock('@/services/salesAgents/salesAgentsService', () => ({ salesAgentsService: { list: vi.fn().mockResolvedValue([]) } }));
+vi.mock('@/services/flowAutomations/flowAutomationsService', () => ({ flowAutomationsService: { list: vi.fn().mockResolvedValue([]) } }));
 vi.mock('./useEhAdmin', () => ({ useEhAdmin: () => s.admin.value }));
 
 const config = { agent_id: 'a1', agent_name: 'Ana', followup_flow_id: 'f1', property_code: 'AP1', wa_number: '5511900000000' };
@@ -23,6 +26,8 @@ const tela = () => render(<MemoryRouter><SalaDemonstracao /></MemoryRouter>);
 beforeEach(() => {
   for (const f of [s.get, s.start, s.followupNow, s.reset]) f.mockReset();
   s.admin.value = true;
+  s.preflight.mockReset(); s.preflight.mockResolvedValue([]);
+  s.msgs.mockReset(); s.msgs.mockResolvedValue([]);
 });
 afterEach(() => { vi.useRealTimers(); });
 

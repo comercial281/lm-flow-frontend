@@ -36,6 +36,7 @@ export default function SalaDemonstracao() {
   const [estado, setEstado] = useState<DemoRoomState | null>(null);
   const [carga, setCarga] = useState<Carga>('carregando');
   const vivo = useRef(true);
+  const [leitura, setLeitura] = useState(0);
 
   const carregar = useCallback(async (silencioso: boolean) => {
     try {
@@ -43,6 +44,7 @@ export default function SalaDemonstracao() {
       if (!vivo.current) return;
       setEstado(novo);
       setCarga('ok');
+      setLeitura(n => n + 1);
     } catch (e) {
       if (!vivo.current) return;
       if (status404(e)) { setCarga('foraDaDemo'); return; }
@@ -127,10 +129,10 @@ export default function SalaDemonstracao() {
   return (
     <Pagina cabecalho={cabecalho}>
       {!sessao && <Preparar state={estado} onStart={comecar} />}
-      {sessao?.status === 'waiting' && <QrDaSala session={sessao} />}
+      {sessao?.status === 'waiting' && <QrDaSala session={sessao} waNumber={estado.config.wa_number} />}
       {sessao && sessao.status !== 'waiting' && (
         <div className="space-y-4">
-          <ConversaAoVivo conversationId={sessao.conversation_id} />
+          <ConversaAoVivo conversationId={sessao.conversation_id} refreshKey={leitura} />
           <Bastidores behind={estado.behind} />
           <FollowupDaSala steps={estado.followup} onAgora={followupAgora} />
         </div>
