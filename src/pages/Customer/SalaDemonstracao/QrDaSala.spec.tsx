@@ -14,7 +14,7 @@ describe('QrDaSala', () => {
     expect(qr.tagName.toLowerCase()).toBe('svg');
     expect(Number(qr.getAttribute('width'))).toBeGreaterThanOrEqual(280);
     expect(screen.getByText('+55 11 90000-0000')).toBeInTheDocument();
-    expect(screen.getByText('Aguardando o Maria mandar a primeira mensagem…')).toBeInTheDocument();
+    expect(screen.getByText('Aguardando Maria mandar a primeira mensagem…')).toBeInTheDocument();
     expect(screen.getByText('ABC123')).toBeInTheDocument();
   });
 

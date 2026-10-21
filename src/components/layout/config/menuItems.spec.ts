@@ -390,11 +390,14 @@ describe('Sala de demonstração (21/10/2026)', () => {
     expect(shouldShowMenuItem(sala(), pode, pode, pode, 'admin', 'x@y.com', {}, [], true)).toBe(false);
   });
 
-  it('no espaço de demonstração aparece só pra administrador e pro suporte', () => {
+  it('no espaço de demonstração aparece pela permissão da rota, sem adivinhar o cargo (o servidor decide)', () => {
     expect(mostra('admin', true)).toBe(true);
-    expect(mostra('manager', true)).toBe(false);
-    expect(mostra('agent', true)).toBe(false);
+    expect(mostra('manager', true)).toBe(true);
     expect(mostra('agent', true, true)).toBe(true);
+    // O usuário do app não traz a chave do cargo: o item não pode depender dela.
+    expect(shouldShowMenuItem(sala(), pode, pode, pode, undefined, 'x@y.com', {}, [], false, true)).toBe(true);
+    const naoPode = () => false;
+    expect(shouldShowMenuItem(sala(), naoPode, naoPode, naoPode, undefined, 'x@y.com', {}, [], false, true)).toBe(false);
   });
 
   it('a seção Principal do filtro leva demoMode adiante', () => {

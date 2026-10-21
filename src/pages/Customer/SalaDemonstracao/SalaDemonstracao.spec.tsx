@@ -5,7 +5,7 @@ import { MemoryRouter } from 'react-router-dom';
 import SalaDemonstracao from './SalaDemonstracao';
 
 const s = vi.hoisted(() => ({
-  get: vi.fn(), start: vi.fn(), followupNow: vi.fn(), reset: vi.fn(), preflight: vi.fn(), saveConfig: vi.fn(), msgs: vi.fn(), admin: { value: true },
+  get: vi.fn(), start: vi.fn(), followupNow: vi.fn(), reset: vi.fn(), preflight: vi.fn(), saveConfig: vi.fn(), msgs: vi.fn(),
 }));
 vi.mock('@/services/demoRoom/demoRoomService', () => ({
   demoRoomService: { get: s.get, start: s.start, followupNow: s.followupNow, reset: s.reset, preflight: s.preflight, saveConfig: s.saveConfig },
@@ -17,7 +17,6 @@ const c = vi.hoisted(() => ({ ok: true }));
 vi.mock('@/hooks/useConfirmacao', () => ({
   useConfirmacao: () => ({ confirmar: vi.fn(async () => c.ok), dialogoDeConfirmacao: null }),
 }));
-vi.mock('./useEhAdmin', () => ({ useEhAdmin: () => s.admin.value }));
 
 const config = { agent_id: 'a1', agent_name: 'Ana', followup_flow_id: 'f1', property_code: 'AP1', wa_number: '5511900000000' };
 const sessao = (status: 'waiting' | 'live') => ({
@@ -30,7 +29,6 @@ const tela = () => render(<MemoryRouter><SalaDemonstracao /></MemoryRouter>);
 
 beforeEach(() => {
   for (const f of [s.get, s.start, s.followupNow, s.reset]) f.mockReset();
-  s.admin.value = true;
   s.preflight.mockReset(); s.preflight.mockResolvedValue([]);
   s.msgs.mockReset(); s.msgs.mockResolvedValue([]);
 });
@@ -65,11 +63,46 @@ describe('SalaDemonstracao', () => {
     expect(await screen.findByText('A Sala de demonstração só existe no espaço de demonstração')).toBeInTheDocument();
   });
 
-  it('quem não é administrador recebe o aviso do cargo e nada é consultado', async () => {
-    s.admin.value = false;
+  it('403 do servidor mostra a tela de sem acesso (o servidor decide quem entra)', async () => {
+    s.get.mockRejectedValue({ response: { status: 403 } });
     tela();
     expect(await screen.findByText(/Seu cargo não tem acesso/)).toBeInTheDocument();
-    expect(s.get).not.toHaveBeenCalled();
+    expect(screen.queryByText('A Sala de demonstração só existe no espaço de demonstração')).toBeNull();
+    expect(screen.queryByTestId('preparar')).toBeNull();
+  });
+
+  it('no ar fica lado a lado: conversa à esquerda, bastidores e follow-up à direita', async () => {
+    s.get.mockResolvedValue(estado(sessao('live')));
+    tela();
+    const conversa = await screen.findByTestId('conversa-ao-vivo');
+    const grade = screen.getByTestId('sala-ao-vivo');
+    expect(grade.className).toMatch(/(^|\s)lg:grid-cols-2(\s|$)/);
+    const [esquerda, direita] = Array.from(grade.children);
+    expect(esquerda).toContainElement(conversa);
+    expect(direita).toContainElement(screen.getByTestId('bastidores'));
+    expect(direita).toContainElement(screen.getByTestId('followup-da-sala'));
+  });
+
+  it('resposta velha que chega depois da nova é descartada (a conversa antiga não volta depois do Recomeçar)', async () => {
+    c.ok = true;
+    s.reset.mockResolvedValue(undefined);
+    let soltarVelha: (v: unknown) => void = () => {};
+    s.get
+      .mockResolvedValueOnce(estado(sessao('live')))
+      .mockImplementationOnce(() => new Promise(r => { soltarVelha = r; }))
+      .mockResolvedValue(estado(null));
+    tela();
+    await screen.findByTestId('conversa-ao-vivo');
+    // consulta de fundo (evento ao vivo) fica pendurada
+    act(() => { window.dispatchEvent(new Event('lmflow:realtime')); });
+    await waitFor(() => expect(s.get).toHaveBeenCalledTimes(2), { timeout: 2000 });
+    // Recomeçar: a consulta nova volta antes
+    await userEvent.click(screen.getByRole('button', { name: 'Recomeçar' }));
+    expect(await screen.findByTestId('preparar')).toBeInTheDocument();
+    // a velha chega por último com a sessão antiga
+    await act(async () => { soltarVelha(estado(sessao('live'))); await Promise.resolve(); });
+    expect(screen.getByTestId('preparar')).toBeInTheDocument();
+    expect(screen.queryByTestId('conversa-ao-vivo')).toBeNull();
   });
 
   it('com sessão consulta a cada 3 s, no evento realtime com 500 ms de espera, e para ao sair', async () => {

@@ -31,7 +31,7 @@ export default function QrDaSala({ session, waNumber }: QrDaSalaProps) {
       </div>
       {numero && <p className="text-3xl font-semibold tracking-wide text-foreground">{numero}</p>}
       <p className="text-xl text-muted-foreground">
-        {`Aguardando o ${session.lead_name} mandar a primeira mensagem…`}
+        {`Aguardando ${session.lead_name} mandar a primeira mensagem…`}
       </p>
       <p className="text-sm text-muted-foreground">
         Código da sessão <span className="font-mono text-base font-semibold text-foreground">{session.code}</span>

@@ -92,8 +92,9 @@ export interface MenuItem {
   rootTenantOnly?: boolean;
   /**
    * Tela que só existe no espaço de demonstração (tenant com demo_mode). Fora
-   * dele some pra TODO mundo, suporte inclusive; dentro dele só o administrador
-   * (e o suporte) vê, porque o servidor só atende administrador.
+   * dele some pra TODO mundo, suporte inclusive; dentro dele segue a permissão
+   * da rota. Quem pode abrir de fato o servidor decide (o usuário do app não
+   * traz a chave do cargo); quem não pode vê a tela de sem acesso.
    */
   somenteDemonstracao?: boolean;
   /** O inverso: some no painel raiz (app.lmflow), tela que só faz sentido no CRM do cliente. */
@@ -259,7 +260,7 @@ export const getCustomerMenuSections = (): MenuSection[] => [
       { name: 'Dashboard', href: '/dashboard', icon: PieChart, ...permissionFromRoute('/dashboard'), featureKey: 'dashboard' },
       { name: 'Conversas', href: '/conversations', icon: MessageSquare, ...permissionFromRoute('/conversations'), featureKey: 'conversations' },
       { name: 'Funil de vendas', href: '/pipelines', icon: SquareKanban, ...permissionFromRoute('/pipelines'), featureKey: 'pipelines' },
-      // Só no espaço de demonstração e só para administrador (ver somenteDemonstracao).
+      // Só no espaço de demonstração (ver somenteDemonstracao); o servidor decide quem entra.
       { name: 'Sala de demonstração', href: '/sala-demonstracao', icon: Presentation, ...permissionFromRoute('/sala-demonstracao'), somenteDemonstracao: true },
     ],
   },
@@ -546,11 +547,9 @@ export const shouldShowMenuItem = (
   const isSuper = isSupport;
 
   // Tela só do espaço de demonstração: fora dele some pra TODO mundo (suporte
-  // inclusive); dentro, só administrador e suporte (o servidor só atende eles).
-  if (item.somenteDemonstracao) {
-    if (!demoMode) return false;
-    if (!isSupport && userRoleKey !== 'admin') return false;
-  }
+  // inclusive); dentro, segue a permissão da rota. Sem adivinhar o cargo aqui:
+  // o servidor decide e a tela mostra o sem acesso pra quem ele recusa.
+  if (item.somenteDemonstracao && !demoMode) return false;
 
   // Menu arquivado GLOBALMENTE (painel Clientes > Arquivados) some pra TODO
   // MUNDO, sem exceção pro super-admin — ao contrário dos gates abaixo, que o

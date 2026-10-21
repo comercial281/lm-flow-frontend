@@ -18,9 +18,9 @@ beforeEach(() => { s.list.mockReset(); s.list.mockResolvedValue([]); });
 describe('FollowupDaSala', () => {
   it('mostra os passos com o tempo da vida real e os selos', () => {
     render(<FollowupDaSala steps={steps} onAgora={vi.fn()} />);
-    expect(screen.getByText('na hora')).toBeInTheDocument();
-    expect(screen.getByText('1 dia depois')).toBeInTheDocument();
-    expect(screen.getByText('3 dias depois')).toBeInTheDocument();
+    expect(screen.getByText('Na hora')).toBeInTheDocument();
+    expect(screen.getByText('1 dia depois na vida real')).toBeInTheDocument();
+    expect(screen.getByText('3 dias depois na vida real')).toBeInTheDocument();
     expect(screen.getByText('Oi Maria, tudo bem?')).toBeInTheDocument();
     expect(screen.getByText('Enviado')).toBeInTheDocument();
     expect(screen.getByText('Próximo')).toBeInTheDocument();
@@ -70,5 +70,18 @@ describe('FollowupDaSala', () => {
     render(<FollowupDaSala steps={[{ step: 1, kinds: ['delay', 'property_book'], preview: 'Book', real_delay: 'na hora', status: 'proximo' }]} onAgora={vi.fn()} />);
     expect(screen.getByLabelText('Book')).toBeInTheDocument();
     expect(screen.queryByLabelText('Texto')).toBeNull();
+  });
+
+  it('passo sem texto mostra o que é pelo tipo', () => {
+    const vazio = (step: number, kinds: string[]): FollowupStep => ({ step, kinds, preview: '', real_delay: 'na hora', status: 'depois' });
+    render(<FollowupDaSala steps={[
+      vazio(1, ['delay', 'audio']), vazio(2, ['video']), vazio(3, ['property_book']),
+      vazio(4, ['document']), vazio(5, ['image']), vazio(6, ['delay']),
+    ]} onAgora={vi.fn()} />);
+    expect(screen.getByText('Áudio gravado')).toBeInTheDocument();
+    expect(screen.getByText('Vídeo do empreendimento')).toBeInTheDocument();
+    expect(screen.getAllByText('Book do imóvel')).toHaveLength(2);
+    expect(screen.getByText('Foto')).toBeInTheDocument();
+    expect(screen.getByText('Mensagem')).toBeInTheDocument();
   });
 });

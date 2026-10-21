@@ -9,7 +9,16 @@ function falha(e: unknown, padrao: string): Error {
   return new Error(err?.response?.data?.error?.message || padrao);
 }
 
-// Preserva o erro original no GET: a tela distingue 404 (fora do espaço de demonstração).
+// Sessão que não existe mais (encerrada em outra aba, Recomeçar de outra pessoa):
+// o servidor responde 404 "Not found", que não diz nada pra quem está na call.
+const ENCERRADA = 'Essa demonstração já foi encerrada. Recarregue a página.';
+
+function falhaDaSessao(e: unknown, padrao: string): Error {
+  const status = (e as { response?: { status?: number } } | null)?.response?.status;
+  return status === 404 ? new Error(ENCERRADA) : falha(e, padrao);
+}
+
+// Preserva o erro original no GET: a tela distingue 403 (sem acesso) e 404 (fora do espaço de demonstração).
 export const demoRoomService = {
   async get(): Promise<DemoRoomState> {
     const res = await api.get('/demo_room');
@@ -47,7 +56,7 @@ export const demoRoomService = {
       const res = await api.post(`/demo_room/sessions/${sessionId}/followup_now`);
       return extractData<{ ok: boolean; message: string }>(res);
     } catch (e) {
-      throw falha(e, 'Não consegui disparar o follow-up agora.');
+      throw falhaDaSessao(e, 'Não consegui disparar o follow-up agora.');
     }
   },
 
@@ -55,7 +64,7 @@ export const demoRoomService = {
     try {
       await api.post(`/demo_room/sessions/${sessionId}/reset`);
     } catch (e) {
-      throw falha(e, 'Não consegui zerar a demonstração.');
+      throw falhaDaSessao(e, 'Não consegui zerar a demonstração.');
     }
   },
 };

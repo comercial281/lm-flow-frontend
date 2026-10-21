@@ -83,4 +83,25 @@ describe('Preparar', () => {
     }));
     await waitFor(() => expect(s.preflight).toHaveBeenCalledTimes(2));
   });
+
+  it('Enter no nome do lead começa a demonstração, com as mesmas travas do botão', async () => {
+    const onStart = vi.fn();
+    render(<Preparar state={state} onStart={onStart} />);
+    await screen.findByText('Tudo certo para a demonstração.');
+    const nome = screen.getByLabelText('Primeiro nome do lead');
+    await userEvent.type(nome, '{Enter}');
+    expect(onStart).not.toHaveBeenCalled();
+    await userEvent.type(nome, 'Carlos{Enter}');
+    expect(onStart).toHaveBeenCalledTimes(1);
+    expect(onStart).toHaveBeenCalledWith('Carlos');
+  });
+
+  it('Enter não começa com a conferência vermelha', async () => {
+    s.preflight.mockResolvedValue([{ key: 'book', ok: false, label: 'Book do imóvel', fix: 'Suba o book.' }]);
+    const onStart = vi.fn();
+    render(<Preparar state={state} onStart={onStart} />);
+    await screen.findByText('Suba o book.');
+    await userEvent.type(screen.getByLabelText('Primeiro nome do lead'), 'Carlos{Enter}');
+    expect(onStart).not.toHaveBeenCalled();
+  });
 });

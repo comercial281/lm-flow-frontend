@@ -8,8 +8,8 @@ vi.mock('@/services/conversations/conversationService', () => ({
 }));
 vi.mock('@/components/chat/messages/MessageAudio', () => ({ default: () => <div data-testid="audio" /> }));
 
-const msg = (id: string, type: 'incoming' | 'outgoing', content: string, attachments: unknown[] = []) => ({
-  id, content, message_type: type, created_at: Number(id), attachments, status: 'sent', sender: { name: 'x' },
+const msg = (id: string, type: 'incoming' | 'outgoing', content: string, attachments: unknown[] = [], extra: Record<string, unknown> = {}) => ({
+  id, content, message_type: type, created_at: Number(id), attachments, status: 'sent', sender: { name: 'x' }, ...extra,
 });
 
 beforeEach(() => { s.getMessages.mockReset(); });
@@ -53,5 +53,39 @@ describe('ConversaAoVivo', () => {
     rerender(<ConversaAoVivo conversationId="c1" refreshKey={2} />);
     await act(async () => { await vi.advanceTimersByTimeAsync(0); });
     expect(s.getMessages).toHaveBeenCalledTimes(3);
+  });
+
+  it('não mostra nota interna', async () => {
+    s.getMessages.mockResolvedValue([
+      msg('1', 'incoming', 'Oi, tudo bem?'),
+      msg('2', 'outgoing', 'Nota interna da equipe', [], { private: true }),
+    ]);
+    render(<ConversaAoVivo conversationId="c1" />);
+    await screen.findByText('Oi, tudo bem?');
+    expect(screen.queryByText('Nota interna da equipe')).toBeNull();
+  });
+
+  it('desce só a caixa da conversa, sem rolar a página', async () => {
+    const rolarPagina = vi.fn();
+    const original = Object.getOwnPropertyDescriptor(Element.prototype, 'scrollIntoView');
+    const alturaOriginal = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'scrollHeight');
+    const topoOriginal = Object.getOwnPropertyDescriptor(Element.prototype, 'scrollTop');
+    const topos: number[] = [];
+    Object.defineProperty(Element.prototype, 'scrollIntoView', { configurable: true, value: rolarPagina });
+    Object.defineProperty(HTMLElement.prototype, 'scrollHeight', { configurable: true, get: () => 900 });
+    Object.defineProperty(Element.prototype, 'scrollTop', { configurable: true, get: () => 0, set: (v: number) => { topos.push(v); } });
+    try {
+      s.getMessages.mockResolvedValue([msg('1', 'incoming', 'Oi, tudo bem?')]);
+      render(<ConversaAoVivo conversationId="c1" />);
+      await screen.findByText('Oi, tudo bem?');
+      expect(rolarPagina).not.toHaveBeenCalled();
+      expect(topos).toContain(900);
+    } finally {
+      if (original) Object.defineProperty(Element.prototype, 'scrollIntoView', original);
+      else delete (Element.prototype as unknown as Record<string, unknown>).scrollIntoView;
+      if (alturaOriginal) Object.defineProperty(HTMLElement.prototype, 'scrollHeight', alturaOriginal);
+      else delete (HTMLElement.prototype as unknown as Record<string, unknown>).scrollHeight;
+      if (topoOriginal) Object.defineProperty(Element.prototype, 'scrollTop', topoOriginal);
+    }
   });
 });

@@ -32,7 +32,7 @@ function Anexos({ attachments }: { attachments: Attachment[] }) {
 export default function ConversaAoVivo({ conversationId, refreshKey = 0 }: ConversaAoVivoProps) {
   const [mensagens, setMensagens] = useState<Message[]>([]);
   const atual = useRef<string | null>(conversationId);
-  const fim = useRef<HTMLDivElement>(null);
+  const caixa = useRef<HTMLElement>(null);
 
   const ler = useCallback(async () => {
     if (!conversationId) return;
@@ -66,16 +66,19 @@ export default function ConversaAoVivo({ conversationId, refreshKey = 0 }: Conve
     };
   }, [conversationId, ler]);
 
-  useEffect(() => {
-    fim.current?.scrollIntoView?.({ block: 'end' });
-  }, [mensagens.length]);
-
+  // Nota interna da equipe não é conversa com o lead: fica fora da tela da call.
   const visiveis = mensagens.filter(
-    m => m.message_type === MESSAGE_TYPE.INCOMING || m.message_type === MESSAGE_TYPE.OUTGOING,
+    m => !m.private && (m.message_type === MESSAGE_TYPE.INCOMING || m.message_type === MESSAGE_TYPE.OUTGOING),
   );
 
+  // Desce só a caixa da conversa: scrollIntoView rolaria a página inteira junto.
+  useEffect(() => {
+    const el = caixa.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [visiveis.length]);
+
   return (
-    <section aria-label="Conversa ao vivo" data-testid="conversa-ao-vivo"
+    <section ref={caixa} aria-label="Conversa ao vivo" data-testid="conversa-ao-vivo"
       className="max-h-[60vh] space-y-3 overflow-y-auto rounded-xl border bg-muted/30 p-4">
       {visiveis.length === 0 ? (
         <p className="py-8 text-center text-xl text-muted-foreground">
@@ -93,7 +96,6 @@ export default function ConversaAoVivo({ conversationId, refreshKey = 0 }: Conve
           </div>
         );
       })}
-      <div ref={fim} />
     </section>
   );
 }

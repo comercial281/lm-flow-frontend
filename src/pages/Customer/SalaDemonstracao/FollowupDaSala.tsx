@@ -29,6 +29,28 @@ function IconeDoTipo({ tipo }: { tipo: string }) {
   }
 }
 
+// Passo sem texto (só mídia) diz o que é pelo tipo.
+const PREVIEW_DO_TIPO: Record<string, string> = {
+  audio: 'Áudio gravado',
+  video: 'Vídeo do empreendimento',
+  property_book: 'Book do imóvel', book: 'Book do imóvel', document: 'Book do imóvel', documento: 'Book do imóvel',
+  image: 'Foto', imagem: 'Foto', foto: 'Foto',
+};
+
+function previewDoPasso(p: FollowupStep): string {
+  if (p.preview?.trim()) return p.preview;
+  const tipo = (p.kinds ?? []).find(k => PREVIEW_DO_TIPO[k]);
+  return tipo ? PREVIEW_DO_TIPO[tipo] : 'Mensagem';
+}
+
+/** "1 dia depois" vira "1 dia depois na vida real"; "na hora" vira "Na hora". */
+function esperaDoPasso(realDelay: string | null | undefined): string {
+  const d = (realDelay ?? '').trim();
+  if (!d) return '';
+  if (d === 'na hora') return 'Na hora';
+  return `${d} na vida real`;
+}
+
 const SELO: Record<FollowupStep['status'], string | null> = { enviado: 'Enviado', proximo: 'Próximo', depois: null };
 
 export default function FollowupDaSala({ steps, onAgora, agentId }: FollowupDaSalaProps) {
@@ -69,11 +91,11 @@ export default function FollowupDaSala({ steps, onAgora, agentId }: FollowupDaSa
           {steps.map(p => (
             <li key={p.step} className="flex items-start gap-3">
               <span className="mt-1 flex gap-1 text-muted-foreground">
-                {(p.kinds.filter(k => k !== 'delay').length ? p.kinds.filter(k => k !== 'delay') : ['texto']).map(k => <IconeDoTipo key={k} tipo={k} />)}
+                {((p.kinds ?? []).filter(k => k !== 'delay').length ? (p.kinds ?? []).filter(k => k !== 'delay') : ['texto']).map(k => <IconeDoTipo key={k} tipo={k} />)}
               </span>
               <div className="flex-1">
-                <p className="text-lg">{p.preview}</p>
-                <p className="text-sm text-muted-foreground">{p.real_delay}</p>
+                <p className="text-lg">{previewDoPasso(p)}</p>
+                {esperaDoPasso(p.real_delay) && <p className="text-sm text-muted-foreground">{esperaDoPasso(p.real_delay)}</p>}
               </div>
               {SELO[p.status] && (
                 <Badge variant={p.status === 'enviado' ? 'default' : 'outline'}>{SELO[p.status]}</Badge>

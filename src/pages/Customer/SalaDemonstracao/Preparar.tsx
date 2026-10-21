@@ -148,11 +148,17 @@ export default function Preparar({ state, onStart, onSaved }: PrepararProps) {
         </div>
       </div>
 
-      <div className="grid gap-2">
-        <label htmlFor="sala-lead" className="text-lg font-medium">Primeiro nome do lead</label>
-        <Input id="sala-lead" className="h-12 text-lg" value={nome} onChange={e => setNome(e.target.value)} />
-      </div>
-      <Button size="lg" disabled={!liberado} onClick={() => void comecar()}>Nova demonstração</Button>
+      {/* Formulário: Enter no nome começa, com as mesmas travas do botão. */}
+      <form
+        className="space-y-5"
+        onSubmit={e => { e.preventDefault(); if (liberado) void comecar(); }}
+      >
+        <div className="grid gap-2">
+          <label htmlFor="sala-lead" className="text-lg font-medium">Primeiro nome do lead</label>
+          <Input id="sala-lead" className="h-12 text-lg" value={nome} onChange={e => setNome(e.target.value)} />
+        </div>
+        <Button type="submit" size="lg" disabled={!liberado}>Nova demonstração</Button>
+      </form>
 
       <Ajustes
         config={state.config}

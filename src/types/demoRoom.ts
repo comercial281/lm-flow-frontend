@@ -30,20 +30,22 @@ export interface BackstageChecklistItem {
 }
 
 export interface BackstageHandoff {
-  at: string;
-  reason: string;
-  summary: string;
+  at: string | null;
+  reason: string | null;
+  summary: string | null;
 }
 
+// O servidor manda os atributos da conversa crus: qualquer campo pode vir null
+// (checklist fica null até a primeira resposta da IA ou em IA sem checklist).
 export interface Backstage {
   stage_name: string | null;
   temperature: string | null;
   intent: string | null;
   caminho: string | null;
-  checklist: BackstageChecklistItem[];
-  collected: unknown;
+  checklist: BackstageChecklistItem[] | null;
+  collected: Record<string, unknown> | null;
   summary: string | null;
-  qualified: boolean;
+  qualified: boolean | null;
   handoff: BackstageHandoff | null;
 }
 
