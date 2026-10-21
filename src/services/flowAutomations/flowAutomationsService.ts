@@ -28,6 +28,17 @@ function unwrapLoose(response: { data: unknown }): unknown {
   return body && typeof body === 'object' && 'data' in body ? body.data : body;
 }
 
+// Fase 2 do follow-up: toggle/archive devolvem `{ data, stopped_count, remaining }`.
+// Os dois contadores entram no fluxo devolvido (ausentes em automação comum).
+function unwrapComContagem(response: { data: { data: FlowAutomation; stopped_count?: number; remaining?: number } }): FlowAutomation {
+  const { data, stopped_count, remaining } = response.data;
+  return {
+    ...data,
+    ...(stopped_count !== undefined ? { stopped_count } : {}),
+    ...(remaining !== undefined ? { remaining } : {}),
+  };
+}
+
 class FlowAutomationsService {
   private get baseUrl(): string {
     return '/flow_automations';
@@ -110,11 +121,11 @@ class FlowAutomationsService {
   }
 
   async toggle(id: string): Promise<FlowAutomation> {
-    return unwrap<FlowAutomation>(await api.post(`${this.baseUrl}/${id}/toggle`));
+    return unwrapComContagem(await api.post(`${this.baseUrl}/${id}/toggle`));
   }
 
   async archive(id: string): Promise<FlowAutomation> {
-    return unwrap<FlowAutomation>(await api.post(`${this.baseUrl}/${id}/archive`));
+    return unwrapComContagem(await api.post(`${this.baseUrl}/${id}/archive`));
   }
 
   async unarchive(id: string): Promise<FlowAutomation> {

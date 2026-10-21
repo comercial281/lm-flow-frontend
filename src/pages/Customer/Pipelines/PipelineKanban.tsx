@@ -35,6 +35,7 @@ import { STATUS_DA_ABA, pertenceAAba, podeArrastarNaAba } from './quadro/enderec
 import { comSituacaoNova, situacaoDe } from '@/features/pipelines/situacao/situacao';
 import { useBoardDrag } from './quadro/useBoardDrag';
 import { useColocarEmFollowup } from '@/features/followup/useColocarEmFollowup';
+import { mensagemDaColunaDeFollowup } from '@/features/followup/erroDeEtapa';
 import { usePipelineFilters } from './quadro/usePipelineFilters';
 import { useFacetasDoQuadro } from './quadro/useFacetasDoQuadro';
 import { useMaisCardsDaColuna } from './quadro/useMaisCardsDaColuna';
@@ -834,7 +835,8 @@ export default function PipelineKanban() {
       await loadPipelineData();
     } catch (error) {
       console.error('Error updating stage:', error);
-      toast.error(t('kanban.messages.stageUpdateError'));
+      // Coluna Follow-up com lead em follow-up: o servidor diz o que fazer (Fase 2).
+      toast.error(mensagemDaColunaDeFollowup(error) ?? t('kanban.messages.stageUpdateError'));
     } finally {
       setIsEditingStage(false);
     }

@@ -20,6 +20,7 @@ import NoAccessState from '@/components/permissions/NoAccessState';
 import { isForbiddenError } from '@/services/core/forbidden';
 import { enableProblem } from '@/features/flowAutomations/readiness';
 import { serverMessage } from '@/features/flowAutomations/guide';
+import { avisoLeadsSaindo, leadsDentro, pedidoDesligarFollowup } from '@/features/flowAutomations/desligarFollowup';
 import { FlowTemplateList, FlowTemplatesDialog } from '@/components/flowAutomations/FlowTemplates';
 
 import {
@@ -116,7 +117,11 @@ export default function FlowAutomationsList({ kind = 'automation' }: { kind?: Fl
           return;
         }
       }
-      await flowAutomationsService.toggle(a.id);
+      // Follow-up desligado com lead dentro: pergunta antes, com a contagem.
+      if (isFollowup && a.is_enabled && leadsDentro(a) > 0 && !(await confirmar(pedidoDesligarFollowup(a.name, leadsDentro(a))))) return;
+      const atualizada = await flowAutomationsService.toggle(a.id);
+      const aviso = isFollowup && a.is_enabled ? avisoLeadsSaindo(atualizada.remaining) : null;
+      if (aviso) toast.success(aviso);
       load();
     } catch (e) {
       // Sprint 4: com passo do guia pendente o servidor recusa e diz qual falta.
@@ -153,10 +158,15 @@ export default function FlowAutomationsList({ kind = 'automation' }: { kind?: Fl
 
   const archive = async (a: FlowAutomation) => {
     try {
-      await flowAutomationsService.archive(a.id);
+      // Arquivar um follow-up ligado também tira os leads de dentro.
+      const dentro = isFollowup && a.is_enabled ? leadsDentro(a) : 0;
+      if (dentro > 0 && !(await confirmar(pedidoDesligarFollowup(a.name, dentro, 'Arquivar')))) return;
+      const arquivada = await flowAutomationsService.archive(a.id);
+      const aviso = dentro > 0 ? avisoLeadsSaindo(arquivada.remaining) : null;
+      if (aviso) toast.success(aviso.replace('Desligado.', 'Arquivado.'));
       load();
-    } catch {
-      toast.error('Erro ao arquivar');
+    } catch (e) {
+      toast.error(serverMessage(e, 'Erro ao arquivar'));
     }
   };
 
@@ -171,8 +181,9 @@ export default function FlowAutomationsList({ kind = 'automation' }: { kind?: Fl
       await flowAutomationsService.destroy(a.id);
       toast.success('Fluxo removido');
       load();
-    } catch {
-      toast.error('Erro ao remover');
+    } catch (e) {
+      // Follow-up com lead dentro: o servidor recusa e diz quantos ("Desligue antes de apagar").
+      toast.error(serverMessage(e, 'Erro ao remover'));
     }
   };
 
