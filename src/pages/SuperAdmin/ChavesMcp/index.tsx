@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import Aviso from '@/components/base/Aviso';
 import EmptyState from '@/components/base/EmptyState';
+import { Seletor } from '@/components/base/Seletor';
 import { CampoDaJanela, GrupoDaJanela } from '@/components/base/janela';
 import { Button, Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, Input } from '@/components/ui/ds';
 import { dataHora } from '@/lib/formato';
@@ -50,6 +51,14 @@ export default function ChavesMcp() {
     finally { setRevogar(null); }
   };
 
+  const trocarModelos = async (chave: ChaveMcp, pode: boolean) => {
+    try {
+      const feita = await mcpKeysService.podeEditarModelos(chave.id, pode);
+      setChaves((atual) => (atual ?? []).map((c) => (c.id === feita.id ? feita : c)));
+      toast.success(pode ? 'Esta chave passa a editar os modelos da IA.' : 'Esta chave não edita mais os modelos da IA.');
+    } catch { toast.error('Não deu pra mudar.'); }
+  };
+
   const copiar = async () => {
     if (!endereco) return;
     try { await navigator.clipboard.writeText(endereco); toast.success('Endereço copiado.'); }
@@ -62,7 +71,7 @@ export default function ChavesMcp() {
         <p className="text-sm text-muted-foreground max-w-2xl">
           Conecte o LM Flow no Claude: no Claude, Configurações → Conectores → Adicionar conector personalizado, e cole o
           endereço. No Claude Code: <code>claude mcp add --transport http lm-flow &lt;endereço&gt;</code>. Quem tiver o
-          endereço entra como admin em todos os clientes.
+          endereço entra como admin em todos os clientes. Só a chave marcada edita os 4 modelos da IA Vendedora pelo MCP.
         </p>
         <Button className="ml-auto" onClick={() => setGerando(true)}>Gerar chave</Button>
       </div>
@@ -81,7 +90,21 @@ export default function ChavesMcp() {
                 <p className="text-sm text-muted-foreground">{c.last_used_at ? `Usada ${dataHora(c.last_used_at)}` : 'Nunca usada'}</p>
                 <span className={`text-xs font-medium ${c.active ? 'text-emerald-600' : 'text-muted-foreground'}`}>{c.active ? 'Ativa' : 'Revogada'}</span>
                 {c.active && (
-                  <Button variant="outline" size="sm" className="ml-auto" aria-label={`Revogar ${c.name}`} onClick={() => setRevogar(c)}>Revogar</Button>
+                  <label className="ml-auto flex items-center gap-2 text-sm text-muted-foreground">
+                    Pode editar modelos
+                    <Seletor
+                      aria-label={`Pode editar modelos: ${c.name}`}
+                      className="w-20"
+                      value={c.can_edit_models ? 'sim' : 'nao'}
+                      onChange={(e) => void trocarModelos(c, e.target.value === 'sim')}
+                    >
+                      <option value="nao">Não</option>
+                      <option value="sim">Sim</option>
+                    </Seletor>
+                  </label>
+                )}
+                {c.active && (
+                  <Button variant="outline" size="sm" aria-label={`Revogar ${c.name}`} onClick={() => setRevogar(c)}>Revogar</Button>
                 )}
               </li>
             ))}

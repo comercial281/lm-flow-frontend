@@ -17,4 +17,8 @@ export const mcpKeysService = {
     const res = await api.post(`/super/mcp_keys/${id}/revoke`);
     return (res.data as Envelope<ChaveMcp>).data;
   },
+  async podeEditarModelos(id: string, pode: boolean): Promise<ChaveMcp> {
+    const res = await api.patch(`/super/mcp_keys/${id}`, { can_edit_models: pode });
+    return (res.data as Envelope<ChaveMcp>).data;
+  },
 };

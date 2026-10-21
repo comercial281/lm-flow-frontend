@@ -4,7 +4,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 
-const svc = vi.hoisted(() => ({ listar: vi.fn(), gerar: vi.fn(), revogar: vi.fn() }));
+const svc = vi.hoisted(() => ({ listar: vi.fn(), gerar: vi.fn(), revogar: vi.fn(), podeEditarModelos: vi.fn() }));
 vi.mock('@/services/superAdmin/mcpKeysService', () => ({ mcpKeysService: svc }));
 const toast = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn() }));
 vi.mock('sonner', () => ({ toast }));
@@ -12,7 +12,7 @@ vi.mock('sonner', () => ({ toast }));
 import ChavesMcp from './index';
 
 const ativa = { id: 'k1', name: 'Claude do Tony', key_prefix: 'AbC123', created_by_email: 'tony@x.com',
-  created_at: '2026-10-11T10:00:00Z', last_used_at: null, revoked_at: null, active: true };
+  created_at: '2026-10-11T10:00:00Z', last_used_at: null, revoked_at: null, active: true, can_edit_models: false };
 
 const abrir = () => render(<MemoryRouter><ChavesMcp /></MemoryRouter>);
 
@@ -55,5 +55,31 @@ describe('Chaves do MCP', () => {
     svc.listar.mockRejectedValue(new Error('x'));
     abrir();
     expect(await screen.findByText('Não deu para carregar as chaves')).toBeInTheDocument();
+  });
+
+  it('liga "pode editar modelos" pelo Seletor', async () => {
+    svc.podeEditarModelos.mockResolvedValue({ ...ativa, can_edit_models: true });
+    abrir();
+    await screen.findByText('Claude do Tony');
+    await userEvent.selectOptions(screen.getByLabelText('Pode editar modelos: Claude do Tony'), 'sim');
+    expect(svc.podeEditarModelos).toHaveBeenCalledWith('k1', true);
+    await waitFor(() => expect(screen.getByLabelText('Pode editar modelos: Claude do Tony')).toHaveValue('sim'));
+    expect(toast.success).toHaveBeenCalled();
+  });
+
+  it('erro ao mudar avisa e mantém como estava', async () => {
+    svc.podeEditarModelos.mockRejectedValue(new Error('x'));
+    abrir();
+    await screen.findByText('Claude do Tony');
+    await userEvent.selectOptions(screen.getByLabelText('Pode editar modelos: Claude do Tony'), 'sim');
+    await waitFor(() => expect(toast.error).toHaveBeenCalled());
+    expect(screen.getByLabelText('Pode editar modelos: Claude do Tony')).toHaveValue('nao');
+  });
+
+  it('chave revogada não mostra o Seletor', async () => {
+    svc.listar.mockResolvedValue([{ ...ativa, active: false, revoked_at: '2026-10-11T11:00:00Z' }]);
+    abrir();
+    await screen.findByText('Revogada');
+    expect(screen.queryByLabelText('Pode editar modelos: Claude do Tony')).not.toBeInTheDocument();
   });
 });
