@@ -8449,6 +8449,7 @@ Origem: o dono quer conectar o LM Flow no Claude (Conectores) e no Claude Code p
 - **Quem pode:** só o e-mail do super-admin gera, lista e revoga chaves; qualquer outro recebe 403 do servidor. A tela não esconde nada por conta própria.
 - **A chave de admin entra em todos os clientes.** O aviso está na tela, antes e depois de gerar. Chave limitada a um cliente fica pra depois, não existe ainda.
 - **Logs:** ação feita pelo MCP aparece com "MCP · nome da chave" no lugar de quem fez, e há a categoria **MCP** no filtro (`formatoLogs.ts` em `SuperAdmin/Logs/`).
+- **(20/10/2026) Pode editar modelos:** cada chave **Ativa** ganha um Seletor (não caixinha) "Pode editar modelos", padrão **Não**. Só a chave marcada edita os 4 modelos da IA Vendedora pelo MCP (o resto da chave não muda). Grava na hora, com aviso; se o servidor recusar, avisa e fica como estava. Chave revogada não mostra o Seletor. A gerente de operação não marca. Servidor: `PATCH /api/v1/super/mcp_keys/:id` (só esse campo).
 - Não reabrir sem o dono pedir.
 
 ## IA Vendedora · avisos limpos e "Ocultar" (11/10/2026)

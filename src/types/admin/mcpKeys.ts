@@ -9,6 +9,8 @@ export interface ChaveMcp {
   last_used_at: string | null;
   revoked_at: string | null;
   active: boolean;
+  /** "Pode editar modelos": a única chave que muda os 4 modelos da IA Vendedora pelo MCP. */
+  can_edit_models: boolean;
 }
 
 /** Só a resposta de "gerar" traz o endereço completo (com a chave). */
