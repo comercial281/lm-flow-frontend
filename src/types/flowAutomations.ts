@@ -155,6 +155,11 @@ export interface FlowAutomation {
    *  servidor). ⚠️ Não usar `template_key` pra isso: todo "Novo follow-up" nasce
    *  com o modelo 'follow_up_padrao', inclusive um "Pós-visita" qualquer. */
   followup_padrao?: boolean;
+  /** Fase 2 (follow-up): leads dentro agora, pausados incluídos. Só follow-up traz. */
+  live_count?: number;
+  /** Fase 2: junto do `data` na resposta de ligar/desligar/arquivar follow-up (a service copia pro fluxo). */
+  stopped_count?: number;
+  remaining?: number;
   max_depth: number;
   archived_at: string | null;
   created_at: string;

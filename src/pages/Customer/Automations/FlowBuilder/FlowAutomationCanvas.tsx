@@ -40,6 +40,7 @@ import {
 } from '@/features/flowAutomations/trigger';
 import { businessHoursOnlyOf } from '@/features/flowAutomations/businessHours';
 import { FLOW_KIND_COPY, kindOf } from '@/features/flowAutomations/kind';
+import { avisoLeadsSaindo, leadsDentro, pedidoDesligarFollowup } from '@/features/flowAutomations/desligarFollowup';
 import { freshBlockConfig, paletteItems, podeSoltarBloco, type PaletteItem } from '@/features/flowAutomations/palette';
 import {
   modoPessoal, NUMERO_FIXO_NA_EQUIPE, personalAvailabilityState, personalBlockState, personalTriggerGroups,
@@ -648,10 +649,15 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
         return false;
       }
     }
+    // Follow-up desligado com lead dentro: pergunta antes, com a contagem.
+    const dentro = kind === 'followup' && automation.is_enabled ? leadsDentro(automation) : 0;
+    if (dentro > 0 && !(await confirmar(pedidoDesligarFollowup(automation.name, dentro)))) return false;
     try {
       const updated = await flowAutomationsService.toggle(automation.id);
-      // Só a chave: recarregar o fluxo apagaria o que ainda não foi salvo.
-      setAutomation(a => (a ? { ...a, is_enabled: updated.is_enabled } : a));
+      // Só a chave (e a contagem de quem sobrou): recarregar o fluxo apagaria o que ainda não foi salvo.
+      setAutomation(a => (a ? { ...a, is_enabled: updated.is_enabled, ...(updated.is_enabled ? {} : { live_count: updated.remaining ?? 0 }) } : a));
+      const aviso = kind === 'followup' && !updated.is_enabled ? avisoLeadsSaindo(updated.remaining) : null;
+      if (aviso) toast.success(aviso);
       return true;
     } catch (e) {
       toast.error(serverMessage(e, 'Não deu pra ligar agora. Tente de novo.'));

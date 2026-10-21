@@ -51,6 +51,11 @@ vi.mock('@evoapi/design-system/label', () => ({
   Label: ({ children, ...props }: any) => <label {...props}>{children}</label>,
 }));
 
+// A janela "Colocar em follow-up" tem spec própria (PipelineManagement.followup.spec).
+vi.mock('@/features/followup/useColocarEmFollowup', () => ({
+  useColocarEmFollowup: () => ({ abrir: vi.fn(), janela: null }),
+}));
+
 vi.mock('lucide-react', () => ({
   Loader2: () => <span data-testid="icon-loader" />,
   GitBranch: () => <span data-testid="icon-branch" />,

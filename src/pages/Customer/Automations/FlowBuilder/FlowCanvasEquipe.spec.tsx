@@ -8,9 +8,11 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 
 const get = vi.hoisted(() => vi.fn());
 const update = vi.hoisted(() => vi.fn());
+const toggle = vi.hoisted(() => vi.fn());
+const toastSuccess = vi.hoisted(() => vi.fn());
 
 vi.mock('@/services/flowAutomations/flowAutomationsService', () => ({
-  flowAutomationsService: { get, update, testRun: vi.fn(), saveFlow: vi.fn(), toggle: vi.fn(), movePositions: vi.fn() },
+  flowAutomationsService: { get, update, testRun: vi.fn(), saveFlow: vi.fn(), toggle, movePositions: vi.fn() },
   flowAutomationFoldersService: {},
 }));
 vi.mock('@/services/messageFunnels/messageFunnelsService', () => ({
@@ -20,7 +22,7 @@ vi.mock('@/services/messageFunnels/messageFunnelsService', () => ({
 vi.mock('@/services/numbers/numbersService', () => ({
   default: { sendNumbers: vi.fn().mockResolvedValue({ number_owner_rule: false, numbers: [] }) },
 }));
-vi.mock('sonner', () => ({ toast: { error: vi.fn(), success: vi.fn() } }));
+vi.mock('sonner', () => ({ toast: { error: vi.fn(), success: toastSuccess } }));
 vi.mock('@/features/flowAutomations/editores/LeadAutomationsEditors', async importOriginal => {
   const original = await importOriginal<typeof import('@/features/flowAutomations/editores/LeadAutomationsEditors')>();
   const resources = {
@@ -68,6 +70,8 @@ const renderCanvas = () =>
 beforeEach(() => {
   get.mockReset();
   update.mockReset();
+  toggle.mockReset();
+  toastSuccess.mockReset();
 });
 
 describe('"Da equipe" no cabeçalho do construtor', () => {
@@ -119,5 +123,41 @@ describe('"Da equipe" no cabeçalho do construtor', () => {
     renderCanvas();
     expect(await screen.findByText('Da equipe')).toBeTruthy();
     expect(screen.queryByRole('switch', { name: 'Da equipe' })).toBeNull();
+  });
+});
+
+// Follow-up: uma porta só (Fase 2): a chave Ligado/Desligado do cabeçalho
+// também avisa quantos leads saem ao desligar um follow-up com gente dentro.
+describe('chave Ligado do follow-up no cabeçalho', () => {
+  const followup = (patch: Record<string, unknown> = {}) => flow({ kind: 'followup', is_enabled: true, live_count: 4, name: 'Pós-visita', ...patch });
+
+  it('desligar com leads dentro pede confirmação com a contagem e depois desliga', async () => {
+    get.mockResolvedValue(followup());
+    toggle.mockResolvedValue(followup({ is_enabled: false, stopped_count: 4, remaining: 0 }));
+    renderCanvas();
+    fireEvent.click(await screen.findByRole('switch', { name: 'Ligar o fluxo' }));
+    expect(await screen.findByText('Desligar "Pós-visita"?')).toBeTruthy();
+    expect(screen.getByText('4 leads vão sair do follow-up e os cards saem da coluna Follow-up.')).toBeTruthy();
+    expect(toggle).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Desligar' }));
+    await waitFor(() => expect(toggle).toHaveBeenCalledWith('fa1'));
+  });
+
+  it('sem leads dentro desliga direto; sobra lead saindo mostra o aviso', async () => {
+    get.mockResolvedValue(followup({ live_count: 0 }));
+    toggle.mockResolvedValue(followup({ is_enabled: false, stopped_count: 0, remaining: 2 }));
+    renderCanvas();
+    fireEvent.click(await screen.findByRole('switch', { name: 'Ligar o fluxo' }));
+    await waitFor(() => expect(toggle).toHaveBeenCalledWith('fa1'));
+    expect(screen.queryByText('Desligar "Pós-visita"?')).toBeNull();
+    await waitFor(() => expect(toastSuccess).toHaveBeenCalledWith('Desligado. 2 leads ainda saindo do follow-up; o sistema termina em seguida.'));
+  });
+
+  it('automação comum desliga direto, mesmo com live_count', async () => {
+    get.mockResolvedValue(flow({ is_enabled: true, live_count: 4 }));
+    toggle.mockResolvedValue(flow({ is_enabled: false }));
+    renderCanvas();
+    fireEvent.click(await screen.findByRole('switch', { name: 'Ligar o fluxo' }));
+    await waitFor(() => expect(toggle).toHaveBeenCalledWith('fa1'));
   });
 });

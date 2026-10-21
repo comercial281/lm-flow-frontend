@@ -32,7 +32,8 @@ import { serverRefusalMessageOf } from '@/services/core/forbidden';
 import { apiErrorMessage } from '@/utils/apiHelpers';
 import type { PipelineItem, PipelineStage } from '@/types/analytics';
 import type { Label as LabelType } from '@/types/settings';
-import { cardFechado, comSituacaoNova, ehColunaDeGanho, mensagemDaRecusa } from '@/features/pipelines/situacao/situacao';
+import { cardFechado, comSituacaoNova, ehColunaDeFollowup, ehColunaDeGanho, mensagemDaRecusa } from '@/features/pipelines/situacao/situacao';
+import { useColocarEmFollowup } from '@/features/followup/useColocarEmFollowup';
 import { contatoDoCard, origemCurta, podeCorrigirContato, podeEditarNome, responsavelNoCard, semFunil } from './cardDoLead';
 import { useVersaoDoHistorico } from './historico/useVersaoDoHistorico';
 
@@ -213,8 +214,40 @@ export function useCardDoLead(
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [aberto, item?.id]);
 
+  // A coluna Follow-up (Fase 2, 20/10/2026): escolher ela na Etapa abre a janela
+  // "Colocar em follow-up" em vez de mover. Iniciar → o servidor leva o card pra
+  // coluna e a tela acompanha; Cancelar → a Etapa fica a de antes.
+  const followup = useColocarEmFollowup();
+  const abrirFollowup = followup.abrir;
+
+  // O lead foi posto em follow-up (pela Etapa ou pelo Iniciar do bloco Follow-up):
+  // o servidor levou o card pra coluna Follow-up do funil, e a Etapa e o quadro
+  // acompanham. Funil sem a coluna ou card fechado: o card fica onde está.
+  const aoColocarEmFollowup = useCallback(() => {
+    if (!item) return;
+    const coluna = stages.find(s => ehColunaDeFollowup(s));
+    if (coluna && !fechado && String(coluna.id) !== String(etapaId)) {
+      setEtapaId(String(coluna.id));
+      onItemStageMoved?.(item.id, String(coluna.id));
+    }
+    recarregarHistorico();
+  }, [item, stages, fechado, etapaId, onItemStageMoved, recarregarHistorico]);
+
   const moverEtapa = useCallback(async (toStageId: string) => {
     if (!item || !etapaId || toStageId === etapaId || fechado || rodapeSalvando) return;
+    if (ehColunaDeFollowup(stages.find(s => String(s.id) === String(toStageId)))) {
+      abrirFollowup(
+        {
+          pipelineItemId: String(item.id),
+          conversationId: item.conversation?.id != null ? String(item.conversation.id) : null,
+        },
+        {
+          aoConfirmar: aoColocarEmFollowup,
+          aoCancelar: () => {},
+        },
+      );
+      return;
+    }
     const anterior = etapaId;
     setEtapaId(toStageId);
     setMovendoEtapa(true);
@@ -243,7 +276,7 @@ export function useCardDoLead(
     } finally {
       setMovendoEtapa(false);
     }
-  }, [item, etapaId, onItemStageMoved, recarregarHistorico, fechado, rodapeSalvando, stages, itemDaSituacao, aoMudarSituacao, onItemStatusChanged]);
+  }, [item, etapaId, onItemStageMoved, recarregarHistorico, fechado, rodapeSalvando, stages, itemDaSituacao, aoMudarSituacao, onItemStatusChanged, abrirFollowup, aoColocarEmFollowup]);
 
   // Com conversa, atribui a conversa (o servidor espelha no contato); sem, grava no contato.
   const handleAssigneeChange = useCallback(async (userId: string) => {
@@ -444,7 +477,13 @@ export function useCardDoLead(
     roletaDoLead,
     recursos: { notas: canNotes, imoveis: canProperties, agendarEnvio: canScheduleAction },
     conversa: { abrir: openLeadConversation, abrindo: openingConversation, janelaDeInicio: startConversationModal },
-    etapa: { id: etapaId, atual: etapaAtual, opcoes: stages, movendo: movendoEtapa, mover: moverEtapa },
+    etapa: {
+      id: etapaId, atual: etapaAtual, opcoes: stages, movendo: movendoEtapa, mover: moverEtapa,
+      // A janela "Colocar em follow-up" que a Etapa abre (DialogosDoCard põe na tela).
+      janelaDoFollowup: followup.janela,
+      // O Iniciar do bloco Follow-up chama depois de pôr o lead (a Etapa vai pra coluna Follow-up).
+      aoColocarEmFollowup,
+    },
     situacao: {
       item: itemDaSituacao,
       fechado,

@@ -5816,7 +5816,10 @@ Armadilhas:
    'followup'`; a lista do Iniciar vem da MESMA leitura, em
    `meta.startable_followups` (o corretor não lê `/flow_automations`, essa rota
    pede só `pipelines.read`). A fila antiga continua vindo de `/followup_jobs`.
-   Iniciar = `POST /flow_automation_instances/start` com o contato e a conversa.
+   ~~Iniciar = `POST /flow_automation_instances/start`~~: **desde a Fase 2 (20/10/2026)
+   o Iniciar do card abre a janela `JanelaColocarEmFollowup` e chama `place`** (com o
+   id do card), não o `start`; a lista de opções vem do `place_preview`. Ver "Follow-up:
+   uma porta só (Fase 2, 2026-10-20)". O `start` fica só pro Disparar do funil de conversa.
 10. **Faixa do formato antigo:** `queued_count` de cada funil em
     `GET /followup_sequences` (uma leitura só, sem histórico por funil).
 
@@ -9391,3 +9394,48 @@ Armadilhas:
 4. **Texto da opção é literal** ("Follow-up"), sem chave nova de i18n.
 
 Código: `features/followup/SeloDoFollowup.tsx`, `features/pipelines/situacao/situacao.ts` (`ehColunaDeFollowup`), `PipelineItemCard.tsx`, `FollowupTimeline.tsx`, `flowAutomationInstancesService.resume`, `features/conversas/automacaoRodando.ts`. Testes: `SeloDoFollowup.spec.tsx`, `situacao.spec.ts`, `FollowupTimeline.spec.tsx`, `automacaoRodando.spec.ts`.
+
+## Follow-up: uma porta só (Fase 2, 2026-10-20)
+
+A Fase 1 deixou a coluna **Follow-up** só como marca. Agora ela é a **porta**: o lead entra no follow-up por um caminho só (`POST /flow_automation_instances/place`), e o card vive na coluna enquanto o follow-up roda.
+
+**As portas da tela** (todas abrem a mesma janela, `JanelaColocarEmFollowup`, e ela chama `place`):
+
+- Soltar o card na coluna Follow-up do quadro (`useBoardDrag`, desvio antes do `setStages`, igual ao Ganho; Cancelar só encerra o arraste e o card volta).
+- Etapa do card (janela e página): escolher a coluna Follow-up.
+- Seção **Funil** do painel (`SecaoFunil`) e `PipelineManagement` da conversa.
+- **Iniciar** do bloco Follow-up do card, mandando o **id do card** (`pipelineItemId`).
+- Atalho **"Follow-up"** do painel do lead (`AtalhosDoLead`), só com `pipeline_items.update` (a chave que o `place` exige).
+
+**O que o servidor cobre sozinho** (**movimento** que não passa pela tela): Lista do funil, MCP/OAuth, automações, ação em lote, IA. A coluna **é** a porta: **mover** o card pra ela começa o follow-up **padrão da conta**; se o lead já tem follow-up vivo, é ignorado. Uma automação explícita "card entrou na coluna Follow-up → Iniciar follow-up X" ganha do padrão: o bloco dela troca o padrão que a coluna começou pelo X (follow-up escolhido por alguém nunca é trocado).
+
+**Card que NASCE na coluna Follow-up não inicia follow-up nesta fase.** Só movimento abre a porta. Card criado direto na coluna (AddItemModal, `POST` de card, MCP, formulário apontando pra coluna) fica lá parado, sem follow-up, até alguém colocar pela janela ou mover. Não prometer na tela que criar ali começa alguma coisa.
+
+**Entrar na coluna pela janela (o `place`) é entrada de verdade:** as automações da coluna, a Meta por coluna, a Central de Push e o aviso de etapa rodam como num arrasto. O evento vai marcado (`moved_by_followup_place`) e a coluna ignora essa entrada, pra não começar outro follow-up por cima. A **saída** (Parar, fim do follow-up) continua sem disparar as automações da coluna de volta.
+
+**As saídas** (o follow-up para e o card sai da coluna): o lead **respondeu**; **arrastar pra outra coluna**; **Parar** (o card volta pra coluna de antes); **troca de dono** A→B ou A→ninguém; **passagem da IA** pro humano; **follow-up desligado**. **Digitou no celular:** mensagem de **TEXTO** escrita no aparelho para o follow-up vivo em ~30 s (decisão adiada, relendo a mensagem; o servidor decide pela **mensagem**, não pelo follow-up). **Mídia COM legenda conta como texto** (o servidor decide pelo texto não vazio da mensagem, seja qual for o tipo). **Mídia sem legenda, mensagem automática, disparo e IA nunca param** o follow-up. Escrevendo **pelo LM Flow** vale a faixa **"Enviar e tirar do fluxo" / "Enviar e manter"** do banner de 03/10. **Exceções:** card **fechado** (Ganho/Perdido) não se move; o que o **próprio follow-up** moveu (caminho "Respondeu" → coluna de resposta) fica onde ele pôs, sem contar como saída.
+
+**Desligar e apagar** (lista e chave Ligado do construtor):
+
+- Desligar (ou arquivar) um follow-up com `live_count > 0` (leads dentro, pausados contam; só follow-up traz o campo) pergunta antes, com `useConfirmacao`: **Desligar "{nome}"?** / "{n} leads vão sair do follow-up e os cards saem da coluna Follow-up." / **Desligar**. Sem lead dentro desliga direto; ligar nunca pergunta.
+- `toggle`/`archive` voltam `{ data, stopped_count, remaining }`; a service copia os dois contadores pro fluxo devolvido. Se `remaining > 0` o toast diz "Desligado. {n} leads ainda saindo do follow-up; o sistema termina em seguida." (o motor termina de tirar).
+- **Apagar** com lead dentro: o servidor recusa (422, "Este follow-up tem N lead(s) dentro. Desligue antes de apagar.") e a tela mostra a mensagem dele (`serverMessage`).
+- **Coluna que perde o tipo Follow-up** com follow-up vivo: o servidor recusa o Editar etapa (422, `error.details` = `full_messages`, vem com "Stage type " na frente). `mensagemDaColunaDeFollowup` tira o prefixo e o toast mostra "Tem lead em follow-up nesta coluna. Pare os follow-ups ou mova os cards antes."; qualquer outro erro da etapa segue no aviso genérico.
+
+**Regras da janela:**
+
+- "**Continuar da mensagem N**" só aparece quando `progress.has_next` **e** o follow-up escolhido é o `progress.flow_automation_id` (o progresso vale só pro follow-up em que o lead parou; noutro, é "Começar do início"). Embaixo, a prévia da próxima mensagem; se for mídia, a frase "A próxima mensagem é uma mídia (foto, áudio ou vídeo)."
+- "**Mesmo follow-up**" é comparado **pelo nome** (`current.flow_name` x nome escolhido), porque o servidor não manda o id do atual. **Limitação:** dois follow-ups com o mesmo nome contam como o mesmo. Se isso doer, o servidor passa a mandar o id.
+- Funil sem a coluna Follow-up: o follow-up começa e o card fica onde está (a janela diz).
+
+Este PR **depende do backend na frente** (`live_count`, o formato novo de `toggle`/`archive`, a recusa de apagar e do tipo da coluna, e o `place`). Servidor velho com tela nova: sem `live_count` a chave desliga direto, sem aviso, e o toast de "saindo" não aparece; o `place` não existe, então as portas falham.
+
+Armadilhas:
+
+1. **A tela intercepta o movimento humano e chama `place`.** Nunca mandar `reorder`/`moveItem` pra dentro da coluna Follow-up numa ação humana: o servidor trataria como "a coluna é a porta" e começaria o follow-up padrão da conta sem a pessoa escolher (follow-up, de onde continuar). Todo caminho humano passa pela janela.
+2. **Depois do `place` quem move o card é o servidor.** A entrada na coluna dispara as automações da coluna normalmente (o evento vai com `moved_by_followup_place`, ver acima), mas a tela não recebe a nova etapa pela resposta do `place`: ela precisa atualizar sozinha, com `aoColocar` (bloco Follow-up) / `aoColocarEmFollowup` (card, painel do lead), que recarregam o card e o quadro. Esquecer isso deixa o card na coluna velha até o F5.
+3. **`moved_by_instance_id` é do servidor** (accessor do `PipelineItem`): quando o próprio follow-up (ou a volta da IA) move o card pra fora da coluna, o ouvinte ignora esse follow-up como "autor" e não o para por isso. A tela nunca manda esse campo.
+4. **Desligar um follow-up para todo mundo**, e o motor também para quem sobrou (o `remaining`): a contagem do confirm é a do momento da leitura da lista e pode ficar velha; o servidor é quem decide.
+5. **Textos literais** (sem chave nova de i18n). Plural com `plural()` de `@/lib/formato` (a trava do build recusa "lead(s)"), por isso "1 lead vai sair..." / "3 leads vão sair...".
+
+Código: `features/followup/` (`JanelaColocarEmFollowup`, `useColocarEmFollowup`, `erroDeEtapa`), `features/flowAutomations/desligarFollowup.ts`, `FlowAutomationsList.tsx`, `FlowAutomationCanvas.tsx` (`alternarLigado`), `flowAutomationInstancesService.place`/`placePreview`. Testes: `JanelaColocarEmFollowup.spec.tsx`, `useBoardDrag.spec.ts`, `FollowupList.spec.tsx`, `FlowCanvasEquipe.spec.tsx`, `erroDeEtapa.spec.ts`.
