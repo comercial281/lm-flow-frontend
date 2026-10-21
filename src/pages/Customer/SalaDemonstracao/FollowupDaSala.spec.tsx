@@ -65,4 +65,10 @@ describe('FollowupDaSala', () => {
     render(<FollowupDaSala steps={steps} onAgora={vi.fn()} agentId="a1" />);
     expect(await screen.findByText(/3 h e 12 h depois/)).toBeInTheDocument();
   });
+
+  it('passo property_book mostra o ícone de Book e ignora delay', () => {
+    render(<FollowupDaSala steps={[{ step: 1, kinds: ['delay', 'property_book'], preview: 'Book', real_delay: 'na hora', status: 'proximo' }]} onAgora={vi.fn()} />);
+    expect(screen.getByLabelText('Book')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Texto')).toBeNull();
+  });
 });

@@ -24,7 +24,7 @@ function IconeDoTipo({ tipo }: { tipo: string }) {
     case 'audio': return <Mic className="h-4 w-4" aria-label="Áudio" />;
     case 'video': return <Video className="h-4 w-4" aria-label="Vídeo" />;
     case 'foto': case 'image': case 'imagem': return <Image className="h-4 w-4" aria-label="Foto" />;
-    case 'book': case 'document': case 'documento': return <FileText className="h-4 w-4" aria-label="Book" />;
+    case 'book': case 'property_book': case 'document': case 'documento': return <FileText className="h-4 w-4" aria-label="Book" />;
     default: return <MessageSquare className="h-4 w-4" aria-label="Texto" />;
   }
 }
@@ -69,7 +69,7 @@ export default function FollowupDaSala({ steps, onAgora, agentId }: FollowupDaSa
           {steps.map(p => (
             <li key={p.step} className="flex items-start gap-3">
               <span className="mt-1 flex gap-1 text-muted-foreground">
-                {(p.kinds.length ? p.kinds : ['texto']).map(k => <IconeDoTipo key={k} tipo={k} />)}
+                {(p.kinds.filter(k => k !== 'delay').length ? p.kinds.filter(k => k !== 'delay') : ['texto']).map(k => <IconeDoTipo key={k} tipo={k} />)}
               </span>
               <div className="flex-1">
                 <p className="text-lg">{p.preview}</p>
