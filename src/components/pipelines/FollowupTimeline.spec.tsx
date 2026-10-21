@@ -235,7 +235,10 @@ describe('Follow-up do card — pausado e na fila', () => {
   });
 
   it('na fila mostra o horário', async () => {
-    const vez = new Date(2026, 9, 20, 14, 5);
+    // Hoje às 14:05: o texto só mostra a data quando o horário não é de hoje, então
+    // fixar um dia do calendário fazia o teste quebrar no dia seguinte.
+    const hoje = new Date();
+    const vez = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate(), 14, 5);
     running.mockResolvedValue([instance({ state: 'waiting', phase: 'queued', until: vez.getTime() / 1000 })]);
 
     render(<FollowupTimeline contactId="c-1" />);
