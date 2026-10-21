@@ -9408,7 +9408,7 @@ A Fase 1 deixou a coluna **Follow-up** só como marca. Agora ela é a **porta**:
 
 **O que o servidor cobre sozinho** (movimento que não passa pela tela): AddItemModal, Lista do funil, MCP/OAuth, automações, ação em lote, IA. A coluna **é** a porta: mover o card pra ela começa o follow-up **padrão da conta**; se o lead já tem follow-up vivo, é ignorado.
 
-**As saídas** (o follow-up para e o card sai da coluna): o lead **respondeu**; **arrastar pra outra coluna**; **Parar** (o card volta pra coluna de antes); **troca de dono** A→B ou A→ninguém; **passagem da IA** pro humano; **follow-up desligado**. Quem digita no celular: follow-up de tipo **TEXT para sozinho em ~30 s**; o de tipo **LM Flow** mantém a escolha do banner de 03/10 (o lead decide continuar ou parar).
+**As saídas** (o follow-up para e o card sai da coluna): o lead **respondeu**; **arrastar pra outra coluna**; **Parar** (o card volta pra coluna de antes); **troca de dono** A→B ou A→ninguém; **passagem da IA** pro humano; **follow-up desligado**. **Digitou no celular:** mensagem de **TEXTO** escrita no aparelho para o follow-up vivo em ~30 s (decisão adiada, relendo a mensagem; o servidor decide pelo tipo da **mensagem**, não do follow-up). **Mídia sem legenda, mensagem automática, disparo e IA nunca param** o follow-up. Escrevendo **pelo LM Flow** vale a faixa **"Enviar e tirar do fluxo" / "Enviar e manter"** do banner de 03/10. **Exceções:** card **fechado** (Ganho/Perdido) não se move; o que o **próprio follow-up** moveu (caminho "Respondeu" → coluna de resposta) fica onde ele pôs, sem contar como saída.
 
 **Desligar e apagar** (lista e chave Ligado do construtor):
 
