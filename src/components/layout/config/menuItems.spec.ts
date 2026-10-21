@@ -372,3 +372,35 @@ describe('gaveta do celular (Raio-X do celular, 10/10/2026)', () => {
     expect(itensDoMenu(secoes).map(i => i.name)).toContain('Disparos');
   });
 });
+
+describe('Sala de demonstração (21/10/2026)', () => {
+  const sala = () => folhas.find(i => i.href === '/sala-demonstracao')!;
+  const pode = () => true;
+  const mostra = (papel: string, demoMode: boolean, suporte = false) =>
+    shouldShowMenuItem(sala(), pode, pode, pode, papel, 'x@y.com', {}, [], suporte, demoMode);
+
+  it('o item existe, é somenteDemonstracao e usa a chave do mapa de rotas', () => {
+    expect(sala().somenteDemonstracao).toBe(true);
+    expect(`${sala().resource}.${sala().action}`).toBe('sales_agents.update');
+  });
+
+  it('some pra todo mundo, suporte inclusive, quando o espaço não é de demonstração', () => {
+    expect(mostra('admin', false)).toBe(false);
+    expect(mostra('admin', false, true)).toBe(false);
+    expect(shouldShowMenuItem(sala(), pode, pode, pode, 'admin', 'x@y.com', {}, [], true)).toBe(false);
+  });
+
+  it('no espaço de demonstração aparece só pra administrador e pro suporte', () => {
+    expect(mostra('admin', true)).toBe(true);
+    expect(mostra('manager', true)).toBe(false);
+    expect(mostra('agent', true)).toBe(false);
+    expect(mostra('agent', true, true)).toBe(true);
+  });
+
+  it('a seção Principal do filtro leva demoMode adiante', () => {
+    const nomes = (demo: boolean) => filterMenuSections(secoes, pode, pode, pode, 'admin', 'x@y.com', {}, [], false, demo)
+      .flatMap(s => s.itens.map(i => i.name));
+    expect(nomes(true)).toContain('Sala de demonstração');
+    expect(nomes(false)).not.toContain('Sala de demonstração');
+  });
+});
