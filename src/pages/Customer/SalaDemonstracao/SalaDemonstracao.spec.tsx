@@ -13,6 +13,10 @@ vi.mock('@/services/demoRoom/demoRoomService', () => ({
 vi.mock('@/services/conversations/conversationService', () => ({ conversationAPI: { getMessages: s.msgs } }));
 vi.mock('@/services/salesAgents/salesAgentsService', () => ({ salesAgentsService: { list: vi.fn().mockResolvedValue([]) } }));
 vi.mock('@/services/flowAutomations/flowAutomationsService', () => ({ flowAutomationsService: { list: vi.fn().mockResolvedValue([]) } }));
+const c = vi.hoisted(() => ({ ok: true }));
+vi.mock('@/hooks/useConfirmacao', () => ({
+  useConfirmacao: () => ({ confirmar: vi.fn(async () => c.ok), dialogoDeConfirmacao: null }),
+}));
 vi.mock('./useEhAdmin', () => ({ useEhAdmin: () => s.admin.value }));
 
 const config = { agent_id: 'a1', agent_name: 'Ana', followup_flow_id: 'f1', property_code: 'AP1', wa_number: '5511900000000' };
@@ -116,5 +120,38 @@ describe('SalaDemonstracao', () => {
     await waitFor(() => expect(s.get).toHaveBeenCalledTimes(2));
     await userEvent.click(await screen.findByRole('button', { name: 'Ajustes da Sala' }));
     expect(await screen.findByLabelText('Código do imóvel')).toHaveValue('AP9');
+  });
+
+  it('Recomeçar só aparece com sessão', async () => {
+    s.get.mockResolvedValue(estado(null));
+    tela();
+    await screen.findByTestId('preparar');
+    expect(screen.queryByRole('button', { name: 'Recomeçar' })).toBeNull();
+  });
+
+  it('Recomeçar cancelado não chama reset', async () => {
+    c.ok = false;
+    s.get.mockResolvedValue(estado(sessao('live')));
+    tela();
+    await userEvent.click(await screen.findByRole('button', { name: 'Recomeçar' }));
+    expect(s.reset).not.toHaveBeenCalled();
+  });
+
+  it('Recomeçar confirmado chama reset(session.id) e volta pro Preparar', async () => {
+    c.ok = true;
+    s.reset.mockResolvedValue(undefined);
+    s.get.mockResolvedValueOnce(estado(sessao('live')));
+    s.get.mockResolvedValue(estado(null));
+    tela();
+    await userEvent.click(await screen.findByRole('button', { name: 'Recomeçar' }));
+    await waitFor(() => expect(s.reset).toHaveBeenCalledWith('s1'));
+    expect(await screen.findByTestId('preparar')).toBeInTheDocument();
+  });
+
+  it('sessão encerrada é tratada como sem sessão', async () => {
+    s.get.mockResolvedValue(estado({ ...sessao('live'), status: 'ended' }));
+    tela();
+    expect(await screen.findByTestId('preparar')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Recomeçar' })).toBeNull();
   });
 });

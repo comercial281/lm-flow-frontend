@@ -8,6 +8,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { Pagina, BaseHeader, EmptyState, Carregando } from '@/components/base';
+import { useConfirmacao } from '@/hooks/useConfirmacao';
 import NoAccessState from '@/components/permissions/NoAccessState';
 import { demoRoomService } from '@/services/demoRoom/demoRoomService';
 import type { DemoRoomState } from '@/types/demoRoom';
@@ -59,7 +60,7 @@ export default function SalaDemonstracao() {
     return () => { vivo.current = false; };
   }, [admin, carregar]);
 
-  const temSessao = !!estado?.session;
+  const temSessao = !!estado?.session && estado.session.status !== 'ended';
   useEffect(() => {
     if (!admin || !temSessao) return undefined;
     let espera: number | undefined;
@@ -85,19 +86,45 @@ export default function SalaDemonstracao() {
     }
   }, [carregar]);
 
-  const followupAgora = useCallback(async () => {
+  const followupAgora = useCallback(async (): Promise<{ ok: boolean; message: string } | undefined> => {
     const id = estado?.session?.id;
-    if (!id) return;
+    if (!id) return undefined;
     try {
       const r = await demoRoomService.followupNow(id);
-      if (r.ok) toast.success(r.message); else toast.error(r.message);
       await carregar(true);
+      return r;
     } catch (e) {
-      toast.error(mensagemDe(e, 'Não consegui disparar o follow-up agora.'));
+      return { ok: false, message: mensagemDe(e, 'Não consegui disparar o follow-up agora.') };
     }
   }, [estado?.session?.id, carregar]);
 
-  const cabecalho = <BaseHeader title="Sala de demonstração" />;
+  const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
+  const sessaoId = estado?.session?.id;
+  const recomecar = useCallback(async () => {
+    if (!sessaoId) return;
+    const sim = await confirmar({
+      titulo: 'Recomeçar a demonstração?',
+      descricao: 'Recomeçar apaga esta conversa.',
+      rotuloDaAcao: 'Recomeçar',
+      destrutivo: true,
+    });
+    if (!sim) return;
+    try {
+      await demoRoomService.reset(sessaoId);
+      await carregar(true);
+    } catch (e) {
+      toast.error(mensagemDe(e, 'Não consegui recomeçar a demonstração.'));
+    }
+  }, [sessaoId, confirmar, carregar]);
+
+  // Sessão encerrada vale como sem sessão: a página volta pro Preparar.
+  const sessao = estado?.session && estado.session.status !== 'ended' ? estado.session : null;
+  const cabecalho = (
+    <BaseHeader
+      title="Sala de demonstração"
+      secondaryActions={sessao ? [{ label: 'Recomeçar', variant: 'outline', onClick: () => { void recomecar(); } }] : []}
+    />
+  );
 
   if (!admin) return <NoAccessState />;
 
@@ -125,16 +152,16 @@ export default function SalaDemonstracao() {
     );
   }
 
-  const sessao = estado.session;
   return (
     <Pagina cabecalho={cabecalho}>
+      {dialogoDeConfirmacao}
       {!sessao && <Preparar state={estado} onStart={comecar} onSaved={() => carregar(true)} />}
       {sessao?.status === 'waiting' && <QrDaSala session={sessao} waNumber={estado.config.wa_number} />}
       {sessao && sessao.status !== 'waiting' && (
         <div className="space-y-4">
           <ConversaAoVivo conversationId={sessao.conversation_id} refreshKey={leitura} />
           <Bastidores behind={estado.behind} />
-          <FollowupDaSala steps={estado.followup} onAgora={followupAgora} />
+          <FollowupDaSala steps={estado.followup} onAgora={followupAgora} agentId={estado.config.agent_id} />
         </div>
       )}
     </Pagina>

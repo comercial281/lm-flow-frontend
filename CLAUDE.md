@@ -9391,3 +9391,25 @@ Armadilhas:
 4. **Texto da opção é literal** ("Follow-up"), sem chave nova de i18n.
 
 Código: `features/followup/SeloDoFollowup.tsx`, `features/pipelines/situacao/situacao.ts` (`ehColunaDeFollowup`), `PipelineItemCard.tsx`, `FollowupTimeline.tsx`, `flowAutomationInstancesService.resume`, `features/conversas/automacaoRodando.ts`. Testes: `SeloDoFollowup.spec.tsx`, `situacao.spec.ts`, `FollowupTimeline.spec.tsx`, `automacaoRodando.spec.ts`.
+
+## Sala de demonstração (desde 2026-10-22)
+
+Tela escondida em `/sala-demonstracao` para as calls de venda: o Tony ou o Giovani compartilham a tela no Meet, o lead escaneia o QR, conversa com a IA no WhatsApp e vê, ao lado, o que a IA está entendendo e o follow-up. Spec em `LM FLOW/specs/2026-10-20-sala-demonstracao-design.md` (fora do git, na pasta do Tony). Servidor: `/api/v1/demo_room` (backend #513).
+
+O que aparece na tela:
+
+- **Sem demonstração:** "Preparar" (Conferir antes da call, Ajustes da Sala, nome do lead). Só libera "Começar" com nome e a conferência toda verde.
+- **Esperando o lead:** o QR e o link do WhatsApp da Sala.
+- **No ar:** a conversa ao vivo (áudio tocável), os **Bastidores** (etapa, temperatura, caminho, respostas da qualificação, resumo; quando a IA decide passar o lead, o cartão "Aqui a IA passaria o lead pro corretor" com o resumo e o "Por que") e o **Follow-up** (linha do tempo dos passos com ícone por tipo, "na vida real" e selo Enviado/Próximo; botão "Simular que o lead sumiu"; três cartões "Outros jeitos de fazer follow-up").
+- **Recomeçar** no cabeçalho, só com demonstração em andamento. Pergunta "Recomeçar a demonstração?", apaga a conversa e volta pro Preparar.
+
+Decisões (não reabrir sem o dono pedir):
+
+1. **Só no espaço de demonstração** (a chave de modo demonstração que já existe) e **só administrador**. Fora dele o servidor responde 404 e a tela diz que a Sala só existe lá.
+2. **Repasse só indicado:** a IA mostra que passaria o lead pro corretor, mas nada é enviado a ninguém.
+3. **Uma call = uma conversa.** Cada demonstração é uma sessão com código próprio; Recomeçar encerra a sessão e a tela volta pro Preparar (sessão `ended` vale como sem sessão).
+4. **O número da Sala é só pras calls**, nunca o botão da landing page.
+5. **O follow-up da Sala é automação comum "só por chamada"** com blocos Esperar (nunca "Aguardar resposta"). Na vida real o follow-up para quando o lead responde; na Sala ele segue pra mostrar todos os formatos, e a tela diz isso. O botão "Simular que o lead sumiu" fica travado enquanto o pedido está em andamento (o envio sai pela fila e o selo vira "Enviado" na próxima consulta de 3 s).
+6. **Retomada da IA:** as horas (2 h e 8 h por padrão) são lidas da IA da Sala (`reengagement_first_hours` / `reengagement_second_hours`).
+
+Código: `src/pages/Customer/SalaDemonstracao/` (`SalaDemonstracao`, `Preparar`, `QrDaSala`, `ConversaAoVivo`, `Bastidores`, `FollowupDaSala`), `src/services/demoRoom/demoRoomService.ts`, `src/types/demoRoom.ts`. Testes: os `.spec.tsx` da mesma pasta.
