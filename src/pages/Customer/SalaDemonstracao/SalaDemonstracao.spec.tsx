@@ -1,13 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, render, screen } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import SalaDemonstracao from './SalaDemonstracao';
 
 const s = vi.hoisted(() => ({
-  get: vi.fn(), start: vi.fn(), followupNow: vi.fn(), reset: vi.fn(), preflight: vi.fn(), msgs: vi.fn(), admin: { value: true },
+  get: vi.fn(), start: vi.fn(), followupNow: vi.fn(), reset: vi.fn(), preflight: vi.fn(), saveConfig: vi.fn(), msgs: vi.fn(), admin: { value: true },
 }));
 vi.mock('@/services/demoRoom/demoRoomService', () => ({
-  demoRoomService: { get: s.get, start: s.start, followupNow: s.followupNow, reset: s.reset, preflight: s.preflight, saveConfig: vi.fn() },
+  demoRoomService: { get: s.get, start: s.start, followupNow: s.followupNow, reset: s.reset, preflight: s.preflight, saveConfig: s.saveConfig },
 }));
 vi.mock('@/services/conversations/conversationService', () => ({ conversationAPI: { getMessages: s.msgs } }));
 vi.mock('@/services/salesAgents/salesAgentsService', () => ({ salesAgentsService: { list: vi.fn().mockResolvedValue([]) } }));
@@ -102,5 +103,18 @@ describe('SalaDemonstracao', () => {
     await act(async () => { await vi.advanceTimersByTimeAsync(0); });
     await act(async () => { await vi.advanceTimersByTimeAsync(10_000); });
     expect(s.get).toHaveBeenCalledTimes(1);
+  });
+
+  it('depois de salvar os Ajustes a página relê e o diálogo reabre com o valor novo', async () => {
+    s.saveConfig.mockResolvedValue(undefined);
+    s.get.mockResolvedValueOnce(estado(null));
+    s.get.mockResolvedValue({ config: { ...config, property_code: 'AP9' }, session: null, behind: null, followup: [] });
+    tela();
+    await screen.findByTestId('preparar');
+    await userEvent.click(screen.getByRole('button', { name: 'Ajustes da Sala' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Salvar ajustes' }));
+    await waitFor(() => expect(s.get).toHaveBeenCalledTimes(2));
+    await userEvent.click(await screen.findByRole('button', { name: 'Ajustes da Sala' }));
+    expect(await screen.findByLabelText('Código do imóvel')).toHaveValue('AP9');
   });
 });

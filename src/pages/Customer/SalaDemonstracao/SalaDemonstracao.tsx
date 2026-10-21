@@ -128,7 +128,7 @@ export default function SalaDemonstracao() {
   const sessao = estado.session;
   return (
     <Pagina cabecalho={cabecalho}>
-      {!sessao && <Preparar state={estado} onStart={comecar} />}
+      {!sessao && <Preparar state={estado} onStart={comecar} onSaved={() => carregar(true)} />}
       {sessao?.status === 'waiting' && <QrDaSala session={sessao} waNumber={estado.config.wa_number} />}
       {sessao && sessao.status !== 'waiting' && (
         <div className="space-y-4">

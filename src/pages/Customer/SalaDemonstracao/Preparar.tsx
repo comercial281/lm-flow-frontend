@@ -15,6 +15,8 @@ import type { DemoRoomConfig, DemoRoomState, PreflightItem } from '@/types/demoR
 export interface PrepararProps {
   state: DemoRoomState;
   onStart: (leadName: string) => void | Promise<void>;
+  /** Chamado depois de salvar os ajustes: a tela pai relê o estado (config nova). */
+  onSaved?: () => void | Promise<void>;
 }
 
 interface Opcao { id: string; name: string }
@@ -94,7 +96,7 @@ function Ajustes({ config, aberto, aoFechar, aoSalvar }: {
   );
 }
 
-export default function Preparar({ state, onStart }: PrepararProps) {
+export default function Preparar({ state, onStart, onSaved }: PrepararProps) {
   const [itens, setItens] = useState<PreflightItem[] | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [conferindo, setConferindo] = useState(false);
@@ -156,7 +158,7 @@ export default function Preparar({ state, onStart }: PrepararProps) {
         config={state.config}
         aberto={ajustes}
         aoFechar={() => setAjustes(false)}
-        aoSalvar={() => { setAjustes(false); void conferir(false); }}
+        aoSalvar={() => { setAjustes(false); void onSaved?.(); void conferir(false); }}
       />
     </section>
   );
