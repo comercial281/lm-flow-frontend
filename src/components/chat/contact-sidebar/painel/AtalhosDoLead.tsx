@@ -1,11 +1,12 @@
 import { Suspense, useState } from 'react';
-import { Bot, BotOff, CalendarClock, MapPin, UserCheck } from 'lucide-react';
+import { Bot, BotOff, CalendarClock, MapPin, Rocket, UserCheck } from 'lucide-react';
 
 import IconActionButton from '@/components/base/IconActionButton';
 import { useFeature } from '@/contexts/TenantFeaturesContext';
 import { avisarAgendadosMudaram } from '@/features/conversas/agendados';
 import { dicaDaIa, iaNoNumero, leadDoPainelParaVisita } from '@/features/conversas/atalhosDoLead';
 import { useIaDaConversa } from '@/features/conversas/useIaDaConversa';
+import { useColocarEmFollowup } from '@/features/followup/useColocarEmFollowup';
 import { conversationAPI } from '@/services/conversations/conversationService';
 import { lazyWithRetry } from '@/utils/chunkReload';
 import type { Pipeline } from '@/types/analytics';
@@ -35,7 +36,8 @@ interface AtalhosDoLeadProps {
 
 /**
  * A fileira de atalhos do painel do lead (07/10/2026): Agendar mensagem · IA ·
- * Agendar visita. Cada botão só existe quando a ação existe; sem nenhum, a
+ * Agendar visita · Follow-up (20/10/2026, abre a janela "Colocar em follow-up"
+ * com a conversa). Cada botão só existe quando a ação existe; sem nenhum, a
  * fileira some.
  */
 export default function AtalhosDoLead({ contact, conversation, pipelines, nome, emOferta }: AtalhosDoLeadProps) {
@@ -43,6 +45,7 @@ export default function AtalhosDoLead({ contact, conversation, pipelines, nome, 
   const ia = useIaDaConversa(conversation?.id);
   const [agendando, setAgendando] = useState(false);
   const [visitaAberta, setVisitaAberta] = useState(false);
+  const followup = useColocarEmFollowup();
 
   const contatoId = contact?.id != null ? String(contact.id) : null;
   // As duas janelas mostram o telefone do lead: fora durante a oferta da roleta.
@@ -50,8 +53,10 @@ export default function AtalhosDoLead({ contact, conversation, pipelines, nome, 
   const podeAgendar = canScheduleAction && contatoId != null && !emOferta;
   const lead = emOferta ? null : leadDoPainelParaVisita(contact, pipelines, nome);
   const temIa = iaNoNumero(ia.estado);
+  // Na oferta da roleta só o robô fica (decisão de 07/10): o follow-up é de quem aceitou.
+  const conversaId = !emOferta && conversation?.id != null ? String(conversation.id) : null;
 
-  if (!podeAgendar && !temIa && !lead) return null;
+  if (!podeAgendar && !temIa && !lead && !conversaId) return null;
 
   return (
     <div className="flex items-center gap-2" role="group" aria-label="Atalhos do lead">
@@ -97,6 +102,17 @@ export default function AtalhosDoLead({ contact, conversation, pipelines, nome, 
           className={REDONDO}
         />
       )}
+
+      {conversaId && (
+        <IconActionButton
+          label="Follow-up"
+          icon={<Rocket className="h-4 w-4" />}
+          onClick={() => followup.abrir({ conversationId: conversaId })}
+          className={REDONDO}
+        />
+      )}
+
+      {followup.janela}
 
       {agendando && contatoId && (
         <Suspense fallback={null}>

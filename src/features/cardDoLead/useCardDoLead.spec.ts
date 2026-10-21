@@ -19,6 +19,7 @@ const s = vi.hoisted(() => ({
   listForLead: vi.fn(),
   toastError: vi.fn(),
   toastSuccess: vi.fn(),
+  abrirFollowup: vi.fn(),
 }));
 
 vi.mock('sonner', () => ({ toast: { success: s.toastSuccess, error: s.toastError } }));
@@ -43,6 +44,10 @@ vi.mock('@/services/roletaConfig/roletaConfigService', () => ({
   roletaConfigService: { getAll: s.getAll, assign: s.assign },
   roletaLabel: (r?: { display_name?: string | null; name?: string | null } | null) => r?.display_name || r?.name || 'Roleta',
 }));
+// A janela "Colocar em follow-up" (Fase 2): aqui só importa que a porta abre ela.
+vi.mock('@/features/followup/useColocarEmFollowup', () => ({
+  useColocarEmFollowup: () => ({ abrir: s.abrirFollowup, janela: null }),
+}));
 vi.mock('@/services/roletaConfig/brokerAssignmentsService', () => ({
   brokerAssignmentsService: { listForLead: s.listForLead },
 }));
@@ -52,6 +57,8 @@ const etapas = [
   { id: 's2', name: 'Agendou visita', color: '#22c55e', position: 2 },
   // A coluna do Ganho (ajuste de 08/10): tipo Concluída.
   { id: 's9', name: 'Concluído', color: '#10b981', position: 9, stage_type: 'completed' },
+  // A coluna Follow-up (20/10): entrar nela é pôr o lead no follow-up.
+  { id: 's5', name: 'Follow-up Automático', color: '#a855f7', position: 5, stage_type: 'followup' },
 ] as never;
 
 const completo = {
@@ -209,6 +216,33 @@ describe('useCardDoLead', () => {
     expect(result.current.situacao.fechado).toBe(true);
     expect(result.current.etapa.id).toBe('s9');
     expect(s.toastSuccess).toHaveBeenCalledWith('Lead marcado como ganho.');
+  });
+
+  it('escolher a coluna Follow-up na Etapa abre a janela com o id do card em vez de mover', async () => {
+    const onItemStageMoved = vi.fn();
+    const { result } = renderHook(() => useCardDoLead(completo, { aberto: true, stages: etapas, onItemStageMoved }));
+
+    await act(async () => {
+      await result.current.etapa.mover('s5');
+    });
+
+    expect(s.moveItem).not.toHaveBeenCalled();
+    expect(s.abrirFollowup).toHaveBeenCalledWith(
+      expect.objectContaining({ pipelineItemId: 'i1' }),
+      expect.objectContaining({ aoConfirmar: expect.any(Function), aoCancelar: expect.any(Function) }),
+    );
+    // Enquanto a janela pergunta, a Etapa continua a de antes.
+    expect(result.current.etapa.id).toBe('s1');
+
+    // Cancelar: o card fica onde estava.
+    act(() => s.abrirFollowup.mock.calls[0][1].aoCancelar());
+    expect(result.current.etapa.id).toBe('s1');
+    expect(onItemStageMoved).not.toHaveBeenCalled();
+
+    // Iniciar: o servidor levou o card pra coluna; a tela acompanha.
+    act(() => s.abrirFollowup.mock.calls[0][1].aoConfirmar({ started: true }));
+    expect(result.current.etapa.id).toBe('s5');
+    expect(onItemStageMoved).toHaveBeenCalledWith('i1', 's5');
   });
 
   it('o rodapé reabriu um Ganho: a Etapa vai para a coluna que o servidor devolveu', () => {

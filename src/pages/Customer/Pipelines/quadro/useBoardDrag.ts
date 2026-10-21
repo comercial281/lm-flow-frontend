@@ -9,7 +9,7 @@ import {
 import { toast } from 'sonner';
 import { pipelinesService } from '@/services/pipelines';
 import type { PipelineItem, PipelineStage } from '@/types/analytics';
-import { comSituacaoNova, ehColunaDeGanho, mensagemDaRecusa } from '@/features/pipelines/situacao/situacao';
+import { comSituacaoNova, ehColunaDeFollowup, ehColunaDeGanho, mensagemDaRecusa } from '@/features/pipelines/situacao/situacao';
 import { itemPos } from '../pipelineItemHelpers';
 import { indiceDoArraste, type AlvoDoArraste } from './ondeOCardCai';
 
@@ -34,9 +34,16 @@ interface OpcoesDoArraste {
    * que o servidor devolveu (sai de Abertos, os números se refazem).
    */
   aoGanhar?: (item: PipelineItem) => void;
+  /**
+   * Soltar na coluna Follow-up (Fase 2, 20/10/2026) não move o card: abre a
+   * janela "Colocar em follow-up". Quem move é o servidor, quando o follow-up
+   * começa. `terminar` encerra o arraste (Iniciar e Cancelar chamam); o card
+   * nunca saiu do lugar, então Cancelar não tem o que desfazer.
+   */
+  aoSoltarNoFollowup?: (item: PipelineItem, terminar: () => void) => void;
 }
 
-export function useBoardDrag({ pipelineId, stages, setStages, mensagemDeErro, podeArrastar, aoGanhar }: OpcoesDoArraste) {
+export function useBoardDrag({ pipelineId, stages, setStages, mensagemDeErro, podeArrastar, aoGanhar, aoSoltarNoFollowup }: OpcoesDoArraste) {
   const [draggedItem, setDraggedItem] = useState<PipelineItem | null>(null);
   const isDraggingRef = useRef(false);
   const suppressClickUntilRef = useRef(0);
@@ -279,6 +286,12 @@ export function useBoardDrag({ pipelineId, stages, setStages, mensagemDeErro, po
       void ganhar(targetStageId);
       return;
     }
+    // Coluna Follow-up: pergunta antes (janela), sem mexer no quadro nem no servidor.
+    if (aoSoltarNoFollowup && draggedItem.stage_id !== targetStageId && ehColunaDeFollowup(stages.find(s => s.id === targetStageId))) {
+      limparEsqueleto();
+      aoSoltarNoFollowup(draggedItem, finishDrag);
+      return;
+    }
     const fromStageId = draggedItem.stage_id;
     const previousStages = stages;
     const moved = {
@@ -312,7 +325,7 @@ export function useBoardDrag({ pipelineId, stages, setStages, mensagemDeErro, po
     } finally {
       finishDrag();
     }
-  }, [draggedItem, pipelineId, stages, setStages, mensagemDeErro, finishDrag, ganhar, limparEsqueleto]);
+  }, [draggedItem, pipelineId, stages, setStages, mensagemDeErro, finishDrag, ganhar, limparEsqueleto, aoSoltarNoFollowup]);
 
   // Soltar: o card cai onde o esqueleto mostrou (`alvoRef`, regra em ondeOCardCai).
   // A position fica entre os vizinhos do índice (ou topo+1 / fundo-1 nas pontas).

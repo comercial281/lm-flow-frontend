@@ -1,6 +1,6 @@
 // src/features/cardDoLead/blocos/DialogosDoCard.tsx
 // As janelas que o card abre por cima: corrigir nome/telefone/e-mail, agendar envio,
-// tirar da roleta, juntar contatos e iniciar conversa.
+// tirar da roleta, juntar contatos, iniciar conversa e colocar em follow-up.
 import { Suspense } from 'react';
 import { lazyWithRetry } from '@/utils/chunkReload';
 import { avisarAgendadosMudaram } from '@/features/conversas/agendados';
@@ -19,7 +19,7 @@ export default function DialogosDoCard({ card, onJuntado }: {
   /** Juntou com outro contato: o aberto pode ter sumido. */
   onJuntado: () => void;
 }) {
-  const { contato, identidade, envio, roleta, juntar, conversa } = card;
+  const { contato, identidade, envio, roleta, juntar, conversa, etapa } = card;
   return (
     <>
       {identidade.corrigindo && contato?.id != null && (
@@ -86,6 +86,9 @@ export default function DialogosDoCard({ card, onJuntado }: {
 
       {/* Iniciar conversa — só monta para lead que ainda não tem conversa */}
       {conversa.janelaDeInicio}
+
+      {/* "Colocar em follow-up": a Etapa escolheu a coluna Follow-up */}
+      {etapa.janelaDoFollowup}
     </>
   );
 }

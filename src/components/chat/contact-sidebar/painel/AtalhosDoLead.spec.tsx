@@ -54,6 +54,12 @@ vi.mock('@/components/visits/ScheduleVisitDialog', () => ({
   ),
 }));
 
+// A janela "Colocar em follow-up" (Fase 2): o atalho só abre com a conversa.
+const abrirFollowup = vi.fn();
+vi.mock('@/features/followup/useColocarEmFollowup', () => ({
+  useColocarEmFollowup: () => ({ abrir: (...a: unknown[]) => abrirFollowup(...a), janela: null }),
+}));
+
 const contact = { id: 'contato-1', name: 'Lead Fictício', phone_number: '+5511912345634' } as never;
 const conversation = { id: 'conv-1' } as never;
 const funil = [
@@ -89,6 +95,7 @@ describe('AtalhosDoLead', () => {
     toggleSalesAgent.mockReset();
     addLabels.mockReset();
     addLabels.mockResolvedValue({});
+    abrirFollowup.mockReset();
     getSalesAgentStatus.mockRejectedValue(new Error('sem IA'));
   });
 
@@ -167,6 +174,19 @@ describe('AtalhosDoLead', () => {
     expect(await screen.findByRole('button', { name: /clique para desativar/ })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Agendar mensagem' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Agendar visita' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Follow-up' })).toBeNull();
+  });
+
+  it('atalho Follow-up abre a janela Colocar em follow-up com a conversa', async () => {
+    renderAtalhos();
+    fireEvent.click(screen.getByRole('button', { name: 'Follow-up' }));
+    expect(abrirFollowup).toHaveBeenCalledWith({ conversationId: 'conv-1' });
+  });
+
+  it('sem conversa, o atalho Follow-up não aparece', async () => {
+    render(<AtalhosDoLead contact={contact} conversation={null} pipelines={funil} nome="Lead Fictício" emOferta={false} />);
+    expect(screen.getByRole('button', { name: 'Agendar visita' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Follow-up' })).toBeNull();
   });
 
   it('oferta e número sem IA: a fileira não existe', async () => {

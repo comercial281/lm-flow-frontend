@@ -12,7 +12,8 @@ import { pipelinesService } from '@/services/pipelines';
 import EditItemModal from '@/components/pipelines/EditItemModal';
 import PipelineManagement from '../PipelineManagement';
 import { TEXTOS_DO_PAINEL as T } from '@/features/conversas/painelDoLead';
-import { ETAPA_TRAVADA, cardFechado, comSituacaoNova, mensagemDaRecusa } from '@/features/pipelines/situacao/situacao';
+import { ETAPA_TRAVADA, cardFechado, comSituacaoNova, ehColunaDeFollowup, mensagemDaRecusa } from '@/features/pipelines/situacao/situacao';
+import { useColocarEmFollowup } from '@/features/followup/useColocarEmFollowup';
 import Secao from './Secao';
 
 import type { Pipeline, PipelineItem, PipelineStage } from '@/types/analytics';
@@ -50,6 +51,8 @@ export default function SecaoFunil({
   const [cardAberto, setCardAberto] = useState<LinhaDoFunil | null>(null);
   const [salvandoCard, setSalvandoCard] = useState(false);
   const [colocando, setColocando] = useState(false);
+  // A coluna Follow-up (Fase 2, 20/10/2026) abre a janela "Colocar em follow-up".
+  const followup = useColocarEmFollowup();
   // Celular (10/10/2026): o card abre na página, não na janela; o voltar devolve à conversa.
   const celular = useCelular();
   const abrirPaginaDoCard = useAbrirPaginaDoCard();
@@ -77,6 +80,19 @@ export default function SecaoFunil({
     if (novaEtapaId === atual || cardFechado(linha.item)) return;
 
     setEscolhida(e => ({ ...e, [linha.item.id]: novaEtapaId }));
+    // Coluna Follow-up: pergunta qual follow-up antes. Quem move é o servidor,
+    // quando o follow-up começa; fechar a janela devolve a etapa de antes.
+    const destino = (linha.pipeline.stages ?? []).find(s => String(s.id) === String(novaEtapaId));
+    if (ehColunaDeFollowup(destino)) {
+      followup.abrir(
+        { pipelineItemId: String(linha.item.id), conversationId },
+        {
+          aoConfirmar: () => onAtualizado(),
+          aoCancelar: () => setEscolhida(e => ({ ...e, [linha.item.id]: atual })),
+        },
+      );
+      return;
+    }
     setMovendo(linha.item.id);
     try {
       await pipelinesService.moveItem({
@@ -197,6 +213,8 @@ export default function SecaoFunil({
           onItemStageMoved={() => onAtualizado()}
         />
       )}
+
+      {followup.janela}
     </Secao>
   );
 }

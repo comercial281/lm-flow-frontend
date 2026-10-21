@@ -3,7 +3,6 @@ import { Loader2, StopCircle, Rocket, Play, ChevronDown, ChevronRight } from 'lu
 import { plural } from '@/lib/formato';
 import { toast } from 'sonner';
 import { Button, Popover, PopoverContent, PopoverTrigger } from '@/components/ui/ds';
-import { Seletor } from '@/components/base/Seletor';
 import EmptyState from '@/components/base/EmptyState';
 import {
   leadFollowupService,
@@ -19,6 +18,7 @@ import {
   type RunningFlow,
   type StartableFollowup,
 } from '@/services/flowAutomations/flowAutomationInstancesService';
+import { useColocarEmFollowup } from '@/features/followup/useColocarEmFollowup';
 import { linhaDoFluxo, linhaDoFollowup, saiAs } from '@/features/conversas/automacaoRodando';
 
 /**
@@ -30,8 +30,10 @@ import { linhaDoFluxo, linhaDoFollowup, saiAs } from '@/features/conversas/autom
  *   conversa ("Follow-up "X" · aguardando resposta até…") e **Parar**;
  * - a fila de um funil antigo, se o lead ainda está terminando nele (formato
  *   antigo), também só com **Parar**;
- * - sem nada rodando, **Iniciar**: escolhe um dos follow-ups que o servidor
- *   lista em `meta.startable_followups` (o corretor não lê o construtor).
+ * - sem nada rodando, **Iniciar**: abre a janela "Colocar em follow-up" (Fase 2,
+ *   20/10/2026), a mesma de todas as portas; a escolha do follow-up, do ponto de
+ *   partida e a ida pra coluna moram lá. O botão só aparece quando o servidor
+ *   lista algum em `meta.startable_followups` (o corretor não lê o construtor).
  *
  * Pausar manual saiu (decisão do Tony, 02–03/10). Desde 20/10/2026 o SERVIDOR
  * pausa o follow-up quando o número cai ("Pausado: motivo" + **Retomar**) e
@@ -79,6 +81,8 @@ interface Props extends LeadRef {
   readOnly?: boolean;
   /** A coluna fixa do card do lead. O bloco já é de uma linha por follow-up; fica pela compatibilidade. */
   compacto?: boolean;
+  /** O card de onde o bloco abre: a janela "Colocar em follow-up" leva ele (o servidor move pra coluna). */
+  pipelineItemId?: string | null;
 }
 
 /** A linha do follow-up: pausado e na fila falam por extenso; o resto é a frase da faixa da conversa. */
@@ -93,7 +97,7 @@ const failMessage = (e: unknown) =>
   || (httpStatusOf(e) === 403 ? 'Seu cargo não permite mexer no follow-up deste lead.' : null)
   || 'Não consegui falar com o servidor. Tente de novo.';
 
-export default function FollowupTimeline({ contactId, conversationId, leadName, readOnly, compacto }: Props) {
+export default function FollowupTimeline({ contactId, conversationId, leadName, readOnly, compacto, pipelineItemId }: Props) {
   const [flows, setFlows] = useState<RunningFlow[]>([]);
   const [legacyJobs, setLegacyJobs] = useState<LeadFollowupJob[]>([]);
   const [legacy, setLegacy] = useState<LeadFollowupState>(EMPTY_LEAD_FOLLOWUP_STATE);
@@ -105,7 +109,7 @@ export default function FollowupTimeline({ contactId, conversationId, leadName, 
   const [erroFluxos, setErroFluxos] = useState(false);
   const [erroAntigo, setErroAntigo] = useState(false);
   const [showCancelled, setShowCancelled] = useState(false);
-  const [chosenId, setChosenId] = useState('');
+  const followup = useColocarEmFollowup();
 
   const ref = useMemo<LeadRef>(() => ({ contactId, conversationId }), [contactId, conversationId]);
   const alive = useRef(true);
@@ -152,7 +156,11 @@ export default function FollowupTimeline({ contactId, conversationId, leadName, 
 
   const legacyLine = linhaDoFollowup(legacy);
   const running = flows.length > 0 || !!legacyLine;
-  const chosen = options.length === 1 ? options[0].id : chosenId;
+  // Iniciar abre a janela "Colocar em follow-up"; depois de iniciar, relê da MESMA fonte.
+  const abrirJanela = () => followup.abrir(
+    { contactId, conversationId, pipelineItemId: pipelineItemId ?? undefined },
+    { aoConfirmar: () => { void load(); } },
+  );
 
   const visibleJobs = useMemo(
     () => legacyJobs.filter(j => showCancelled || j.status !== 'cancelled'),
@@ -298,26 +306,12 @@ export default function FollowupTimeline({ contactId, conversationId, leadName, 
           <div data-linha-followup className="flex items-center gap-2">
             <span className="min-w-0 flex-1 text-xs text-muted-foreground">{headline.label}</span>
             {canAct && options.length > 0 && (
-              <>
-                {options.length > 1 && (
-                  <Seletor
-                    className="h-8 text-xs rounded-md border border-border bg-background px-2 max-w-[140px]"
-                    value={chosenId}
-                    disabled={busy}
-                    onChange={e => setChosenId(e.target.value)}
-                    aria-label="Qual follow-up"
-                  >
-                    <option value="">Escolha…</option>
-                    {options.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
-                  </Seletor>
-                )}
-                <Button size="sm" variant="outline" className="text-xs gap-1.5 shrink-0" disabled={busy || !chosen}
-                  aria-label="Iniciar follow-up"
-                  onClick={() => void act(() => flowAutomationInstancesService.start(ref, chosen), 'Follow-up iniciado')}>
-                  {busy ? <Loader2 className="h-3 w-3 animate-spin" /> : <Rocket className="h-3.5 w-3.5" />}
-                  Iniciar
-                </Button>
-              </>
+              <Button size="sm" variant="outline" className="text-xs gap-1.5 shrink-0" disabled={busy}
+                aria-label="Iniciar follow-up"
+                onClick={abrirJanela}>
+                {busy ? <Loader2 className="h-3 w-3 animate-spin" /> : <Rocket className="h-3.5 w-3.5" />}
+                Iniciar
+              </Button>
             )}
           </div>
         )}
@@ -337,6 +331,7 @@ export default function FollowupTimeline({ contactId, conversationId, leadName, 
         {erroFluxos && !running && (
           <EmptyState tipo="erro" tamanho="compacto" aoTentarDeNovo={() => void load()} className="p-3 text-xs" />
         )}
+        {followup.janela}
       </div>
     );
   }
@@ -396,20 +391,8 @@ export default function FollowupTimeline({ contactId, conversationId, leadName, 
       {canAct && !running && (
         options.length > 0 ? (
           <div className="flex items-center gap-2 flex-wrap">
-            {options.length > 1 && (
-              <Seletor
-                className="h-7 text-xs rounded-md border border-border bg-background px-2 max-w-[200px]"
-                value={chosenId}
-                disabled={busy}
-                onChange={e => setChosenId(e.target.value)}
-                aria-label="Qual follow-up"
-              >
-                <option value="">Escolha o follow-up…</option>
-                {options.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
-              </Seletor>
-            )}
-            <Button size="sm" variant="default" className="text-xs gap-1.5" disabled={busy || !chosen}
-              onClick={() => void act(() => flowAutomationInstancesService.start(ref, chosen), 'Follow-up iniciado')}>
+            <Button size="sm" variant="default" className="text-xs gap-1.5" disabled={busy}
+              onClick={abrirJanela}>
               {busy ? <Loader2 className="h-3 w-3 animate-spin" /> : <Rocket className="h-3.5 w-3.5" />}
               Iniciar follow-up
             </Button>
@@ -423,6 +406,7 @@ export default function FollowupTimeline({ contactId, conversationId, leadName, 
           />
         )
       )}
+      {followup.janela}
     </div>
   );
 }

@@ -98,6 +98,7 @@ export default function FichaDoCard({
             contactId={contato?.id != null ? String(contato.id) : null}
             conversationId={conversaDoCard(item)}
             leadName={contato?.name ?? null}
+            pipelineItemId={item.id ? String(item.id) : null}
           />
         </CaixaDoCard>
 

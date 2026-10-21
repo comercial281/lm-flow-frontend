@@ -34,6 +34,7 @@ import { useCardNoEndereco } from './useCardNoEndereco';
 import { STATUS_DA_ABA, pertenceAAba, podeArrastarNaAba } from './quadro/enderecoDoQuadro';
 import { comSituacaoNova, situacaoDe } from '@/features/pipelines/situacao/situacao';
 import { useBoardDrag } from './quadro/useBoardDrag';
+import { useColocarEmFollowup } from '@/features/followup/useColocarEmFollowup';
 import { usePipelineFilters } from './quadro/usePipelineFilters';
 import { useFacetasDoQuadro } from './quadro/useFacetasDoQuadro';
 import { useMaisCardsDaColuna } from './quadro/useMaisCardsDaColuna';
@@ -167,6 +168,19 @@ export default function PipelineKanban() {
   const aoGanharRef = useRef<(item: PipelineItem) => void>(() => {});
   const aoGanharNoQuadro = useCallback((item: PipelineItem) => aoGanharRef.current(item), []);
 
+  // Soltar na coluna Follow-up (Fase 2, 20/10/2026) abre a janela "Colocar em
+  // follow-up"; Iniciar → o servidor move o card e o quadro relê (loadPipelineData,
+  // declarado mais abaixo — por isso a ref). Cancelar → o card fica onde estava.
+  const followup = useColocarEmFollowup();
+  const abrirFollowup = followup.abrir;
+  const recarregarQuadroRef = useRef<() => void>(() => {});
+  const aoSoltarNoFollowup = useCallback((item: PipelineItem, terminar: () => void) => {
+    abrirFollowup({ pipelineItemId: String(item.id) }, {
+      aoConfirmar: () => { terminar(); recarregarQuadroRef.current(); },
+      aoCancelar: terminar,
+    });
+  }, [abrirFollowup]);
+
   // Arraste do card, rolar o fundo e a roda do mouse (quadro/useBoardDrag).
   const {
     boardScrollRef, isDraggingRef, suppressClickUntilRef,
@@ -175,7 +189,7 @@ export default function PipelineKanban() {
     arraste, alvo,
   } = useBoardDrag({
     pipelineId, stages, setStages: setStagesLocal, mensagemDeErro: t('kanban.messages.itemMoveError'), podeArrastar: podeArrastarCard,
-    aoGanhar: aoGanharNoQuadro,
+    aoGanhar: aoGanharNoQuadro, aoSoltarNoFollowup,
   });
   // Mini card ao passar o mouse (um só pro quadro; o card só avisa o mouse).
   const miniCard = useMiniCard(isDraggingRef);
@@ -356,6 +370,8 @@ export default function PipelineKanban() {
       console.error('Error loading pipelines:', error);
     }
   }, []);
+
+  recarregarQuadroRef.current = () => { void loadPipelineData(true); };
 
   useEffect(() => {
     loadPipelineData(false, true);
@@ -1174,6 +1190,8 @@ export default function PipelineKanban() {
           loading={isReorderingStages}
         />
       </Suspense>
+
+      {followup.janela}
     </div>
   );
 }

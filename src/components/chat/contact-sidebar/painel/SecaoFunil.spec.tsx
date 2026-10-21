@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render as renderRtl, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render as renderRtl, screen, waitFor } from '@testing-library/react';
 import type { ReactElement, ReactNode } from 'react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import SecaoFunil from './SecaoFunil';
@@ -56,6 +56,12 @@ vi.mock('@/components/pipelines/EditItemModal', () => ({
   ),
 }));
 
+// A janela "Colocar em follow-up" (Fase 2): a porta só abre e espera a resposta.
+const abrirFollowup = vi.fn();
+vi.mock('@/features/followup/useColocarEmFollowup', () => ({
+  useColocarEmFollowup: () => ({ abrir: (...a: unknown[]) => abrirFollowup(...a), janela: null }),
+}));
+
 vi.mock('../PipelineManagement', () => ({
   default: () => <div>escolher-funil-e-etapa</div>,
 }));
@@ -74,6 +80,7 @@ const funil = (): Pipeline =>
         { id: 'item-9', item_id: 'conv-1', type: 'conversation', pipeline_id: 'funil-1', stage_id: 'etapa-qualif' },
       ] as never),
       etapa('etapa-visita', 'Visita agendada', 2),
+      { ...etapa('etapa-fu', 'Follow-up Automático', 3), stage_type: 'followup' },
     ],
   }) as unknown as Pipeline;
 
@@ -81,6 +88,7 @@ describe('SecaoFunil', () => {
   beforeEach(() => {
     moveItem.mockReset();
     toastError.mockReset();
+    abrirFollowup.mockReset();
   });
 
   afterEach(() => {
@@ -108,6 +116,25 @@ describe('SecaoFunil', () => {
       from_stage_id: 'etapa-qualif',
       to_stage_id: 'etapa-visita',
     });
+  });
+
+  it('escolher a coluna Follow-up abre a janela com o id do card em vez de mover', async () => {
+    const onAtualizado = vi.fn();
+    render(<SecaoFunil conversationId="conv-1" pipelines={[funil()]} carregando={false} onAtualizado={onAtualizado} />);
+
+    fireEvent.change(screen.getByLabelText('etapa'), { target: { value: 'etapa-fu' } });
+
+    expect(moveItem).not.toHaveBeenCalled();
+    expect(abrirFollowup).toHaveBeenCalledWith(
+      expect.objectContaining({ pipelineItemId: 'item-9', conversationId: 'conv-1' }),
+      expect.objectContaining({ aoConfirmar: expect.any(Function), aoCancelar: expect.any(Function) }),
+    );
+    // Cancelar: a etapa volta pra de antes.
+    act(() => abrirFollowup.mock.calls[0][1].aoCancelar());
+    expect((screen.getByLabelText('etapa') as HTMLSelectElement).value).toBe('etapa-qualif');
+    // Iniciar: o servidor moveu; a lateral recarrega.
+    act(() => abrirFollowup.mock.calls[0][1].aoConfirmar({ started: true }));
+    expect(onAtualizado).toHaveBeenCalled();
   });
 
   it('erro ao mover: avisa e a etapa volta', async () => {

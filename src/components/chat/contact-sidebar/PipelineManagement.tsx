@@ -8,6 +8,8 @@ import { pipelinesService } from '@/services/pipelines/pipelinesService';
 import type { Pipeline, PipelineItem, PipelineStage } from '@/types/analytics';
 import { useLanguage } from '@/hooks/useLanguage';
 import { useConfirmacao } from '@/hooks/useConfirmacao';
+import { ehColunaDeFollowup } from '@/features/pipelines/situacao/situacao';
+import { useColocarEmFollowup } from '@/features/followup/useColocarEmFollowup';
 
 interface PipelineManagementProps {
   conversationId: string;
@@ -31,6 +33,8 @@ const PipelineManagement: React.FC<PipelineManagementProps> = ({
   const [selectedStageId, setSelectedStageId] = useState<string>('');
   const [isSaving, setIsSaving] = useState(false);
   const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
+  // A coluna Follow-up (Fase 2, 20/10/2026) abre a janela "Colocar em follow-up".
+  const followup = useColocarEmFollowup();
   const [originalPipelines, setOriginalPipelines] = useState<Pipeline[]>([]);
 
   const loadData = async () => {
@@ -97,9 +101,40 @@ const PipelineManagement: React.FC<PipelineManagementProps> = ({
     setSelectedStageId('');
   };
 
+  // O card desta conversa no funil escolhido (procura nas etapas).
+  const cardDaConversa = (): PipelineItem | undefined => {
+    const conversationPipeline = pipelines?.find(
+      (pipeline: Pipeline) => String(pipeline.id) === selectedPipelineId
+    );
+    for (const stage of conversationPipeline?.stages ?? []) {
+      const found = stage.items?.find(
+        (item: PipelineItem) => String(item.item_id) === conversationId
+      );
+      if (found) return found;
+    }
+    return undefined;
+  };
+
   const handleSaveClick = async () => {
     if (!selectedPipelineId || !selectedStageId) {
       toast.error(t('contactSidebar.pipeline.selectError'));
+      return;
+    }
+    // Mover o card pra coluna Follow-up: pergunta qual follow-up (janela) em vez
+    // de mover. Quem move é o servidor, quando o follow-up começa.
+    const card = cardDaConversa();
+    const destino = availableStages.find(s => String(s.id) === selectedStageId);
+    if (card && String(card.stage_id) !== selectedStageId && ehColunaDeFollowup(destino)) {
+      followup.abrir(
+        { pipelineItemId: String(card.id), conversationId },
+        {
+          aoConfirmar: () => {
+            void loadData();
+            onPipelineUpdated?.();
+          },
+          aoCancelar: () => setSelectedStageId(String(card.stage_id)),
+        },
+      );
       return;
     }
     // Frase com o nome do funil e da etapa em negrito.
@@ -135,22 +170,7 @@ const PipelineManagement: React.FC<PipelineManagementProps> = ({
       setIsSaving(true);
 
       // Find the pipeline item for this conversation by searching through stages
-      const conversationPipeline = pipelines?.find(
-        (pipeline: Pipeline) => String(pipeline.id) === selectedPipelineId
-      );
-
-      let conversationItem: PipelineItem | undefined;
-      if (conversationPipeline?.stages) {
-        for (const stage of conversationPipeline.stages) {
-          const found = stage.items?.find(
-            (item: PipelineItem) => String(item.item_id) === conversationId
-          );
-          if (found) {
-            conversationItem = found;
-            break;
-          }
-        }
-      }
+      const conversationItem = cardDaConversa();
 
       if (conversationItem) {
         // Use move_to_stage endpoint (same as Kanban drag-and-drop)
@@ -307,6 +327,7 @@ const PipelineManagement: React.FC<PipelineManagementProps> = ({
       </div>
 
       {dialogoDeConfirmacao}
+      {followup.janela}
     </div>
   );
 };

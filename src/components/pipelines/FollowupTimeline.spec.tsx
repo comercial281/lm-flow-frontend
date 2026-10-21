@@ -9,6 +9,8 @@ const running = vi.fn();
 const instanceStart = vi.fn();
 const instanceStop = vi.fn();
 const instanceResume = vi.fn();
+const placePreview = vi.fn();
+const instancePlace = vi.fn();
 // Os follow-ups que dá pra iniciar vêm na mesma leitura (meta.startable_followups).
 let startable: Array<{ id: string; name: string }> = [];
 
@@ -31,6 +33,8 @@ vi.mock('@/services/flowAutomations/flowAutomationInstancesService', () => ({
     start: (...a: unknown[]) => instanceStart(...a),
     stop: (...a: unknown[]) => instanceStop(...a),
     resume: (...a: unknown[]) => instanceResume(...a),
+    placePreview: (...a: unknown[]) => placePreview(...a),
+    place: (...a: unknown[]) => instancePlace(...a),
   },
 }));
 
@@ -71,8 +75,17 @@ const instance = (over: Record<string, unknown> = {}) => ({
 
 const flow = (over: Record<string, unknown> = {}) => ({ id: 'f1', name: 'Follow-up longo', ...over });
 
+const preview = (over: Record<string, unknown> = {}) => ({
+  default_flow_id: 'f1',
+  options: [flow(), flow({ id: 'f2', name: 'Follow-up curto' })],
+  current: null,
+  progress: null,
+  has_followup_column: true,
+  ...over,
+});
+
 beforeEach(() => {
-  [get, legacyStop, running, instanceStart, instanceStop, instanceResume].forEach(m => m.mockReset());
+  [get, legacyStop, running, instanceStart, instanceStop, instanceResume, placePreview, instancePlace].forEach(m => m.mockReset());
   get.mockResolvedValue({ jobs: [], state: state() });
   running.mockResolvedValue([]);
   startable = [];
@@ -110,32 +123,40 @@ describe('Follow-up do card — fluxo de follow-up', () => {
     expect(screen.queryByText(/Boas-vindas/)).not.toBeInTheDocument();
   });
 
-  it('sem nada rodando, Iniciar escolhe um dos follow-ups que o servidor lista', async () => {
+  it('sem nada rodando, Iniciar abre a janela Colocar em follow-up e inicia o escolhido', async () => {
     startable = [flow(), flow({ id: 'f2', name: 'Follow-up curto' })];
-    instanceStart.mockResolvedValue({ message: 'Follow-up iniciado' });
+    placePreview.mockResolvedValue(preview());
+    instancePlace.mockResolvedValue({ message: 'Follow-up "Follow-up curto" iniciado.', started: true });
 
     render(<FollowupTimeline contactId="c-1" />);
 
-    const seletor = await screen.findByLabelText('Qual follow-up');
-    expect(screen.getByRole('option', { name: 'Follow-up curto' })).toBeInTheDocument();
-    const iniciar = screen.getByRole('button', { name: /Iniciar follow-up/ });
-    expect(iniciar).toBeDisabled();
+    // A escolha do follow-up mora na janela: o bloco não tem mais lista própria.
+    await userEvent.click(await screen.findByRole('button', { name: /Iniciar follow-up/ }));
+    expect(screen.queryByLabelText('Qual follow-up')).not.toBeInTheDocument();
+    const seletor = await screen.findByLabelText('Follow-up');
+    expect(placePreview).toHaveBeenCalledWith({ contactId: 'c-1', conversationId: undefined, pipelineItemId: undefined });
 
     fireEvent.change(seletor, { target: { value: 'f2' } });
-    await userEvent.click(iniciar);
+    await userEvent.click(screen.getByRole('button', { name: 'Iniciar' }));
 
-    await waitFor(() => expect(instanceStart).toHaveBeenCalledWith({ contactId: 'c-1', conversationId: undefined }, 'f2'));
+    await waitFor(() => expect(instancePlace).toHaveBeenCalledWith(
+      { contactId: 'c-1', conversationId: undefined, pipelineItemId: undefined },
+      { flowAutomationId: 'f2', mode: 'restart' },
+    ));
+    expect(instanceStart).not.toHaveBeenCalled();
+    // Relê da mesma fonte depois de iniciar.
+    await waitFor(() => expect(running).toHaveBeenCalledTimes(2));
   });
 
-  it('com um follow-up só, o botão já inicia ele', async () => {
+  it('Iniciar do card abre a janela com o id do card', async () => {
     startable = [flow()];
-    instanceStart.mockResolvedValue({});
+    placePreview.mockResolvedValue(preview());
 
-    render(<FollowupTimeline contactId="c-1" />);
+    render(<FollowupTimeline contactId="c-1" conversationId="conv-1" pipelineItemId="card-9" compacto />);
 
-    await waitFor(() => expect(screen.getByRole('button', { name: /Iniciar follow-up/ })).not.toBeDisabled());
-    await userEvent.click(screen.getByRole('button', { name: /Iniciar follow-up/ }));
-    await waitFor(() => expect(instanceStart).toHaveBeenCalledWith(expect.anything(), 'f1'));
+    await userEvent.click(await screen.findByRole('button', { name: /Iniciar follow-up/ }));
+    expect(await screen.findByRole('heading', { name: 'Colocar em follow-up' })).toBeInTheDocument();
+    expect(placePreview).toHaveBeenCalledWith({ contactId: 'c-1', conversationId: 'conv-1', pipelineItemId: 'card-9' });
   });
 
   it('sem follow-up ligado, diz onde criar', async () => {
