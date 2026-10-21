@@ -28,6 +28,11 @@ vi.mock('@/contexts/TenantFeaturesContext', () => ({
   useFeature: () => agendarLigado,
 }));
 
+let podeMexerNoCard = true;
+vi.mock('@/hooks/useCan', () => ({
+  useCan: () => (recurso: string, acao: string) => (recurso === 'pipeline_items' && acao === 'update' ? podeMexerNoCard : true),
+}));
+
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
 vi.mock('@/components/scheduledActions/ScheduleActionModal', () => ({
@@ -96,6 +101,7 @@ describe('AtalhosDoLead', () => {
     addLabels.mockReset();
     addLabels.mockResolvedValue({});
     abrirFollowup.mockReset();
+    podeMexerNoCard = true;
     getSalesAgentStatus.mockRejectedValue(new Error('sem IA'));
   });
 
@@ -177,10 +183,32 @@ describe('AtalhosDoLead', () => {
     expect(screen.queryByRole('button', { name: 'Follow-up' })).toBeNull();
   });
 
-  it('atalho Follow-up abre a janela Colocar em follow-up com a conversa', async () => {
-    renderAtalhos();
+  it('atalho Follow-up abre a janela com a conversa e, ao iniciar, recarrega o funil do painel', async () => {
+    const aoColocarEmFollowup = vi.fn();
+    render(
+      <AtalhosDoLead
+        contact={contact}
+        conversation={conversation}
+        pipelines={funil}
+        nome="Lead Fictício"
+        emOferta={false}
+        aoColocarEmFollowup={aoColocarEmFollowup}
+      />,
+    );
     fireEvent.click(screen.getByRole('button', { name: 'Follow-up' }));
-    expect(abrirFollowup).toHaveBeenCalledWith({ conversationId: 'conv-1' });
+    expect(abrirFollowup).toHaveBeenCalledWith(
+      { conversationId: 'conv-1' },
+      expect.objectContaining({ aoConfirmar: expect.any(Function) }),
+    );
+    abrirFollowup.mock.calls[0][1].aoConfirmar({ started: true });
+    expect(aoColocarEmFollowup).toHaveBeenCalledTimes(1);
+  });
+
+  it('sem permissão de mexer no card, o atalho Follow-up não aparece', async () => {
+    podeMexerNoCard = false;
+    renderAtalhos();
+    expect(screen.getByRole('button', { name: 'Agendar visita' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Follow-up' })).toBeNull();
   });
 
   it('sem conversa, o atalho Follow-up não aparece', async () => {

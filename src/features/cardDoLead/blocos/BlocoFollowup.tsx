@@ -16,6 +16,7 @@ export default function BlocoFollowup({ card }: { card: CardDoLead }) {
         leadName={contato?.name ?? null}
         // Card sem funil tem id vazio: aí a janela vai só com o lead.
         pipelineItemId={item?.id ? String(item.id) : null}
+        aoColocar={card.etapa.aoColocarEmFollowup}
         compacto
       />
     </div>

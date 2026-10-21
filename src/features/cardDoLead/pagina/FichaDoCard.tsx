@@ -99,6 +99,7 @@ export default function FichaDoCard({
             conversationId={conversaDoCard(item)}
             leadName={contato?.name ?? null}
             pipelineItemId={item.id ? String(item.id) : null}
+            aoColocar={card.etapa.aoColocarEmFollowup}
           />
         </CaixaDoCard>
 

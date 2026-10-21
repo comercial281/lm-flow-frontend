@@ -220,6 +220,19 @@ export function useCardDoLead(
   const followup = useColocarEmFollowup();
   const abrirFollowup = followup.abrir;
 
+  // O lead foi posto em follow-up (pela Etapa ou pelo Iniciar do bloco Follow-up):
+  // o servidor levou o card pra coluna Follow-up do funil, e a Etapa e o quadro
+  // acompanham. Funil sem a coluna ou card fechado: o card fica onde está.
+  const aoColocarEmFollowup = useCallback(() => {
+    if (!item) return;
+    const coluna = stages.find(s => ehColunaDeFollowup(s));
+    if (coluna && !fechado && String(coluna.id) !== String(etapaId)) {
+      setEtapaId(String(coluna.id));
+      onItemStageMoved?.(item.id, String(coluna.id));
+    }
+    recarregarHistorico();
+  }, [item, stages, fechado, etapaId, onItemStageMoved, recarregarHistorico]);
+
   const moverEtapa = useCallback(async (toStageId: string) => {
     if (!item || !etapaId || toStageId === etapaId || fechado || rodapeSalvando) return;
     if (ehColunaDeFollowup(stages.find(s => String(s.id) === String(toStageId)))) {
@@ -229,11 +242,7 @@ export function useCardDoLead(
           conversationId: item.conversation?.id != null ? String(item.conversation.id) : null,
         },
         {
-          aoConfirmar: () => {
-            setEtapaId(toStageId);
-            onItemStageMoved?.(item.id, toStageId);
-            recarregarHistorico();
-          },
+          aoConfirmar: aoColocarEmFollowup,
           aoCancelar: () => {},
         },
       );
@@ -267,7 +276,7 @@ export function useCardDoLead(
     } finally {
       setMovendoEtapa(false);
     }
-  }, [item, etapaId, onItemStageMoved, recarregarHistorico, fechado, rodapeSalvando, stages, itemDaSituacao, aoMudarSituacao, onItemStatusChanged, abrirFollowup]);
+  }, [item, etapaId, onItemStageMoved, recarregarHistorico, fechado, rodapeSalvando, stages, itemDaSituacao, aoMudarSituacao, onItemStatusChanged, abrirFollowup, aoColocarEmFollowup]);
 
   // Com conversa, atribui a conversa (o servidor espelha no contato); sem, grava no contato.
   const handleAssigneeChange = useCallback(async (userId: string) => {
@@ -472,6 +481,8 @@ export function useCardDoLead(
       id: etapaId, atual: etapaAtual, opcoes: stages, movendo: movendoEtapa, mover: moverEtapa,
       // A janela "Colocar em follow-up" que a Etapa abre (DialogosDoCard põe na tela).
       janelaDoFollowup: followup.janela,
+      // O Iniciar do bloco Follow-up chama depois de pôr o lead (a Etapa vai pra coluna Follow-up).
+      aoColocarEmFollowup,
     },
     situacao: {
       item: itemDaSituacao,

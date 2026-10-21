@@ -237,6 +237,7 @@ const ContactSidebar: React.FC<ContactSidebarProps> = ({
                     pipelines={conversationPipelines}
                     nome={nomeNaTela(contact?.name, emOferta) || TEXTOS_DO_PAINEL.semNome}
                     emOferta={emOferta}
+                    aoColocarEmFollowup={handlePipelineUpdated}
                   />
                 }
                 selos={

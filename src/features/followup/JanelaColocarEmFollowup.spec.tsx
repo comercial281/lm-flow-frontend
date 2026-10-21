@@ -129,6 +129,29 @@ describe('JanelaColocarEmFollowup', () => {
     ).toBeInTheDocument();
   });
 
+  it('lead já no follow-up escolhido não fala em troca', async () => {
+    placePreview.mockResolvedValue(preview({ current: { flow_name: 'Follow-up longo', phase: 'waiting' } }));
+    abrir();
+
+    expect(await screen.findByText('Este lead já está neste follow-up.')).toBeInTheDocument();
+    expect(screen.queryByText(/Iniciar troca pelo escolhido/)).not.toBeInTheDocument();
+
+    // Trocar pra outro no seletor volta o aviso de troca.
+    fireEvent.change(screen.getByLabelText('Follow-up'), { target: { value: 'f1' } });
+    expect(
+      await screen.findByText('Este lead já está no follow-up "Follow-up longo". Iniciar troca pelo escolhido.'),
+    ).toBeInTheDocument();
+  });
+
+  it('follow-up atual sem nome: "um follow-up", sem aspas vazias', async () => {
+    placePreview.mockResolvedValue(preview({ current: { flow_name: null, phase: 'waiting' } }));
+    abrir();
+
+    expect(
+      await screen.findByText('Este lead já está em um follow-up. Iniciar troca pelo escolhido.'),
+    ).toBeInTheDocument();
+  });
+
   it('recusa do servidor mostra a frase e a janela fica aberta', async () => {
     placePreview.mockResolvedValue(preview());
     place.mockRejectedValue({ response: { status: 403, data: { errors: ['Esse lead não é seu.'] } } });

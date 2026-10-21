@@ -74,7 +74,16 @@ export default function JanelaColocarEmFollowup({ lead, aoCancelar, aoConcluir }
   const progresso = previa?.progress && previa.progress.flow_automation_id === escolhido ? previa.progress : null;
   const podeContinuar = Boolean(progresso?.has_next);
   const modoFinal: ModoDoFollowup = podeContinuar && modo === 'continue' ? 'continue' : 'restart';
-  const nomeAtual = previa?.current?.flow_name ?? '';
+  // O servidor manda o nome do follow-up atual (sem id): é ele que diz se o escolhido é o mesmo.
+  const nomeAtual = previa?.current?.flow_name ?? null;
+  const nomeEscolhido = previa?.options.find(o => o.id === escolhido)?.name ?? null;
+  const avisoDoAtual = !previa?.current
+    ? null
+    : nomeAtual && nomeAtual === nomeEscolhido
+      ? 'Este lead já está neste follow-up.'
+      : nomeAtual
+        ? `Este lead já está no follow-up "${nomeAtual}". Iniciar troca pelo escolhido.`
+        : 'Este lead já está em um follow-up. Iniciar troca pelo escolhido.';
 
   const iniciar = async () => {
     if (!escolhido || salvando) return;
@@ -115,11 +124,7 @@ export default function JanelaColocarEmFollowup({ lead, aoCancelar, aoConcluir }
           />
         ) : (
           <div className="grid gap-4">
-            {previa.current && (
-              <Aviso tom="atencao" compacto>
-                {`Este lead já está no follow-up "${nomeAtual}". Iniciar troca pelo escolhido.`}
-              </Aviso>
-            )}
+            {avisoDoAtual && <Aviso tom="atencao" compacto>{avisoDoAtual}</Aviso>}
 
             <GradeDaJanela>
               <CampoDaJanela rotulo="Follow-up" htmlFor="colocar-followup-qual" colunas={4} ajuda={fraseDaColuna}>

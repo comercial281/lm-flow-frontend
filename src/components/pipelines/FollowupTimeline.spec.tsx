@@ -159,6 +159,19 @@ describe('Follow-up do card — fluxo de follow-up', () => {
     expect(placePreview).toHaveBeenCalledWith({ contactId: 'c-1', conversationId: 'conv-1', pipelineItemId: 'card-9' });
   });
 
+  it('depois de iniciar pela janela, avisa o card (a Etapa vai pra coluna Follow-up)', async () => {
+    startable = [flow()];
+    placePreview.mockResolvedValue(preview());
+    instancePlace.mockResolvedValue({ message: 'Follow-up "Follow-up longo" iniciado.', started: true });
+    const aoColocar = vi.fn();
+
+    render(<FollowupTimeline contactId="c-1" pipelineItemId="card-9" compacto aoColocar={aoColocar} />);
+
+    await userEvent.click(await screen.findByRole('button', { name: /Iniciar follow-up/ }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Iniciar' }));
+    await waitFor(() => expect(aoColocar).toHaveBeenCalledTimes(1));
+  });
+
   it('sem follow-up ligado, diz onde criar', async () => {
     render(<FollowupTimeline contactId="c-1" />);
     expect(await screen.findByText(/Nenhum follow-up pra iniciar/)).toBeInTheDocument();

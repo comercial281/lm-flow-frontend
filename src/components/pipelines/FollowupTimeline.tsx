@@ -83,6 +83,8 @@ interface Props extends LeadRef {
   compacto?: boolean;
   /** O card de onde o bloco abre: a janela "Colocar em follow-up" leva ele (o servidor move pra coluna). */
   pipelineItemId?: string | null;
+  /** Depois de pôr o lead no follow-up pela janela: o card leva a Etapa pra coluna Follow-up e avisa o quadro. */
+  aoColocar?: () => void;
 }
 
 /** A linha do follow-up: pausado e na fila falam por extenso; o resto é a frase da faixa da conversa. */
@@ -97,7 +99,7 @@ const failMessage = (e: unknown) =>
   || (httpStatusOf(e) === 403 ? 'Seu cargo não permite mexer no follow-up deste lead.' : null)
   || 'Não consegui falar com o servidor. Tente de novo.';
 
-export default function FollowupTimeline({ contactId, conversationId, leadName, readOnly, compacto, pipelineItemId }: Props) {
+export default function FollowupTimeline({ contactId, conversationId, leadName, readOnly, compacto, pipelineItemId, aoColocar }: Props) {
   const [flows, setFlows] = useState<RunningFlow[]>([]);
   const [legacyJobs, setLegacyJobs] = useState<LeadFollowupJob[]>([]);
   const [legacy, setLegacy] = useState<LeadFollowupState>(EMPTY_LEAD_FOLLOWUP_STATE);
@@ -159,7 +161,7 @@ export default function FollowupTimeline({ contactId, conversationId, leadName, 
   // Iniciar abre a janela "Colocar em follow-up"; depois de iniciar, relê da MESMA fonte.
   const abrirJanela = () => followup.abrir(
     { contactId, conversationId, pipelineItemId: pipelineItemId ?? undefined },
-    { aoConfirmar: () => { void load(); } },
+    { aoConfirmar: () => { void load(); aoColocar?.(); } },
   );
 
   const visibleJobs = useMemo(

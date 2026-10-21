@@ -3,6 +3,7 @@ import { Bot, BotOff, CalendarClock, MapPin, Rocket, UserCheck } from 'lucide-re
 
 import IconActionButton from '@/components/base/IconActionButton';
 import { useFeature } from '@/contexts/TenantFeaturesContext';
+import { useCan } from '@/hooks/useCan';
 import { avisarAgendadosMudaram } from '@/features/conversas/agendados';
 import { dicaDaIa, iaNoNumero, leadDoPainelParaVisita } from '@/features/conversas/atalhosDoLead';
 import { useIaDaConversa } from '@/features/conversas/useIaDaConversa';
@@ -32,6 +33,8 @@ interface AtalhosDoLeadProps {
   /** Nome como aparece no topo do painel. */
   nome: string;
   emOferta: boolean;
+  /** Pôs o lead no follow-up: o painel relê os funis (o card foi pra coluna Follow-up). */
+  aoColocarEmFollowup?: () => void;
 }
 
 /**
@@ -40,12 +43,13 @@ interface AtalhosDoLeadProps {
  * com a conversa). Cada botão só existe quando a ação existe; sem nenhum, a
  * fileira some.
  */
-export default function AtalhosDoLead({ contact, conversation, pipelines, nome, emOferta }: AtalhosDoLeadProps) {
+export default function AtalhosDoLead({ contact, conversation, pipelines, nome, emOferta, aoColocarEmFollowup }: AtalhosDoLeadProps) {
   const canScheduleAction = useFeature('card_schedule_action');
   const ia = useIaDaConversa(conversation?.id);
   const [agendando, setAgendando] = useState(false);
   const [visitaAberta, setVisitaAberta] = useState(false);
   const followup = useColocarEmFollowup();
+  const pode = useCan();
 
   const contatoId = contact?.id != null ? String(contact.id) : null;
   // As duas janelas mostram o telefone do lead: fora durante a oferta da roleta.
@@ -54,7 +58,10 @@ export default function AtalhosDoLead({ contact, conversation, pipelines, nome, 
   const lead = emOferta ? null : leadDoPainelParaVisita(contact, pipelines, nome);
   const temIa = iaNoNumero(ia.estado);
   // Na oferta da roleta só o robô fica (decisão de 07/10): o follow-up é de quem aceitou.
-  const conversaId = !emOferta && conversation?.id != null ? String(conversation.id) : null;
+  // Sem `pipeline_items.update` o servidor recusa o place: o botão nem aparece.
+  const conversaId = !emOferta && conversation?.id != null && pode('pipeline_items', 'update')
+    ? String(conversation.id)
+    : null;
 
   if (!podeAgendar && !temIa && !lead && !conversaId) return null;
 
@@ -107,7 +114,7 @@ export default function AtalhosDoLead({ contact, conversation, pipelines, nome, 
         <IconActionButton
           label="Follow-up"
           icon={<Rocket className="h-4 w-4" />}
-          onClick={() => followup.abrir({ conversationId: conversaId })}
+          onClick={() => followup.abrir({ conversationId: conversaId }, { aoConfirmar: () => aoColocarEmFollowup?.() })}
           className={REDONDO}
         />
       )}

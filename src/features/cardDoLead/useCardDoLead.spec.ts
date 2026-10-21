@@ -245,6 +245,29 @@ describe('useCardDoLead', () => {
     expect(onItemStageMoved).toHaveBeenCalledWith('i1', 's5');
   });
 
+  it('Iniciar pelo bloco do card atualiza a Etapa mostrada e avisa o quadro', () => {
+    const onItemStageMoved = vi.fn();
+    const { result } = renderHook(() => useCardDoLead(completo, { aberto: true, stages: etapas, onItemStageMoved }));
+    const chaveAntes = result.current.historico.versao;
+
+    act(() => result.current.etapa.aoColocarEmFollowup());
+
+    expect(result.current.etapa.id).toBe('s5');
+    expect(onItemStageMoved).toHaveBeenCalledWith('i1', 's5');
+    expect(result.current.historico.versao).not.toBe(chaveAntes);
+  });
+
+  it('Iniciar pelo bloco num funil sem coluna Follow-up: a Etapa fica onde está', () => {
+    const onItemStageMoved = vi.fn();
+    const semColuna = (etapas as unknown as Array<{ stage_type?: string }>).filter(e => e.stage_type !== 'followup') as never;
+    const { result } = renderHook(() => useCardDoLead(completo, { aberto: true, stages: semColuna, onItemStageMoved }));
+
+    act(() => result.current.etapa.aoColocarEmFollowup());
+
+    expect(result.current.etapa.id).toBe('s1');
+    expect(onItemStageMoved).not.toHaveBeenCalled();
+  });
+
   it('o rodapé reabriu um Ganho: a Etapa vai para a coluna que o servidor devolveu', () => {
     const ganho = { ...(completo as object), status: 'won', stage_id: 's9' } as never;
     const { result } = renderHook(() => useCardDoLead(ganho, { aberto: true, stages: etapas }));
