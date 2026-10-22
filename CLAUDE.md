@@ -9536,3 +9536,10 @@ Armadilhas:
 5. **Textos literais** (sem chave nova de i18n), "Funis de mensagem → Follow-up" nas dicas.
 
 Código: `features/followup/JanelaColocarEmFollowup.tsx`, `features/flowAutomations/followupOptions.ts` (`soFollowupsDaEquipe`), `features/flowAutomations/editores/LeadAutomationsEditors.tsx` (`useAutomationResources`), `pages/Customer/Automations/FlowBuilder/ListaDeFollowups.tsx`, `FlowAutomationCanvas.tsx`, `pages/Customer/Automations/SalesAgents/configurar/paginas/Followup.tsx`, `components/layout/config/menuItems.ts`, `flowAutomationInstancesService.placePreview`, `flowAutomationsService.list({ startable, automationId })`. Testes: `JanelaColocarEmFollowup.spec.tsx`, `Followup.spec.tsx` (IA), `useAutomationResources.erroDeCarga.spec.tsx`, `FollowupPorUsuario.spec.tsx`, `FollowupCanvasCorretor.spec.tsx`, `menuItems.spec.ts`.
+
+## Funis de mensagem: listas empilhadas, nunca aba dentro de aba (2026-10-22)
+
+Pedido do dono, depois de ver a aba Manual com uma segunda fileira "Meus funis | Da equipe" embaixo de "Manual | Follow-up" (e as duas cortadas ao meio). Ele já tinha pedido em 20/10: "duas listas, uma da equipe e a outra pessoal... não vai poder ter um monte de menuzinho ali".
+
+- **Uma fileira de abas só por página.** Em Funis de mensagem a fileira é a da moldura (Manual | Follow-up). Dentro de cada aba, as divisões são **listas empilhadas com título e contagem** (Manual: Da equipe, Meus funis; Follow-up: Da equipe, Meus, Dos corretores pro gestor). Lista vazia mostra o aviso dela e a outra continua aparecendo. Não reabrir sem o dono pedir.
+- **Abas não encolhem.** Em página com `rolagem="conteudo"` a coluna é flex com `min-h-0`, e a fileira com `overflow-x-auto` encolhia até cortar o texto. O componente `Abas` agora é `shrink-0` (vale pra toda tela).
