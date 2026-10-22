@@ -43,6 +43,7 @@ import { FlowBlockDialog } from './FlowBlockDialog';
 import { NotificationFields } from './NotificationFields';
 import { isNotifyAction } from '@/features/flowAutomations/notification';
 import { LinhaDoEnvio, MessageBlockFields } from './MessageBlockFields';
+import { flowNumberAiLine, flowNumberMessageLine, type FlowNumberView } from '@/features/flowAutomations/flowNumber';
 
 interface Props {
   node: FlowAutomationNode | null;
@@ -71,6 +72,13 @@ interface Props {
    * A mensagem só avisa por qual WhatsApp sai (o servidor força o do dono).
    */
   donoDoEnvio?: string | null;
+  /**
+   * Entrega 4: fluxo da equipe com a regra de número (salva ou escolhida agora
+   * nas Configurações). A Mensagem só diz por onde sai; null = fluxo antigo.
+   */
+  numeroDoFluxo?: FlowNumberView | null;
+  /** Fluxo antigo da equipe cujas Mensagens saem por números diferentes. */
+  numerosDiferentes?: boolean;
 }
 
 // "Por um tempo, saindo só em horário comercial" (o modo `schedule`) virou a
@@ -248,7 +256,7 @@ function withOwnerSendFrom(kind: string, config: FlowNodeConfig): FlowNodeConfig
   return config;
 }
 
-export function FlowNodePanel({ node, resources, onClose, onSave, onDirtyChange, flowKind = 'automation', guided = false, saving = false, pessoal = false, numeroPessoal = null, numeroPessoalCarregando = false, donoDoEnvio = null }: Props) {
+export function FlowNodePanel({ node, resources, onClose, onSave, onDirtyChange, flowKind = 'automation', guided = false, saving = false, pessoal = false, numeroPessoal = null, numeroPessoalCarregando = false, donoDoEnvio = null, numeroDoFluxo = null, numerosDiferentes = false }: Props) {
   // Pessoal (a minha ou a de outra pessoa): a mensagem sai pelo número do dono.
   const peloDono = pessoal || donoDoEnvio != null;
   const [config, setConfig] = useState<FlowNodeConfig>(node?.config || {});
@@ -379,6 +387,8 @@ export function FlowNodePanel({ node, resources, onClose, onSave, onDirtyChange,
             numeroPessoal={numeroPessoal}
             numeroPessoalCarregando={numeroPessoalCarregando}
             donoDoEnvio={donoDoEnvio}
+            numeroDoFluxo={numeroDoFluxo ? flowNumberMessageLine(numeroDoFluxo) : null}
+            numerosDiferentes={numerosDiferentes}
           />
         );
       case 'add_label':
@@ -435,7 +445,12 @@ export function FlowNodePanel({ node, resources, onClose, onSave, onDirtyChange,
           </div>
         );
       case 'hand_to_ai':
-        return <p className="text-sm">Quem atende: a IA do número da conversa do lead. Se esse número não tiver IA ligada, nada acontece.</p>;
+        return (
+          <p className="text-sm">
+            {(numeroDoFluxo && flowNumberAiLine(numeroDoFluxo))
+              || 'Quem atende: a IA do número da conversa do lead. Se esse número não tiver IA ligada, nada acontece.'}
+          </p>
+        );
       case 'disable_ai':
         return <p className="text-sm">Pra religar, use o bloco Passar para a IA ou o botão no card do lead.</p>;
       case 'wait': {

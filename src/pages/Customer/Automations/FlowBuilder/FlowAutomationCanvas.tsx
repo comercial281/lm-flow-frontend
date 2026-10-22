@@ -56,6 +56,11 @@ import {
   useAlteracoesNaoSalvas, mesmoConteudo, limparPendentes, PEDIDO_SAIR_SEM_SALVAR,
 } from '@/hooks/useAlteracoesNaoSalvas';
 import { useConfirmacao } from '@/hooks/useConfirmacao';
+import {
+  flowNumberOf, flowNumberStartLine, serializeFlowNumber, withFlowSendFrom, type FlowNumberSetting, type FlowNumberView,
+} from '@/features/flowAutomations/flowNumber';
+import { finalDoNumero } from '@/features/numbers/numberTexts';
+import { useSendNumbers } from '@/features/numbers/useSendNumbers';
 import { useAuthStore } from '@/store/authStore';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { ehCelular } from '@/hooks/useCelular';
@@ -103,14 +108,20 @@ const PEDIDO_TIRAR_MENSAGEM = {
 const START_GAP_X = 320;
 
 // O que conta como "alteração não salva": nome, gatilho, configurações ("pode
-// rodar de novo", horário comercial) e blocos. A posição dos blocos fica de
-// fora — ela já é gravada sozinha quando o arraste termina.
-function snapshot(name: string, trigger: FlowTrigger, reentry: ReentrySetting, businessHoursOnly: boolean, nodes: FlowAutomationNode[], initialNodeId: string | null) {
+// rodar de novo", horário comercial, a regra de número do fluxo) e blocos. A
+// posição dos blocos fica de fora — ela já é gravada sozinha quando o arraste
+// termina. `numberRule` null = fluxo sem a regra (antigo e intocado, ou fora
+// da equipe): nada de número vai pro servidor.
+function snapshot(
+  name: string, trigger: FlowTrigger, reentry: ReentrySetting, businessHoursOnly: boolean,
+  numberRule: FlowNumberSetting | null, nodes: FlowAutomationNode[], initialNodeId: string | null,
+) {
   return {
     name,
     trigger: serializeTrigger(trigger),
     reentry: serializeReentry(reentry),
     businessHoursOnly,
+    numberRule: numberRule ? serializeFlowNumber(numberRule) : null,
     initialNodeId,
     nodes: nodes.map(({ pos_x: _x, pos_y: _y, ...rest }) => rest),
   };
@@ -139,6 +150,14 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
   const [reentry, setReentry] = useState<ReentrySetting>(() => reentryOf(null));
   const [businessHoursOnly, setBusinessHoursOnly] = useState(false);
   const [editingSettings, setEditingSettings] = useState(false);
+  // Entrega 4: a regra de número do fluxo. `numberSaved` = o servidor já tem a
+  // regra; `numberTouched` = a pessoa mexeu no grupo das Configurações nesta
+  // visita. Sem nenhum dos dois (fluxo antigo), o Salvar não manda número e
+  // não toca as Mensagens.
+  const [numberSetting, setNumberSetting] = useState<FlowNumberSetting>({ mode: '', inboxId: '', onConflict: 'follow_conversation' });
+  const [numberSaved, setNumberSaved] = useState(false);
+  const [numberDivergent, setNumberDivergent] = useState(false);
+  const [numberTouched, setNumberTouched] = useState(false);
   const [nodes, setNodes] = useState<FlowAutomationNode[]>([]);
   const [initialNodeId, setInitialNodeId] = useState<string | null>(null);
   const [loaded, setLoaded] = useState<ReturnType<typeof snapshot> | null>(null);
@@ -157,13 +176,21 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
     const nextNodes = normalizeLoadedNodes(data.nodes || []);
     const nextReentry = reentryOf(data);
     const nextBusinessHours = businessHoursOnlyOf(data);
+    const nextNumber = flowNumberOf(data, nextNodes);
     setAutomation(data);
     setTrigger(nextTrigger);
     setReentry(nextReentry);
     setBusinessHoursOnly(nextBusinessHours);
+    setNumberSetting(nextNumber.setting);
+    setNumberSaved(nextNumber.saved);
+    setNumberDivergent(nextNumber.divergent);
+    setNumberTouched(false);
     setNodes(nextNodes);
     setInitialNodeId(data.initial_node_id);
-    setLoaded(snapshot(data.name, nextTrigger, nextReentry, nextBusinessHours, nextNodes, data.initial_node_id));
+    setLoaded(snapshot(
+      data.name, nextTrigger, nextReentry, nextBusinessHours, nextNumber.saved ? nextNumber.setting : null,
+      nextNodes, data.initial_node_id,
+    ));
   }, []);
 
   const load = useCallback(async () => {
@@ -209,12 +236,30 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
     if (modo === 'dono') return (item: PaletteItem) => personalAvailabilityState(item, ctx);
     return undefined;
   }, [modo, capacidades.temNumero, capacidades.temIA]);
+  // Número do fluxo (Entrega 4): só na automação da equipe. Follow-up, funil
+  // de conversa e automação pessoal seguem como estão.
+  const numeroDoFluxoVale = kind === 'automation' && modo === null;
+  const numeroAtivo = numeroDoFluxoVale && (numberSaved || numberTouched);
+  const sendNumbers = useSendNumbers(
+    'lead_automation_rules',
+    numeroDoFluxoVale && (editingSettings || (numeroAtivo && numberSetting.mode === 'number')),
+  );
+  const numberView: FlowNumberView | null = useMemo(() => {
+    if (!numeroAtivo) return null;
+    const phone = numberSetting.mode === 'number'
+      ? sendNumbers.numbers.find(n => n.inbox_id === numberSetting.inboxId)?.phone ?? null
+      : null;
+    return { mode: numberSetting.mode, final: finalDoNumero(phone) };
+  }, [numeroAtivo, numberSetting, sendNumbers.numbers]);
   const gatilhosDoCargo = useMemo(() => (pessoal ? personalTriggerGroups(FLOW_TRIGGER_GROUPS) : undefined), [pessoal]);
   const guided = isGuided(automation);
   const builderTools = !readOnly && !guided;
 
   const hasChanges = !readOnly && !!automation && !!loaded
-    && !mesmoConteudo(snapshot(automation.name, trigger, reentry, businessHoursOnly, nodes, initialNodeId), loaded);
+    && !mesmoConteudo(snapshot(
+      automation.name, trigger, reentry, businessHoursOnly, numberSaved || numberTouched ? numberSetting : null,
+      nodes, initialNodeId,
+    ), loaded);
   // O rascunho do painel lateral também é alteração não salva: sair pelo menu
   // ou fechar a aba com ele mexido pergunta antes.
   const unsaved = hasChanges || sidePanel.dirty;
@@ -298,8 +343,12 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
   // Grava no servidor: o cabeçalho (nome, gatilho, configurações) e os blocos.
   // No modo guiado vai só o nome (o servidor recusa o resto) e o fluxo do
   // funil de conversa não manda gatilho (é fixo). Devolve se gravou.
+  // Número do fluxo: só vai (e só espelha nas Mensagens) quando a regra já
+  // está salva ou a pessoa mexeu nas Configurações. Fluxo antigo intocado
+  // salva igual a hoje.
   const persist = useCallback(async (nextNodes: FlowAutomationNode[], nextInitial: string | null): Promise<boolean> => {
     if (!id || !automation) return false;
+    const sendNumber = numeroAtivo && !guided;
     setSaving(true);
     try {
       if (guided) {
@@ -310,13 +359,17 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
           ...(isConversation ? {} : { trigger: serializeTrigger(trigger) }),
           ...serializeReentry(reentry),
           business_hours_only: businessHoursOnly,
+          ...(sendNumber ? serializeFlowNumber(numberSetting) : {}),
         });
       }
+      // O número escolhido vai espelhado em cada Mensagem: é o que mantém o
+      // fluxo falando pelo mesmo número se o servidor voltar de versão.
+      const nodesToSave = sendNumber ? withFlowSendFrom(nextNodes, numberSetting) : nextNodes;
       // Manda o id ATUAL de cada bloco, definitivo (uuid) ou temporário (tmp_xxx,
       // bloco novo desta sessão): o servidor decide "é novo?" batendo contra os
       // blocos que já existem no fluxo. `initial_node_id` pode ser temporário
       // também: o servidor resolve os dois pelo MESMO mapa.
-      const saved = await flowAutomationsService.saveFlow(id, buildSaveFlowPayload(nextNodes, nextInitial));
+      const saved = await flowAutomationsService.saveFlow(id, buildSaveFlowPayload(nodesToSave, nextInitial));
       // A resposta já é o fluxo salvo (com o guia atualizado e, no funil de
       // conversa, ligado se o último passo ficou pronto): sem recarregar a tela.
       if (saved && Array.isArray(saved.nodes)) applyFlow(saved);
@@ -329,7 +382,7 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
     } finally {
       setSaving(false);
     }
-  }, [id, automation, guided, loaded, isConversation, trigger, reentry, businessHoursOnly, applyFlow, load]);
+  }, [id, automation, guided, loaded, isConversation, trigger, reentry, businessHoursOnly, numeroAtivo, numberSetting, applyFlow, load]);
 
   const handleRemove = useCallback(async (nodeId: string) => {
     if (guided) {
@@ -489,6 +542,7 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
       summary: triggerOneLine(trigger, (event, c) => formatConditionSummary(event, c, resources)),
       hint: triggerEvents(trigger).includes('lead.created') ? LEAD_CREATED_HINT : null,
       problem: triggerProblem(trigger),
+      numberLine: numberView ? flowNumberStartLine(numberView) : null,
       editing: openPanel?.type === 'trigger',
       highlighted: highlighted === TRIGGER_NODE_ID,
       fixed: readOnly,
@@ -496,7 +550,7 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
         if (!readOnly) requestPanel({ type: 'trigger' });
       },
     };
-  }, [isConversation, trigger, resources, openPanel, highlighted, readOnly, requestPanel]);
+  }, [isConversation, trigger, resources, numberView, openPanel, highlighted, readOnly, requestPanel]);
 
   // O Início fica sempre uma coluna antes do primeiro bloco, na mesma altura.
   const startPosition = useMemo(() => {
@@ -888,6 +942,8 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
               numeroPessoal={capacidades.principalPhone}
               numeroPessoalCarregando={capacidades.loading}
               donoDoEnvio={donoDoEnvio}
+              numeroDoFluxo={numberView}
+              numerosDiferentes={numeroDoFluxoVale && !numeroAtivo && numberDivergent}
             />
           )}
           {openPanel?.type === 'trigger' && !isConversation && (
@@ -908,12 +964,20 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
 
         <FlowSettingsDialog
           open={editingSettings}
-          settings={{ reentry, businessHoursOnly }}
+          settings={{ reentry, businessHoursOnly, ...(numeroDoFluxoVale ? { number: numberSetting } : {}) }}
+          numberDivergent={numberDivergent && !numberTouched}
+          numbers={sendNumbers.numbers}
+          numbersState={sendNumbers.state}
           triggerEvent={messageEvent}
           onClose={() => setEditingSettings(false)}
           onSave={next => {
             setReentry(next.reentry);
             setBusinessHoursOnly(next.businessHoursOnly);
+            // Só vem quando a pessoa mexeu no grupo do número.
+            if (next.number) {
+              setNumberSetting(next.number);
+              setNumberTouched(true);
+            }
             setEditingSettings(false);
           }}
         />

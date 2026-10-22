@@ -142,3 +142,41 @@ describe('Mensagem do corretor', () => {
     expect(screen.queryByText('Enviar pelo número')).toBeNull();
   });
 });
+
+// Entrega 4: no fluxo da equipe com a regra de número, a Mensagem não escolhe
+// número; diz por onde sai e onde trocar.
+describe('Mensagem do fluxo com número', () => {
+  it('mostra a linha do número do fluxo no lugar do "Enviar pelo número"', () => {
+    render(
+      <FlowNodePanel
+        node={node({ config: { text: 'Oi' } })}
+        resources={resources} onClose={() => {}} onSave={vi.fn()}
+        numeroDoFluxo={{ mode: 'number', final: '92' }}
+      />,
+    );
+    expect(screen.getByText('Sai pelo número do fluxo (final 92). Trocar nas Configurações.')).toBeTruthy();
+    expect(screen.queryByText('Enviar pelo número')).toBeNull();
+  });
+
+  it('modo conversa e responsável', () => {
+    const { unmount } = render(
+      <FlowNodePanel node={node({ config: { text: 'Oi' } })} resources={resources} onClose={() => {}} onSave={vi.fn()}
+        numeroDoFluxo={{ mode: '', final: null }} />,
+    );
+    expect(screen.getByText('Sai pelo número da conversa do lead. Trocar nas Configurações.')).toBeTruthy();
+    unmount();
+    render(
+      <FlowNodePanel node={node({ config: { text: 'Oi' } })} resources={resources} onClose={() => {}} onSave={vi.fn()}
+        numeroDoFluxo={{ mode: 'owner', final: null }} />,
+    );
+    expect(screen.getByText('Sai pelo número do responsável pelo lead. Trocar nas Configurações.')).toBeTruthy();
+  });
+
+  it('sem a regra (fluxo antigo) continua com o "Enviar pelo número"', () => {
+    render(
+      <FlowNodePanel node={node({ config: { text: 'Oi' } })} resources={resources} onClose={() => {}} onSave={vi.fn()}
+        numeroDoFluxo={null} />,
+    );
+    expect(screen.getByText('Enviar pelo número')).toBeTruthy();
+  });
+});

@@ -61,3 +61,57 @@ export function withFlowSendFrom(nodes: FlowAutomationNode[], s: FlowNumberSetti
       : n,
   );
 }
+
+// ── Textos do número do fluxo (Entrega 4) ───────────────────────────────────
+
+/** O que a tela precisa pra dizer por onde o fluxo fala: o modo e o final do número escolhido. */
+export interface FlowNumberView {
+  mode: SendFromMode;
+  /** Os 2 últimos dígitos do número específico (null fora desse modo ou sem a lista). */
+  final: string | null;
+}
+
+export const FLOW_NUMBER_GROUP = 'Por qual número este fluxo fala com o lead';
+export const FLOW_NUMBER_OPTIONS: { value: SendFromMode; label: string }[] = [
+  { value: '', label: 'Pelo número da conversa do lead' },
+  { value: 'owner', label: 'Pelo número do responsável pelo lead' },
+  { value: 'number', label: 'Por um número específico' },
+];
+export const FLOW_CONFLICT_GROUP = 'Se o lead já conversa com a equipe em outro número';
+export const FLOW_CONFLICT_OPTIONS: { value: NumberConflictMode; label: string }[] = [
+  { value: 'pause', label: 'Pausar e esperar alguém escolher' },
+  { value: 'follow_conversation', label: 'Seguir pela conversa dele' },
+  { value: 'force_flow_number', label: 'Mandar pelo número do fluxo mesmo assim' },
+];
+export const FLOW_NUMBER_DIVERGENT = 'Este fluxo fala por números diferentes. Escolha um nas Configurações.';
+
+/** O grupo do conflito só existe quando o fluxo não fala pela conversa do lead. */
+export function asksConflict(mode: SendFromMode): boolean {
+  return mode === 'owner' || mode === 'number';
+}
+
+/** A linha do cartão do Início. */
+export function flowNumberStartLine(v: FlowNumberView): string {
+  if (v.mode === 'owner') return 'Fala pelo responsável pelo lead';
+  if (v.mode === 'number') return v.final ? `Fala pelo final ${v.final}` : 'Fala por um número específico';
+  return 'Fala pelo número da conversa';
+}
+
+/** A linha da janela da Mensagem, no lugar do "Enviar pelo número". */
+export function flowNumberMessageLine(v: FlowNumberView): string {
+  if (v.mode === 'owner') return 'Sai pelo número do responsável pelo lead. Trocar nas Configurações.';
+  if (v.mode === 'number') {
+    return v.final
+      ? `Sai pelo número do fluxo (final ${v.final}). Trocar nas Configurações.`
+      : 'Sai pelo número do fluxo. Trocar nas Configurações.';
+  }
+  return 'Sai pelo número da conversa do lead. Trocar nas Configurações.';
+}
+
+/** O corpo do "Passar para a IA" quando o fluxo tem número; null = o texto de sempre. */
+export function flowNumberAiLine(v: FlowNumberView): string | null {
+  if (v.mode === '') return null;
+  return v.mode === 'number' && v.final
+    ? `Quem atende: a IA do número do fluxo (final ${v.final}).`
+    : 'Quem atende: a IA do número do fluxo.';
+}

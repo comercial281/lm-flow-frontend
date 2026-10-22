@@ -77,6 +77,11 @@ export interface FlowStartNodeData {
    * não abre painel.
    */
   fixed?: boolean;
+  /**
+   * Entrega 4: por onde o fluxo da equipe fala ("Fala pelo final 92"). Só com a
+   * regra de número salva (ou escolhida agora nas Configurações).
+   */
+  numberLine?: string | null;
   onEdit: () => void;
 }
 
@@ -183,7 +188,7 @@ export function summaryLine(node: FlowAutomationNode, lookups: FlowLookups = {})
 // apaga e não se arrasta; clicar abre o painel do gatilho. Não existe no banco:
 // a linha que sai dele é o `initial_node_id`.
 export function FlowStartNode({ data }: NodeProps) {
-  const { summary, hint, problem, editing, highlighted, fixed, onEdit } = data as unknown as FlowStartNodeData;
+  const { summary, hint, problem, editing, highlighted, fixed, numberLine, onEdit } = data as unknown as FlowStartNodeData;
   const body = (
     <>
       <div className="flex items-center gap-2 rounded-t-md bg-emerald-500 px-3 py-1.5 text-xs font-semibold text-white">
@@ -196,6 +201,9 @@ export function FlowStartNode({ data }: NodeProps) {
         <span className="line-clamp-3">{summary}</span>
       </div>
       {hint && <div className="px-3 pb-2 text-[11px] text-emerald-800/80 dark:text-emerald-200/80 line-clamp-3">{hint}</div>}
+      {numberLine && (
+        <div data-testid="inicio-numero" className="px-3 pb-2 text-[11px] font-medium text-emerald-900 dark:text-emerald-100">{numberLine}</div>
+      )}
       {problem && (
         <div className="mx-3 mb-2 flex items-start gap-1 rounded bg-amber-500/10 px-1.5 py-1 text-[11px] text-amber-700 dark:text-amber-300">
           <AlertTriangle className="h-3 w-3 mt-px shrink-0" aria-hidden="true" />
