@@ -22,7 +22,6 @@ import type { FlowAutomation, FlowAutomationNode } from '@/types/flowAutomations
 import { paletteItems } from '@/features/flowAutomations/palette';
 import { nodeProblem } from '@/features/flowAutomations/readiness';
 import { progressLine } from '@/features/flowAutomations/progress';
-import { RECOVERED_EFFECTS } from '@/features/flowAutomations/recovered';
 
 const followupFlows = [
   { id: 'f1', name: 'Follow-up longo', is_enabled: true },
@@ -117,18 +116,17 @@ describe('"Só em horário comercial"', () => {
   });
 });
 
-describe('bloco "Marcar como recuperado pelo follow-up"', () => {
+describe('bloco "Lead recuperado"', () => {
   it('está na paleta, no grupo Lead, sem config', () => {
     const item = paletteItems().find(i => i.kind === 'followup_recovered');
-    expect(item).toMatchObject({ label: 'Marcar como recuperado pelo follow-up', group: 'contact', config: {} });
+    expect(item).toMatchObject({ label: 'Lead recuperado', group: 'contact', config: {} });
   });
 
-  it('a janela lista os cinco efeitos e salva sem pedir nada', async () => {
+  it('a janela explica o efeito e salva sem pedir nada', async () => {
     const onSave = vi.fn();
     render(<FlowNodePanel node={node({ kind: 'followup_recovered', config: {} })} resources={resources} onClose={() => {}} onSave={onSave} />);
-    expect(screen.getByRole('heading', { name: 'Marcar como recuperado pelo follow-up' })).toBeTruthy();
-    expect(RECOVERED_EFFECTS).toHaveLength(5);
-    RECOVERED_EFFECTS.forEach(effect => expect(screen.getByText(effect)).toBeTruthy());
+    expect(screen.getByRole('heading', { name: 'Lead recuperado' })).toBeTruthy();
+    expect(screen.getByText(/^Faz o mesmo que o follow-up quando o lead responde/)).toBeTruthy();
     fireEvent.click(screen.getByText('Salvar'));
     await waitFor(() => expect(onSave).toHaveBeenCalledWith('n1', { label: '', config: {} }));
   });

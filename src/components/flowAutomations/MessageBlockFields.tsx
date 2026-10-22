@@ -32,7 +32,7 @@ const uploadMedia = (file: File) => flowAutomationsService.uploadMedia(file).the
 export function ProgressFields({ config, onChange }: { config: FlowNodeConfig; onChange: (next: FlowNodeConfig) => void }) {
   const mark = progressOf(config);
   return (
-    <div className="space-y-2 rounded-md border border-border p-3">
+    <div className="space-y-2">
       <label className="flex items-center gap-2 text-sm cursor-pointer">
         <Checkbox
           checked={mark.on}

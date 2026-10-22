@@ -25,9 +25,12 @@ describe('lista de blocos', () => {
       expect(screen.getByRole('region', { name: section })).toBeTruthy();
     });
     // "Mandar áudio" saiu da lista no PR 8 (virou item do bloco Mensagem).
+    // "Mandar resposta rápida" também saiu da lista (22/10/2026); o bloco salvo continua abrindo.
     fireEvent.change(screen.getByLabelText('Buscar blocos'), { target: { value: 'rapida' } });
-    expect(screen.getByRole('button', { name: /Mandar resposta rápida/ })).toBeTruthy();
-    expect(screen.queryByRole('button', { name: /Esperar/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Mandar resposta rápida/ })).toBeNull();
+    fireEvent.change(screen.getByLabelText('Buscar blocos'), { target: { value: 'espera' } });
+    expect(screen.getByRole('button', { name: /Esperar/ })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /Disparar funil/ })).toBeNull();
     fireEvent.change(screen.getByLabelText('Buscar blocos'), { target: { value: 'xyz' } });
     expect(screen.getByText('Nenhum bloco com esse nome.')).toBeTruthy();
   });

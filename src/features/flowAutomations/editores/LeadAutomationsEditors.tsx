@@ -700,14 +700,12 @@ export function PipelineFilterEditor({
         ))}
       </Seletor>
       <p className="text-xs text-muted-foreground mt-1">
-        Em branco = vale para todo lead do CRM. Escolhendo um funil, essa automação
-        só roda para o lead cujo card está nele — é assim que o mesmo CRM tem uma IA
-        no funil de lançamento e outra no de locação.
+        Em branco, vale pra todo lead do CRM. Escolhendo um funil, o fluxo só roda pro lead que está nele.
         {trigger === 'lead.created' && (
           <>
             {' '}O lead de anúncio e de landing entra no funil logo depois de nascer,
             então essa automação espera o card aparecer antes de disparar (cerca de
-            meio minuto). Sem funil escolhido, nada muda: dispara na hora.
+            meio minuto). Sem funil escolhido, nada muda e dispara na hora.
           </>
         )}
       </p>

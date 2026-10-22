@@ -33,7 +33,6 @@ import {
   waitUsesBusinessHours,
   withWaitBusinessHours,
 } from '@/features/flowAutomations/businessHours';
-import { RECOVERED_EFFECTS } from '@/features/flowAutomations/recovered';
 import { moveStageModeOf, stageNameOf, withMoveStageMode, withStageName } from '@/features/flowAutomations/moveStage';
 import { FormAnswerPicker } from './FormAnswerPicker';
 import { FlowBlockDialog } from './FlowBlockDialog';
@@ -441,16 +440,14 @@ export function FlowNodePanel({ node, resources, onClose, onSave, onDirtyChange,
       case 'followup_recovered':
         return (
           <div className="space-y-2 text-sm">
-            <p>Faz o que o follow-up faz quando o lead responde:</p>
-            <ul className="list-disc pl-5 space-y-1 text-muted-foreground">
-              {RECOVERED_EFFECTS.map(effect => <li key={effect}>{effect}</li>)}
-            </ul>
+            <p>Faz o mesmo que o follow-up quando o lead responde: põe a etiqueta de recuperado, tira a de follow-up, conta no relatório, avisa a equipe e manda WhatsApp pro corretor.</p>
             <p className="text-xs text-muted-foreground">Use no caminho Respondeu do Aguardar resposta.</p>
           </div>
         );
       case 'hand_to_ai':
+        return <p className="text-sm">Quem atende: a IA do número da conversa do lead. Se esse número não tiver IA ligada, nada acontece.</p>;
       case 'disable_ai':
-        return <p className="text-sm">{blockDescription(activeNode)}</p>;
+        return <p className="text-sm">Pra religar, use o bloco Passar para a IA ou o botão no card do lead.</p>;
       case 'wait': {
         const mode = waitModeOf(config);
         // Funil de conversa (sprint 4): só "por um tempo", em segundos (é conversa ao vivo).

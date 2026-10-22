@@ -42,7 +42,7 @@ export interface SendNumbers {
 }
 
 export const SEND_FROM_LABEL = 'Enviar pelo número';
-export const SEND_FROM_AUTO = 'Automático (como sempre foi)';
+export const SEND_FROM_AUTO = 'Pelo número da conversa do lead';
 export const SEND_FROM_FOLLOWUP_DEFAULT = 'O número do responsável pelo lead (padrão)';
 export const SEND_FROM_OWNER = 'O número do responsável pelo lead';
 export const SEND_FROM_SPECIFIC_GROUP = 'Um número específico';
