@@ -9613,11 +9613,11 @@ Em 22/10/2026 o Tony achou a janela de Etiqueta do construtor feia ("não dá pr
 
 O que aparece:
 
-- **Escolher etiqueta (`EscolhaDeEtiqueta`, versão B):** busca no topo; "N marcadas" com botão Limpar; as Marcadas fixas no alto; depois Da equipe; Do sistema recolhido. Cada linha tem bolinha na cor da etiqueta, o nome bonito (`display_name`), a contagem de leads e a caixinha à direita. Etiqueta salva que sumiu aparece como "não existe mais". Digitou um nome que não existe: botão Criar etiqueta “x” na própria lista. Enter escolhe a primeira que casa com a busca.
+- **Escolher etiqueta (`EscolhaDeEtiqueta`, versão B):** busca no topo; "N marcadas" com botão Limpar; as Marcadas fixas no alto; depois Da equipe; Do sistema recolhido. Cada linha tem bolinha na cor da etiqueta, o nome bonito (`display_name`), a contagem de leads e a caixinha à direita. Etiqueta salva que sumiu aparece como "não existe mais". Digitou um nome que não existe: botão Criar etiqueta “x” na própria lista. Enter escolhe a primeira que casa com a busca; sem resultado, Enter cria a etiqueta.
 - **Conta com mais de 200 etiquetas, sem busca:** mostra as Marcadas, as 30 com mais leads e um rodapé pedindo pra buscar.
-- **Mesmo componente em quatro lugares:** Aplicar etiqueta (ordem por nome), Tirar etiqueta (ordem por mais leads) e Condição "Tem a etiqueta" (escolhe uma só, sem Limpar).
+- **Mesmo componente em três lugares:** Aplicar etiqueta (ordem por nome), Tirar etiqueta (ordem por mais leads) e Condição "Tem a etiqueta" (escolhe uma só, sem Limpar).
 - **Carregando ou catálogo fora do ar** nunca mostra "não existe mais" falso.
-- **Criar tarefa:** "Pra quem" com Responsável pelo lead / Uma pessoa da equipe (seletor só com gente ativa, só o nome); "Prazo" com número e horas/dias; os textos de ajuda do protótipo; "Escolha a pessoa." quando falta.
+- **Criar tarefa:** "Pra quem" com Responsável pelo lead / Uma pessoa da equipe (seletor só com gente ativa, só o nome); "Prazo" com número e horas/dias; os textos de ajuda do protótipo; "Escolha a pessoa." aparece embaixo do seletor vazio; "Falta escolher a pessoa." bloqueia ligar o fluxo.
 
 Decisões (não reabrir sem o dono pedir):
 
@@ -9626,7 +9626,7 @@ Decisões (não reabrir sem o dono pedir):
 3. **Etiqueta do sistema = categoria diferente da própria da conta.** Ficam em Do sistema, recolhido.
 4. **Regra dos 200:** acima disso, sem busca, só Marcadas + 30 mais usadas + rodapé.
 5. **Unidade do prazo derivada do valor salvo, como no Esperar:** múltiplo positivo de 24 abre em dias, senão em horas. Trocar a unidade mantém o número digitado; prazo mínimo 1.
-6. **"Uma pessoa da equipe" exige a pessoa.** Sem ela o bloco acusa "Falta escolher a pessoa." e não salva como pronto.
+6. **"Uma pessoa da equipe" exige a pessoa.** Sem ela, "Escolha a pessoa." aparece embaixo do seletor e "Falta escolher a pessoa." bloqueia ligar o fluxo.
 
 Armadilhas:
 
