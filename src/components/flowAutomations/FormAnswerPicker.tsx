@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Input, Label, Badge } from '@/components/ui/ds';
+import { Input, Label, Badge, Checkbox } from '@/components/ui/ds';
 import { Seletor } from '@/components/base/Seletor';
 import EmptyState from '@/components/base/EmptyState';
 import { flowAutomationsService } from '@/services/flowAutomations/flowAutomationsService';
@@ -171,11 +171,9 @@ export function FormAnswerPicker({ value, onChange }: Props) {
               <div className={boxClass}>
                 {question!.options.map(o => (
                   <label key={o.key || o.value} className={rowClass}>
-                    <input
-                      type="checkbox"
+                    <Checkbox
                       checked={isOptionChecked(value, o)}
-                      onChange={() => onChange(toggleOption(value, question!.options, o))}
-                      className="h-4 w-4 accent-primary"
+                      onCheckedChange={() => onChange(toggleOption(value, question!.options, o))}
                     />
                     <span className="truncate">{o.value || o.key}</span>
                   </label>

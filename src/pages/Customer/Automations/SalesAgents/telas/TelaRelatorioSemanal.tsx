@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Card, Button, Label, Textarea } from '@/components/ui/ds';
+import { Card, Button, Label, Textarea, Checkbox } from '@/components/ui/ds';
 import { toast } from 'sonner';
 import { Bot, Send, RefreshCw, Loader2, CalendarDays, Users } from 'lucide-react';
 import { plural } from '@/lib/formato';
@@ -416,10 +416,9 @@ export default function TelaRelatorioSemanal() {
             ) : (
               targets.groups.map((g) => (
                 <label key={g.jid} className="flex items-center gap-2 text-sm cursor-pointer py-0.5">
-                  <input
-                    type="checkbox"
+                  <Checkbox
                     checked={config?.group_jids.includes(g.jid) ?? false}
-                    onChange={() => void salvarConfig({ group_jids: alternar(config?.group_jids ?? [], g.jid) }, { quiet: true })}
+                    onCheckedChange={() => void salvarConfig({ group_jids: alternar(config?.group_jids ?? [], g.jid) }, { quiet: true })}
                   />
                   {g.name}
                 </label>
@@ -440,10 +439,9 @@ export default function TelaRelatorioSemanal() {
             ) : (
               targets.managers.map((m) => (
                 <label key={m.id} className="flex items-center gap-2 text-sm cursor-pointer py-0.5">
-                  <input
-                    type="checkbox"
+                  <Checkbox
                     checked={config?.user_ids.includes(String(m.id)) ?? false}
-                    onChange={() => void salvarConfig({ user_ids: alternar(config?.user_ids ?? [], String(m.id)) }, { quiet: true })}
+                    onCheckedChange={() => void salvarConfig({ user_ids: alternar(config?.user_ids ?? [], String(m.id)) }, { quiet: true })}
                   />
                   {m.name} <span className="text-xs text-muted-foreground">{m.phone_masked}</span>
                 </label>
@@ -461,10 +459,9 @@ export default function TelaRelatorioSemanal() {
         {/* Automático */}
         <div className="pt-2 border-t border-sidebar-border space-y-2">
           <label className="flex items-center gap-2 text-sm cursor-pointer">
-            <input
-              type="checkbox"
+            <Checkbox
               checked={config?.enabled ?? false}
-              onChange={(e) => void salvarConfig({ enabled: e.target.checked })}
+              onCheckedChange={(v) => void salvarConfig({ enabled: v === true })}
             />
             Enviar toda semana, sozinho
           </label>

@@ -187,6 +187,12 @@ As peças 11 a 22 (e os acréscimos em 6, 7 e 9) são as **escolhas do dono em 1
    - Lista de busca fechada até digitar; nenhuma caixa com borda dentro de outra; aviso sempre no `Aviso`; rótulo com maiúscula só na primeira letra.
    - Modelo: a janela do card do lead (14/10/2026) e "Por que este lead foi perdido?".
    - **Trava:** `escolhaRoxaCheia`, `avisoSoltoNaJanela` e `topoCentralizado` (ponto cego: grupo sem título e larguras soltas não são medidos).
+24. **Caixinha** (`Checkbox` de `components/ui/ds`): toda caixinha de marcar (escolha do dono em 21/10/2026, olhando a da casa e a do navegador lado a lado).
+   - Quadradinho de 16 px, canto de 4 px, borda cinza; marcada fica roxa com o ✓ branco; "parcial" (`checked="indeterminate"`, parte da lista marcada) fica roxa com um traço.
+   - Nunca `<input type="checkbox">` cru (sai azul do Chrome, com o formato de cada navegador) nem import de `@evoapi/design-system/checkbox`.
+   - O valor chega em `onCheckedChange` como `true | false | 'indeterminate'`: compare com `=== true`. Dentro de cartão ou linha clicável, `onClick={e => e.stopPropagation()}` na caixinha.
+   - **Exceção:** o site público (Anuncie seu imóvel) não carrega o pacote do app; lá é o input pintado com o mesmo desenho, na cor do cliente (✓ em `--brand-ink`).
+   - **Trava:** `caixinhaCrua`, app inteiro, teto 0.
 
 **As telas de referência são Configurações → Conta e Automações → Lembretes.** Foram as duas pilotos, já na base.
 
@@ -197,6 +203,7 @@ As peças 11 a 22 (e os acréscimos em 6, 7 e 9) são as **escolhas do dono em 1
 - Maiúscula Em Toda Palavra e plural com parênteses;
 - formatação fora do módulo, chave feita à mão e botão só-ícone sem nome;
 - lista de escolha nativa, que é a exceção: vale para o app inteiro (painel raiz, landing e a sobra do fork também).
+- caixinha crua, que também vale para o app inteiro.
 
 O build reprova se alguma passar do teto em `scripts/conferir-padrao.tetos.json`.
 - **Ver onde:** `node scripts/conferir-padrao.mjs --listar <categoria>`.

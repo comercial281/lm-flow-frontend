@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { toast } from 'sonner';
 import { plural } from '@/lib/formato';
-import { Card, Button, Input } from '@/components/ui/ds';
+import { Card, Button, Input, Checkbox } from '@/components/ui/ds';
 import { Seletor } from '@/components/base/Seletor';
 import BarraSalvar from '@/components/base/BarraSalvar';
 import { COR_DO_TOM } from '@/components/base/Aviso';
@@ -358,12 +358,11 @@ export default function PortalPropertiesSelector({
               const isFeatured = adType === LEGADO_DESTAQUE;
               return (
                 <div key={p.id} className="flex items-center gap-3 px-4 py-2.5 hover:bg-muted/40">
-                  <input
-                    type="checkbox"
+                  <Checkbox
                     aria-label={`Publicar ${p.code}`}
                     checked={isSelected}
-                    onChange={() => toggle(p.id)}
-                    className="h-4 w-4 accent-primary shrink-0 cursor-pointer"
+                    onCheckedChange={() => toggle(p.id)}
+                    className="shrink-0"
                   />
                   <div className="min-w-0 flex-1 cursor-pointer" onClick={() => toggle(p.id)}>
                     <p className="text-sm font-medium truncate">

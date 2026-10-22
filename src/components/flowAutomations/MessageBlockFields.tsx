@@ -1,5 +1,5 @@
 import type React from 'react';
-import { Input, Label } from '@/components/ui/ds';
+import { Input, Label, Checkbox } from '@/components/ui/ds';
 import SendFromField from '@/components/numbers/SendFromField';
 import MessageSequenceEditor, {
   type ExtraSequenceKind,
@@ -34,11 +34,9 @@ export function ProgressFields({ config, onChange }: { config: FlowNodeConfig; o
   return (
     <div className="space-y-2 rounded-md border border-border p-3">
       <label className="flex items-center gap-2 text-sm cursor-pointer">
-        <input
-          type="checkbox"
+        <Checkbox
           checked={mark.on}
-          onChange={e => onChange(withProgress(config, { ...mark, on: e.target.checked }))}
-          className="h-4 w-4 accent-primary"
+          onCheckedChange={v => onChange(withProgress(config, { ...mark, on: v === true }))}
         />
         Marcar progresso
       </label>

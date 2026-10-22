@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import type { PermissionSection } from '@/types/customRoles';
 import { CaixaDaJanela } from '@/components/base/janela';
+import { Checkbox } from '@/components/ui/ds';
 
 interface Props {
   catalog: PermissionSection[];
@@ -143,12 +144,10 @@ function AreaDePermissoes({ section, state, selected, onToggle, onBulkToggle, di
                               : 'text-muted-foreground hover:bg-muted/50'
                           } ${disabled ? 'cursor-not-allowed opacity-60' : ''}`}
                         >
-                          <input
-                            type="checkbox"
+                          <Checkbox
                             checked={isOn}
                             disabled={disabled}
-                            onChange={e => onToggle(action.permission, e.target.checked)}
-                            className="h-4 w-4 accent-primary"
+                            onCheckedChange={v => onToggle(action.permission, v === true)}
                           />
                           <span className="select-none">{action.label}</span>
                         </label>

@@ -14,6 +14,7 @@ import {
   SelectValue,
   SelectContent,
   SelectItem,
+  Checkbox,
 } from '@/components/ui/ds';
 import { RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
@@ -323,20 +324,16 @@ export default function MessageFunnelEditor({ open, onClose, funnel, onSaved, de
               </div>
             )}
             <label className="flex items-center gap-2 cursor-pointer pt-1">
-              <input
-                type="checkbox"
+              <Checkbox
                 checked={active}
-                onChange={e => setActive(e.target.checked)}
-                className="h-4 w-4 rounded border-border"
+                onCheckedChange={v => setActive(v === true)}
               />
               <span className="text-sm">Funil ativo (aparece pro atendente no chat)</span>
             </label>
             <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
+              <Checkbox
                 checked={humanize}
-                onChange={e => setHumanize(e.target.checked)}
-                className="h-4 w-4 rounded border-border"
+                onCheckedChange={v => setHumanize(v === true)}
               />
               <span className="text-sm">Parece digitado à mão (mostra "digitando…"/"gravando áudio…" antes de cada balão)</span>
             </label>

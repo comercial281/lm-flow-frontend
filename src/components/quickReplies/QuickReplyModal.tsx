@@ -9,6 +9,7 @@ import {
   Input,
   Label as UILabel,
   Textarea,
+  Checkbox,
 } from '@/components/ui/ds';
 import type { QuickReply, QuickReplyFormData } from '@/types/knowledge';
 
@@ -123,12 +124,10 @@ export default function QuickReplyModal({
 
           {isAdmin && (
             <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
+              <Checkbox
                 id="qr-shared"
                 checked={!!formData.shared}
-                onChange={e => setFormData(prev => ({ ...prev, shared: e.target.checked }))}
-                className="h-4 w-4 rounded border-border"
+                onCheckedChange={v => setFormData(prev => ({ ...prev, shared: v === true }))}
               />
               <UILabel htmlFor="qr-shared" className="cursor-pointer font-normal">
                 Compartilhar com toda a equipe

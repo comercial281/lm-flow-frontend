@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { Button, Input, Label as UILabel } from '@/components/ui/ds';
+import { Button, Input, Label as UILabel, Checkbox } from '@/components/ui/ds';
 import { Seletor } from '@/components/base/Seletor';
 import Aviso from '@/components/base/Aviso';
 import { labelsService } from '@/services/contacts/labelsService';
@@ -96,11 +96,10 @@ export default function SecaoEquipe({ form: f, setF }: PropsDaSecao) {
             ali, e separá-las faria procurar as duas em lugares
             diferentes. */}
         <label className="mt-2 flex items-start gap-2 text-xs">
-          <input
-            type="checkbox"
+          <Checkbox
             className="mt-0.5"
             checked={f.lead_goes_to_responsible === true}
-            onChange={e => setF({ lead_goes_to_responsible: e.target.checked })}
+            onCheckedChange={v => setF({ lead_goes_to_responsible: v === true })}
           />
           <span>
             {LEAD_DESTINATION_LABEL}
@@ -114,11 +113,10 @@ export default function SecaoEquipe({ form: f, setF }: PropsDaSecao) {
             empreendimento recebe várias famílias no estande. Fica aqui porque
             também é sobre os corretores deste imóvel. */}
         <label className="mt-3 flex items-start gap-2 text-xs">
-          <input
-            type="checkbox"
+          <Checkbox
             className="mt-0.5"
             checked={aceitaVisitasJuntas(f)}
-            onChange={e => setF({ accepts_concurrent_visits: e.target.checked })}
+            onCheckedChange={v => setF({ accepts_concurrent_visits: v === true })}
           />
           <span>
             {VISITAS_JUNTAS_LABEL}

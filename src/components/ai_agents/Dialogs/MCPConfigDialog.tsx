@@ -16,6 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
   ScrollArea,
+  Checkbox,
 } from '@/components/ui/ds';
 import { MCPServer, MCPServerConfig } from '@/types/ai';
 import { Server, Settings, CheckCircle2 } from 'lucide-react';
@@ -366,11 +367,10 @@ const MCPConfigDialog = ({
                                 <p className="text-xs text-muted-foreground">{tool.description}</p>
                               )}
                             </div>
-                            <input
-                              type="checkbox"
-                              checked={toolIds[selectedServer.id]?.includes(tool.id || tool.name)}
-                              onChange={() => handleToolToggle(tool)}
-                              className="h-4 w-4"
+                            <Checkbox
+                              checked={toolIds[selectedServer.id]?.includes(tool.id || tool.name) ?? false}
+                              onCheckedChange={() => handleToolToggle(tool)}
+                              onClick={e => e.stopPropagation()}
                             />
                           </div>
                         </div>

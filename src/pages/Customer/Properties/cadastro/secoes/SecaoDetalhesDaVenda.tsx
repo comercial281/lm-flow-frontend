@@ -1,4 +1,4 @@
-import { Label as UILabel } from '@/components/ui/ds';
+import { Label as UILabel, Checkbox } from '@/components/ui/ds';
 import { Seletor } from '@/components/base/Seletor';
 import type { PadraoDoImovel } from '@/services/properties/propertiesService';
 import { useCampoTravado } from '@/features/properties/cadastro/travasDoSite';
@@ -34,7 +34,7 @@ export default function SecaoDetalhesDaVenda({ form: f, setF }: PropsDaSecao) {
       <div className="flex flex-wrap gap-x-6 gap-y-2">
         {revenda && (
           <label className="flex items-center gap-2 cursor-pointer">
-            <input type="checkbox" checked={f.exclusive ?? false} onChange={e => setF({ exclusive: e.target.checked })} className="rounded" />
+            <Checkbox checked={f.exclusive ?? false} onCheckedChange={v => setF({ exclusive: v === true })} />
             <span className="text-sm">Exclusividade</span>
           </label>
         )}

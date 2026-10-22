@@ -9439,3 +9439,18 @@ Armadilhas:
 5. **Textos literais** (sem chave nova de i18n). Plural com `plural()` de `@/lib/formato` (a trava do build recusa "lead(s)"), por isso "1 lead vai sair..." / "3 leads vão sair...".
 
 Código: `features/followup/` (`JanelaColocarEmFollowup`, `useColocarEmFollowup`, `erroDeEtapa`), `features/flowAutomations/desligarFollowup.ts`, `FlowAutomationsList.tsx`, `FlowAutomationCanvas.tsx` (`alternarLigado`), `flowAutomationInstancesService.place`/`placePreview`. Testes: `JanelaColocarEmFollowup.spec.tsx`, `useBoardDrag.spec.ts`, `FollowupList.spec.tsx`, `FlowCanvasEquipe.spec.tsx`, `erroDeEtapa.spec.ts`.
+
+## Caixinha da casa em tudo (desde 2026-10-21)
+
+**O que mudou na tela:** toda caixinha de marcar do app é a mesma: quadradinho de 16 px, canto levemente arredondado, roxa com ✓ branco quando marcada. Saíram as 52 caixinhas cruas do navegador (azuis no Chrome) de 38 telas: Login, Conversas (seleção em lote), Tarefa, Funis, Funis de mensagem, Construtor de automações, Cadastro do imóvel, Equipe, Cargos, IA Vendedora, Robô sem resposta, Pixel, Respostas rápidas, Google Agenda, Portais, editor de landing, canais e o painel raiz. Escolha do dono em 21/10/2026, olhando as duas lado a lado. O que cada caixinha faz não mudou.
+
+Regras (peça 24 do `GLOSSARIO.md`):
+
+1. **É o `Checkbox` de `@/components/ui/ds`.** O embrulho da casa pinta também o "parcial" (`checked="indeterminate"`) de roxo com um traço; o do pacote deixava branco com ✓. Usado em Tokens de acesso (Selecionar tudo e por grupo).
+2. **`onCheckedChange` recebe `true | false | 'indeterminate'`:** comparar com `=== true`, nunca passar o valor direto pra um campo booleano.
+3. **Caixinha dentro de linha ou cartão clicável** (lista de Conversas, cartões de servidor e ferramenta da IA) leva `onClick={e => e.stopPropagation()}`: sem isso o clique alterna duas vezes ou abre a conversa.
+4. **Site público é exceção.** O Anuncie seu imóvel não carrega o pacote do app (nenhuma página de `pages/Public` carrega); lá a caixinha é o input pintado com o mesmo desenho na cor do cliente (`--brand`). Não importar `ds` no site público por causa de caixinha.
+5. **Trava `caixinhaCrua`** no `conferir-padrao` (app inteiro, teto 0): reprova `type="checkbox"` e o import de `@evoapi/design-system/checkbox`. Exceções na própria régua: `ui/ds.tsx` e `PortalAnunciePage.tsx`.
+
+Código: `components/ui/ds.tsx` (`Checkbox`), `scripts/conferir-padrao.mjs` (`caixinhaCrua`). Testes: `conferir-padrao.spec.ts`.
+

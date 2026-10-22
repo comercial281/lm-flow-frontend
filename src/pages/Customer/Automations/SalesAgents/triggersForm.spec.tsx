@@ -25,7 +25,7 @@ describe('gatilho de formulário', () => {
     render(<Harness />);
     const box = await screen.findByRole('checkbox');
     fireEvent.click(box);
-    await waitFor(() => expect((screen.getByRole('checkbox') as HTMLInputElement).checked).toBe(true));
+    await waitFor(() => expect(screen.getByRole('checkbox')).toBeChecked());
   });
 });
 

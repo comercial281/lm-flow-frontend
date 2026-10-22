@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/ds';
 import { Input } from '@evoapi/design-system/input';
 import { Badge } from '@evoapi/design-system/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@evoapi/design-system/avatar';
-import { Checkbox } from '@evoapi/design-system/checkbox';
+import { Checkbox } from '@/components/ui/ds';
 import { Search, User, Users, Tag, X } from 'lucide-react';
 import { useLanguage } from '@/hooks/useLanguage';
 

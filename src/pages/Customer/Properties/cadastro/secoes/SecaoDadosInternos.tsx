@@ -1,6 +1,7 @@
 import type { DadosInternos } from '@/services/properties/propertiesService';
 import { CampoReais, CampoTexto } from './campos';
 import type { PropsDaSecao } from './tipos';
+import { Checkbox } from '@/components/ui/ds';
 
 // Revenda. Só a equipe vê.
 export default function SecaoDadosInternos({ form: f, setF }: PropsDaSecao) {
@@ -14,7 +15,7 @@ export default function SecaoDadosInternos({ form: f, setF }: PropsDaSecao) {
         <CampoTexto rotulo="Onde ficam as chaves" valor={info?.keys_location} aoMudar={v => mudar({ keys_location: v })} />
         <div className="flex items-end">
           <label className="flex cursor-pointer items-center gap-2 pb-2">
-            <input type="checkbox" checked={f.on_sign ?? false} onChange={e => setF({ on_sign: e.target.checked })} className="rounded" />
+            <Checkbox checked={f.on_sign ?? false} onCheckedChange={v => setF({ on_sign: v === true })} />
             <span className="text-sm">Tem placa</span>
           </label>
         </div>

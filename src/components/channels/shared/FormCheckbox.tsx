@@ -1,3 +1,5 @@
+import { Checkbox } from '@/components/ui/ds';
+
 interface FormCheckboxProps {
   label: string;
   checked: boolean;
@@ -13,11 +15,9 @@ export const FormCheckbox = ({
 }: FormCheckboxProps) => {
   return (
     <label className={`flex items-center gap-2 text-sm text-sidebar-foreground/80 select-none ${className || ''}`}>
-      <input
-        type="checkbox"
+      <Checkbox
         checked={checked}
-        onChange={e => onChange(e.target.checked)}
-        className="h-4 w-4 rounded border-sidebar-border bg-sidebar text-primary focus:ring-0"
+        onCheckedChange={v => onChange(v === true)}
       />
       <span>{label}</span>
     </label>
