@@ -136,17 +136,40 @@ describe('bloco "Lead recuperado"', () => {
   });
 });
 
-describe('"Mover de etapa" por nome de coluna', () => {
-  it('grava stage_name e tira stage_id', async () => {
+describe('"Mover de etapa" só com etapa específica', () => {
+  const comEtapas = {
+    ...resources,
+    pipelines: [{ id: 'p1', name: 'Funil de vendas' }],
+    stagesByPipeline: { p1: [{ id: 's1', name: 'Visita', color: '#22c55e', position: 1 }] },
+  } as unknown as AutomationResources;
+
+  it('bloco novo não oferece o modo por nome e mostra a etapa escolhida como chip', () => {
+    render(<FlowNodePanel node={node({ kind: 'move_stage', config: { stage_id: 's1' } })} resources={comEtapas} onClose={() => {}} onSave={() => {}} />);
+    expect(screen.queryByText('Coluna com este nome no funil do card')).toBeNull();
+    expect(screen.getByText('Pra qual etapa')).toBeTruthy();
+    expect(screen.getByTestId('chip-da-etapa').textContent).toContain('Visita');
+    expect(screen.getByTestId('chip-da-etapa').textContent).toContain('Funil de vendas');
+  });
+
+  it('bloco salvo por nome mostra o aviso e troca por etapa específica no botão', () => {
+    render(<FlowNodePanel node={node({ kind: 'move_stage', config: { stage_name: 'Em atendimento' } })} resources={comEtapas} onClose={() => {}} onSave={() => {}} />);
+    expect(screen.getByText('Coluna “Em atendimento” do funil do card')).toBeTruthy();
+    expect(screen.queryByLabelText('Etapa')).toBeNull();
+    fireEvent.click(screen.getByText('Trocar por uma etapa específica'));
+    expect(screen.getByLabelText('Etapa')).toBeTruthy();
+    expect(screen.queryByText('Coluna “Em atendimento” do funil do card')).toBeNull();
+  });
+
+  it('salvar o bloco antigo sem clicar mantém stage_name', async () => {
     const onSave = vi.fn();
-    render(<FlowNodePanel node={node({ kind: 'move_stage', config: { stage_id: '' } })} resources={resources} onClose={() => {}} onSave={onSave} />);
-    fireEvent.click(screen.getByLabelText('Coluna com este nome no funil do card'));
-    fireEvent.change(screen.getByLabelText('Nome da coluna'), { target: { value: 'Em atendimento' } });
+    render(<FlowNodePanel node={node({ kind: 'move_stage', config: { stage_name: 'Em atendimento' } })} resources={comEtapas} onClose={() => {}} onSave={onSave} />);
     fireEvent.click(screen.getByText('Salvar'));
     await waitFor(() => expect(onSave).toHaveBeenCalled());
     expect(savedConfig(onSave)).toEqual({ stage_name: 'Em atendimento' });
   });
+});
 
+describe('"Mover de etapa" por nome de coluna (blocos salvos)', () => {
   it('o slug dos modelos antigos aparece como nome, e o cartão fala do funil do card', () => {
     expect(summaryLine(node({ kind: 'move_stage', config: { stage_slug: 'em-atendimento' } }))).toBe('Para a coluna "em-atendimento" do funil do card');
     // O motor não lê `stage_slug`: o bloco pede pra abrir e salvar.
@@ -161,7 +184,7 @@ describe('"Mover de etapa" de modelo antigo (stage_slug)', () => {
   it('salvar a janela grava como stage_name', async () => {
     const onSave = vi.fn();
     render(<FlowNodePanel node={node({ kind: 'move_stage', config: { stage_slug: 'em-atendimento' } })} resources={resources} onClose={() => {}} onSave={onSave} />);
-    expect((screen.getByLabelText('Nome da coluna') as HTMLInputElement).value).toBe('em-atendimento');
+    expect(screen.getByText('Coluna “em-atendimento” do funil do card')).toBeTruthy();
     fireEvent.click(screen.getByText('Salvar'));
     await waitFor(() => expect(onSave).toHaveBeenCalled());
     expect(savedConfig(onSave)).toEqual({ stage_name: 'em-atendimento' });

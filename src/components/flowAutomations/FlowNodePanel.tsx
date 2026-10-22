@@ -393,45 +393,35 @@ export function FlowNodePanel({ node, resources, onClose, onSave, onDirtyChange,
         );
       case 'move_stage': {
         const stageMode = moveStageModeOf(config);
+        // Bloco salvo por nome continua rodando (o motor lê stage_name); só não
+        // nasce mais. Fica o nome e um botão pra trocar por etapa específica.
+        if (stageMode === 'name') {
+          return (
+            <Aviso
+              tom="neutro"
+              acao={(
+                <Button variant="outline" size="sm" onClick={() => setConfig(c => withMoveStageMode(c, 'stage'))}>
+                  Trocar por uma etapa específica
+                </Button>
+              )}
+            >
+              Coluna “{stageNameOf(config)}” do funil do card
+            </Aviso>
+          );
+        }
+        const stageId = String(config.stage_id ?? '');
+        const picked = resources.pipelines
+          .map(p => ({ pipeline: p, stage: (resources.stagesByPipeline[p.id] ?? []).find(s => s.id === stageId) }))
+          .find(x => x.stage);
         return (
           <div className="space-y-2">
-            <label className="flex items-center gap-2 text-sm cursor-pointer">
-              <input
-                type="radio"
-                name="flow-move-stage-mode"
-                checked={stageMode === 'stage'}
-                onChange={() => setConfig(c => withMoveStageMode(c, 'stage'))}
-                className="h-4 w-4 accent-primary"
-              />
-              Uma etapa específica
-            </label>
-            {stageMode === 'stage' && (
-              <div className="pl-6">
-                <StagePicker value={String(config.stage_id ?? '')} onPick={id => set('stage_id', id)} resources={resources} />
-              </div>
-            )}
-            <label className="flex items-center gap-2 text-sm cursor-pointer">
-              <input
-                type="radio"
-                name="flow-move-stage-mode"
-                checked={stageMode === 'name'}
-                onChange={() => setConfig(c => withMoveStageMode(c, 'name'))}
-                className="h-4 w-4 accent-primary"
-              />
-              Coluna com este nome no funil do card
-            </label>
-            {stageMode === 'name' && (
-              <div className="pl-6 space-y-1">
-                <Input
-                  value={stageNameOf(config)}
-                  onChange={e => setConfig(c => withStageName(c, e.target.value))}
-                  placeholder="Em atendimento"
-                  aria-label="Nome da coluna"
-                />
-                <p className="text-xs text-muted-foreground">
-                  O card vai pra coluna com esse nome no funil em que ele está (sem ligar pra acento e maiúscula). Se o
-                  funil do card não tiver essa coluna, ele não sai do lugar.
-                </p>
+            <Label className="text-xs">Pra qual etapa</Label>
+            <StagePicker value={stageId} onPick={id => set('stage_id', id)} resources={resources} />
+            {picked?.stage && (
+              <div data-testid="chip-da-etapa" className="inline-flex items-center gap-2 rounded-full border border-border bg-muted/40 px-3 py-1 text-sm">
+                <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: picked.stage.color }} aria-hidden />
+                <span className="font-medium">{picked.stage.name}</span>
+                <span className="text-xs text-muted-foreground">{picked.pipeline.name}</span>
               </div>
             )}
           </div>
