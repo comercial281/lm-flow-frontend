@@ -9666,8 +9666,8 @@ Decisões (não reabrir sem o dono pedir):
 5. **Conversa só com IA não conta como conflito** (ex.: Basel, "Corretor aceitou"); conta conversa aberta ou pendente com mensagem de uma pessoa da equipe nos últimos 7 dias em outro número do cliente.
 6. **Fluxo antigo não muda até salvar as Configurações.** Sem mexer no grupo do número, o salvamento sai idêntico ao de hoje (sem `send_from`, sem espelho nas Mensagens). Fluxo antigo mexido começa em "Seguir pela conversa dele"; fluxo novo nasce com `''` (modo conversa).
 7. **Sem exceção por bloco.** Quem precisa de outro número faz outro fluxo.
-8. **“Seguir pela conversa dele” gruda.** Usada uma vez, vale pro resto do fluxo para aquele lead (backend, sendo implementado).
-9. **Passar para a IA espera o horário comercial** quando teria que abrir uma conversa (backend, sendo implementado).
+8. **“Seguir pela conversa dele” gruda.** Usada uma vez, vale pro resto do fluxo para aquele lead (backend, PR #524).
+9. **Passar para a IA espera o horário comercial** quando teria que abrir uma conversa (backend, PR #524).
 
 Armadilhas:
 
