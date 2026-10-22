@@ -9538,3 +9538,41 @@ Armadilhas:
 5. **Textos literais** (sem chave nova de i18n), "Funis de mensagem → Follow-up" nas dicas.
 
 Código: `features/followup/JanelaColocarEmFollowup.tsx`, `features/flowAutomations/followupOptions.ts` (`soFollowupsDaEquipe`), `features/flowAutomations/editores/LeadAutomationsEditors.tsx` (`useAutomationResources`), `pages/Customer/Automations/FlowBuilder/ListaDeFollowups.tsx`, `FlowAutomationCanvas.tsx`, `pages/Customer/Automations/SalesAgents/configurar/paginas/Followup.tsx`, `components/layout/config/menuItems.ts`, `flowAutomationInstancesService.placePreview`, `flowAutomationsService.list({ startable, automationId })`. Testes: `JanelaColocarEmFollowup.spec.tsx`, `Followup.spec.tsx` (IA), `useAutomationResources.erroDeCarga.spec.tsx`, `FollowupPorUsuario.spec.tsx`, `FollowupCanvasCorretor.spec.tsx`, `menuItems.spec.ts`.
+
+## Construtor: janelas revisadas (desde 2026-10-22)
+
+Em 21/10/2026 o Tony fez o raio-x das 19 janelas de bloco do construtor de automações e achou que pareciam outro app: a limpeza visual de 30/09 a 14/10 nunca chegou ao conteúdo dessas janelas (só à casca). Ele marcou cada bloco, e a Entrega 1 corrige direto o que foi marcado, sem mexer no que o bloco faz. Spec em `LM FLOW/specs/2026-10-22-construtor-janelas-e-numero-do-fluxo-design.md` (fora do git, na pasta do Tony).
+
+O que mudou na tela:
+
+- **Início:** texto de ajuda novo explicando de onde a automação parte.
+- **"Lead recuperado":** novo nome do bloco, com um parágrafo só e uma dica curta.
+- **Janelas da IA** (passar pra IA, desligar a IA): sem a frase repetida.
+- **"Mandar resposta rápida"** saiu da lista de Blocos. Bloco já salvo continua abrindo e rodando.
+- **Grupo Controle:** cor `#475569` (cinza azulado), pra não confundir com Distribuição.
+- **Número de envio:** "Pelo número da conversa do lead" no lugar de "Automático (como sempre foi)".
+- **Mover de etapa:** só "etapa específica", com o chip da etapa (bolinha na cor, nome da etapa e do funil). Bloco salvo por nome mostra o Aviso `Coluna "nome" do funil do card` e o botão "Trocar por uma etapa específica".
+- **Esperar e Aguardar resposta:** "Esperar como?" e "Até quando esperar?" em `BotoesDeEscolha` (Por um prazo / Sem limite); unidades no singular ("1 dia", não "1 dias"); as saídas (Respondeu, Não respondeu) desenhadas pelo `SaidasDoBloco`.
+- **Notificação:** "Quem recebe" e "Mensagem" (obrigatórios com asterisco), sem emoji nos números; opção "WhatsApp deste CRM (final NN)" só quando o cliente tem exatamente 1 número conectado, senão "WhatsApp deste CRM (o número da conversa do lead)"; "Central da Leal Mídia" continua pro cliente; "LM01" some do texto que o cliente vê; o aviso vermelho solto virou Aviso de erro compacto, sem a palavra "lembrete".
+
+Decisões (não reabrir sem o dono pedir):
+
+1. **Resposta rápida sai da lista, não do motor.** Bloco salvo continua abrindo e rodando.
+2. **Mover de etapa só por etapa específica.** Editar o nome da coluna à mão acabou; quem tem bloco por nome troca pelo botão.
+3. **Cor do Controle `#475569`**, distinta de Distribuição `#EA580C`.
+4. **Final do número só com exatamente 1 conectado.** O servidor não tem um número único do CRM: a Notificação sai pelo número da conversa do lead, então com 2 ou mais a opção não inventa final.
+5. **"Central da Leal Mídia" fica pro cliente** (é escolha real dos avisos de grupo); o seletor de números por nome segue só pro superadmin.
+6. **Unidade no singular pela quantidade nas janelas do construtor** (`unitLabel`), sem mexer no `UNITS` do Follow-up.
+7. **Texto que sai pro lead não muda.**
+
+Armadilhas:
+
+1. **`MessageSequenceEditor`** (o título mudou) também aparece em Disparo em massa e Funis de mensagem: conferir os três ao mexer.
+2. **`SendFromField`** (o rótulo "Pelo número da conversa do lead") também aparece no follow-up e na ação antiga de enviar WhatsApp.
+3. **`UNITS`, `LEAD_WAIT_UNITS` e `SECONDS_UNITS` ficam intactos** (compartilhados com o Follow-up); só o rótulo mostrado passa por `unitLabel`.
+4. **Valores gravados não mudam** (`config` de cada bloco): só texto e desenho de tela. Bloco antigo abre igual.
+5. **Bloco de Mover de etapa por nome mantém `stage_name`** enquanto o usuário não clicar em trocar; salvar sem clicar não perde nada.
+6. **`instanceStatusLabel`** perdeu o emoji e vale também pra ação antiga de WhatsApp.
+7. **Teto `avisoSoltoNaJanela` desceu de 3 pra 2** no `conferir-padrao`; tetos só descem.
+
+Código: `components/flowAutomations/FlowNodePanel.tsx` (Mover de etapa, Esperar, Aguardar resposta), `components/flowAutomations/SaidasDoBloco.tsx`, `features/flowAutomations/editores/LeadAutomationsEditors.tsx` (Notificação), `features/flowAutomations/waitTime.ts` (`unitLabel`), `features/flowAutomations/leadAction.ts`, `features/flowAutomations/recovered.ts`, `lib/flowAutomationGraph.ts` (cor do Controle), `features/numbers/sendFrom.ts`, `features/numbers/numberTexts.ts` (`finalDoNumero`, `instanceStatusLabel`), `components/messaging/MessageSequenceEditor.tsx`, `components/flowAutomations/MessageBlockFields.tsx`. Testes: `BlockTexts.spec.tsx`, `FollowupBlocks.spec.tsx`, `FlowBlocks.spec.tsx`, `FlowLayoutPieces.spec.tsx`, `palette.spec.ts`, `waitTime.spec.ts`, `sendFrom.spec.ts`, `numberTexts.spec.ts`, `SendFromField.spec.tsx`, `notifyGroupCliente.spec.tsx`.
