@@ -177,6 +177,8 @@ describe('JanelaColocarEmFollowup', () => {
     abrir();
 
     expect(await screen.findByText(/Nenhum follow-up pra iniciar/)).toBeInTheDocument();
+    // Fase 3: o follow-up mora em Funis de mensagem → Follow-up.
+    expect(screen.getByText('Funis de mensagem → Follow-up')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Iniciar' })).toBeDisabled();
   });
 });

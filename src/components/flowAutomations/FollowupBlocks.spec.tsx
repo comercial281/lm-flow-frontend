@@ -176,6 +176,7 @@ describe('bloco "Iniciar follow-up"', () => {
     render(<FlowNodePanel node={node({ kind: 'lead_action', config: { action_type: 'start_followup_flow', params: {} } })} resources={resources} onClose={() => {}} onSave={onSave} />);
     expect(screen.getByRole('heading', { name: 'Iniciar follow-up' })).toBeTruthy();
     expect(screen.getByRole('option', { name: 'Follow-up curto (desligado)' })).toBeTruthy();
+    expect(screen.getByText(/Os follow-ups ficam em Funis de mensagem → Follow-up\./)).toBeTruthy();
     fireEvent.click(screen.getByText('Salvar'));
     expect(screen.getByRole('alert').textContent).toBe('Falta preencher o follow-up.');
     fireEvent.change(screen.getByLabelText('Qual follow-up'), { target: { value: 'f1' } });

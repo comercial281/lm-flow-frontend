@@ -38,6 +38,9 @@ export const FLOW_KIND_COPY: Record<FlowAutomationKind, FlowKindCopy> = {
       'Comece por um modelo: ele cria o fluxo desligado, você ajusta os textos e liga. Ou crie um fluxo do zero em Novo fluxo.',
     searchPlaceholder: 'Buscar fluxo...',
   },
+  // Fase 3 (21/10/2026): a lista é a aba Follow-up de Funis de mensagem (lista
+  // própria, ListaDeFollowups, em seções Da equipe · Meus · Dos corretores). O
+  // endereço continua o mesmo: link salvo e redirecionamento antigo valem.
   followup: {
     listPath: '/automations/follow-ups',
     title: 'Follow-up',

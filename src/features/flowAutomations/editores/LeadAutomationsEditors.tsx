@@ -855,12 +855,12 @@ export function ActionEditor({ action, onChange, resources, pessoal = false }: A
     }
 
     // ----- start_followup_flow -----
-    // Sprint 3 (03/10/2026): o follow-up é um fluxo do construtor (aba Follow-up).
+    // Sprint 3 (03/10/2026): o follow-up é um fluxo do construtor (Funis de mensagem → Follow-up desde a Fase 3).
     case 'start_followup_flow': {
       const atual = String(params.flow_automation_id ?? '');
       const conhecido = resources.followupFlows.some(f => f.id === atual);
       return (
-        <Field label="Qual follow-up *" hint="Os follow-ups ficam em Automações → Follow-up. Desligado, ele não recebe o lead.">
+        <Field label="Qual follow-up *" hint="Os follow-ups ficam em Funis de mensagem → Follow-up. Desligado, ele não recebe o lead.">
           <Seletor
             value={atual}
             onChange={e => setParam('flow_automation_id', e.target.value)}

@@ -132,8 +132,21 @@ class FlowAutomationsService {
     return unwrap<FlowAutomation>(await api.post(`${this.baseUrl}/${id}/unarchive`));
   }
 
-  async duplicate(id: string): Promise<FlowAutomation> {
-    return unwrap<FlowAutomation>(await api.post(`${this.baseUrl}/${id}/duplicate`));
+  // Follow-up (Fase 3): a cópia é de quem duplica; o gestor manda `team` pra
+  // escolher (sem ele a cópia do follow-up nasce pessoal). Corretor nunca manda.
+  async duplicate(id: string, opts?: { team?: boolean }): Promise<FlowAutomation> {
+    const url = `${this.baseUrl}/${id}/duplicate`;
+    return unwrap<FlowAutomation>(opts?.team === undefined ? await api.post(url) : await api.post(url, { team: opts.team }));
+  }
+
+  /** "Meu padrão" (follow-up, Fase 3): marca (`on`) ou desmarca o follow-up que começa quando EU mando o lead pra coluna. */
+  async myDefault(id: string, on: boolean): Promise<FlowAutomation> {
+    return unwrap<FlowAutomation>(await api.patch(`${this.baseUrl}/${id}/my_default`, { on }));
+  }
+
+  /** "Tornar padrão da conta" (follow-up, Fase 3): só o gestor, só follow-up da equipe e ligado. */
+  async accountDefault(id: string): Promise<FlowAutomation> {
+    return unwrap<FlowAutomation>(await api.patch(`${this.baseUrl}/${id}/account_default`));
   }
 
   /**

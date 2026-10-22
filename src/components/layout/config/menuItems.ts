@@ -329,11 +329,19 @@ export const getCustomerMenuSections = (): MenuSection[] => [
       // no construtor a partir de modelos. O Corretor de fábrica tem
       // `message_funnels.read` (backend lm-flow#388) e vê este item: é o único da
       // seção pra quem não tem acesso às Automações.
-      { name: 'Funis de mensagem', href: '/automations/message-funnels', icon: Rocket, ...permissionFromRoute('/automations/message-funnels'), featureKey: 'message_funnels', foraDoCelular: true },
+      //
+      // Follow-up por usuário (Fase 3, 21/10/2026): o item "Follow-up" saiu do
+      // topo e virou a aba Follow-up daqui (Manual | Follow-up), com o mesmo
+      // endereço. Cada aba leva a função dela (`message_funnels`, `follow_ups`):
+      // as duas chaves continuam no catálogo de Funções e uma desliga sem a outra.
+      // A aba Follow-up abre com a chave dos funis (o corretor) OU a do follow-up.
+      itemComAbas({ name: 'Funis de mensagem', icon: Rocket, foraDoCelular: true }, [
+        { name: 'Manual', href: '/automations/message-funnels', icon: Rocket, ...permissionFromRoute('/automations/message-funnels'), featureKey: 'message_funnels' },
+        { name: 'Follow-up', href: '/automations/follow-ups', icon: Repeat, ...permissionFromRoute('/automations/follow-ups'), ...permissionsFromRoute('/automations/follow-ups'), featureKey: 'follow_ups' },
+      ]),
       { name: 'Disparos', href: '/disparos', icon: Megaphone, ...permissionFromRoute('/disparos'), featureKey: 'disparos', foraDoCelular: true },
       // Feature gerenciada pela Leal Mídia: super-admin SEMPRE vê; cliente só se ligar o toggle.
       { name: 'IA Vendedora', href: '/ia-vendedora', icon: Bot, ...permissionFromRoute('/ia-vendedora'), clientToggleKey: 'client_manage_automations' },
-      { name: 'Follow-up', href: '/automations/follow-ups', icon: Repeat, ...permissionFromRoute('/automations/follow-ups'), featureKey: 'follow_ups' },
       // Automações = "quando X acontecer, faça Y": o construtor de fluxos, direto
       // na lista (sprint 2, 03/10/2026). "Regras de lead" e "Lembretes" não
       // existem mais: os endereços antigos levam pra cá.

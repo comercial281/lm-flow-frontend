@@ -120,7 +120,7 @@ export default function JanelaColocarEmFollowup({ lead, aoCancelar, aoConcluir }
           <EmptyState
             tamanho="compacto"
             title="Nenhum follow-up pra iniciar."
-            description={<>Crie e ligue um em <em>Automações → Follow-up</em>.</>}
+            description={<>Crie e ligue um em <em>Funis de mensagem → Follow-up</em>.</>}
           />
         ) : (
           <div className="grid gap-4">

@@ -157,6 +157,10 @@ export interface FlowAutomation {
   followup_padrao?: boolean;
   /** Fase 2 (follow-up): leads dentro agora, pausados incluídos. Só follow-up traz. */
   live_count?: number;
+  /** Fase 3 (follow-up): é o "Meu padrão" de quem pediu (já checado: ligado e dele ou da equipe). */
+  my_default?: boolean;
+  /** Fase 3 (follow-up): é o padrão EFETIVO da conta (o que a coluna usa sem escolha). */
+  account_default?: boolean;
   /** Fase 2: junto do `data` na resposta de ligar/desligar/arquivar follow-up (a service copia pro fluxo). */
   stopped_count?: number;
   remaining?: number;

@@ -37,6 +37,9 @@ export interface RoutePermission {
 
 // Construtor de automações: o gestor entra pela leitura; o corretor, por "Automações próprias".
 const FLOW_BUILDER_PERMISSIONS = ['flow_automations.read', 'flow_automations.own'] as const;
+// Follow-up (Fase 3, 21/10/2026): aba de Funis de mensagem. O corretor entra pela
+// chave dos funis (o servidor deixa ele ver os dele + os da equipe); o gestor, pela do follow-up.
+const FOLLOWUP_PERMISSIONS = ['message_funnels.read', 'followup_sequences.read'] as const;
 
 export const ROUTE_PERMISSIONS: readonly RoutePermission[] = [
   { path: '/equipe/cargos/lista', resource: 'roles', action: 'read' },
@@ -67,8 +70,8 @@ export const ROUTE_PERMISSIONS: readonly RoutePermission[] = [
   { path: 'template-variables', resource: 'canned_responses', action: 'read', automationsChild: true },
   { path: 'origem', resource: 'lead_ads_form_configs', action: 'read', automationsChild: true },
   { path: 'lead-ads-forms', resource: 'lead_ads_form_configs', action: 'read', automationsChild: true },
-  { path: 'follow-ups', resource: 'followup_sequences', action: 'read', automationsChild: true },
-  { path: 'follow-ups/:id', resource: 'followup_sequences', action: 'read', automationsChild: true },
+  { path: 'follow-ups', resource: 'followup_sequences', action: 'read', permissions: FOLLOWUP_PERMISSIONS, automationsChild: true },
+  { path: 'follow-ups/:id', resource: 'followup_sequences', action: 'read', permissions: FOLLOWUP_PERMISSIONS, automationsChild: true },
   { path: 'roleta-config', resource: 'roleta_configs', action: 'read', automationsChild: true },
   // A página de uma roleta.
   { path: 'roleta-config/:id', resource: 'roleta_configs', action: 'read', automationsChild: true },
