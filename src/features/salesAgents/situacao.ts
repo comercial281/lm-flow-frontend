@@ -165,7 +165,7 @@ export function restricaoDosGatilhos(agent: AgenteLido): { frase: string; parada
   return { frase: `só ${juntar(restritivos.map(descricao), 'e')}`, parada: false };
 }
 
-export function situacaoDaIa(agent: AgenteLido, diagnostics?: HealthReport | null, ocultas: string[] = []): Situacao {
+export function situacaoDaIa(agent: AgenteLido, diagnostics?: HealthReport | null, ocultas: string[] = [], oficial = false): Situacao {
   if (!agent.enabled && !agent.inbox_id) return { tipo: 'rascunho', frase: 'Rascunho: falta escolher o número', corrigir: PAGINA('canal') };
   // Desligada: sem botão, liga na chave da barra.
   if (!agent.enabled) return { tipo: 'desligada', frase: 'Desligada' };
@@ -174,7 +174,7 @@ export function situacaoDaIa(agent: AgenteLido, diagnostics?: HealthReport | nul
   const erro = (diagnostics?.items ?? []).find((i) => i.status === 'error' && PARADA_POR_ITEM[i.key]);
   if (erro) {
     const parada = PARADA_POR_ITEM[erro.key];
-    const corrigir = parada.corrigir ? corrigirDoItem(erro.key, agent) ?? parada.corrigir : undefined;
+    const corrigir = parada.corrigir ? corrigirDoItem(erro.key, agent, oficial) ?? parada.corrigir : undefined;
     return { tipo: 'parada', frase: parada.frase, ...(corrigir ? { corrigir } : {}) };
   }
 
@@ -195,19 +195,19 @@ export function situacaoDaIa(agent: AgenteLido, diagnostics?: HealthReport | nul
  * do número (o mesmo destino do aviso de queda, `enderecoConexao`), onde se lê o QR
  * code de novo; sem número, cai no Canal pra escolher um.
  */
-function corrigirDoItem(chave: string, agent: Pick<AgenteLido, 'inbox_id'>): Corrigir | undefined {
+function corrigirDoItem(chave: string, agent: Pick<AgenteLido, 'inbox_id'>, oficial: boolean): Corrigir | undefined {
   const base = CORRIGIR_DO_ITEM[chave];
-  if (chave === 'credentials' && agent.inbox_id) return { ...base, rota: enderecoConexao(String(agent.inbox_id)) };
+  if (chave === 'credentials' && agent.inbox_id) return { ...base, rota: enderecoConexao(String(agent.inbox_id), oficial) };
   return base;
 }
 
-function daItem(item: HealthItem, agent: Pick<AgenteLido, 'inbox_id'>): Pendencia {
+function daItem(item: HealthItem, agent: Pick<AgenteLido, 'inbox_id'>, oficial: boolean): Pendencia {
   return {
     chave: item.key,
     titulo: item.label,
     detalhe: item.detail,
     grave: item.status === 'error',
-    corrigir: corrigirDoItem(item.key, agent),
+    corrigir: corrigirDoItem(item.key, agent, oficial),
   };
 }
 
@@ -241,7 +241,7 @@ const DESTINO_DO_SISTEMA = ['destino_cvcrm_desconectado', 'destino_sem_endereco'
 // é lead que não chegou (ruling de 11/10/2026).
 export const NUNCA_OCULTA = new Set(['client_system']);
 
-export function pendenciasDaIa(agent: AgenteLido, diagnostics?: HealthReport | null): Pendencia[] {
+export function pendenciasDaIa(agent: AgenteLido, diagnostics?: HealthReport | null, oficial = false): Pendencia[] {
   const daPagina = pendenciasDasPaginas(agent);
   const destinoNaTela = daPagina.some((p) => DESTINO_DO_SISTEMA.includes(p.chave));
   // A pendência da tela substitui o item do servidor, então herda a gravidade dele
@@ -251,7 +251,7 @@ export function pendenciasDaIa(agent: AgenteLido, diagnostics?: HealthReport | n
   const lista = (diagnostics?.items ?? [])
     .filter((i) => i.status !== 'ok' && i.key !== 'enabled' && i.key !== 'triggers')
     .filter((i) => !(i.key === 'client_system' && destinoNaTela))
-    .map((i) => daItem(i, agent));
+    .map((i) => daItem(i, agent, oficial));
 
   if (!diagnostics && agent.enabled && !agent.inbox_id) {
     lista.push({ chave: 'inbox', titulo: 'Número de WhatsApp', detalhe: 'Nenhum número escolhido. Sem ele a IA não recebe nem responde ninguém.', grave: true, corrigir: PAGINA('canal') });

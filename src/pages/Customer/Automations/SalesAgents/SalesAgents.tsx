@@ -121,8 +121,8 @@ export default function SalesAgents() {
     inboxesService
       .list()
       .then((res) => {
-        const data = ((res as unknown as { data?: InboxOption[] }).data) ?? [];
-        setInboxes(data.map((i) => ({ id: i.id, name: i.name })));
+        const data = ((res as unknown as { data?: Array<InboxOption & { whatsapp_cloud?: unknown }> }).data) ?? [];
+        setInboxes(data.map((i) => ({ id: i.id, name: i.name, oficial: !!i.whatsapp_cloud })));
       })
       .catch(() => setInboxes([]));
   }, [loadAgents]);
@@ -265,7 +265,8 @@ export default function SalesAgents() {
   // ⚠️ O relatório é de UMA IA: ao trocar A→B, o de A não vale pra B (o selo
   // mentiria até o de B chegar). Só relido por `updated_at` mantém, sem piscar.
   const diagnosticoDaIa = selected && diagnostico?.id === selected.id ? diagnostico.report : null;
-  const situacao = selected ? situacaoDaIa(selected, diagnosticoDaIa, selected.hidden_warnings ?? []) : null;
+  const numeroOficial = inboxes.find((i) => String(i.id) === String(selected?.inbox_id ?? ''))?.oficial ?? false;
+  const situacao = selected ? situacaoDaIa(selected, diagnosticoDaIa, selected.hidden_warnings ?? [], numeroOficial) : null;
   const info = telaInfo(tela);
   const trilha = trilhaDe(tela);
 
@@ -337,6 +338,7 @@ export default function SalesAgents() {
                 aoIr={irPara}
                 aoSalvo={aoSalvo}
                 podeOcultar={pode('sales_agents', 'update')}
+                numeroOficial={numeroOficial}
               />
             )}
             {tela === 'sugestoes' && insightsLiberado && <TelaSugestoes agent={selected} />}

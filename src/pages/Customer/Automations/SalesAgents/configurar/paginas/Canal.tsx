@@ -44,7 +44,9 @@ export default function Canal({ agent, inboxes, gravar, irPara, diagnostico }: P
   // a gravar no desmonte. O desmonte do filho roda antes deste efeito, então o
   // desmonte causado pelo "Todos" ainda vê a trava ligada.
   useEffect(() => { if (publico === 'alguns') escolheuTodos.current = false; }, [publico]);
-  const numero = inboxes.find((i) => String(i.id) === String(agent.inbox_id ?? ''))?.name ?? agent.inbox_name ?? null;
+  const escolhido = inboxes.find((i) => String(i.id) === String(agent.inbox_id ?? ''));
+  const numero = escolhido?.name ?? agent.inbox_name ?? null;
+  const oficial = !!escolhido?.oficial;
   const credencial = diagnostico?.items.find((i) => i.key === 'credentials');
   // Só "Desconectado" com erro de verdade: número novo, sem conversa ainda, não é queda (11/10/2026).
   const situacao = !agent.inbox_id || !credencial ? null : credencial.status === 'error' ? 'Desconectado' : 'Conectado';
@@ -77,9 +79,14 @@ export default function Canal({ agent, inboxes, gravar, irPara, diagnostico }: P
             <Seletor id="canal-numero" className={`${CLASSE_DO_CAMPO} w-full`} value={agent.inbox_id ?? ''}
               onChange={(e) => { const id = e.target.value || null; if (id) void gravar({ inbox_id: id }).then((ok) => ok && setTrocando(false)); }}>
               <option value="">Escolha o número</option>
-              {inboxes.map((i) => <option key={i.id} value={String(i.id)}>{i.name}</option>)}
+              {inboxes.map((i) => <option key={i.id} value={String(i.id)}>{i.oficial ? `${i.name} (API oficial)` : i.name}</option>)}
             </Seletor>
           </Campo>
+        )}
+        {oficial && (
+          <Aviso tom="info">
+            <p>Pela API oficial a IA responde normalmente quem chamar. Abrir conversa com lead de formulário e mandar follow-up depois de 24h ainda não funcionam neste número. Acima de 1.000 respostas no mês, a Meta cobra cada resposta.</p>
+          </Aviso>
         )}
         {corretor && agent.number_owner_name && (
           <p className="text-sm text-muted-foreground">Dono deste número: {agent.number_owner_name}. É pra ele que o lead vai.</p>

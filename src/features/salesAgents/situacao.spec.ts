@@ -93,6 +93,14 @@ describe('restricaoDosGatilhos (espelho do TriggerGate)', () => {
   });
 });
 
+describe('pendenciasDaIa · número oficial', () => {
+  it('WhatsApp desconectado leva à tela do número oficial, não ao QR', () => {
+    const d = diag(['credentials', 'error']);
+    expect(pendenciasDaIa(ia(), d, true)[0].corrigir?.rota).toBe('/channels/inbox-1/oficial');
+    expect(pendenciasDaIa(ia(), d)[0].corrigir?.rota).toBe('/channels/inbox-1/settings?tab=configuration');
+  });
+});
+
 describe('pendenciasDaIa', () => {
   it('itens do Diagnóstico fora do ok, graves primeiro, cada um com onde corrigir', () => {
     const p = pendenciasDaIa(ia(), diag(['enabled', 'ok'], ['knowledge', 'warning', 'Nenhum documento pronto.'], ['inbox', 'error', 'O canal vinculado não existe mais.'], ['api_key', 'error']));

@@ -1,6 +1,8 @@
 export interface InboxOption {
   id: string | number;
   name: string;
+  /** Número da API oficial do WhatsApp (`!!inbox.whatsapp_cloud`). */
+  oficial: boolean;
 }
 
 // Toggle liga/desliga reutilizável. `rotulo` é o nome da chave (ex.: "curtir
