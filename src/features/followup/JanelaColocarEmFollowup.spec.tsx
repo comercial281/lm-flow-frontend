@@ -161,7 +161,7 @@ describe('JanelaColocarEmFollowup', () => {
     ).toBeInTheDocument();
   });
 
-  it('opções levam o selo Seu ou Da equipe', async () => {
+  it('opções levam o selo Do responsável ou Da equipe', async () => {
     placePreview.mockResolvedValue(preview({
       default_flow_id: 'f1',
       options: [
@@ -172,7 +172,7 @@ describe('JanelaColocarEmFollowup', () => {
     abrir();
 
     expect(await screen.findByLabelText('Follow-up')).toHaveValue('f1');
-    expect(screen.getByRole('option', { name: 'Meu follow-up · Seu' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'Meu follow-up · Do responsável' })).toBeInTheDocument();
     expect(screen.getByRole('option', { name: 'Follow-up longo · Da equipe' })).toBeInTheDocument();
   });
 

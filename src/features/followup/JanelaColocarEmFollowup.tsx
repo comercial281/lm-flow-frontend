@@ -38,9 +38,9 @@ interface Props {
 
 const MIDIA = 'A próxima mensagem é uma mídia (foto, áudio ou vídeo).';
 
-/** Selo da opção: "Seu" (do responsável pelo lead) ou "Da equipe". Sem a informação, só o nome. */
+/** Selo da opção: "Do responsável" (o pessoal de quem cuida do lead, que pode não ser quem abre a janela) ou "Da equipe". Sem a informação, só o nome. */
 const rotuloDaOpcao = (o: { name: string; team?: boolean }) =>
-  o.team === true ? `${o.name} · Da equipe` : o.team === false ? `${o.name} · Seu` : o.name;
+  o.team === true ? `${o.name} · Da equipe` : o.team === false ? `${o.name} · Do responsável` : o.name;
 
 const motivoDaRecusa = (e: unknown) =>
   serverErrorOf(e)
