@@ -81,6 +81,7 @@ describe('ChannelCard', () => {
 
     expect(screen.getByText('API oficial')).toBeInTheDocument();
     expect(screen.getByText('Conectado')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /actions\.configure/ })).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: /Gerenciar/ }));
     expect(gerenciar).toHaveBeenCalledWith(expect.objectContaining({ id: '7' }));
   });

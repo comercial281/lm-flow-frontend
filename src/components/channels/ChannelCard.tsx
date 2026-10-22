@@ -118,25 +118,23 @@ export default function ChannelCard({ inbox, isDeleting, onSettings, onDelete, c
               {t('actions.reconnect')}
             </Button>
           )}
-          {oficial ? (
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-8 text-xs bg-sidebar border-sidebar-border hover:bg-sidebar-accent"
+            onClick={() => onSettings(inbox)}
+          >
+            <Settings className="h-3.5 w-3.5 mr-1" />
+            {t('actions.configure')}
+          </Button>
+          {oficial && (
             <Button
               size="sm"
               variant="outline"
               className="h-8 text-xs bg-sidebar border-sidebar-border hover:bg-sidebar-accent"
               onClick={() => onManage?.(inbox)}
             >
-              <Settings className="h-3.5 w-3.5 mr-1" />
               Gerenciar
-            </Button>
-          ) : (
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-8 text-xs bg-sidebar border-sidebar-border hover:bg-sidebar-accent"
-              onClick={() => onSettings(inbox)}
-            >
-              <Settings className="h-3.5 w-3.5 mr-1" />
-              {t('actions.configure')}
             </Button>
           )}
           {canDelete && (

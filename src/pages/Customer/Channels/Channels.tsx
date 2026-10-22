@@ -290,7 +290,7 @@ export default function Channels() {
                 inbox={inbox}
                 isDeleting={isDeleting}
                 onSettings={openChannelSettings}
-                onManage={openOfficialNumber}
+            onManage={openOfficialNumber}
                 onDelete={openDeleteModal}
                 canDelete={podeExcluir}
               />
@@ -301,7 +301,7 @@ export default function Channels() {
             channels={paginatedInboxes}
             loading={isInitialLoading}
             onSettings={openChannelSettings}
-                onManage={openOfficialNumber}
+            onManage={openOfficialNumber}
             onDelete={openDeleteModal}
             canDelete={podeExcluir}
           />

@@ -96,7 +96,6 @@ export default function ChannelsTable({
             label: t('actions.configure'),
             onClick: onSettings,
             icon: <Settings className="h-4 w-4" />,
-            show: (item: Inbox) => !item.whatsapp_cloud,
           },
           {
             label: 'Gerenciar',

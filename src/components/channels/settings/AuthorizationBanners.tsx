@@ -6,6 +6,7 @@ import { useLanguage } from '@/hooks/useLanguage';
 import { toast } from 'sonner';
 import { useGlobalConfig } from '@/contexts/GlobalConfigContext';
 import ChannelsService from '@/services/channels/channelsService';
+import { usePermissions } from '@/contexts/PermissionsContext';
 import { useConexaoOficial } from '@/components/channels/forms/whatsapp/useConexaoOficial';
 import instagramService from '@/services/channels/instagramService';
 import EmailOauthService from '@/services/channels/emailOauthService';
@@ -164,6 +165,8 @@ const AuthorizationSuccessBanner: React.FC<{
   const { t } = useLanguage('channels');
   const config = useGlobalConfig();
   const [isReconnecting, setIsReconnecting] = useState(false);
+  const { can } = usePermissions();
+  const podeEditar = can('inboxes', 'update');
   const isWhatsAppOficial = provider.toLowerCase() === 'whatsapp' && inbox?.provider === 'whatsapp_cloud';
   const conexaoOficial = useConexaoOficial({
     inboxId: inbox?.id,
@@ -312,10 +315,7 @@ const AuthorizationSuccessBanner: React.FC<{
 
   // WhatsApp oficial: o mesmo fluxo de conectar da tela de novo canal, com o id da caixa.
   const handleReconnectWhatsApp = async () => {
-    if (!conexaoOficial.liberado || !conexaoOficial.pronto) {
-      toast.error(t('settings.authorizationBanners.success.whatsappNotConfigured'));
-      return;
-    }
+    if (!conexaoOficial.liberado || !conexaoOficial.pronto) return;
     conexaoOficial.iniciar(inbox?.whatsapp_cloud?.mode ?? 'new_number');
   };
 
@@ -389,8 +389,9 @@ const AuthorizationSuccessBanner: React.FC<{
   const providerLower = provider.toLowerCase();
   const isWhatsAppCloud = providerLower === 'whatsapp' && inbox?.provider === 'whatsapp_cloud';
   const showReconnectButton =
-    ['facebook', 'instagram', 'gmail', 'google', 'microsoft', 'outlook'].includes(providerLower) ||
-    isWhatsAppCloud;
+    podeEditar &&
+    (['facebook', 'instagram', 'gmail', 'google', 'microsoft', 'outlook'].includes(providerLower) ||
+      (isWhatsAppCloud && conexaoOficial.liberado));
 
   return (
     <Aviso
@@ -414,7 +415,7 @@ const AuthorizationSuccessBanner: React.FC<{
                 console.error('Error in handleReconnect:', error);
               });
             }}
-            loading={isReconnecting || conexaoOficial.carregando}
+            loading={isReconnecting || (isWhatsAppCloud && (conexaoOficial.carregando || !conexaoOficial.pronto))}
             size="sm"
             variant="outline"
             className="border-primary/30 text-primary hover:bg-primary/10"
@@ -425,7 +426,10 @@ const AuthorizationSuccessBanner: React.FC<{
         )
       }
     >
-      {conexaoOficial.erro && <p>{conexaoOficial.erro}</p>}
+      {isWhatsAppCloud && podeEditar && !conexaoOficial.liberado && (
+        <Aviso tom="info">A conexão com a API oficial ainda não está liberada neste LM Flow.</Aviso>
+      )}
+      {isWhatsAppCloud && conexaoOficial.erro && <Aviso tom="erro">{conexaoOficial.erro}</Aviso>}
       {lastConnected && (
         <p>{t('settings.authorizationBanners.success.lastConnection', { date: lastConnected })}</p>
       )}

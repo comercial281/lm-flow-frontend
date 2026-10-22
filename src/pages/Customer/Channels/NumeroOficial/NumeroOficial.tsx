@@ -9,6 +9,7 @@ import Carregando from '@/components/base/Carregando';
 import { Badge, Button } from '@/components/ui/ds';
 import MessageTemplateForm from '@/components/channels/settings/MessageTemplateForm';
 import { useConexaoOficial } from '@/components/channels/forms/whatsapp/useConexaoOficial';
+import { usePermissions } from '@/contexts/PermissionsContext';
 import { useConfirmacao } from '@/hooks/useConfirmacao';
 import InboxesService from '@/services/channels/inboxesService';
 import WhatsappService from '@/services/channels/whatsappService';
@@ -22,6 +23,8 @@ export default function NumeroOficial() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
+  const { can } = usePermissions();
+  const podeEditar = can('inboxes', 'update');
 
   const [inbox, setInbox] = useState<Inbox | null>(null);
   const [carga, setCarga] = useState<'carregando' | 'ok' | 'erro' | 'naoOficial'>('carregando');
@@ -146,16 +149,18 @@ export default function NumeroOficial() {
                 <ExternalLink className="h-4 w-4 mr-1" />
                 Abrir no painel da Meta
               </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={!reconexao.liberado || !reconexao.pronto || reconexao.carregando}
-                onClick={() => reconexao.iniciar(nuvem.mode)}
-              >
-                <RefreshCw className="h-4 w-4 mr-1" />
-                Reconectar
-              </Button>
-              {nuvem.connected && (
+              {podeEditar && reconexao.liberado && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={!reconexao.pronto || reconexao.carregando}
+                  onClick={() => reconexao.iniciar(nuvem.mode)}
+                >
+                  <RefreshCw className="h-4 w-4 mr-1" />
+                  {reconexao.carregando || !reconexao.pronto ? 'Carregando...' : 'Reconectar'}
+                </Button>
+              )}
+              {podeEditar && nuvem.connected && (
                 <Button variant="outline" size="sm" disabled={desligando} onClick={desconectar}>
                   Desconectar
                 </Button>
@@ -168,6 +173,9 @@ export default function NumeroOficial() {
       <div className="space-y-4">
         {!nuvem.connected && (
           <Aviso tom="atencao">Este número não está recebendo mensagens. Reconecte pra voltar a atender.</Aviso>
+        )}
+        {podeEditar && !reconexao.liberado && (
+          <Aviso tom="info">A conexão com a API oficial ainda não está liberada neste LM Flow.</Aviso>
         )}
         {reconexao.erro && <Aviso tom="erro">{reconexao.erro}</Aviso>}
         <Abas

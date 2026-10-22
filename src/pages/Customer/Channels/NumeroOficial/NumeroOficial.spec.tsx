@@ -9,7 +9,10 @@ const s = vi.hoisted(() => ({
   disconnectCloud: vi.fn(),
   iniciar: vi.fn(),
   hook: vi.fn(),
+  pode: true,
+  liberado: true,
 }));
+vi.mock('@/contexts/PermissionsContext', () => ({ usePermissions: () => ({ can: () => s.pode }) }));
 
 vi.mock('@/services/channels/inboxesService', () => ({ default: { getById: s.getById } }));
 vi.mock('@/services/channels/whatsappService', () => ({ default: { disconnectCloud: s.disconnectCloud } }));
@@ -17,7 +20,7 @@ vi.mock('@/components/channels/settings/MessageTemplateForm', () => ({ default: 
 vi.mock('@/components/channels/forms/whatsapp/useConexaoOficial', () => ({
   useConexaoOficial: (o: unknown) => {
     s.hook(o);
-    return { liberado: true, pronto: true, carregando: false, erro: null, iniciar: s.iniciar };
+    return { liberado: s.liberado, pronto: true, carregando: false, erro: null, iniciar: s.iniciar };
   },
 }));
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
@@ -51,6 +54,8 @@ const tela = () =>
 
 beforeEach(() => {
   vi.clearAllMocks();
+  s.pode = true;
+  s.liberado = true;
   s.getById.mockResolvedValue(caixa({}));
   s.disconnectCloud.mockResolvedValue({ inbox_id: '9' });
 });
@@ -112,5 +117,24 @@ describe('NumeroOficial', () => {
     s.getById.mockResolvedValue(caixa(null));
     tela();
     expect(await screen.findByText('Este canal não é um número da API oficial.')).toBeInTheDocument();
+  });
+
+  it('sem permissão de editar a caixa, Reconectar e Desconectar não aparecem', async () => {
+    s.pode = false;
+    tela();
+    await screen.findByRole('heading', { name: 'Loja Exemplo' });
+    expect(screen.queryByRole('button', { name: /Reconectar/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Desconectar' })).toBeNull();
+    expect(screen.getByRole('button', { name: /Abrir no painel da Meta/ })).toBeInTheDocument();
+  });
+
+  it('conexão não liberada troca o Reconectar pelo aviso', async () => {
+    s.liberado = false;
+    tela();
+    await screen.findByRole('heading', { name: 'Loja Exemplo' });
+    expect(screen.queryByRole('button', { name: /Reconectar/ })).toBeNull();
+    expect(
+      screen.getByText('A conexão com a API oficial ainda não está liberada neste LM Flow.'),
+    ).toBeInTheDocument();
   });
 });
