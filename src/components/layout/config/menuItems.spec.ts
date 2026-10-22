@@ -367,6 +367,27 @@ describe('gaveta do celular (Raio-X do celular, 10/10/2026)', () => {
     expect(secoesDoCelular(vistas).map(s => s.id)).toEqual(['principal', 'atividades', 'imoveis', 'leads']);
   });
 
+  // Follow-up (Fase 3): virou aba de Funis de mensagem, mas segue na gaveta como
+  // antes (decisão do dono, 10/10: "Follow-up e Automações ficam no menu do
+  // celular"), só pra quem tem a chave do follow-up. A aba Manual fica de fora.
+  const podeCom = (chaves: Set<string>) => (ps: string[]) => ps.some(p => chaves.has(p));
+  const GESTOR_FOLLOWUP = new Set(['followup_sequences.read', 'followup_sequences.update', 'message_funnels.read']);
+
+  it('o Follow-up continua na gaveta pro gestor, sem a aba Manual, com o nome e o endereço do follow-up', () => {
+    const vistas = comCargo(GESTOR_FOLLOWUP);
+    const vendas = secoesDoCelular(vistas, podeCom(GESTOR_FOLLOWUP)).find(s => s.id === 'vendas')!;
+    const followup = vendas.itens.find(i => i.href === '/automations/follow-ups')!;
+    expect(followup.name).toBe('Follow-up');
+    expect(followup.abas?.map(a => a.name)).toEqual(['Follow-up']);
+    expect(vendas.itens.map(i => i.name)).not.toContain('Funis de mensagem');
+    expect(itensDoMenu([vendas]).map(i => i.href)).not.toContain('/automations/message-funnels');
+  });
+
+  it('o corretor (só message_funnels.*) não ganha o Follow-up na gaveta e segue sem Vendas e automação', () => {
+    const vistas = comCargo(CORRETOR);
+    expect(secoesDoCelular(vistas, podeCom(CORRETOR)).map(s => s.id)).toEqual(['principal', 'atividades', 'imoveis', 'leads']);
+  });
+
   it('as telas continuam com dono no menu inteiro (abrem pelo endereço e a busca acha)', () => {
     expect(donoDoEndereco(secoes, '/settings/attributes')?.item.name).toBe('Campos personalizados');
     expect(itensDoMenu(secoes).map(i => i.name)).toContain('Disparos');

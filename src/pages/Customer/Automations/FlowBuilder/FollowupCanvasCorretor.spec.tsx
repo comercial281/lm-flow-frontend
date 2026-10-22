@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 
 // Follow-up por usuário (Fase 3, 21/10/2026): o corretor (só as chaves dos
@@ -101,6 +101,16 @@ describe('canvas do follow-up pro corretor', () => {
     expect(personalCapabilities).not.toHaveBeenCalled();
     expect(screen.queryByText(/Pelo WhatsApp de|Sai pelo seu WhatsApp|Pelo seu WhatsApp/)).toBeNull();
     expect(screen.queryByText(/Indisponível/)).toBeNull();
+  });
+
+  it('no painel do bloco Mensagem não escolhe número nem mexe no progresso: diz por onde sai', async () => {
+    get.mockResolvedValue(followup());
+    renderCanvas();
+    fireEvent.click(await screen.findByLabelText('Editar Primeira mensagem'));
+    const janela = await screen.findByRole('dialog');
+    expect(within(janela).getByText('Sai pelo WhatsApp do responsável pelo lead.')).toBeTruthy();
+    expect(within(janela).queryByLabelText('Enviar pelo número')).toBeNull();
+    expect(within(janela).queryByText('Marcar progresso')).toBeNull();
   });
 
   it('o da equipe abre só pra ver, com o texto do follow-up', async () => {

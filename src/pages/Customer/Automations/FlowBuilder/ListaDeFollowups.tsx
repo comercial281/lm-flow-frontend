@@ -240,7 +240,8 @@ export default function ListaDeFollowups() {
   const item = (f: FlowAutomation, secao: 'equipe' | 'meus' | 'corretores') => {
     const canEdit = f.permissions ? f.permissions.can_edit === true : ehGestor;
     const comEstrela = secao !== 'corretores';
-    const podeTornarPadrao = ehGestor && secao === 'equipe' && !f.account_default && !f.archived_at;
+    // Só ligado (e não arquivado): o servidor recusa o resto.
+    const podeTornarPadrao = ehGestor && secao === 'equipe' && f.is_enabled && !f.account_default && !f.archived_at;
     const estado = f.archived_at ? 'Arquivado' : f.is_enabled ? 'Ligado' : 'Desligado';
     return (
       <li key={f.id} className="rounded-lg border border-border overflow-hidden flex">

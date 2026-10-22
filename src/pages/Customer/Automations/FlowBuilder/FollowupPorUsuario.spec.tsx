@@ -176,6 +176,7 @@ describe('Padrão da conta', () => {
     list.mockResolvedValue([
       daEquipe('t1', 'Follow-up padrão', { account_default: true, permissions: gestor }),
       fu('t2', 'Pós-visita', { team: true, permissions: gestor }),
+      fu('t3', 'Desligado da equipe', { team: true, is_enabled: false, permissions: gestor }),
       fu('m1', 'Meu do gestor', { permissions: { ...gestor, personal: true } }),
       fu('c1', 'Do Bruno', { owner_user_id: 'u2', owner_name: 'Bruno', permissions: gestor }),
     ]);
@@ -187,6 +188,8 @@ describe('Padrão da conta', () => {
     expect(within(itemDe('Follow-up padrão')).queryByRole('button', { name: 'Tornar padrão da conta' })).toBeNull();
     expect(within(itemDe('Meu do gestor')).queryByRole('button', { name: 'Tornar padrão da conta' })).toBeNull();
     expect(within(itemDe('Do Bruno')).queryByRole('button', { name: 'Tornar padrão da conta' })).toBeNull();
+    // Desligado não vira padrão da conta (o servidor recusaria).
+    expect(within(itemDe('Desligado da equipe')).queryByRole('button', { name: 'Tornar padrão da conta' })).toBeNull();
 
     fireEvent.click(within(itemDe('Pós-visita')).getByRole('button', { name: 'Tornar padrão da conta' }));
     await waitFor(() => expect(accountDefault).toHaveBeenCalledWith('t2'));

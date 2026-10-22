@@ -107,6 +107,10 @@ export function MessageBlockFields({
   numeroPessoalCarregando = false, donoDoEnvio = null,
 }: Props) {
   const peloDono = pessoal || donoDoEnvio != null;
+  // Follow-up guiado (Fase 3; automação nunca vem guiada e o funil é o ramo de
+  // conversa): o servidor manda sempre pelo número do responsável pelo lead e
+  // recusa mexer no progresso. A tela só diz por onde sai.
+  const doResponsavel = guided && !conversation;
   return (
     <>
       <div className="space-y-1">
@@ -127,7 +131,9 @@ export function MessageBlockFields({
         <p className="text-xs text-muted-foreground">Sai pelo número da conversa em que você disparar o funil.</p>
       ) : (
         <>
-          {peloDono ? (
+          {doResponsavel ? (
+            <p className="text-sm font-medium" data-testid="sai-pelo-responsavel">Sai pelo WhatsApp do responsável pelo lead.</p>
+          ) : peloDono ? (
             <LinhaDoEnvio
               pessoal={pessoal}
               numeroPessoal={numeroPessoal}
@@ -141,7 +147,7 @@ export function MessageBlockFields({
               onChange={v => onChange(c => applySendFrom(c, v))}
             />
           )}
-          <ProgressFields config={config} onChange={onChange} />
+          {!doResponsavel && <ProgressFields config={config} onChange={onChange} />}
           <p className="text-xs text-muted-foreground">A mensagem sai marcada como automática, igual o Follow-up.</p>
         </>
       )}

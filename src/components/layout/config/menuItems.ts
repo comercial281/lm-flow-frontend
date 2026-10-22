@@ -155,6 +155,15 @@ export interface SubMenuItem {
   exata?: boolean;
   /** Cartão da página de Integrações em que esta tela aparece (ver `entrada`). */
   cartao?: CartaoDeIntegracao;
+  /** A aba some da gaveta do celular (ver `MenuItem.foraDoCelular` e `secoesDoCelular`). */
+  foraDoCelular?: boolean;
+  /**
+   * Na gaveta do celular a aba só aparece pra quem tem uma destas chaves
+   * (no computador vale o cargo normal da aba). Ex.: Follow-up (Fase 3): o
+   * corretor entra pela chave dos funis no computador, mas na gaveta só fica
+   * pra quem tem a do follow-up, como era o item "Follow-up" antes.
+   */
+  celularPede?: string[];
 }
 
 /**
@@ -335,9 +344,13 @@ export const getCustomerMenuSections = (): MenuSection[] => [
       // endereço. Cada aba leva a função dela (`message_funnels`, `follow_ups`):
       // as duas chaves continuam no catálogo de Funções e uma desliga sem a outra.
       // A aba Follow-up abre com a chave dos funis (o corretor) OU a do follow-up.
-      itemComAbas({ name: 'Funis de mensagem', icon: Rocket, foraDoCelular: true }, [
-        { name: 'Manual', href: '/automations/message-funnels', icon: Rocket, ...permissionFromRoute('/automations/message-funnels'), featureKey: 'message_funnels' },
-        { name: 'Follow-up', href: '/automations/follow-ups', icon: Repeat, ...permissionFromRoute('/automations/follow-ups'), ...permissionsFromRoute('/automations/follow-ups'), featureKey: 'follow_ups' },
+      //
+      // Gaveta do celular: a aba Manual fica de fora (como o item era); a aba
+      // Follow-up continua lá, só pra quem tem a chave do follow-up (decisão do
+      // dono, 10/10/2026: "Follow-up e Automações ficam no menu do celular").
+      itemComAbas({ name: 'Funis de mensagem', icon: Rocket }, [
+        { name: 'Manual', href: '/automations/message-funnels', icon: Rocket, ...permissionFromRoute('/automations/message-funnels'), featureKey: 'message_funnels', foraDoCelular: true },
+        { name: 'Follow-up', href: '/automations/follow-ups', icon: Repeat, ...permissionFromRoute('/automations/follow-ups'), ...permissionsFromRoute('/automations/follow-ups'), featureKey: 'follow_ups', celularPede: ['followup_sequences.read'] },
       ]),
       { name: 'Disparos', href: '/disparos', icon: Megaphone, ...permissionFromRoute('/disparos'), featureKey: 'disparos', foraDoCelular: true },
       // Feature gerenciada pela Leal Mídia: super-admin SEMPRE vê; cliente só se ligar o toggle.
@@ -414,10 +427,28 @@ export const getFooterMenuItems = (): MenuItem[] => [
  * `foraDoCelular` (Raio-X do celular, 10/10/2026). Seção que fica vazia some.
  * Só a gaveta usa: o menu do computador, a busca e as abas das páginas seguem
  * com a lista inteira, e a tela abre pelo endereço no celular também.
+ *
+ * Item com abas: sai a aba `foraDoCelular` e a aba `celularPede` de quem não
+ * tem a chave (`podeAlguma`; sem ela, a aba fecha). Sem aba nenhuma, o item
+ * some; o endereço vira o da primeira que sobrou e, sobrando uma só depois do
+ * corte, o item leva o nome dela (Follow-up continua "Follow-up" na gaveta).
  */
-export function secoesDoCelular(secoes: MenuSection[]): MenuSection[] {
+export function secoesDoCelular(
+  secoes: MenuSection[],
+  podeAlguma: (permissoes: string[]) => boolean = () => false,
+): MenuSection[] {
+  const abaNoCelular = (aba: SubMenuItem) => !aba.foraDoCelular && (!aba.celularPede || podeAlguma(aba.celularPede));
+  const itemNoCelular = (item: MenuItem): MenuItem | null => {
+    if (item.foraDoCelular) return null;
+    if (!item.abas?.length) return item;
+    const abas = item.abas.filter(abaNoCelular);
+    if (abas.length === item.abas.length) return item;
+    if (abas.length === 0) return null;
+    const unica = abas.length === 1 ? { name: abas[0].name, icon: abas[0].icon } : {};
+    return { ...item, ...unica, href: item.entrada ?? abas[0].href, abas };
+  };
   return secoes
-    .map(secao => ({ ...secao, itens: secao.itens.filter(item => !item.foraDoCelular) }))
+    .map(secao => ({ ...secao, itens: secao.itens.map(itemNoCelular).filter((i): i is MenuItem => i !== null) }))
     .filter(secao => secao.itens.length > 0);
 }
 
