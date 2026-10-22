@@ -9606,3 +9606,35 @@ Armadilhas:
 5. **A conversão preserva** id, rótulo, posição e `guide_done`.
 
 Código: `features/flowAutomations/filterToCondition.ts` (`canBecomeCondition`, `toCondition`, `willConvert`), `features/flowAutomations/palette.ts`, `components/flowAutomations/FlowNodePanel.tsx` (janela, título e descrição), `pages/Customer/Automations/FlowBuilder/FlowAutomationCanvas.tsx` (`handleSaveNodeConfig`), `lib/flowAutomationGraph.ts`, `types/flowAutomations.ts`. Testes: `filterToCondition.spec.ts`, `palette.spec.ts`, `conditions.spec.ts`, `FlowBlocks.spec.tsx`.
+
+## Construtor: Etiqueta e Criar tarefa (desde 2026-10-22)
+
+Em 22/10/2026 o Tony achou a janela de Etiqueta do construtor feia ("não dá pra buscar nem nada") e escolheu a versão B ("Lista com grupos") entre 3 protótipos clicáveis. Na mesma rodada apareceu que o bloco Criar tarefa prometia "pra alguém da equipe" sem ter campo pra escolher a pessoa. A Entrega 3 resolve os dois.
+
+O que aparece:
+
+- **Escolher etiqueta (`EscolhaDeEtiqueta`, versão B):** busca no topo; "N marcadas" com botão Limpar; as Marcadas fixas no alto; depois Da equipe; Do sistema recolhido. Cada linha tem bolinha na cor da etiqueta, o nome bonito (`display_name`), a contagem de leads e a caixinha à direita. Etiqueta salva que sumiu aparece como "não existe mais". Digitou um nome que não existe: botão Criar etiqueta “x” na própria lista. Enter escolhe a primeira que casa com a busca.
+- **Conta com mais de 200 etiquetas, sem busca:** mostra as Marcadas, as 30 com mais leads e um rodapé pedindo pra buscar.
+- **Mesmo componente em quatro lugares:** Aplicar etiqueta (ordem por nome), Tirar etiqueta (ordem por mais leads) e Condição "Tem a etiqueta" (escolhe uma só, sem Limpar).
+- **Carregando ou catálogo fora do ar** nunca mostra "não existe mais" falso.
+- **Criar tarefa:** "Pra quem" com Responsável pelo lead / Uma pessoa da equipe (seletor só com gente ativa, só o nome); "Prazo" com número e horas/dias; os textos de ajuda do protótipo; "Escolha a pessoa." quando falta.
+
+Decisões (não reabrir sem o dono pedir):
+
+1. **Versão B, Lista com grupos.** As outras duas foram descartadas.
+2. **Grava o título, mostra o `display_name`.** O valor salvo no bloco não muda.
+3. **Etiqueta do sistema = categoria diferente da própria da conta.** Ficam em Do sistema, recolhido.
+4. **Regra dos 200:** acima disso, sem busca, só Marcadas + 30 mais usadas + rodapé.
+5. **Unidade do prazo derivada do valor salvo, como no Esperar:** múltiplo positivo de 24 abre em dias, senão em horas. Trocar a unidade mantém o número digitado; prazo mínimo 1.
+6. **"Uma pessoa da equipe" exige a pessoa.** Sem ela o bloco acusa "Falta escolher a pessoa." e não salva como pronto.
+
+Armadilhas:
+
+1. **O backend casa etiqueta por título** e põe em minúsculas ao criar. Criar “Quente” quando já existe “quente” reaproveita a existente.
+2. **`getLabels` com `withCounts` agora vive em `useAutomationResources`:** o `LeadAdsForms` também paga a contagem.
+3. **Escape dentro da janela do Radix fecha a janela**, então a busca não limpa com Escape (tentamos e tiramos). Enter fica.
+4. **Criar tarefa depende do backend #522** (`assignee_mode` e `assignee_id` no `create_task`): o backend entra primeiro, senão o servidor ignora a pessoa.
+5. **Pessoa desativada:** o servidor cai pro dono do lead. A tela avisa "A pessoa escolhida não está mais na equipe." e mostra "Pessoa que não está mais na equipe" pra não perder o valor em silêncio.
+6. **Bloco antigo de Criar tarefa abre em horas** (24 horas) e não grava `assignee_mode` até a pessoa mexer em "Pra quem".
+
+Código: `components/flowAutomations/EscolhaDeEtiqueta.tsx`, `components/labels/labelColors.ts` (cores compartilhadas com `LabelMultiSelect` e `ContactTagsManager`), `components/flowAutomations/FlowNodePanel.tsx`, `features/flowAutomations/editores/LeadAutomationsEditors.tsx` (`CreateTaskFields`), `features/flowAutomations/leadAction.ts` (`leadActionProblem`). Testes: `EscolhaDeEtiqueta.spec.tsx`, `FlowBlocks.spec.tsx`, `editores/createTask.spec.tsx`, `leadAction.spec.ts`.
