@@ -145,7 +145,7 @@ export function useAutomationResources(enabled: boolean, automationId?: string |
 
   // Recarrega o catálogo de etiquetas (usado após criar uma etiqueta nova inline).
   const reloadLabels = () => {
-    labelsService.getLabels()
+    labelsService.getLabels({ withCounts: true })
       .then(res => {
         setLabels(res.data ?? []);
         setErros(e => ({ ...e, labels: false }));
@@ -163,7 +163,7 @@ export function useAutomationResources(enabled: boolean, automationId?: string |
 
     (async () => {
       const [labelsRes, seqRes, usersRes, pipelinesRes, qrRes, adRes, formRes, funnelsRes, evoRes, fuFlowsRes, convRes, roletasRes] = await Promise.allSettled([
-        labelsService.getLabels(),
+        labelsService.getLabels({ withCounts: true }),
         followupSequencesService.getAll(),
         usersService.getUsers(),
         pipelinesService.getPipelines({ include_items: false }),
