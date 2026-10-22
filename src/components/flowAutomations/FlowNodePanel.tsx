@@ -36,6 +36,7 @@ import {
   withWaitBusinessHours,
 } from '@/features/flowAutomations/businessHours';
 import { moveStageModeOf, stageNameOf, withMoveStageMode, withStageName } from '@/features/flowAutomations/moveStage';
+import { canBecomeCondition } from '@/features/flowAutomations/filterToCondition';
 import { FormAnswerPicker } from './FormAnswerPicker';
 import { FlowBlockDialog } from './FlowBlockDialog';
 import { NotificationFields } from './NotificationFields';
@@ -300,7 +301,7 @@ export function FlowNodePanel({ node, resources, onClose, onSave, onDirtyChange,
     return (
       <>
         <div className="space-y-1">
-          <Label className="text-xs">{kind === 'condition' ? 'Se' : 'Só continua se'}</Label>
+          <Label className="text-xs">{kind === 'condition' ? 'Seguir pelo Sim quando' : 'Só continua se'}</Label>
           <Seletor
             value={criterion}
             onChange={e => setConfig(configForCriterion(kind, e.target.value))}
@@ -360,6 +361,17 @@ export function FlowNodePanel({ node, resources, onClose, onSave, onDirtyChange,
         )}
         {kind === 'filter_label' && (
           <p className="text-xs text-muted-foreground">Se não passar, o fluxo para aqui pra esse lead.</p>
+        )}
+        {kind === 'condition' && (
+          <>
+            <SaidasDoBloco
+              saidas={[
+                { rotulo: 'Sim', cor: handleColor('condition', 'yes'), quando: 'Quando o lead passa na condição.' },
+                { rotulo: 'Não', cor: handleColor('condition', 'no'), quando: 'Quando o lead não passa.' },
+              ]}
+            />
+            <p className="text-xs text-muted-foreground">Sem nada ligado no Não, o fluxo para aqui pra esse lead.</p>
+          </>
         )}
       </>
     );
@@ -529,7 +541,9 @@ export function FlowNodePanel({ node, resources, onClose, onSave, onDirtyChange,
       case 'condition':
         return conditionFields('condition');
       case 'filter_label':
-        return conditionFields('filter_label');
+        // Com critério, abre como Condição (o canvas converte ao salvar);
+        // o legado, só com etiquetas, abre como sempre.
+        return conditionFields(canBecomeCondition(activeNode) ? 'condition' : 'filter_label');
       // Ação das Automações: o MESMO editor da tela de regras, gravando
       // `{ action_type, params }` (leadAction.ts).
       case 'lead_action':

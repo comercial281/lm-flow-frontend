@@ -6,7 +6,7 @@ import type { FlowAutomationNode, FlowNodeKind, SaveFlowPayload } from '@/types/
 export type OutputHandle = 'out' | 'yes' | 'no';
 export type BranchHandle = 'yes' | 'no';
 
-// Blocos com duas saídas. "Se / senão": Sim / Não. "Aguardar resposta"
+// Blocos com duas saídas. "Condição": Sim / Não. "Aguardar resposta"
 // (sprint 1 das Automações, 02/10/2026): Respondeu / Não respondeu, gravados
 // em next_yes_node_id / next_no_node_id. Com "Sem limite" o bloco só sai
 // quando o lead responde, então só existe "Respondeu".

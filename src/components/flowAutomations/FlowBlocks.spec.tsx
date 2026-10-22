@@ -103,6 +103,26 @@ describe('janela do bloco', () => {
     await waitFor(() => expect(onSave).toHaveBeenCalledWith('n1', expect.objectContaining({ config: expect.objectContaining({ minutes: 120 }) })));
   });
 
+  it('Condição: rótulo, saídas Sim e Não e a frase do Não vazio', () => {
+    render(<FlowNodePanel node={node({ kind: 'condition', config: { criterion: 'has_email' } })} resources={resources} onClose={() => {}} onSave={() => {}} />);
+    expect(screen.getByText('Seguir pelo Sim quando')).toBeTruthy();
+    expect(screen.getByText('Sim')).toBeTruthy();
+    expect(screen.getByText('Não')).toBeTruthy();
+    expect(screen.getByText('Sem nada ligado no Não, o fluxo para aqui pra esse lead.')).toBeTruthy();
+  });
+
+  it('Só continuar se com critério abre com a janela da Condição', () => {
+    render(<FlowNodePanel node={node({ kind: 'filter_label', config: { criterion: 'has_email' } })} resources={resources} onClose={() => {}} onSave={() => {}} />);
+    expect(screen.getByText('Seguir pelo Sim quando')).toBeTruthy();
+    expect(screen.getByText('Sim')).toBeTruthy();
+  });
+
+  it('Só continuar se legado (só etiquetas) abre como sempre', () => {
+    render(<FlowNodePanel node={node({ kind: 'filter_label', config: { labels: ['x'], mode: 'any' } })} resources={resources} onClose={() => {}} onSave={() => {}} />);
+    expect(screen.getByText('Só continua se')).toBeTruthy();
+    expect(screen.queryByText('Sim')).toBeNull();
+  });
+
   it('Mensagem tem "Enviar pelo número"', async () => {
     render(<FlowNodePanel node={node({ kind: 'send_whatsapp', config: { text: 'Oi' } })} resources={resources} onClose={() => {}} onSave={() => {}} />);
     expect(await screen.findByText('Enviar pelo número')).toBeTruthy();

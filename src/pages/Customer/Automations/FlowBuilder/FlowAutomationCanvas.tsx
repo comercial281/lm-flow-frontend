@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent, type ReactNode } from 'react';
+import { canBecomeCondition, toCondition } from '@/features/flowAutomations/filterToCondition';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
@@ -367,9 +368,12 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
     const target = nodes.find(n => n.id === nodeId);
     // Bloco com passo do guia: Salvar no painel confirma o passo (`guide_done`).
     const confirmsStep = !!target?.guide;
-    const next = nodes.map(n => (n.id === nodeId
-      ? { ...n, label: guided ? n.label : patch.label || null, config: patch.config, ...(confirmsStep ? { guide_done: true } : {}) }
-      : n));
+    const next = nodes.map(n => {
+      if (n.id !== nodeId) return n;
+      const saved = { ...n, label: guided ? n.label : patch.label || null, config: patch.config, ...(confirmsStep ? { guide_done: true } : {}) };
+      // "Só continuar se" com critério vira Condição ao salvar (o caminho vai pro Sim).
+      return canBecomeCondition(saved) ? toCondition(saved) : saved;
+    });
     setNodes(next);
     // O passo do guia que ainda falta (e tudo no modo guiado) grava NA HORA: o
     // guia avança sozinho, e quem é leigo não precisa achar o Salvar do topo.
