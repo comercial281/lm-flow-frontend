@@ -39,6 +39,8 @@ import {
   toggleAcceptedBy,
 } from './acceptedByFilter';
 import { Seletor } from '@/components/base/Seletor';
+import BotoesDeEscolha from '@/components/base/BotoesDeEscolha';
+import { unitLabel } from '@/features/flowAutomations/waitTime';
 import Aviso from '@/components/base/Aviso';
 import {
   AVISO_TRAVADO, ROTULO_FORA_DA_LISTA, ROTULO_TRAVADO, destinoTravado, instanciaDoModo, modoDoNumero, type ModoDoNumero,
@@ -1097,23 +1099,11 @@ export function ActionEditor({ action, onChange, resources, pessoal = false }: A
     case 'create_task':
       return (
         <>
-          <Field label="Título da tarefa *">
-            <Input
-              value={String(params.title ?? '')}
-              onChange={e => setParam('title', e.target.value)}
-              placeholder="Ex: Ligar pro lead"
-              className="mt-1"
-            />
-          </Field>
-          <Field label="Prazo (em horas)">
-            <Input
-              type="number"
-              min={0}
-              value={Number(params.due_in_hours ?? 24)}
-              onChange={e => setParam('due_in_hours', parseInt(e.target.value) || 0)}
-              className="mt-1"
-            />
-          </Field>
+          <CreateTaskFields
+            params={params}
+            users={resources.users}
+            onChange={patch => onChange({ ...action, params: patch(params) })}
+          />
         </>
       );
 
@@ -1461,6 +1451,119 @@ export function ActionEditor({ action, onChange, resources, pessoal = false }: A
     default:
       return null;
   }
+}
+
+// ----- Criar tarefa: título, pra quem e prazo (Entrega 3 do construtor) -----
+// Sem assignee_mode o bloco antigo abre em "Responsável pelo lead" com o prazo
+// em horas, como sempre rodou. Em "Responsável pelo lead" o assignee_id não é gravado.
+type QuemRecebe = 'lead_owner' | 'user';
+type PrazoUnidade = 'h' | 'd';
+
+function CreateTaskFields({
+  params, users, onChange,
+}: {
+  params: Record<string, string | number>;
+  users: User[];
+  onChange: (patch: (atual: Record<string, string | number>) => Record<string, string | number>) => void;
+}) {
+  const quem: QuemRecebe = params.assignee_mode === 'user' ? 'user' : 'lead_owner';
+  const [unidade, setUnidade] = useState<PrazoUnidade>('h');
+  const horas = Number(params.due_in_hours ?? 24);
+  const quantidade = unidade === 'd' ? Math.round(horas / 24) : horas;
+  const pessoas = users.filter(u => !u.deactivated);
+  const assigneeId = String(params.assignee_id ?? '');
+  const naLista = pessoas.some(u => u.id === assigneeId);
+  const rotuloUnidade = (u: PrazoUnidade) => {
+    const base = u === 'd' ? { value: 'd', label: 'dias' } : { value: 'h', label: 'horas' };
+    return unitLabel(base, quantidade);
+  };
+
+  const escolherQuem = (v: QuemRecebe) =>
+    onChange(atual => {
+      if (v === 'user') return { ...atual, assignee_mode: 'user' };
+      const novo: Record<string, string | number> = { ...atual, assignee_mode: 'lead_owner' };
+      delete novo.assignee_id;
+      return novo;
+    });
+  const gravarPrazo = (q: number, u: PrazoUnidade) =>
+    onChange(atual => ({ ...atual, due_in_hours: q * (u === 'd' ? 24 : 1) }));
+
+  return (
+    <>
+      <Field label="Título da tarefa *">
+        <Input
+          value={String(params.title ?? '')}
+          onChange={e => onChange(atual => ({ ...atual, title: e.target.value }))}
+          placeholder="Ex: Ligar pro lead"
+          className="mt-1"
+        />
+      </Field>
+      <div className="mt-2">
+        <UILabel>Pra quem</UILabel>
+        <div className="mt-1">
+          <BotoesDeEscolha<QuemRecebe>
+            rotulo="Pra quem"
+            valor={quem}
+            aoEscolher={escolherQuem}
+            opcoes={[
+              { valor: 'lead_owner', rotulo: 'Responsável pelo lead' },
+              { valor: 'user', rotulo: 'Uma pessoa da equipe' },
+            ]}
+          />
+        </div>
+        <p className="text-xs text-muted-foreground mt-1">
+          {quem === 'user'
+            ? 'Vai sempre pra mesma pessoa, seja quem for o responsável.'
+            : 'Vai pra quem estiver cuidando do lead na hora.'}
+        </p>
+        {quem === 'user' && (
+          <Seletor
+            aria-label="Pessoa da equipe"
+            value={assigneeId}
+            onChange={e => {
+              const v = e.target.value;
+              onChange(atual => {
+                if (v) return { ...atual, assignee_id: v };
+                const novo = { ...atual };
+                delete novo.assignee_id;
+                return novo;
+              });
+            }}
+            className="mt-2"
+          >
+            <option value="">Escolha a pessoa</option>
+            {assigneeId && !naLista && <option value={assigneeId}>Pessoa que não está mais na equipe</option>}
+            {pessoas.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+          </Seletor>
+        )}
+      </div>
+      <div className="mt-2">
+        <UILabel>Prazo</UILabel>
+        <div className="mt-1 flex flex-wrap items-center gap-2">
+          <Input
+            type="number"
+            min={0}
+            aria-label="Quanto tempo"
+            value={quantidade}
+            onChange={e => gravarPrazo(parseInt(e.target.value) || 0, unidade)}
+            className="w-24"
+          />
+          <BotoesDeEscolha<PrazoUnidade>
+            rotulo="Unidade do prazo"
+            valor={unidade}
+            aoEscolher={u => { setUnidade(u); gravarPrazo(quantidade, u); }}
+            opcoes={[
+              { valor: 'h', rotulo: rotuloUnidade('h') },
+              { valor: 'd', rotulo: rotuloUnidade('d') },
+            ]}
+          />
+        </div>
+        <p className="text-xs text-muted-foreground mt-1">
+          {`A tarefa vence ${quantidade} ${rotuloUnidade(unidade)} depois que o lead passar por este bloco.`}
+        </p>
+      </div>
+    </>
+  );
 }
 
 function Field({
