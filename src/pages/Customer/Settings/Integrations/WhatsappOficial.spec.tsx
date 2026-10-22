@@ -47,6 +47,14 @@ describe('WhatsApp Oficial', () => {
     expect(screen.getByText('form de modelos')).toBeInTheDocument();
   });
 
+  it('Gerenciar de cada número abre a página dele em Canais', async () => {
+    s.numeros.mockResolvedValue([numero]);
+    tela();
+    await screen.findByText('Oficial 1');
+    await userEvent.click(screen.getByRole('button', { name: /Gerenciar/ }));
+    expect(s.navegar).toHaveBeenCalledWith('/channels/i1/oficial');
+  });
+
   it('erro ao carregar mostra o erro e Tentar de novo recupera', async () => {
     s.numeros.mockRejectedValueOnce(new Error('rede'));
     tela();

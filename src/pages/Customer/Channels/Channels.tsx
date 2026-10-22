@@ -290,7 +290,7 @@ export default function Channels() {
                 inbox={inbox}
                 isDeleting={isDeleting}
                 onSettings={openChannelSettings}
-            onManage={openOfficialNumber}
+                onManage={openOfficialNumber}
                 onDelete={openDeleteModal}
                 canDelete={podeExcluir}
               />

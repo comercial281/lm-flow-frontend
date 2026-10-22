@@ -95,7 +95,7 @@ export function NumerosOficiais({ numeros }: { numeros: CloudChannelOption[] }) 
                   </div>
                 </div>
               </div>
-              <Button variant="ghost" size="sm" onClick={() => navigate('/channels')}>
+              <Button variant="ghost" size="sm" onClick={() => navigate(`/channels/${o.inbox_id}/oficial`)}>
                 <ExternalLink className="w-3.5 h-3.5 mr-1" /> Gerenciar
               </Button>
             </div>
