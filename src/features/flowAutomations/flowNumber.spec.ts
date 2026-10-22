@@ -14,6 +14,18 @@ describe('flowNumberOf', () => {
     expect(r.saved).toBe(true);
     expect(r.setting).toEqual({ mode: 'number', inboxId: 'i1', onConflict: 'pause' });
   });
+  it("send_from '' salvo vale como salvo, mesmo com Mensagens divergentes", () => {
+    const r = flowNumberOf(flow({ send_from: '', number_conflict: 'pause' }), [msg('number', 'i1'), msg('owner', '')]);
+    expect(r).toEqual({ setting: { mode: '', inboxId: '', onConflict: 'pause' }, saved: true, divergent: false });
+  });
+  it('fluxo salvo com number_conflict null vale pause', () => {
+    expect(flowNumberOf(flow({ send_from: 'owner', number_conflict: null }), []).setting.onConflict).toBe('pause');
+  });
+  it("send_from 'number' salvo sem número continua salvo, com inboxId vazio", () => {
+    const r = flowNumberOf(flow({ send_from: 'number', send_from_inbox_id: null, number_conflict: 'pause' }), []);
+    expect(r.saved).toBe(true);
+    expect(r.setting.inboxId).toBe('');
+  });
   it('infere das Mensagens iguais com follow_conversation', () => {
     expect(flowNumberOf(flow({}), [msg('number', 'i1'), msg('number', 'i1')]).setting).toEqual({
       mode: 'number', inboxId: 'i1', onConflict: 'follow_conversation',

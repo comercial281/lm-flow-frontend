@@ -14,19 +14,19 @@ export interface FlowNumberSetting {
 
 const CONFLICTS: NumberConflictMode[] = ['pause', 'follow_conversation', 'force_flow_number'];
 
-function conflictOf(raw: unknown): NumberConflictMode {
-  return CONFLICTS.includes(raw as NumberConflictMode) ? (raw as NumberConflictMode) : 'follow_conversation';
+function conflictOf(raw: unknown, fallback: NumberConflictMode): NumberConflictMode {
+  return CONFLICTS.includes(raw as NumberConflictMode) ? (raw as NumberConflictMode) : fallback;
 }
 
 export function flowNumberOf(
   flow: FlowAutomation,
   nodes: FlowAutomationNode[],
 ): { setting: FlowNumberSetting; saved: boolean; divergent: boolean } {
-  // '' / null = a regra nunca foi salva neste fluxo.
-  if (flow.send_from) {
+  // null/undefined = a regra nunca foi salva (fluxo legado). '' é salvo: "número da conversa do lead".
+  if (flow.send_from !== null && flow.send_from !== undefined) {
     const v = sendFromOf({ send_from: flow.send_from, send_from_inbox_id: flow.send_from_inbox_id });
     return {
-      setting: { mode: v.send_from, inboxId: v.send_from_inbox_id, onConflict: conflictOf(flow.number_conflict) },
+      setting: { mode: v.send_from, inboxId: v.send_from_inbox_id, onConflict: conflictOf(flow.number_conflict, 'pause') },
       saved: true,
       divergent: false,
     };

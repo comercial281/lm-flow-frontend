@@ -152,7 +152,7 @@ export interface FlowAutomation {
   once_per_lead?: boolean;
   /** "Só em horário comercial" (sprint 3): nenhuma mensagem do fluxo sai fora da janela. Também em `state`. */
   business_hours_only?: boolean;
-  /** Número do fluxo (Entrega 4): '' / null = regra ainda não salva. */
+  /** Número do fluxo (Entrega 4): null/ausente = regra nunca salva (legado); '' = salvo como número da conversa do lead. */
   send_from?: SendFromMode | null;
   send_from_inbox_id?: string | null;
   number_conflict?: NumberConflictMode | null;
