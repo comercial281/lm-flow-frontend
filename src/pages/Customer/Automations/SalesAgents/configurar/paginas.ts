@@ -61,7 +61,7 @@ export const PAGINAS: Record<PaginaId, PaginaInfo> = {
   objetivo: { id: 'objetivo', grupo: 'repasse', titulo: 'Objetivo', frase: 'Até onde ela leva a conversa.', icone: Target,
     campos: ['reach', 'booking_enabled', 'transfer_config.mode'] },
   criterio: { id: 'criterio', grupo: 'repasse', titulo: 'Critério', frase: 'Quando o lead está pronto pra ir pra uma pessoa.', icone: Gauge,
-    campos: ['transfer_config.mode', 'transfer_config.min_temperature', 'crm_policy.cold',
+    campos: ['transfer_config.mode', 'transfer_config.min_temperature', 'transfer_config.early_handoff', 'crm_policy.cold',
       'escalate_on_frustration', 'escalate_on_human_request', 'escalate_on_ai_detected'] },
   destino: { id: 'destino', grupo: 'repasse', titulo: 'Destino', frase: 'Pra quem o lead vai e o que vai junto.', icone: Send,
     // `persona_kind`: o "Passar a entregar pro dono do número" da IA antiga (persona só DERIVADA da voz) grava a persona junto.
