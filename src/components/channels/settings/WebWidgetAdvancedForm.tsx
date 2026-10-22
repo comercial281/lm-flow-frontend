@@ -1,4 +1,4 @@
-import { Switch } from '@/components/ui/ds';
+import { Switch, Checkbox } from '@/components/ui/ds';
 import { useLanguage } from '@/hooks/useLanguage';
 import { Seletor } from '@/components/base/Seletor';
 
@@ -154,12 +154,10 @@ export default function WebWidgetAdvancedForm({
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="flex items-center gap-3 p-3 border border-border rounded-lg">
-            <input
-              type="checkbox"
+            <Checkbox
               id="attachments"
               checked={(formData.selected_feature_flags || []).includes('attachments')}
-              onChange={(e) => onFeatureFlagChange('attachments', e.target.checked)}
-              className="rounded border-border"
+              onCheckedChange={(v) => onFeatureFlagChange('attachments', v === true)}
             />
             <label htmlFor="attachments" className="text-sm text-foreground flex-1">
               <div className="font-medium">{t('settings.webWidgetAdvanced.featureFlags.attachments.title')}</div>
@@ -168,12 +166,10 @@ export default function WebWidgetAdvancedForm({
           </div>
 
           <div className="flex items-center gap-3 p-3 border border-border rounded-lg">
-            <input
-              type="checkbox"
+            <Checkbox
               id="emoji_picker"
               checked={(formData.selected_feature_flags || []).includes('emoji_picker')}
-              onChange={(e) => onFeatureFlagChange('emoji_picker', e.target.checked)}
-              className="rounded border-border"
+              onCheckedChange={(v) => onFeatureFlagChange('emoji_picker', v === true)}
             />
             <label htmlFor="emoji_picker" className="text-sm text-foreground flex-1">
               <div className="font-medium">{t('settings.webWidgetAdvanced.featureFlags.emojiPicker.title')}</div>
@@ -182,12 +178,10 @@ export default function WebWidgetAdvancedForm({
           </div>
 
           <div className="flex items-center gap-3 p-3 border border-border rounded-lg">
-            <input
-              type="checkbox"
+            <Checkbox
               id="end_conversation"
               checked={(formData.selected_feature_flags || []).includes('end_conversation')}
-              onChange={(e) => onFeatureFlagChange('end_conversation', e.target.checked)}
-              className="rounded border-border"
+              onCheckedChange={(v) => onFeatureFlagChange('end_conversation', v === true)}
             />
             <label htmlFor="end_conversation" className="text-sm text-foreground flex-1">
               <div className="font-medium">{t('settings.webWidgetAdvanced.featureFlags.endConversation.title')}</div>
@@ -196,12 +190,10 @@ export default function WebWidgetAdvancedForm({
           </div>
 
           <div className="flex items-center gap-3 p-3 border border-border rounded-lg">
-            <input
-              type="checkbox"
+            <Checkbox
               id="use_inbox_avatar_for_bot"
               checked={(formData.selected_feature_flags || []).includes('use_inbox_avatar_for_bot')}
-              onChange={(e) => onFeatureFlagChange('use_inbox_avatar_for_bot', e.target.checked)}
-              className="rounded border-border"
+              onCheckedChange={(v) => onFeatureFlagChange('use_inbox_avatar_for_bot', v === true)}
             />
             <label htmlFor="use_inbox_avatar_for_bot" className="text-sm text-foreground flex-1">
               <div className="font-medium">{t('settings.webWidgetAdvanced.featureFlags.botAvatar.title')}</div>

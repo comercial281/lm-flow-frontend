@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Button, Input } from '@/components/ui/ds';
+import { Button, Input, Checkbox } from '@/components/ui/ds';
 import { Plus, Trash2 } from 'lucide-react';
 import { type SalesAgent, type SalesAgentTrigger, type SalesAgentTriggerType, type SalesAgentTriggerMatchMode } from '@/services/salesAgents/salesAgentsService';
 import { pipelinesService } from '@/services/pipelines/pipelinesService';
@@ -268,8 +268,10 @@ export function TriggersSection({ agent, onSave, escolheuTodos }: {
                 <div className="flex flex-col gap-1">
                   {formOptions(formConfigs, t.form_ids).map((o) => (
                     <label key={o.formId} className="flex items-center gap-2 text-sm cursor-pointer">
-                      <input type="checkbox" checked={o.checked}
-                        onChange={() => update(i, { form_ids: toggleForm(t.form_ids, o.formId) })} />
+                      <Checkbox
+                        checked={o.checked}
+                        onCheckedChange={() => update(i, { form_ids: toggleForm(t.form_ids, o.formId) })}
+                      />
                       <span>{o.label}</span>
                       {o.inactive && <span className="text-xs text-muted-foreground">(desativado)</span>}
                       {o.orphan && <span className="text-xs text-amber-600">(não está mais cadastrado)</span>}

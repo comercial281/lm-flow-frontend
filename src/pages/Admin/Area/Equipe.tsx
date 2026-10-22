@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import superLogsService, { TeamMember, SupportReview, SupportReviewPerson } from '@/services/superLogs/superLogsService';
 import { plural } from '@/lib/formato';
 import { criterionLabel, tenantsToShow, personDetail, reviewTotals, accountCreatedLabel } from './supportReviewRules';
+import { Checkbox } from '@/components/ui/ds';
 
 /**
  * Equipe Leal Mídia. Uma lista que faz duas coisas:
@@ -161,7 +162,7 @@ export default function AdminEquipe() {
           </button>
         </div>
         <label className="mt-3 flex items-center gap-2 text-sm text-muted-foreground">
-          <input type="checkbox" checked={canAdmin} onChange={e => setCanAdmin(e.target.checked)} className="h-4 w-4" />
+          <Checkbox checked={canAdmin} onCheckedChange={v => setCanAdmin(v === true)} />
           Pode acessar o painel de admin (não só sumir do log)
         </label>
       </div>

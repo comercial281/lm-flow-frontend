@@ -10,6 +10,7 @@ import {
   Badge,
   Input,
   ScrollArea,
+  Checkbox,
 } from '@/components/ui/ds';
 import { Search, Server, CheckCircle } from 'lucide-react';
 import { MCPServer, MCPServerConfig } from '@/types/ai';
@@ -209,11 +210,10 @@ const MCPServersDialog = ({
                         )}
                       </div>
                       <div className="flex items-center">
-                        <input
-                          type="checkbox"
+                        <Checkbox
                           checked={selectedServerIds.includes(server.id)}
-                          onChange={() => toggleServer(server.id)}
-                          className="h-4 w-4 text-primary -z-10"
+                          onCheckedChange={() => toggleServer(server.id)}
+                          onClick={e => e.stopPropagation()}
                         />
                       </div>
                     </div>

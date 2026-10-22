@@ -10,7 +10,7 @@ import {
 } from '@/services/capi/capiConfigService';
 import { Seletor } from '@/components/base/Seletor';
 import Aviso from '@/components/base/Aviso';
-import { Button } from '@/components/ui/ds';
+import { Button, Checkbox } from '@/components/ui/ds';
 import Carregando from '@/components/base/Carregando';
 import EmptyState from '@/components/base/EmptyState';
 
@@ -71,11 +71,11 @@ function LinhaDaRegra({
         {r.event_name && (
           <>
             <label className="flex items-center gap-1 text-xs text-muted-foreground" title={dicaDoLigado}>
-              <input type="checkbox" checked={r.enabled} onChange={(e) => aoMudar({ enabled: e.target.checked })} />
+              <Checkbox checked={r.enabled} onCheckedChange={(v) => aoMudar({ enabled: v === true })} />
               {rotuloDoLigado}
             </label>
             <label className="flex items-center gap-1 text-xs text-muted-foreground">
-              <input type="checkbox" checked={r.to_client} onChange={(e) => aoMudar({ to_client: e.target.checked })} />
+              <Checkbox checked={r.to_client} onCheckedChange={(v) => aoMudar({ to_client: v === true })} />
               Cliente
             </label>
             <Seletor
@@ -274,7 +274,7 @@ export default function PixelCapiConfig() {
             <p className="text-xs text-muted-foreground">O ativo dele — conta de anúncio do próprio cliente.</p>
           </div>
           <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" checked={isEnabled} onChange={(e) => setIsEnabled(e.target.checked)} />
+            <Checkbox checked={isEnabled} onCheckedChange={(v) => setIsEnabled(v === true)} />
             Ativo
           </label>
         </div>

@@ -1,5 +1,5 @@
 import React, { useState, useRef, type ReactNode } from 'react';
-import { Button, Input, Textarea } from '@/components/ui/ds';
+import { Button, Input, Textarea, Checkbox } from '@/components/ui/ds';
 import {
   X, Trash2, Type, Mic, Image as ImageIcon, Video, FileText,
   ChevronUp, ChevronDown, Square, Upload, Clock, AlertCircle, Loader2, Copy, Plus,
@@ -588,10 +588,9 @@ function ItemEditor({
       {item.kind === 'delay' && (
         <div className="space-y-2">
           <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <input
-              type="checkbox"
+            <Checkbox
               checked={Boolean(item.config.random_interval)}
-              onChange={e => onUpdate({ config: { ...item.config, random_interval: e.target.checked } })}
+              onCheckedChange={v => onUpdate({ config: { ...item.config, random_interval: v === true } })}
             />
             Sortear um tempo aleatório em vez de fixo
           </label>

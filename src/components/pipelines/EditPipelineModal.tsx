@@ -300,16 +300,14 @@ export default function EditPipelineModal({
                     <div className="p-1.5 space-y-0.5">
                       {teams.map(team => (
                         <label key={team.id} className="flex items-center gap-2 p-1.5 hover:bg-muted/50 rounded cursor-pointer">
-                          <input
-                            type="checkbox"
+                          <Checkbox
                             checked={teamIds.includes(team.id)}
-                            onChange={() => {
+                            onCheckedChange={() => {
                               setTeamIds(prev =>
                                 prev.includes(team.id) ? prev.filter(tid => tid !== team.id) : [...prev, team.id]
                               );
                             }}
                             disabled={loading}
-                            className="rounded border-gray-300"
                           />
                           <span className="text-sm">{team.name}</span>
                         </label>
@@ -348,11 +346,10 @@ export default function EditPipelineModal({
               </div>
 
               <label className="flex items-start gap-2 mb-4 cursor-pointer">
-                <input
-                  type="checkbox"
+                <Checkbox
                   className="mt-1"
                   checked={entrySources === null}
-                  onChange={(e) => setEntrySources(e.target.checked ? null : [...PIPE_ENTRY_SOURCES.map(s => s.key)])}
+                  onCheckedChange={(v) => setEntrySources(v === true ? null : [...PIPE_ENTRY_SOURCES.map(s => s.key)])}
                 />
                 <span>
                   <span className="text-sm font-medium">Usar o padrão do cliente</span>
@@ -367,17 +364,14 @@ export default function EditPipelineModal({
                 <div className="space-y-2 pl-1">
                   {PIPE_ENTRY_SOURCES.map((src) => (
                     <label key={src.key} className="flex items-start gap-2 cursor-pointer">
-                      <input
-                        type="checkbox"
+                      <Checkbox
                         className="mt-1"
                         checked={entrySources.includes(src.key)}
-                        onChange={(e) =>
-                          setEntrySources(
-                            e.target.checked
+                        onCheckedChange={(v) => setEntrySources(
+                            v === true
                               ? [...entrySources, src.key]
                               : entrySources.filter((s) => s !== src.key),
-                          )
-                        }
+                          )}
                       />
                       <span>
                         <span className="text-sm font-medium">{src.label}</span>

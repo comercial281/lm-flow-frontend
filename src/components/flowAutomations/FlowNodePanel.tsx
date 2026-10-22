@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Button, Input, Label } from '@/components/ui/ds';
+import { Button, Input, Label, Checkbox } from '@/components/ui/ds';
 import Aviso from '@/components/base/Aviso';
 import EmptyState from '@/components/base/EmptyState';
 import { Seletor } from '@/components/base/Seletor';
@@ -174,11 +174,9 @@ function BusinessHoursCheck({ checked, onChange }: { checked: boolean; onChange:
   return (
     <div className="space-y-1">
       <label className="flex items-center gap-2 text-sm cursor-pointer">
-        <input
-          type="checkbox"
+        <Checkbox
           checked={checked}
-          onChange={e => onChange(e.target.checked)}
-          className="h-4 w-4 accent-primary"
+          onCheckedChange={v => onChange(v === true)}
         />
         {BUSINESS_HOURS_LABEL}
       </label>
@@ -228,11 +226,9 @@ function LabelChecklist({ selected, onChange, resources }: { selected: string[];
         )}
         {[...resources.labels.map(l => l.title), ...missing].map(title => (
           <label key={title} className="flex items-center gap-2 px-2.5 py-2 cursor-pointer hover:bg-muted/50 text-sm">
-            <input
-              type="checkbox"
+            <Checkbox
               checked={selected.includes(title)}
-              onChange={() => toggle(title)}
-              className="h-4 w-4 accent-primary"
+              onCheckedChange={() => toggle(title)}
             />
             <span className="truncate">{title}</span>
           </label>

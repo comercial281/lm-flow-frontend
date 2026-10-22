@@ -7,6 +7,7 @@ import type { BlockConfig, BlockInstance, LeadFormStep } from '@/features/landin
 import { useLandingEditorStore, type AnswerDestination } from './landingEditorStore';
 import { Field, Group, Num, Text, TextArea, inputCls } from './panelKit';
 import { PhoneInput } from '@/components/shared/PhoneInput';
+import { Checkbox } from '@/components/ui/ds';
 
 /* ------------------------------------------------------------------ */
 /* Funis, colunas e etiquetas — carregados uma vez por sessão do editor */
@@ -217,10 +218,9 @@ function OptionRow({
               />
             </label>
             <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <input
-                type="checkbox"
+              <Checkbox
                 checked={option.disqualifies ?? false}
-                onChange={(e) => onChange({ disqualifies: e.target.checked || undefined })}
+                onCheckedChange={(v) => onChange({ disqualifies: v === true || undefined })}
               />
               Desqualifica o lead
             </label>

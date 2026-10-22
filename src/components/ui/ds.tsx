@@ -498,3 +498,20 @@ import { Skeleton as SkeletonDoPacote } from '@evoapi/design-system';
 export function Skeleton({ className, ...props }: ComponentProps<typeof SkeletonDoPacote>) {
   return <SkeletonDoPacote className={`bg-muted motion-reduce:animate-none ${className ?? ''}`} {...props} />;
 }
+
+// ── Caixinha (Checkbox) ──────────────────────────────────────────────────────
+// Peça 24 do GLOSSARIO (escolha do dono em 21/10/2026): toda caixinha de marcar
+// é esta, nunca `<input type="checkbox">` cru (que sai azul do Chrome, com o
+// formato de cada navegador). O do pacote só pinta o roxo no "marcado"; aqui o
+// "parcial" (`checked="indeterminate"`, quando só parte da lista está marcada)
+// também fica roxo, com um traço no lugar do ✓.
+import { Checkbox as CheckboxDoPacote } from '@evoapi/design-system';
+
+const PARCIAL =
+  'grid cursor-pointer place-content-center data-[state=indeterminate]:bg-primary data-[state=indeterminate]:border-primary ' +
+  'data-[state=indeterminate]:text-primary-foreground [&[data-state=indeterminate]_svg]:hidden ' +
+  "data-[state=indeterminate]:before:block data-[state=indeterminate]:before:h-0.5 data-[state=indeterminate]:before:w-2 data-[state=indeterminate]:before:rounded-full data-[state=indeterminate]:before:bg-current data-[state=indeterminate]:before:content-['']";
+
+export function Checkbox({ className, ...props }: ComponentProps<typeof CheckboxDoPacote>) {
+  return <CheckboxDoPacote className={`${PARCIAL} ${className ?? ''}`} {...props} />;
+}

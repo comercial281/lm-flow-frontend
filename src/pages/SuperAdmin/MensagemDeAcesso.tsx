@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Loader2, RotateCcw, Save } from 'lucide-react';
-import { Button } from '@/components/ui/ds';
+import { Button, Checkbox } from '@/components/ui/ds';
 import clientInstancesService, {
   type CentralInstance, type MemberAccessConfig,
 } from '@/services/clientInstances/clientInstancesService';
@@ -110,7 +110,7 @@ export default function MensagemDeAcesso() {
       {error && <p className="text-sm text-destructive">{error}</p>}
 
       <label className="flex items-center gap-2 text-sm font-medium">
-        <input type="checkbox" checked={enabled} onChange={e => setEnabled(e.target.checked)} />
+        <Checkbox checked={enabled} onCheckedChange={v => setEnabled(v === true)} />
         Envio ligado
       </label>
 

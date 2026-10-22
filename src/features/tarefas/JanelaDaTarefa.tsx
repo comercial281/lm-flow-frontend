@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { Briefcase, Building2, Search, Trash2 } from 'lucide-react';
-import { Button, Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, Input, Textarea } from '@/components/ui/ds';
+import { Button, Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, Input, Textarea, Checkbox } from '@/components/ui/ds';
 import { Seletor } from '@/components/base/Seletor';
 import Aviso from '@/components/base/Aviso';
 import { CampoDaJanela, ESCOLHA, GradeDaJanela, GrupoDaJanela } from '@/components/base/janela';
@@ -433,7 +433,7 @@ export default function JanelaDaTarefa({ aberta, aoFechar, aoSalvar, tarefa, pip
 
         <DialogFooter className="gap-3 sm:items-center sm:justify-between">
           <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" className="h-4 w-4 accent-primary" checked={concluida} onChange={e => setConcluida(e.target.checked)} />
+            <Checkbox checked={concluida} onCheckedChange={v => setConcluida(v === true)} />
             {T.marcarConcluida}
           </label>
           <div className="flex justify-end gap-2">

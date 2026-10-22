@@ -11,7 +11,7 @@ import {
 import { Button } from '@/components/ui/ds';
 import { Input } from '@evoapi/design-system/input';
 import { Label } from '@evoapi/design-system/label';
-import { Checkbox } from '@evoapi/design-system/checkbox';
+import { Checkbox } from '@/components/ui/ds';
 import { Bot, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 

@@ -4,7 +4,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, rmSync, readFileSync, existsSync
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 // @ts-expect-error módulo .mjs sem tipos
-import { textosDaTela, botoesSemNome, tagsJsx, textosDoJson, noEscopo, contaSelectNativo, contaConfirmacao, emTitleCase, SEM_ACENTO, TERMOS_TECNICOS, abaForaDaCasa, alternadorAMao, soNoMouse, menuDeitado, cartaoAMao, corFixaEmGrafico, botoesPintados, botaoPequeno, botoesPequenos, iconesComTamanho, rodinhasCentrais, telasEmBranco, vaziosSoltos, largurasForaDaEscala, importaJanelaDoPacote, JANELA_A_MAO, escondidosSoComMouse, rodapeAMao, topoCentralizado, escolhaRoxaCheia, escolhasRoxasCheias, avisosSoltosNaJanela } from './conferir-padrao.mjs';
+import { textosDaTela, botoesSemNome, tagsJsx, textosDoJson, noEscopo, contaSelectNativo, contaConfirmacao, emTitleCase, SEM_ACENTO, TERMOS_TECNICOS, abaForaDaCasa, alternadorAMao, soNoMouse, menuDeitado, cartaoAMao, corFixaEmGrafico, botoesPintados, botaoPequeno, botoesPequenos, iconesComTamanho, rodinhasCentrais, telasEmBranco, vaziosSoltos, largurasForaDaEscala, importaJanelaDoPacote, JANELA_A_MAO, escondidosSoComMouse, rodapeAMao, topoCentralizado, escolhaRoxaCheia, escolhasRoxasCheias, avisosSoltosNaJanela, caixinhaCrua, contaCaixinhaCrua } from './conferir-padrao.mjs';
 
 // A catraca da Fase 3 precisa ser vista REPROVANDO, não só passando — mesma
 // lição do conferir-caixinhas.spec. E o que ela considera "texto de tela"
@@ -676,4 +676,24 @@ describe('avisoSoltoNaJanela: aviso em texto colorido dentro de janela', () => {
     expect(avisosSoltosNaJanela('<DialogContent>\n<p className="text-sm text-orange-600">x</p>')).toHaveLength(1);
   });
   it('ignora arquivo sem janela', () => { expect(avisosSoltosNaJanela('<p className="text-amber-600">x</p>')).toHaveLength(0); });
+});
+
+describe('caixinhaCrua (peça 24: caixinha é o Checkbox da casa, app inteiro)', () => {
+  it('pega o input de caixinha, com aspas ou chaves, e o import direto do pacote', () => {
+    expect(caixinhaCrua('<input type="checkbox" checked={x} />')).toBe(true);
+    expect(caixinhaCrua("        type={'checkbox'}")).toBe(true);
+    expect(caixinhaCrua("import { Checkbox } from '@evoapi/design-system/checkbox';")).toBe(true);
+  });
+  it('não pega o Checkbox da casa nem outro tipo de campo', () => {
+    expect(caixinhaCrua("import { Button, Checkbox } from '@/components/ui/ds';")).toBe(false);
+    expect(caixinhaCrua('<Checkbox checked={x} onCheckedChange={v => y(v === true)} />')).toBe(false);
+    expect(caixinhaCrua('<input type="radio" />')).toBe(false);
+  });
+  it('vale no app inteiro, menos a peça e o site público', () => {
+    expect(contaCaixinhaCrua('src/pages/SuperAdmin/MensagemDeAcesso.tsx')).toBe(true);
+    expect(contaCaixinhaCrua('src/features/landing/editor/panelKit.tsx')).toBe(true);
+    expect(contaCaixinhaCrua('src/pages/Auth/Auth.tsx')).toBe(true);
+    expect(contaCaixinhaCrua('src/components/ui/ds.tsx')).toBe(false);
+    expect(contaCaixinhaCrua('src/pages/Public/PortalAnunciePage.tsx')).toBe(false);
+  });
 });

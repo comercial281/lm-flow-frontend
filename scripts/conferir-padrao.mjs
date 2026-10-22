@@ -362,6 +362,25 @@ export const contaSelectNativo = rel =>
   !SELECT_NATIVO_PERMITIDO.has(rel);
 const COMECO_DE_COMENTARIO = /^(\{?\/\*|\*)/;
 
+// Caixinha crua (peça 24 do GLOSSARIO, escolha do dono em 21/10/2026): toda
+// caixinha de marcar é o `Checkbox` de `components/ui/ds`. O `<input
+// type="checkbox">` sai azul do Chrome, com o formato de cada navegador; o
+// import direto do pacote pula o "parcial" roxo da casa. Vale para o app
+// INTEIRO, como a lista nativa: no dia da troca não sobrou nenhuma.
+const CAIXINHA_CRUA = /type=\{?["']checkbox["']\}?|['"]@evoapi\/design-system\/checkbox['"]/;
+// O site público não carrega o pacote do app: a caixinha de lá é o input
+// pintado com o mesmo desenho, na cor do cliente.
+export const CAIXINHA_CRUA_PERMITIDA = new Set([
+  'src/components/ui/ds.tsx',
+  'src/pages/Public/PortalAnunciePage.tsx',
+]);
+export const contaCaixinhaCrua = rel =>
+  rel.startsWith('src/') &&
+  rel.endsWith('.tsx') &&
+  !/\.(spec|test)\.tsx$/.test(rel) &&
+  !CAIXINHA_CRUA_PERMITIDA.has(rel);
+export const caixinhaCrua = linha => CAIXINHA_CRUA.test(linha);
+
 // Atributos e propriedades cujo valor é texto que aparece na tela.
 const ATRIBUTOS_DE_TEXTO = new Set([
   'title', 'placeholder', 'label', 'aria-label', 'alt', 'description', 'subtitle',
@@ -1006,7 +1025,8 @@ export function varrer() {
     const confirmacao = contaConfirmacao(rel);
     const janela = rel.startsWith('src/') && /\.tsx?$/.test(rel) && !/\.(spec|test)\.tsx?$/.test(rel) && rel !== AJUSTE_DA_CASA;
     const soMouse = contaSoMouse(rel);
-    if (!escopo && !lista && !confirmacao && !janela && !soMouse) continue;
+    const caixinha = contaCaixinhaCrua(rel);
+    if (!escopo && !lista && !confirmacao && !janela && !soMouse && !caixinha) continue;
     const codigo = readFileSync(arquivo, 'utf8');
     if (janela && codigo.includes('@evoapi/design-system')) {
       for (const a of importaJanelaDoPacote(codigo, rel)) anotar('janelaDireta', rel, a.linha, 'janela importada do pacote base', a.texto);
@@ -1071,6 +1091,7 @@ export function varrer() {
           anotar('selectNativo', rel, i + 1, 'lista nativa fora do Seletor', l.trim());
         }
       }
+      if (caixinha && caixinhaCrua(l)) anotar('caixinhaCrua', rel, i + 1, 'caixinha fora do Checkbox da casa', l.trim());
     });
   }
 
@@ -1118,6 +1139,7 @@ export const CATEGORIAS = {
   escolhaRoxaCheia: 'escolha marcada com o roxo do botão final',
   avisoSoltoNaJanela: 'aviso em texto colorido solto dentro de janela',
   soMouse: 'escondido que só aparece com mouse (app inteiro)',
+  caixinhaCrua: 'caixinha fora do Checkbox da casa (app inteiro)',
 };
 
 function principal() {

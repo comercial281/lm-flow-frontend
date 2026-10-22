@@ -15,6 +15,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  Checkbox,
 } from '@/components/ui/ds';
 import { Plus, Trash2, GripVertical, X, Users } from 'lucide-react';
 import { CreatePipelineData, PipelineStage } from '@/types/analytics';
@@ -468,15 +469,13 @@ export default function CreatePipelineModal({
                             <div className="p-1.5 space-y-0.5">
                               {teams.map(team => (
                                 <label key={team.id} className="flex items-center gap-2 p-1.5 hover:bg-muted/50 rounded cursor-pointer">
-                                  <input
-                                    type="checkbox"
+                                  <Checkbox
                                     checked={teamIds.includes(team.id)}
-                                    onChange={() => {
+                                    onCheckedChange={() => {
                                       setTeamIds(prev =>
                                         prev.includes(team.id) ? prev.filter(id => id !== team.id) : [...prev, team.id]
                                       );
                                     }}
-                                    className="rounded border-gray-300"
                                   />
                                   <span className="text-sm">{team.name}</span>
                                 </label>
