@@ -117,6 +117,20 @@ describe('janela do bloco', () => {
     expect(screen.getByText('Sim')).toBeTruthy();
   });
 
+  it('Só continuar se com critério: título e descrição já são os da Condição', () => {
+    render(<FlowNodePanel node={node({ kind: 'filter_label', config: { criterion: 'has_email' } })} resources={resources} onClose={() => {}} onSave={() => {}} />);
+    expect(screen.getByText('Condição')).toBeTruthy();
+    expect(screen.getByText('Confere algo do lead e segue pelo Sim ou pelo Não.')).toBeTruthy();
+    expect(screen.queryByText('Só continuar se')).toBeNull();
+  });
+
+  it('Só continuar se com critério no modo guiado abre como sempre', () => {
+    render(<FlowNodePanel guided node={node({ kind: 'filter_label', config: { criterion: 'has_email' } })} resources={resources} onClose={() => {}} onSave={() => {}} />);
+    expect(screen.getByText('Só continua se')).toBeTruthy();
+    expect(screen.queryByText('Sim')).toBeNull();
+    expect(screen.queryByText('Seguir pelo Sim quando')).toBeNull();
+  });
+
   it('Só continuar se legado (só etiquetas) abre como sempre', () => {
     render(<FlowNodePanel node={node({ kind: 'filter_label', config: { labels: ['x'], mode: 'any' } })} resources={resources} onClose={() => {}} onSave={() => {}} />);
     expect(screen.getByText('Só continua se')).toBeTruthy();

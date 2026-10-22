@@ -21,3 +21,8 @@ export function toCondition(node: FlowAutomationNode): FlowAutomationNode {
     next_no_node_id: null,
   };
 }
+
+/** No modo guiado o servidor recusa trocar o tipo do bloco: nunca converte. */
+export function willConvert(node: FlowAutomationNode, guided: boolean): boolean {
+  return !guided && canBecomeCondition(node);
+}

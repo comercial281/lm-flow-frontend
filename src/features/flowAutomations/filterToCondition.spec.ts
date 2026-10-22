@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import type { FlowAutomationNode } from '@/types/flowAutomations';
-import { canBecomeCondition, toCondition } from './filterToCondition';
+import { buildEdges } from '@/lib/flowAutomationGraph';
+import { canBecomeCondition, toCondition, willConvert } from './filterToCondition';
 
 const node = (patch: Partial<FlowAutomationNode>): FlowAutomationNode => ({
   id: 'n1', kind: 'filter_label', label: null, config: {},
@@ -30,5 +31,27 @@ describe('Só continuar se vira Condição', () => {
   it('só filtro com critério converte', () => {
     expect(canBecomeCondition(node({ config: { criterion: 'has_label', label: 'a' } }))).toBe(true);
     expect(canBecomeCondition(node({ kind: 'condition', config: { criterion: 'has_label' } }))).toBe(false);
+  });
+
+  it('critério vazio conta como sem critério', () => {
+    expect(canBecomeCondition(node({ config: { criterion: '', labels: ['x'] } }))).toBe(false);
+  });
+
+  it('id, nome, posição e passo do guia sobrevivem', () => {
+    const out = toCondition(node({ id: 'z9', label: 'Quente?', pos_x: 10, pos_y: 20, guide_done: true, config: { criterion: 'has_email' } }));
+    expect(out).toMatchObject({ id: 'z9', label: 'Quente?', pos_x: 10, pos_y: 20, guide_done: true });
+  });
+
+  it('modo guiado nunca converte', () => {
+    const n = node({ config: { criterion: 'has_email' }, next_node_id: 'b2' });
+    expect(willConvert(n, true)).toBe(false);
+    expect(willConvert(n, false)).toBe(true);
+  });
+
+  it('o mapa desenha a seta saindo do Sim depois da conversão', () => {
+    const out = toCondition(node({ config: { criterion: 'has_email' }, next_node_id: 'b2' }));
+    const edges = buildEdges([out], null);
+    expect(edges).toHaveLength(1);
+    expect(edges[0]).toMatchObject({ source: 'n1', target: 'b2', sourceHandle: 'yes' });
   });
 });

@@ -36,7 +36,7 @@ import {
   withWaitBusinessHours,
 } from '@/features/flowAutomations/businessHours';
 import { moveStageModeOf, stageNameOf, withMoveStageMode, withStageName } from '@/features/flowAutomations/moveStage';
-import { canBecomeCondition } from '@/features/flowAutomations/filterToCondition';
+import { willConvert } from '@/features/flowAutomations/filterToCondition';
 import { FormAnswerPicker } from './FormAnswerPicker';
 import { FlowBlockDialog } from './FlowBlockDialog';
 import { NotificationFields } from './NotificationFields';
@@ -282,10 +282,12 @@ export function FlowNodePanel({ node, resources, onClose, onSave, onDirtyChange,
   const hidden = !isVisibleNode(activeNode);
   // O nome que a pessoa deu ao bloco (renomeado no cartão) vira o título; o tipo
   // do bloco passa pra frente da descrição, pra não sumir ("Mensagem · …").
-  const typeName = blockLabel(activeNode);
+  // Só continuar se com critério vira Condição ao salvar: título e descrição já são os dela.
+  const shownNode = willConvert(activeNode, guided) ? { ...activeNode, kind: 'condition' as const } : activeNode;
+  const typeName = blockLabel(shownNode);
   const givenName = (activeNode.label ?? '').trim();
   const title = givenName || typeName;
-  const baseDescription = hidden ? '' : blockDescription(activeNode);
+  const baseDescription = hidden ? '' : blockDescription(shownNode);
   const description = givenName
     ? [typeName, baseDescription].filter(Boolean).join(' · ')
     : baseDescription || undefined;
@@ -543,7 +545,7 @@ export function FlowNodePanel({ node, resources, onClose, onSave, onDirtyChange,
       case 'filter_label':
         // Com critério, abre como Condição (o canvas converte ao salvar);
         // o legado, só com etiquetas, abre como sempre.
-        return conditionFields(canBecomeCondition(activeNode) ? 'condition' : 'filter_label');
+        return conditionFields(willConvert(activeNode, guided) ? 'condition' : 'filter_label');
       // Ação das Automações: o MESMO editor da tela de regras, gravando
       // `{ action_type, params }` (leadAction.ts).
       case 'lead_action':
