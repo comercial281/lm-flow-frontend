@@ -9577,7 +9577,6 @@ Armadilhas:
 
 Código: `components/flowAutomations/FlowNodePanel.tsx` (Mover de etapa, Esperar, Aguardar resposta), `components/flowAutomations/SaidasDoBloco.tsx`, `features/flowAutomations/editores/LeadAutomationsEditors.tsx` (Notificação), `features/flowAutomations/waitTime.ts` (`unitLabel`), `features/flowAutomations/leadAction.ts`, `features/flowAutomations/recovered.ts`, `lib/flowAutomationGraph.ts` (cor do Controle), `features/numbers/sendFrom.ts`, `features/numbers/numberTexts.ts` (`finalDoNumero`, `instanceStatusLabel`), `components/messaging/MessageSequenceEditor.tsx`, `components/flowAutomations/MessageBlockFields.tsx`. Testes: `BlockTexts.spec.tsx`, `FollowupBlocks.spec.tsx`, `FlowBlocks.spec.tsx`, `FlowLayoutPieces.spec.tsx`, `palette.spec.ts`, `waitTime.spec.ts`, `sendFrom.spec.ts`, `numberTexts.spec.ts`, `SendFromField.spec.tsx`, `notifyGroupCliente.spec.tsx`.
 
-
 ## Construtor: bloco Condição (desde 2026-10-22)
 
 Em 21 e 22/10/2026 o Tony pediu pra juntar "Se / senão" e "Só continuar se" num bloco condicional só: os dois testavam o lead e o fluxo seguia por caminhos diferentes, o que confundia na hora de montar. A Entrega 2 troca os dois por **Condição**. Spec em `LM FLOW/specs/2026-10-22-construtor-janelas-e-numero-do-fluxo-design.md` (Frente 3, fora do git).
@@ -9593,7 +9592,7 @@ Decisões (não reabrir sem o dono pedir):
 
 1. **Um bloco só.** Condição substitui Se / senão e Só continuar se na lista.
 2. **Não vazio para o fluxo daquele lead.** Sem nada ligado no Não, o lead para ali.
-3. **Diferença aceita:** o lead que não passa termina como concluído, não como parado (era assim no "Só continuar se").
+3. **Diferença aceita:** o lead que não passa termina como concluído; no "Só continuar se" antigo ele terminava como parado.
 4. **Filtro legado sem critério** (só etiquetas) fica como está: continua "Só continuar se", não vira Condição.
 5. **`filter_label` salvo com critério converte** quando alguém abre e salva fora do modo guiado.
 6. **No modo guiado nunca converte** e abre como antes ("Só continua se").
@@ -9602,8 +9601,8 @@ Armadilhas:
 
 1. **O backend rejeita `next_node_id` em `condition`:** a ligação do Sim vai em `next_yes`, não no `next_node_id` do filtro antigo. Na conversão o `next_node_id` vira `next_yes`.
 2. **O `GuidedSave` rejeita mudança de tipo e de ligação**, por isso o guarda do modo guiado (`willConvert(node, guided)`): converter lá quebraria o salvamento.
-3. **O motor lê só `label` pro `has_label`:** a conversão descarta etiquetas e modo do filtro antigo. Por isso só converte quando há critério, e filtro só de etiquetas fica intacto.
+3. **O motor atual lê só `label` pro `has_label`:** a conversão descarta etiquetas e modo do filtro antigo. Por isso só converte quando há critério, e filtro só de etiquetas fica intacto.
 4. **`filter_label` continua em `FLOW_NODE_DEFS`** pra bloco salvo manter nome e ícone.
 5. **A conversão preserva** id, rótulo, posição e `guide_done`.
 
-Código: `features/flowAutomations/filterToCondition.ts` (`canBecomeCondition`, `toCondition`, `willConvert`), `features/flowAutomations/palette.ts`, `components/flowAutomations/FlowNodePanel.tsx` (janela, título e descrição), `pages/FlowBuilder/FlowAutomationCanvas.tsx` (`handleSaveNodeConfig`), `lib/flowAutomationGraph.ts`, `types/flowAutomations.ts`. Testes: `filterToCondition.spec.ts`, `palette.spec.ts`, `conditions.spec.ts`, `FlowBlocks.spec.tsx`.
+Código: `features/flowAutomations/filterToCondition.ts` (`canBecomeCondition`, `toCondition`, `willConvert`), `features/flowAutomations/palette.ts`, `components/flowAutomations/FlowNodePanel.tsx` (janela, título e descrição), `pages/Customer/Automations/FlowBuilder/FlowAutomationCanvas.tsx` (`handleSaveNodeConfig`), `lib/flowAutomationGraph.ts`, `types/flowAutomations.ts`. Testes: `filterToCondition.spec.ts`, `palette.spec.ts`, `conditions.spec.ts`, `FlowBlocks.spec.tsx`.
