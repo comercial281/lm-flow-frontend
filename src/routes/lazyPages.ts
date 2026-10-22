@@ -18,6 +18,7 @@ export const Contacts = lazyWithRetry(() => import('@/pages/Customer/Contacts'))
 export const WhatsappOficial = lazyWithRetry(() => import('@/pages/Customer/Settings/Integrations/WhatsappOficial'));
 export const IntegracoesEntrada = lazyWithRetry(() => import('@/pages/Customer/Settings/Integrations/IntegracoesEntrada'));
 export const Channels = lazyWithRetry(() => import('@/pages/Customer/Channels').then(m => ({ default: m.Channels })));
+export const NumeroOficial = lazyWithRetry(() => import('@/pages/Customer/Channels/NumeroOficial'));
 export const ChatPage = lazyWithRetry(() => import('@/pages/Customer/Chat/ChatPage'));
 export const Pipelines = lazyWithRetry(() => import('@/pages/Customer/Pipelines/Pipelines'));
 export const Bolsao = lazyWithRetry(() => import('@/pages/Customer/Bolsao/Bolsao'));

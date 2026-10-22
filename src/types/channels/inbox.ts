@@ -124,6 +124,17 @@ export interface Inbox {
   // Quando a instância caiu (ISO). Só faz sentido com `connection_status` em
   // 'disconnected' — é o "fora do ar desde" do selo.
   disconnected_at?: string | null;
+  // Só canal da API oficial. Sem chave de acesso: o servidor nunca manda.
+  whatsapp_cloud?: WhatsappCloudInfo | null;
+}
+
+export interface WhatsappCloudInfo {
+  connected: boolean;
+  verified_name: string | null;
+  display_phone_number: string | null;
+  connected_at: string | null;
+  waba_id: string | null;
+  mode: 'coexistence' | 'new_number';
 }
 
 // As três respostas possíveis para "essa instância está funcionando?".

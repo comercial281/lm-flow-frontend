@@ -6,7 +6,7 @@ import { useLanguage } from '@/hooks/useLanguage';
 import { toast } from 'sonner';
 import { useGlobalConfig } from '@/contexts/GlobalConfigContext';
 import ChannelsService from '@/services/channels/channelsService';
-import WhatsappService from '@/services/channels/whatsappService';
+import { useConexaoOficial } from '@/components/channels/forms/whatsapp/useConexaoOficial';
 import instagramService from '@/services/channels/instagramService';
 import EmailOauthService from '@/services/channels/emailOauthService';
 
@@ -164,6 +164,15 @@ const AuthorizationSuccessBanner: React.FC<{
   const { t } = useLanguage('channels');
   const config = useGlobalConfig();
   const [isReconnecting, setIsReconnecting] = useState(false);
+  const isWhatsAppOficial = provider.toLowerCase() === 'whatsapp' && inbox?.provider === 'whatsapp_cloud';
+  const conexaoOficial = useConexaoOficial({
+    inboxId: inbox?.id,
+    ativo: isWhatsAppOficial,
+    aoConectar: () => {
+      toast.success(t('settings.authorizationBanners.success.reconnected'));
+      setTimeout(() => window.location.reload(), 1000);
+    },
+  });
 
   // Load Facebook SDK (same logic as FacebookChannelForm)
   async function loadFBsdk(appId: string) {
@@ -301,92 +310,13 @@ const AuthorizationSuccessBanner: React.FC<{
     }
   };
 
+  // WhatsApp oficial: o mesmo fluxo de conectar da tela de novo canal, com o id da caixa.
   const handleReconnectWhatsApp = async () => {
-    setIsReconnecting(true);
-    try {
-      if (!config.wpAppId || !config.wpWhatsappConfigId) {
-        toast.error(t('settings.authorizationBanners.success.whatsappNotConfigured'));
-        return;
-      }
-
-      await loadFBsdk(config.wpAppId);
-
-      if (!window.FB || !window.FB.login) {
-        toast.error(t('settings.authorizationBanners.success.sdkNotLoaded'));
-        return;
-      }
-
-      window.FB.init({
-        appId: config.wpAppId,
-        autoLogAppEvents: true,
-        xfbml: true,
-        version: 'v19.0',
-      });
-
-      window.FB.login(
-        (response: any) => {
-          // Wrap async logic in IIFE to avoid passing async function directly
-          (async () => {
-            if (response.status === 'connected') {
-              try {
-                // Use embedded signup event (same as WhatsappCloudForm)
-                window.FB.Event.subscribe('messenger_platform_embedded_signup', (data: any) => {
-                  // Wrap async logic in IIFE
-                  (async () => {
-                    try {
-                      const payload = {
-                        user_access_token: response.authResponse.accessToken,
-                        waba_id: data.waba_id,
-                        phone_number_id: data.phone_number_id,
-                        inbox_id: inbox.id,
-                      };
-
-                      await WhatsappService.createWhatsappCloudChannel(payload);
-                      toast.success(t('settings.authorizationBanners.success.reconnected'));
-                      setTimeout(() => window.location.reload(), 1000);
-                    } catch (error: any) {
-                      console.error('Error reconnecting WhatsApp:', error);
-                      toast.error(
-                        error?.message || t('settings.authorizationBanners.success.reconnectError'),
-                      );
-                    } finally {
-                      setIsReconnecting(false);
-                    }
-                  })().catch((error: any) => {
-                    console.error('Error in WhatsApp reconnect callback:', error);
-                    setIsReconnecting(false);
-                  });
-                });
-              } catch (error: any) {
-                console.error('Error setting up WhatsApp reconnection:', error);
-                toast.error(
-                  error?.message || t('settings.authorizationBanners.success.reconnectError'),
-                );
-                setIsReconnecting(false);
-              }
-            } else {
-              setIsReconnecting(false);
-              toast.error(t('settings.authorizationBanners.success.loginCancelled'));
-            }
-          })().catch((error: any) => {
-            console.error('Error in WhatsApp reconnect callback:', error);
-            setIsReconnecting(false);
-          });
-        },
-        {
-          config_id: config.wpWhatsappConfigId,
-          response_type: 'code',
-          override_default_response_type: true,
-          extras: {
-            setup: {},
-          },
-        },
-      );
-    } catch (error: any) {
-      console.error('Error reconnecting WhatsApp:', error);
-      toast.error(error?.message || t('settings.authorizationBanners.success.reconnectError'));
-      setIsReconnecting(false);
+    if (!conexaoOficial.liberado || !conexaoOficial.pronto) {
+      toast.error(t('settings.authorizationBanners.success.whatsappNotConfigured'));
+      return;
     }
+    conexaoOficial.iniciar(inbox?.whatsapp_cloud?.mode ?? 'new_number');
   };
 
   const handleReconnectGoogle = async () => {
@@ -484,7 +414,7 @@ const AuthorizationSuccessBanner: React.FC<{
                 console.error('Error in handleReconnect:', error);
               });
             }}
-            loading={isReconnecting}
+            loading={isReconnecting || conexaoOficial.carregando}
             size="sm"
             variant="outline"
             className="border-primary/30 text-primary hover:bg-primary/10"
@@ -495,6 +425,7 @@ const AuthorizationSuccessBanner: React.FC<{
         )
       }
     >
+      {conexaoOficial.erro && <p>{conexaoOficial.erro}</p>}
       {lastConnected && (
         <p>{t('settings.authorizationBanners.success.lastConnection', { date: lastConnected })}</p>
       )}

@@ -1,202 +1,26 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useGlobalConfig } from '@/contexts/GlobalConfigContext';
-import WhatsappService from '@/services/channels/whatsappService';
 import Aviso from '@/components/base/Aviso';
 import { Button } from '@/components/ui/ds';
 import { FormSection } from '../../shared/FormSection';
 import { EscolhaCaminhoOficial, type CaminhoOficial } from './EscolhaCaminhoOficial';
-
-// FB in window
-declare global {
-  interface Window {
-    FB: any;
-    fbAsyncInit?: any;
-  }
-}
+import { useConexaoOficial, type ResultadoDaConexao } from './useConexaoOficial';
 
 interface CloudWhatsappFormProps {
   canFB: boolean;
 }
 
-// Extras do FB.login por caminho. Doc da Meta (Embedded Signup v4/v5, páginas
-// "versions" e "onboarding-business-app-users"): v2 e v3 morreram em 15/10/2026;
-// na v4 o extras é "propositalmente vazio" e a versão vem da configuração do login.
-// Coexistência pede featureType 'whatsapp_business_app_onboarding' (na v5 já vem ligado).
-const EXTRAS: Record<CaminhoOficial, Record<string, unknown>> = {
-  coexistence: {
-    setup: {},
-    featureType: 'whatsapp_business_app_onboarding',
-    sessionInfoVersion: '3',
-  },
-  new_number: {
-    setup: {},
-    sessionInfoVersion: '3',
-  },
-};
-
-const EVENTOS_DE_FIM = ['FINISH', 'FINISH_WHATSAPP_BUSINESS_APP_ONBOARDING'];
-const PRAZO_DO_CODIGO_MS = 30_000;
 const LINK_PAGAMENTO = 'https://business.facebook.com/billing_hub/';
 
 export const CloudWhatsappForm = ({ canFB }: CloudWhatsappFormProps) => {
-  const config = useGlobalConfig();
   const navigate = useNavigate();
-
   const [caminho, setCaminho] = useState<CaminhoOficial | null>(null);
-  const [fbSDKReady, setFbSDKReady] = useState(false);
-  const [carregando, setCarregando] = useState(false);
-  const [erro, setErro] = useState<string | null>(null);
-  const [conectado, setConectado] = useState<{ inbox_id: string; name: string; message?: string } | null>(null);
-  const [sessionInfo, setSessionInfo] = useState<any>(null);
-  const [sdkResponse, setSdkResponse] = useState<any>(null);
-  // O caminho vale no momento do clique, mesmo se o cartão mudar durante o fluxo.
-  const caminhoDoLogin = useRef<CaminhoOficial | null>(null);
-  const enviando = useRef(false);
-  const prazo = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const limparPrazo = () => {
-    if (prazo.current) clearTimeout(prazo.current);
-    prazo.current = null;
-  };
-
-  const falhar = (mensagem: string) => {
-    limparPrazo();
-    setErro(mensagem);
-    setCarregando(false);
-  };
-
-  useEffect(() => limparPrazo, []);
-
-  const liberado = canFB && !!config.wpAppId;
-
-  useEffect(() => {
-    if (liberado) loadFacebookSDK();
-  }, [liberado, config.wpAppId, config.wpApiVersion]);
-
-  useEffect(() => {
-    const handleMessage = (event: MessageEvent) => {
-      if (event.origin !== 'https://www.facebook.com' && event.origin !== 'https://web.facebook.com') {
-        return;
-      }
-      try {
-        const data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
-        if (data?.type !== 'WA_EMBEDDED_SIGNUP') return;
-        if (EVENTOS_DE_FIM.includes(data.event)) {
-          setSessionInfo(data);
-        } else if (data.event === 'FINISH_ONLY_WABA') {
-          falhar('A Meta terminou sem escolher um número. Comece de novo e escolha o número no final.');
-        } else if (data.event === 'CANCEL') {
-          falhar(data.data?.error_message || 'Você fechou a janela da Meta antes de terminar.');
-        } else if (data.event === 'ERROR') {
-          falhar(data.data?.error_message || 'A Meta não conseguiu concluir. Tente de novo.');
-        } else if (typeof data.event === 'string' && data.event.startsWith('FINISH')) {
-          falhar('Esse tipo de conexão não é aceito aqui. Tente de novo escolhendo o número.');
-        }
-      } catch {
-        // mensagem que não é JSON: não é da Meta
-      }
-    };
-    window.addEventListener('message', handleMessage);
-    return () => window.removeEventListener('message', handleMessage);
-  }, []);
-
-  // Junta o evento (ids do número) com a resposta do login (código)
-  useEffect(() => {
-    const code = sdkResponse?.authResponse?.code;
-    if (!sessionInfo || !code || enviando.current) return;
-    enviando.current = true;
-    limparPrazo();
-    const { phone_number_id, waba_id, business_id } = sessionInfo.data || {};
-    conectar({
-      code,
-      phone_number_id: phone_number_id || '',
-      waba_id: waba_id || '',
-      business_id: business_id || '',
-    });
-  }, [sessionInfo, sdkResponse]);
-
-  const loadFacebookSDK = () => {
-    if (window.FB && window.FB.getLoginStatus) {
-      setFbSDKReady(true);
-      return;
-    }
-    const init = function () {
-      window.FB.init({
-        appId: config.wpAppId,
-        autoLogAppEvents: true,
-        xfbml: true,
-        version: config.wpApiVersion || 'v23.0',
-      });
-      setFbSDKReady(true);
-    };
-    if (document.querySelector('script[src*="sdk.js"]')) {
-      if (!window.fbAsyncInit) window.fbAsyncInit = init;
-      return;
-    }
-    window.fbAsyncInit = init;
-    // Sem crossOrigin: o CDN da Meta não manda os cabeçalhos CORS e o navegador barraria o script.
-    const script = document.createElement('script');
-    script.async = true;
-    script.defer = true;
-    script.src = 'https://connect.facebook.net/en_US/sdk.js';
-    document.head.appendChild(script);
-  };
-
-  const conectar = async (dados: {
-    code: string;
-    phone_number_id: string;
-    waba_id: string;
-    business_id: string;
-  }) => {
-    try {
-      setCarregando(true);
-      const result = await WhatsappService.connectCloud({
-        ...dados,
-        mode: caminhoDoLogin.current ?? 'new_number',
-      });
-      setConectado({ inbox_id: result.inbox_id, name: result.name, message: result.message });
-    } catch (e: any) {
-      setErro(e?.response?.data?.error || 'Não deu pra conectar o número agora. Tente de novo.');
-      // libera uma nova tentativa
-      setSessionInfo(null);
-      setSdkResponse(null);
-      enviando.current = false;
-    } finally {
-      setCarregando(false);
-    }
-  };
-
-  const handleFacebookLogin = () => {
-    if (!window.FB || !caminho) return;
-    setErro(null);
-    setSessionInfo(null);
-    setSdkResponse(null);
-    enviando.current = false;
-    caminhoDoLogin.current = caminho;
-    setCarregando(true);
-
-    window.FB.login(
-      (response: any) => {
-        setSdkResponse(response);
-        if (!response?.authResponse) {
-          falhar('A conexão com a Meta foi cancelada.');
-        } else {
-          // O código vale 30 s: se o evento de fim não chegar, libera a tela.
-          limparPrazo();
-          prazo.current = setTimeout(() => {
-            if (!enviando.current) falhar('A Meta não confirmou a conexão a tempo. Tente de novo.');
-          }, PRAZO_DO_CODIGO_MS);
-        }
-      },
-      {
-        config_id: config.wpWhatsappConfigId,
-        response_type: 'code',
-        override_default_response_type: true,
-        extras: EXTRAS[caminho],
-      },
-    );
-  };
+  const [conectado, setConectado] = useState<ResultadoDaConexao | null>(null);
+  const { liberado: configurado, pronto: fbSDKReady, carregando, erro, iniciar } = useConexaoOficial({
+    ativo: canFB,
+    aoConectar: setConectado,
+  });
+  const liberado = canFB && configurado;
 
   if (!liberado) {
     return (
@@ -236,7 +60,7 @@ export const CloudWhatsappForm = ({ canFB }: CloudWhatsappFormProps) => {
           <div className="flex justify-center">
             <Button
               type="button"
-              onClick={handleFacebookLogin}
+              onClick={() => caminho && iniciar(caminho)}
               disabled={!fbSDKReady || carregando || !caminho}
             >
               {carregando ? 'Conectando...' : !fbSDKReady ? 'Carregando...' : 'Conectar pela Meta'}

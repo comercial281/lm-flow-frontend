@@ -45,13 +45,9 @@ class WhatsappService {
     return extractData<any>(response);
   }
 
-  // Ainda usado por AuthorizationBanners (sai na F2).
-  async createWhatsappCloudChannel(payload: {
-    user_access_token: string;
-    waba_id: string;
-    phone_number_id: string;
-  }) {
-    const response = await api.post(`/whatsapp/cloud/setup`, payload);
+  // Desliga o número oficial. As conversas continuam; reconectar religa o mesmo canal.
+  async disconnectCloud(inboxId: string): Promise<{ inbox_id: string }> {
+    const response = await api.post(`/whatsapp/cloud_connections/${inboxId}/disconnect`);
     return extractData<any>(response);
   }
 }
