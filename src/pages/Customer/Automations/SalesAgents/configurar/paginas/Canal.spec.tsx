@@ -19,12 +19,12 @@ function abrir(agent: SalesAgent = agenteDeTeste(), diagnostico: never | null = 
 
 describe('Canal · API oficial', () => {
   const AVISO = /Pela API oficial a IA responde normalmente quem chamar/;
-  it('a opção do número oficial leva o sufixo; os outros não', async () => {
+  it('a opção do número oficial leva o sufixo; os outros não', () => {
     abrir(agenteDeTeste({ inbox_id: null }));
     expect(screen.getByRole('option', { name: 'Oficial 1 (API oficial)' })).toBeInTheDocument();
     expect(screen.getByRole('option', { name: 'Lançamentos' })).toBeInTheDocument();
   });
-  it('com o oficial escolhido mostra o aviso; com Evolution não', () => {
+  it('com o oficial escolhido mostra o aviso', () => {
     abrir(agenteDeTeste({ inbox_id: 'inbox-3' }));
     expect(screen.getByText(AVISO)).toBeInTheDocument();
   });

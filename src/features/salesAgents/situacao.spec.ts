@@ -47,6 +47,12 @@ describe('situacaoDaIa', () => {
     expect(s.corrigir?.rota).toBe(`/channels/${ia().inbox_id}/settings?tab=configuration`);
   });
 
+  it('número oficial desconectado: corrigir leva à página do número', () => {
+    const s = situacaoDaIa(ia(), diag(['credentials', 'error']), [], true);
+    expect(s.tipo).toBe('parada');
+    expect(s.corrigir?.rota).toBe(`/channels/${ia().inbox_id}/oficial`);
+  });
+
   it('"só follow-up" para a resposta ao vivo, mesmo sem Diagnóstico', () => {
     expect(situacaoDaIa(ia({ followup_only: true })).tipo).toBe('restricao');
   });
