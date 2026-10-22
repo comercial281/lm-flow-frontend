@@ -47,10 +47,17 @@ class FlowAutomationsService {
   // `kind` (sprint 3): o servidor devolve só as automações quando não vem; a aba
   // Follow-up pede `followup`.
   /** `withNodes` (só funil de conversa): a lista vem com os blocos (Mensagens prontas da conversa). */
-  async list(params: { search?: string; folderId?: string | null; kind?: FlowAutomationKind; withNodes?: boolean } = {}): Promise<FlowAutomation[]> {
+  /**
+   * `startable` (Fase 3, só follow-up): só os que dá pra iniciar, pela regra do
+   * servidor. Com `automationId`, a regra daquela automação (da equipe: só
+   * follow-up da equipe; pessoal: os do dono + os da equipe).
+   */
+  async list(params: { search?: string; folderId?: string | null; kind?: FlowAutomationKind; withNodes?: boolean; startable?: boolean; automationId?: string | null } = {}): Promise<FlowAutomation[]> {
     const response = await api.get(this.baseUrl, {
       params: {
         ...(params.kind ? { kind: params.kind } : {}),
+        ...(params.startable ? { startable: 1 } : {}),
+        ...(params.startable && params.automationId ? { automation_id: params.automationId } : {}),
         ...(params.withNodes ? { with_nodes: 1 } : {}),
         ...(params.search ? { search: params.search } : {}),
         ...(params.folderId !== undefined ? { folder_id: params.folderId ?? '' } : {}),
@@ -132,8 +139,21 @@ class FlowAutomationsService {
     return unwrap<FlowAutomation>(await api.post(`${this.baseUrl}/${id}/unarchive`));
   }
 
-  async duplicate(id: string): Promise<FlowAutomation> {
-    return unwrap<FlowAutomation>(await api.post(`${this.baseUrl}/${id}/duplicate`));
+  // Follow-up (Fase 3): a cópia é de quem duplica; o gestor manda `team` pra
+  // escolher (sem ele a cópia do follow-up nasce pessoal). Corretor nunca manda.
+  async duplicate(id: string, opts?: { team?: boolean }): Promise<FlowAutomation> {
+    const url = `${this.baseUrl}/${id}/duplicate`;
+    return unwrap<FlowAutomation>(opts?.team === undefined ? await api.post(url) : await api.post(url, { team: opts.team }));
+  }
+
+  /** "Meu padrão" (follow-up, Fase 3): marca (`on`) ou desmarca o follow-up que começa quando EU mando o lead pra coluna. */
+  async myDefault(id: string, on: boolean): Promise<FlowAutomation> {
+    return unwrap<FlowAutomation>(await api.patch(`${this.baseUrl}/${id}/my_default`, { on }));
+  }
+
+  /** "Tornar padrão da conta" (follow-up, Fase 3): só o gestor, só follow-up da equipe e ligado. */
+  async accountDefault(id: string): Promise<FlowAutomation> {
+    return unwrap<FlowAutomation>(await api.patch(`${this.baseUrl}/${id}/account_default`));
   }
 
   /**

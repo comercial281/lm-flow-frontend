@@ -106,7 +106,12 @@ export interface AutomationResources {
   recarregar?: () => void;
 }
 
-export function useAutomationResources(enabled: boolean): AutomationResources {
+/**
+ * `automationId` (Fase 3): a automação que está sendo editada. A lista do bloco
+ * "Iniciar follow-up" vem do servidor pela regra dela: da equipe só lista
+ * follow-up da equipe; pessoal lista os do dono e os da equipe.
+ */
+export function useAutomationResources(enabled: boolean, automationId?: string | null): AutomationResources {
   const isSuperAdmin = useIsSuperAdmin();
   const [labels, setLabels] = useState<ContactLabel[]>([]);
   const [sequences, setSequences] = useState<FollowupSequence[]>([]);
@@ -165,7 +170,7 @@ export function useAutomationResources(enabled: boolean): AutomationResources {
         leadAutomationService.getFormOrigins(),
         messageFunnelsService.list({ activeOnly: false }),
         isSuperAdmin ? leadAutomationService.getEvolutionInstances() : Promise.resolve([]),
-        flowAutomationsService.list({ kind: 'followup' }),
+        flowAutomationsService.list({ kind: 'followup', startable: true, automationId }),
         flowAutomationsService.list({ kind: 'conversation' }),
         roletaConfigService.getAll(),
       ]);
@@ -208,7 +213,7 @@ export function useAutomationResources(enabled: boolean): AutomationResources {
 
       setLoading(false);
     })();
-  }, [enabled]); // eslint-disable-line react-hooks/exhaustive-deps -- isSuperAdmin só vale na primeira carga, como antes
+  }, [enabled, automationId]); // eslint-disable-line react-hooks/exhaustive-deps -- isSuperAdmin só vale na primeira carga, como antes
 
   useEffect(() => {
     carregar();
@@ -855,12 +860,12 @@ export function ActionEditor({ action, onChange, resources, pessoal = false }: A
     }
 
     // ----- start_followup_flow -----
-    // Sprint 3 (03/10/2026): o follow-up é um fluxo do construtor (aba Follow-up).
+    // Sprint 3 (03/10/2026): o follow-up é um fluxo do construtor (Funis de mensagem → Follow-up desde a Fase 3).
     case 'start_followup_flow': {
       const atual = String(params.flow_automation_id ?? '');
       const conhecido = resources.followupFlows.some(f => f.id === atual);
       return (
-        <Field label="Qual follow-up *" hint="Os follow-ups ficam em Automações → Follow-up. Desligado, ele não recebe o lead.">
+        <Field label="Qual follow-up *" hint="Os follow-ups ficam em Funis de mensagem → Follow-up. Só aparecem os ligados que esta automação pode usar.">
           <Seletor
             value={atual}
             onChange={e => setParam('flow_automation_id', e.target.value)}
@@ -868,11 +873,9 @@ export function ActionEditor({ action, onChange, resources, pessoal = false }: A
             aria-label="Qual follow-up"
           >
             <option value="">Escolha o follow-up</option>
-            {atual && !conhecido && <option value={atual}>{resources.loading ? 'Carregando…' : 'Follow-up que não existe mais'}</option>}
+            {atual && !conhecido && <option value={atual}>{resources.loading ? 'Carregando…' : 'Follow-up desligado ou indisponível pra esta automação'}</option>}
             {resources.followupFlows.map(f => (
-              <option key={f.id} value={f.id}>
-                {f.name}{!f.is_enabled ? ' (desligado)' : ''}
-              </option>
+              <option key={f.id} value={f.id}>{f.name}</option>
             ))}
           </Seletor>
         </Field>
@@ -1591,7 +1594,9 @@ export function formatActionSummary(
     }
     case 'start_followup_flow': {
       const flow = resources.followupFlows.find(f => f.id === p.flow_automation_id);
-      return flow ? `Follow-up: ${flow.name}` : 'Follow-up: (não definido)';
+      if (flow) return `Follow-up: ${flow.name}`;
+      // Salvo mas fora da lista do servidor (desligado, arquivado, de outro dono): não é "não definido".
+      return p.flow_automation_id && !resources.loading ? 'Follow-up: (desligado ou indisponível)' : 'Follow-up: (não definido)';
     }
     case 'send_whatsapp_message':
       return p.message ? `"${String(p.message).slice(0, 60)}…"` : '(mensagem vazia)';

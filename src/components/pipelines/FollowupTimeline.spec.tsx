@@ -362,7 +362,7 @@ describe('Follow-up do card — compacto', () => {
   it('sem follow-up ligado, diz onde criar', async () => {
     render(<FollowupTimeline contactId="c-1" compacto />);
     expect(await screen.findByText(/Nenhum follow-up pra iniciar/)).toBeInTheDocument();
-    expect(screen.getByText(/Automações → Follow-up/)).toBeInTheDocument();
+    expect(screen.getByText(/Funis de mensagem → Follow-up/)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Iniciar follow-up/ })).not.toBeInTheDocument();
   });
 

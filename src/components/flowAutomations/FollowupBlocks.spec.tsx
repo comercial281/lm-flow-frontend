@@ -17,7 +17,7 @@ import { FlowNodePanel } from './FlowNodePanel';
 import { FlowSettingsDialog } from './FlowSettingsDialog';
 import { FlowTriggerPanel } from './FlowTriggerPanel';
 import { summaryLine } from './FlowNodeCard';
-import type { AutomationResources } from '@/features/flowAutomations/editores/LeadAutomationsEditors';
+import { formatActionSummary, type AutomationResources } from '@/features/flowAutomations/editores/LeadAutomationsEditors';
 import type { FlowAutomation, FlowAutomationNode } from '@/types/flowAutomations';
 import { paletteItems } from '@/features/flowAutomations/palette';
 import { nodeProblem } from '@/features/flowAutomations/readiness';
@@ -175,7 +175,8 @@ describe('bloco "Iniciar follow-up"', () => {
     const onSave = vi.fn();
     render(<FlowNodePanel node={node({ kind: 'lead_action', config: { action_type: 'start_followup_flow', params: {} } })} resources={resources} onClose={() => {}} onSave={onSave} />);
     expect(screen.getByRole('heading', { name: 'Iniciar follow-up' })).toBeTruthy();
-    expect(screen.getByRole('option', { name: 'Follow-up curto (desligado)' })).toBeTruthy();
+    expect(screen.getByRole('option', { name: 'Follow-up longo' })).toBeTruthy();
+    expect(screen.getByText(/Os follow-ups ficam em Funis de mensagem → Follow-up\./)).toBeTruthy();
     fireEvent.click(screen.getByText('Salvar'));
     expect(screen.getByRole('alert').textContent).toBe('Falta preencher o follow-up.');
     fireEvent.change(screen.getByLabelText('Qual follow-up'), { target: { value: 'f1' } });
@@ -183,6 +184,24 @@ describe('bloco "Iniciar follow-up"', () => {
     await waitFor(() => expect(onSave).toHaveBeenCalledWith('n1', expect.objectContaining({
       config: { action_type: 'start_followup_flow', params: { flow_automation_id: 'f1' } },
     })));
+  });
+});
+
+describe('follow-up salvo que o servidor não lista', () => {
+  const salvo = { action_type: 'start_followup_flow', params: { flow_automation_id: 'sumiu' } };
+
+  it('o select diz que está desligado ou indisponível, não que não existe', () => {
+    render(<FlowNodePanel node={node({ kind: 'lead_action', config: salvo })} resources={resources} onClose={() => {}} onSave={() => {}} />);
+    expect(screen.getByRole('option', { name: 'Follow-up desligado ou indisponível pra esta automação' })).toBeTruthy();
+    expect(screen.queryByText(/não existe mais/)).toBeNull();
+  });
+
+  it('o resumo do nó diz "desligado ou indisponível"; sem escolha continua "não definido"', () => {
+    expect(formatActionSummary({ type: 'start_followup_flow', params: { flow_automation_id: 'sumiu' } }, resources))
+      .toBe('Follow-up: (desligado ou indisponível)');
+    expect(formatActionSummary({ type: 'start_followup_flow', params: {} }, resources)).toBe('Follow-up: (não definido)');
+    expect(formatActionSummary({ type: 'start_followup_flow', params: { flow_automation_id: 'f1' } }, resources))
+      .toBe('Follow-up: Follow-up longo');
   });
 });
 

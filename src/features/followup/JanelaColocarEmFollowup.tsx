@@ -38,12 +38,16 @@ interface Props {
 
 const MIDIA = 'A próxima mensagem é uma mídia (foto, áudio ou vídeo).';
 
+/** Selo da opção: "Do responsável" (o pessoal de quem cuida do lead, que pode não ser quem abre a janela) ou "Da equipe". Sem a informação, só o nome. */
+const rotuloDaOpcao = (o: { name: string; team?: boolean }) =>
+  o.team === true ? `${o.name} · Da equipe` : o.team === false ? `${o.name} · Do responsável` : o.name;
+
 const motivoDaRecusa = (e: unknown) =>
   serverErrorOf(e)
   || (httpStatusOf(e) === 403 ? 'Seu cargo não permite mexer no follow-up deste lead.' : null)
   || 'Não consegui falar com o servidor. Tente de novo.';
 
-/** O padrão da conta, se ele está na lista; senão o primeiro. */
+/** O padrão que o servidor marcou (o "meu padrão" do responsável, senão o da conta), se está na lista; senão o primeiro. */
 const escolhaInicial = (p: PlacePreview) =>
   p.options.find(o => o.id === p.default_flow_id)?.id ?? p.options[0]?.id ?? '';
 
@@ -74,12 +78,12 @@ export default function JanelaColocarEmFollowup({ lead, aoCancelar, aoConcluir }
   const progresso = previa?.progress && previa.progress.flow_automation_id === escolhido ? previa.progress : null;
   const podeContinuar = Boolean(progresso?.has_next);
   const modoFinal: ModoDoFollowup = podeContinuar && modo === 'continue' ? 'continue' : 'restart';
-  // O servidor manda o nome do follow-up atual (sem id): é ele que diz se o escolhido é o mesmo.
+  // Fase 3: o "mesmo follow-up" é pelo id (dois follow-ups podem ter o mesmo nome: o seu e o da equipe).
   const nomeAtual = previa?.current?.flow_name ?? null;
-  const nomeEscolhido = previa?.options.find(o => o.id === escolhido)?.name ?? null;
+  const mesmoFollowup = Boolean(previa?.current?.flow_automation_id) && previa?.current?.flow_automation_id === escolhido;
   const avisoDoAtual = !previa?.current
     ? null
-    : nomeAtual && nomeAtual === nomeEscolhido
+    : mesmoFollowup
       ? 'Este lead já está neste follow-up.'
       : nomeAtual
         ? `Este lead já está no follow-up "${nomeAtual}". Iniciar troca pelo escolhido.`
@@ -120,7 +124,7 @@ export default function JanelaColocarEmFollowup({ lead, aoCancelar, aoConcluir }
           <EmptyState
             tamanho="compacto"
             title="Nenhum follow-up pra iniciar."
-            description={<>Crie e ligue um em <em>Automações → Follow-up</em>.</>}
+            description={<>Crie e ligue um em <em>Funis de mensagem → Follow-up</em>.</>}
           />
         ) : (
           <div className="grid gap-4">
@@ -135,7 +139,9 @@ export default function JanelaColocarEmFollowup({ lead, aoCancelar, aoConcluir }
                   disabled={salvando}
                   onChange={e => { setEscolhido(e.target.value); setModo('continue'); }}
                 >
-                  {previa.options.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
+                  {previa.options.map(o => (
+                    <option key={o.id} value={o.id}>{rotuloDaOpcao(o)}</option>
+                  ))}
                 </Seletor>
               </CampoDaJanela>
 

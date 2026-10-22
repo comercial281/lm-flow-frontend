@@ -118,7 +118,7 @@ function snapshot(name: string, trigger: FlowTrigger, reentry: ReentrySetting, b
 export default function FlowAutomationCanvas({ banner, highlightedNodeId }: FlowAutomationCanvasProps = {}) {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const resources = useAutomationResources(true);
+  const resources = useAutomationResources(true, id);
   const messageVariables = useTenantMessageVariables();
   const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
   const sidePanel = useSidePanel(confirmar);
@@ -194,7 +194,9 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
   // ("Indisponível" sem número ou sem IA); na pessoal de outra pessoa, o bloco
   // de mensagem só avisa por qual WhatsApp sai (o servidor força o do dono).
   const ehCorretor = useEhCorretorDeAutomacao();
-  const modo = modoPessoal(automation, { ehCorretor, meId });
+  // Só automação: o follow-up pessoal (Fase 3) sai sempre pelo número do
+  // responsável pelo lead (o servidor manda) e o corretor edita no modo guiado.
+  const modo = kind === 'automation' ? modoPessoal(automation, { ehCorretor, meId }) : null;
   const pessoal = modo === 'corretor';
   const peloMeuNumero = modo === 'corretor' || modo === 'dono';
   // '' = de outra pessoa sem nome conhecido; null = não é o caso.
@@ -564,7 +566,7 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
     if (!automation) return;
     try {
       const copy = await flowAutomationsService.duplicate(automation.id);
-      toast.success('Pronto: este é o seu funil. Ajuste e salve.');
+      toast.success(kind === 'followup' ? 'Pronto: este é o seu follow-up. Ajuste e salve.' : 'Pronto: este é o seu funil. Ajuste e salve.');
       navigate(`${listPath}/${copy.id}`);
     } catch (e) {
       toast.error(serverMessage(e, 'Não deu pra duplicar agora. Tente de novo.'));
@@ -601,11 +603,14 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
   }
 
   // "Da equipe" na automação: sem dono também é da equipe, então vale o que o
-  // servidor diz (`personal`), não só a marca. Funil e follow-up seguem a marca.
+  // servidor diz (`personal`), não só a marca. Follow-up (Fase 3): sem dono
+  // também é da equipe. Funil segue a marca.
   const ehAutomacao = kind === 'automation';
   const daEquipe = ehAutomacao && automation.permissions && 'personal' in automation.permissions
     ? automation.permissions.personal !== true
-    : !!automation.team;
+    : kind === 'followup'
+      ? automation.team === true || automation.owner_user_id == null || automation.owner_user_id === ''
+      : !!automation.team;
   // O gestor marca e desmarca "Da equipe" no cabeçalho também (a mesma pergunta da lista).
   const podeMarcarEquipe = ehAutomacao && !readOnly && automation.permissions?.can_mark_team === true;
   // Bloco preso a número específico: "Da equipe" não sai (o servidor recusa).
@@ -748,9 +753,13 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
         {readOnly && (
           <Faixa tom="neutro" icone={Users}>
             <span data-testid="faixa-so-ver">
-              {automation.team
-                ? 'Este funil é da equipe: só o gestor edita. Você pode disparar ele nas conversas ou duplicar pra ter a sua cópia.'
-                : 'Você só pode ver este funil. Duplique pra ter a sua cópia.'}
+              {kind === 'followup'
+                ? daEquipe
+                  ? 'Este follow-up é da equipe: só o gestor edita. Duplique pra ter a sua cópia.'
+                  : 'Você só pode ver este follow-up. Duplique pra ter a sua cópia.'
+                : automation.team
+                  ? 'Este funil é da equipe: só o gestor edita. Você pode disparar ele nas conversas ou duplicar pra ter a sua cópia.'
+                  : 'Você só pode ver este funil. Duplique pra ter a sua cópia.'}
             </span>
           </Faixa>
         )}

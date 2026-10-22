@@ -121,22 +121,31 @@ describe('JanelaColocarEmFollowup', () => {
   });
 
   it('lead já em follow-up mostra o aviso de troca', async () => {
-    placePreview.mockResolvedValue(preview({ current: { flow_name: 'Follow-up curto', phase: 'waiting' } }));
+    placePreview.mockResolvedValue(preview({ current: { flow_automation_id: 'f1', flow_name: 'Follow-up curto', phase: 'waiting' } }));
     abrir();
 
+    // O padrão marcado (f2) não é o atual (f1): troca.
     expect(
       await screen.findByText('Este lead já está no follow-up "Follow-up curto". Iniciar troca pelo escolhido.'),
     ).toBeInTheDocument();
   });
 
-  it('lead já no follow-up escolhido não fala em troca', async () => {
-    placePreview.mockResolvedValue(preview({ current: { flow_name: 'Follow-up longo', phase: 'waiting' } }));
+  it('mesmo follow-up pelo id', async () => {
+    // Dois follow-ups com o MESMO nome (um seu, um da equipe): só o id diz qual é o atual.
+    placePreview.mockResolvedValue(preview({
+      default_flow_id: 'f2',
+      options: [
+        { id: 'f1', name: 'Follow-up longo', team: true },
+        { id: 'f2', name: 'Follow-up longo', team: false },
+      ],
+      current: { flow_automation_id: 'f2', flow_name: 'Follow-up longo', phase: 'waiting' },
+    }));
     abrir();
 
     expect(await screen.findByText('Este lead já está neste follow-up.')).toBeInTheDocument();
     expect(screen.queryByText(/Iniciar troca pelo escolhido/)).not.toBeInTheDocument();
 
-    // Trocar pra outro no seletor volta o aviso de troca.
+    // Trocar pro de mesmo nome, mas outro id, volta o aviso de troca.
     fireEvent.change(screen.getByLabelText('Follow-up'), { target: { value: 'f1' } });
     expect(
       await screen.findByText('Este lead já está no follow-up "Follow-up longo". Iniciar troca pelo escolhido.'),
@@ -144,12 +153,27 @@ describe('JanelaColocarEmFollowup', () => {
   });
 
   it('follow-up atual sem nome: "um follow-up", sem aspas vazias', async () => {
-    placePreview.mockResolvedValue(preview({ current: { flow_name: null, phase: 'waiting' } }));
+    placePreview.mockResolvedValue(preview({ current: { flow_automation_id: 'f1', flow_name: null, phase: 'waiting' } }));
     abrir();
 
     expect(
       await screen.findByText('Este lead já está em um follow-up. Iniciar troca pelo escolhido.'),
     ).toBeInTheDocument();
+  });
+
+  it('opções levam o selo Do responsável ou Da equipe', async () => {
+    placePreview.mockResolvedValue(preview({
+      default_flow_id: 'f1',
+      options: [
+        { id: 'f1', name: 'Meu follow-up', team: false },
+        { id: 'f2', name: 'Follow-up longo', team: true },
+      ],
+    }));
+    abrir();
+
+    expect(await screen.findByLabelText('Follow-up')).toHaveValue('f1');
+    expect(screen.getByRole('option', { name: 'Meu follow-up · Do responsável' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'Follow-up longo · Da equipe' })).toBeInTheDocument();
   });
 
   it('recusa do servidor mostra a frase e a janela fica aberta', async () => {
@@ -177,6 +201,8 @@ describe('JanelaColocarEmFollowup', () => {
     abrir();
 
     expect(await screen.findByText(/Nenhum follow-up pra iniciar/)).toBeInTheDocument();
+    // Fase 3: o follow-up mora em Funis de mensagem → Follow-up.
+    expect(screen.getByText('Funis de mensagem → Follow-up')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Iniciar' })).toBeDisabled();
   });
 });
