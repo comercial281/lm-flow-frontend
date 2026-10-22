@@ -117,18 +117,12 @@ describe('EscolhaDeEtiqueta', () => {
     expect(base.aoMudar).toHaveBeenCalledWith(['quente']);
   });
 
-  it('Enter marca a primeira da busca; Escape limpa a busca sem fechar a janela', () => {
-    const fechar = vi.fn();
-    render(<div onKeyDown={e => { if (e.key === 'Escape') fechar(); }}><EscolhaDeEtiqueta {...base} /></div>);
+  it('Enter marca a primeira da busca', () => {
+    render(<EscolhaDeEtiqueta {...base} />);
     const campo = screen.getByPlaceholderText('Buscar ou criar etiqueta');
     fireEvent.change(campo, { target: { value: 'a' } });
     fireEvent.keyDown(campo, { key: 'Enter' });
     expect(base.aoMudar).toHaveBeenCalledWith(['alfa']);
-    fireEvent.keyDown(campo, { key: 'Escape' });
-    expect((campo as HTMLInputElement).value).toBe('');
-    expect(fechar).not.toHaveBeenCalled();
-    fireEvent.keyDown(campo, { key: 'Escape' });
-    expect(fechar).toHaveBeenCalled();
   });
 
   it('modo uma chama o campo de Etiqueta, no singular', () => {

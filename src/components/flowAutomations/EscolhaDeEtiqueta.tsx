@@ -200,10 +200,6 @@ export function EscolhaDeEtiqueta({ modo, escolhidas, aoMudar, etiquetas, ordem 
                 const primeira = [...equipeLivre, ...sistemaLivre][0];
                 if (primeira) alternar(primeira.titulo);
               }
-            } else if (e.key === 'Escape' && busca) {
-              e.preventDefault();
-              e.stopPropagation();
-              setBusca('');
             }
           }}
           placeholder="Buscar ou criar etiqueta"
