@@ -9512,3 +9512,28 @@ Armadilhas:
 Código: `components/channels/forms/whatsapp/` (`CloudWhatsappForm`, `EscolhaCaminhoOficial`, `useConexaoOficial`), `pages/Customer/Channels/NumeroOficial/`, `ChannelCard.tsx`, `AuthorizationBanners.tsx`, `services/channels/whatsappService.ts`, `features/numbers/avisoConversas.ts` + `useNumerosDaConversa.ts` (Conversas), `pages/Customer/Settings/Integrations/WhatsappOficialPartes.tsx`. Testes: `CloudWhatsappForm.spec.tsx`, `useConexaoOficial.spec.tsx`, `NumeroOficial.spec.tsx`, `ChannelCard.spec.tsx`, `AuthorizationBanners.spec.tsx`, `avisoConversas.spec.ts`, `useNumerosDaConversa.spec.ts`, `AvisoNumero.spec.tsx`, `WhatsappOficial.spec.tsx`.
 
 Não reabrir sem o dono pedir.
+
+## IA Vendedora na API oficial (desde 2026-10-22)
+
+A IA Vendedora passa a poder atender por um número da API oficial. Entrega C do backend manda a mensagem; a tela só mostra o que o servidor decide. Quem usa Evolution não vê diferença.
+
+O que muda pra quem usa:
+
+1. **O seletor de número da IA marca o número oficial com "(API oficial)"** depois do nome, em Configurar, página Canal. Os outros números aparecem como sempre.
+2. **Aviso na página Canal, só com número oficial escolhido**: "Pela API oficial a IA responde normalmente quem chamar. Abrir conversa com lead de formulário e mandar follow-up depois de 24h ainda não funcionam neste número. Acima de 1.000 respostas no mês, a Meta cobra cada resposta."
+3. **O aviso diz o que ainda não funciona porque é verdade hoje.** Pela oficial, texto livre só sai dentro de 24h da última mensagem do lead. Abrir conversa com lead de formulário e follow-up depois de 24h precisam de modelo de mensagem aprovado, o que vem nas entregas B e D. Quando a D entrar, o texto troca; não prometer antes.
+4. **O aviso fala em 1.000 respostas, não em "cada mensagem é cobrada".** Desde 01/10/2026 a Meta deixa grátis a resposta dentro de 24h, até 1.000 por mês por número. Dizer que toda mensagem é cobrada assustaria à toa e estaria errado.
+5. **Os motivos novos chegam prontos do servidor** no histórico da IA ("Fora da janela de 24h: pela API oficial só sai modelo aprovado" e "O número oficial desta IA está desconectado"). A tela não traduz chave nem reescreve a frase.
+6. **Número oficial desconectado não desliga a IA.** Ela segue ligada, a escolha do número se mantém, o motivo aparece no histórico e o envio volta sozinho quando o número é religado.
+7. **"Corrigir" da conexão de uma IA com número oficial leva pra página do número** (`/channels/:id/oficial`), onde se reconecta. Em número Evolution continua levando pra configuração do número (QR Code).
+
+Armadilhas:
+
+1. **Texto de tela sem "WABA", "token", "webhook", "template" nem "Evolution"**; é "modelo de mensagem". Repo público: nada de dado real em teste ou exemplo.
+2. **O aviso tem teste pela frase inicial** (`Canal.spec.tsx`); mudar o texto pede mudar o teste.
+
+Código: `pages/Customer/Automations/SalesAgents/configurar/paginas/Canal.tsx`, `features/salesAgents/situacao.ts` (parâmetro `oficial`), `IaBarra.tsx`, `SalesAgents.tsx`.
+
+Este PR **depende do backend da C na frente**: sem ele a IA não envia pela oficial e os motivos novos não existem.
+
+Não reabrir sem o dono pedir.
