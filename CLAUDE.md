@@ -9479,21 +9479,26 @@ Código: `components/ui/ds.tsx` (`Checkbox`), `scripts/conferir-padrao.mjs` (`ca
 
 ## API oficial do WhatsApp (desde 2026-10-22)
 
-O cliente passa a poder conectar um número pela API oficial da Meta, sem QR Code, direto em **Canais**. Entrega A (base): conectar, ver a situação e desconectar. A gestão completa (modelos, qualidade, limites) é a Fase 2, com o esboço aprovado em https://claude.ai/artifact/7RsnJbPnXLDstRfGUE7s1N.
+O cliente passa a poder conectar um número pela API oficial da Meta, sem QR Code, direto em **Canais**. Entrega A (base): conectar, ver a situação, reconectar, desconectar e a aba **Modelos de mensagem** na página do número. A gestão completa (qualidade, limites, métricas por número) é a Fase 2, com o esboço aprovado em https://claude.ai/artifact/7RsnJbPnXLDstRfGUE7s1N.
 
 O que muda pra quem usa:
 
 1. **Sem item novo no menu.** A gestão abre pelo próprio número, em Canais (botão **Gerenciar** do card). Decisão do Tony em 21/10.
 2. **Dois caminhos pra conectar**, na mesma janela: **"Já uso esse número no app WhatsApp Business"** (coexistência: o número continua no celular) e **"Chip novo, só pra API oficial"**.
 3. **A conta é criada pelo servidor.** A tela só abre o login do Facebook e repassa o código; o token da conta nunca passa pela tela nem fica no navegador. O formulário antigo de colar token saiu.
-4. **Aviso de cobrança da Meta no fim** da conexão: a Meta cobra por conversa e isso aparece antes de concluir.
+4. **Aviso de cobrança da Meta depois de conectar**: a Meta cobra **por mensagem** e o aviso aparece quando a conexão termina.
 5. **Número já conectado por QR neste cliente: desconectar antes** (decisão do Tony, opção a). O servidor recusa com a frase pronta; a tela só mostra.
 6. **Página do número** (`NumeroOficial`): situação, **Abrir no painel da Meta**, **Reconectar** e **Desconectar**. Desconectar **mantém as conversas** (a caixa e o histórico ficam; o número só para de receber e enviar).
-7. **Reconectar e Desconectar só aparecem pra quem edita caixa** (mesma permissão do servidor). Quem só lê vê a situação e não mexe.
-8. **Sem a conexão liberada** (falta o id do app da Meta no ambiente), Reconectar mostra a frase **"A conexão com a API oficial ainda não está liberada neste LM Flow."** em vez de botão desabilitado mudo.
+7. **Desconectar só aparece pra quem edita caixa; Reconectar pede editar E criar caixa** (o servidor exige `inboxes.update` pra desconectar e `inboxes.create` na rota de conectar, que é a mesma do religar). Vale na página do número e no banner da configuração. Quem só lê vê a situação e não mexe.
+8. **Sem a conexão liberada** (falta o id do app da Meta ou o id da configuração do login no ambiente), Reconectar mostra a frase **"A conexão com a API oficial ainda não está liberada neste LM Flow."** em vez de botão desabilitado mudo.
 9. **Canal oficial mantém Configurar ao lado de Gerenciar.** Configurar abre as configurações da caixa (atendentes, horário etc.); tirar esconderia o resto.
 10. **Nesta entrega a página tem só a aba Modelos de mensagem.** O resto da gestão é a Fase 2.
 11. O banner de reautorização esconde o Reconectar de quem não edita caixa, em todos os provedores (o clique falharia).
+12. **Aba Modelos só pra quem edita caixa.** Quem não edita vê "Os modelos são do gestor do número." no lugar da lista (criar e apagar modelo exige editar a caixa).
+13. **Número oficial desconectado nunca pede QR Code.** Em Canais o Reconectar do card leva pra página do número; na configuração o banner diz **Desconectado** (não "Ativo"); em Conversas a frase é "Reconecte este número pela página dele em Canais." e o botão vai pra `/channels/:id/oficial`. Quem decide é `whatsapp_cloud.connected` (o servidor também manda `connection_status`).
+14. **A janela da Meta é aceita de `facebook.com` e de qualquer subdomínio** (`www`, `web`, `business`...), comparando pelo nome do host: `evilfacebook.com` não passa.
+15. **Cancelou ou deu erro na janela da Meta: frase nossa em pt-BR** ("Você fechou a janela da Meta antes de terminar." e "A Meta não conseguiu concluir a conexão. Tente de novo."), nunca a mensagem crua da Meta. Passou o prazo de 30 s, o evento atrasado não conecta mais.
+16. **Gerenciar em Integrações, WhatsApp Oficial** abre a página do número (`/channels/:id/oficial`).
 
 Este PR **depende do backend na frente** (PR #516 entra antes): sem ele a conexão, a situação e o Desconectar não existem no servidor.
 
@@ -9501,9 +9506,9 @@ Armadilhas:
 
 1. **Os extras do login do Facebook (v4) e o formato do aviso da coexistência são suposição até testar com número real.** Primeiro teste ao vivo: conferir os dois caminhos e ajustar `useConexaoOficial.ts`.
 2. **O código que a Meta devolve vale ~30 s.** A tela repassa na hora ao servidor; não guardar, não reenviar, não pôr em fila. Passou do prazo, o servidor recusa e o cliente tenta de novo.
-3. **Frase de erro vem pronta do servidor**; a tela não reescreve.
-4. **Texto de tela sem "WABA", "token", "webhook", "template" nem "Evolution"**; é "modelos de mensagem". Repo público: nenhum número, segredo ou dado de lead em teste ou exemplo.
+3. **Frase de erro do servidor vem pronta**; a tela não reescreve. As frases da janela da Meta (cancelou, erro, prazo) são nossas (decisão 15).
+4. **Texto de tela sem "WABA", "token", "webhook", "template" nem "Evolution"**; é "modelo de mensagem". O `MessageTemplateForm` é herdado e lia "Template": o pt-BR do bloco `settings.messageTemplates.*` (`i18n/locales/pt-BR/channels.json`) foi trocado pra "modelo" (vale também nas Configurações da caixa). Chave nova ou texto novo ali: "modelo", nunca "template". Repo público: nenhum número, segredo ou dado de lead em teste ou exemplo.
 
-Código: `components/channels/forms/whatsapp/` (`CloudWhatsappForm`, `EscolhaCaminhoOficial`, `useConexaoOficial`), `pages/Customer/Channels/NumeroOficial/`, `ChannelCard.tsx`, `AuthorizationBanners.tsx`, `services/channels/whatsappService.ts`. Testes: `CloudWhatsappForm.spec.tsx`, `useConexaoOficial.spec.tsx`, `NumeroOficial.spec.tsx`, `ChannelCard.spec.tsx`, `AuthorizationBanners.spec.tsx`.
+Código: `components/channels/forms/whatsapp/` (`CloudWhatsappForm`, `EscolhaCaminhoOficial`, `useConexaoOficial`), `pages/Customer/Channels/NumeroOficial/`, `ChannelCard.tsx`, `AuthorizationBanners.tsx`, `services/channels/whatsappService.ts`, `features/numbers/avisoConversas.ts` + `useNumerosDaConversa.ts` (Conversas), `pages/Customer/Settings/Integrations/WhatsappOficialPartes.tsx`. Testes: `CloudWhatsappForm.spec.tsx`, `useConexaoOficial.spec.tsx`, `NumeroOficial.spec.tsx`, `ChannelCard.spec.tsx`, `AuthorizationBanners.spec.tsx`, `avisoConversas.spec.ts`, `useNumerosDaConversa.spec.ts`, `AvisoNumero.spec.tsx`, `WhatsappOficial.spec.tsx`.
 
 Não reabrir sem o dono pedir.
