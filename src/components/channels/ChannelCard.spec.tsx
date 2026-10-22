@@ -86,6 +86,36 @@ describe('ChannelCard', () => {
     expect(gerenciar).toHaveBeenCalledWith(expect.objectContaining({ id: '7' }));
   });
 
+  // Formato real do servidor: o canal oficial caído vem com connection_status
+  // 'disconnected' E whatsapp_cloud.connected falso. Número oficial não tem QR:
+  // o Reconectar leva pra página dele, nunca pra Configuração.
+  it('oficial desconectado: Reconectar abre a página do número, não o QR', async () => {
+    const abrir = vi.fn();
+    const gerenciar = vi.fn();
+    const oficial = {
+      ...canal('disconnected'),
+      provider: 'whatsapp_cloud',
+      whatsapp_cloud: { connected: false, mode: 'new_number' },
+    } as unknown as Inbox;
+    render(<ChannelCard inbox={oficial} onSettings={abrir} onDelete={vi.fn()} onManage={gerenciar} />);
+
+    const reconectar = screen.getAllByRole('button', { name: /actions\.reconnect/ });
+    expect(reconectar).toHaveLength(1);
+    await userEvent.click(reconectar[0]);
+    expect(gerenciar).toHaveBeenCalledWith(expect.objectContaining({ id: '7' }));
+    expect(abrir).not.toHaveBeenCalledWith(expect.anything(), 'configuration');
+  });
+
+  it('oficial conectado não mostra Reconectar', () => {
+    const oficial = {
+      ...canal('connected'),
+      provider: 'whatsapp_cloud',
+      whatsapp_cloud: { connected: true, mode: 'new_number' },
+    } as unknown as Inbox;
+    render(<ChannelCard inbox={oficial} onSettings={vi.fn()} onDelete={vi.fn()} onManage={vi.fn()} />);
+    expect(screen.queryByRole('button', { name: /actions\.reconnect/ })).toBeNull();
+  });
+
   it('canal da API oficial desconectado mostra Desconectado', () => {
     const oficial = {
       ...canal(null),

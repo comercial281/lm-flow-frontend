@@ -25,6 +25,8 @@ export default function NumeroOficial() {
   const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
   const { can } = usePermissions();
   const podeEditar = can('inboxes', 'update');
+  // Religar passa pela mesma rota de conectar, que o servidor libera só pra quem cria caixa.
+  const podeReconectar = podeEditar && can('inboxes', 'create');
 
   const [inbox, setInbox] = useState<Inbox | null>(null);
   const [carga, setCarga] = useState<'carregando' | 'ok' | 'erro' | 'naoOficial'>('carregando');
@@ -149,7 +151,7 @@ export default function NumeroOficial() {
                 <ExternalLink className="h-4 w-4 mr-1" />
                 Abrir no painel da Meta
               </Button>
-              {podeEditar && reconexao.liberado && (
+              {podeReconectar && reconexao.liberado && (
                 <Button
                   variant="outline"
                   size="sm"
@@ -174,7 +176,7 @@ export default function NumeroOficial() {
         {!nuvem.connected && (
           <Aviso tom="atencao">Este número não está recebendo mensagens. Reconecte pra voltar a atender.</Aviso>
         )}
-        {podeEditar && !reconexao.liberado && (
+        {podeReconectar && !reconexao.liberado && (
           <Aviso tom="info">A conexão com a API oficial ainda não está liberada neste LM Flow.</Aviso>
         )}
         {reconexao.erro && <Aviso tom="erro">{reconexao.erro}</Aviso>}
@@ -184,7 +186,12 @@ export default function NumeroOficial() {
           ativa="modelos"
           aoTrocar={() => {}}
         />
-        <MessageTemplateForm inboxId={inbox.id} channelType={inbox.channel_type} />
+        {/* Criar e apagar modelo exige editar a caixa: quem não pode só levaria erro. */}
+        {podeEditar ? (
+          <MessageTemplateForm inboxId={inbox.id} channelType={inbox.channel_type} />
+        ) : (
+          <Aviso tom="info">Os modelos são do gestor do número.</Aviso>
+        )}
       </div>
       {dialogoDeConfirmacao}
     </Pagina>

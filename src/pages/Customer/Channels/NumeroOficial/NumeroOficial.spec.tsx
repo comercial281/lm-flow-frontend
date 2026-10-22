@@ -9,10 +9,12 @@ const s = vi.hoisted(() => ({
   disconnectCloud: vi.fn(),
   iniciar: vi.fn(),
   hook: vi.fn(),
-  pode: true,
+  perms: { update: true, create: true } as Record<string, boolean>,
   liberado: true,
 }));
-vi.mock('@/contexts/PermissionsContext', () => ({ usePermissions: () => ({ can: () => s.pode }) }));
+vi.mock('@/contexts/PermissionsContext', () => ({
+  usePermissions: () => ({ can: (_recurso: string, acao: string) => !!s.perms[acao] }),
+}));
 
 vi.mock('@/services/channels/inboxesService', () => ({ default: { getById: s.getById } }));
 vi.mock('@/services/channels/whatsappService', () => ({ default: { disconnectCloud: s.disconnectCloud } }));
@@ -54,7 +56,7 @@ const tela = () =>
 
 beforeEach(() => {
   vi.clearAllMocks();
-  s.pode = true;
+  s.perms = { update: true, create: true };
   s.liberado = true;
   s.getById.mockResolvedValue(caixa({}));
   s.disconnectCloud.mockResolvedValue({ inbox_id: '9' });
@@ -120,12 +122,28 @@ describe('NumeroOficial', () => {
   });
 
   it('sem permissão de editar a caixa, Reconectar e Desconectar não aparecem', async () => {
-    s.pode = false;
+    s.perms = { update: false, create: true };
     tela();
     await screen.findByRole('heading', { name: 'Loja Exemplo' });
     expect(screen.queryByRole('button', { name: /Reconectar/ })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Desconectar' })).toBeNull();
     expect(screen.getByRole('button', { name: /Abrir no painel da Meta/ })).toBeInTheDocument();
+  });
+
+  it('edita mas não cria caixa: Desconectar sim, Reconectar não (o servidor recusaria)', async () => {
+    s.perms = { update: true, create: false };
+    tela();
+    await screen.findByRole('heading', { name: 'Loja Exemplo' });
+    expect(screen.queryByRole('button', { name: /Reconectar/ })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Desconectar' })).toBeInTheDocument();
+  });
+
+  it('sem permissão de editar a caixa, a aba Modelos só avisa de quem são', async () => {
+    s.perms = { update: false, create: false };
+    tela();
+    await screen.findByRole('heading', { name: 'Loja Exemplo' });
+    expect(screen.queryByText('lista de modelos')).toBeNull();
+    expect(screen.getByText('Os modelos são do gestor do número.')).toBeInTheDocument();
   });
 
   it('conexão não liberada troca o Reconectar pelo aviso', async () => {

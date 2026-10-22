@@ -33,13 +33,15 @@ export default function ChannelCard({ inbox, isDeleting, onSettings, onDelete, c
   // Instância caída ganha a borda vermelha além do selo: num grid de doze
   // canais, o selo sozinho some no meio dos outros onze verdes — o card
   // inteiro precisa saltar pra que "qual caiu?" se responda de relance.
-  const isDown = inbox.connection_status === 'disconnected';
+  // Número oficial não tem QR Code: o caído é religado pela página dele.
+  const isDown = !oficial && inbox.connection_status === 'disconnected';
+  const oficialCaido = !!oficial && !oficial.connected;
 
   return (
     <Card
       className={cn(
         'group relative flex flex-col gap-3 p-5 bg-sidebar border-sidebar-border overflow-hidden transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lg hover:shadow-black/10',
-        isDown && 'border-red-500/40 hover:border-red-500/60',
+        (isDown || oficialCaido) && 'border-red-500/40 hover:border-red-500/60',
       )}
     >
       {/* Glow no hover */}
@@ -114,6 +116,12 @@ export default function ChannelCard({ inbox, isDeleting, onSettings, onDelete, c
               className="h-8 text-xs"
               onClick={() => onSettings(inbox, 'configuration')}
             >
+              <RefreshCw className="h-3.5 w-3.5 mr-1" />
+              {t('actions.reconnect')}
+            </Button>
+          )}
+          {oficialCaido && onManage && (
+            <Button size="sm" className="h-8 text-xs" onClick={() => onManage(inbox)}>
               <RefreshCw className="h-3.5 w-3.5 mr-1" />
               {t('actions.reconnect')}
             </Button>

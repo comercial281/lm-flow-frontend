@@ -167,10 +167,13 @@ const AuthorizationSuccessBanner: React.FC<{
   const [isReconnecting, setIsReconnecting] = useState(false);
   const { can } = usePermissions();
   const podeEditar = can('inboxes', 'update');
-  const isWhatsAppOficial = provider.toLowerCase() === 'whatsapp' && inbox?.provider === 'whatsapp_cloud';
+  const isWhatsAppCloud = provider.toLowerCase() === 'whatsapp' && inbox?.provider === 'whatsapp_cloud';
+  // Religar o número oficial passa pela mesma rota de conectar, que o servidor
+  // libera só pra quem cria caixa: sem as duas permissões o clique falharia.
+  const podeReconectarOficial = podeEditar && can('inboxes', 'create');
   const conexaoOficial = useConexaoOficial({
     inboxId: inbox?.id,
-    ativo: isWhatsAppOficial,
+    ativo: isWhatsAppCloud,
     aoConectar: () => {
       toast.success(t('settings.authorizationBanners.success.reconnected'));
       setTimeout(() => window.location.reload(), 1000);
@@ -315,7 +318,7 @@ const AuthorizationSuccessBanner: React.FC<{
 
   // WhatsApp oficial: o mesmo fluxo de conectar da tela de novo canal, com o id da caixa.
   const handleReconnectWhatsApp = async () => {
-    if (!conexaoOficial.liberado || !conexaoOficial.pronto) return;
+    if (!conexaoOficial.liberado || !conexaoOficial.pronto || conexaoOficial.carregando) return;
     conexaoOficial.iniciar(inbox?.whatsapp_cloud?.mode ?? 'new_number');
   };
 
@@ -387,35 +390,43 @@ const AuthorizationSuccessBanner: React.FC<{
   // Mostrar botão de reconectar apenas para providers específicos
   // Para WhatsApp, apenas mostrar se for WhatsApp Cloud (provider === 'whatsapp' e inbox.provider === 'whatsapp_cloud')
   const providerLower = provider.toLowerCase();
-  const isWhatsAppCloud = providerLower === 'whatsapp' && inbox?.provider === 'whatsapp_cloud';
-  const showReconnectButton =
-    podeEditar &&
-    (['facebook', 'instagram', 'gmail', 'google', 'microsoft', 'outlook'].includes(providerLower) ||
-      (isWhatsAppCloud && conexaoOficial.liberado));
+  const showReconnectButton = isWhatsAppCloud
+    ? podeReconectarOficial && conexaoOficial.liberado
+    : podeEditar && ['facebook', 'instagram', 'gmail', 'google', 'microsoft', 'outlook'].includes(providerLower);
+  const ocupado =
+    isReconnecting || (isWhatsAppCloud && (conexaoOficial.carregando || !conexaoOficial.pronto));
+  // O número oficial diz se está no ar pelo próprio estado (o servidor manda
+  // `whatsapp_cloud.connected`): caído não pode aparecer como "Ativo".
+  const oficialCaido = isWhatsAppCloud && !inbox?.whatsapp_cloud?.connected;
 
   return (
     <Aviso
-      tom="sucesso"
+      tom={oficialCaido ? 'atencao' : 'sucesso'}
       titulo={
-        <span className="flex flex-wrap items-center gap-2">
-          {t('settings.authorizationBanners.success.connectedWith', { provider })}
-          <Badge
-            variant="default"
-            className="bg-primary text-primary-foreground dark:text-primary-foreground"
-          >
-            {t('settings.authorizationBanners.success.active')}
-          </Badge>
-        </span>
+        oficialCaido ? (
+          'Desconectado'
+        ) : (
+          <span className="flex flex-wrap items-center gap-2">
+            {t('settings.authorizationBanners.success.connectedWith', { provider })}
+            <Badge
+              variant="default"
+              className="bg-primary text-primary-foreground dark:text-primary-foreground"
+            >
+              {t('settings.authorizationBanners.success.active')}
+            </Badge>
+          </span>
+        )
       }
       acao={
         showReconnectButton && (
           <Button
             onClick={() => {
+              if (ocupado) return;
               handleReconnect().catch(error => {
                 console.error('Error in handleReconnect:', error);
               });
             }}
-            loading={isReconnecting || (isWhatsAppCloud && (conexaoOficial.carregando || !conexaoOficial.pronto))}
+            disabled={ocupado}
             size="sm"
             variant="outline"
             className="border-primary/30 text-primary hover:bg-primary/10"
@@ -426,7 +437,8 @@ const AuthorizationSuccessBanner: React.FC<{
         )
       }
     >
-      {isWhatsAppCloud && podeEditar && !conexaoOficial.liberado && (
+      {oficialCaido && <p>Este número não está recebendo mensagens. Reconecte pra voltar a atender.</p>}
+      {isWhatsAppCloud && podeReconectarOficial && !conexaoOficial.liberado && (
         <Aviso tom="info">A conexão com a API oficial ainda não está liberada neste LM Flow.</Aviso>
       )}
       {isWhatsAppCloud && conexaoOficial.erro && <Aviso tom="erro">{conexaoOficial.erro}</Aviso>}

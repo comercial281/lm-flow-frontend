@@ -56,6 +56,7 @@ export function useNumerosDaConversa(): {
             name: i.name,
             connection_status: i.connection_status ?? null,
             owner_user_id: i.owner_user_id ?? null,
+            oficial: i.provider === 'whatsapp_cloud' || !!i.whatsapp_cloud,
           }))
         : null,
     [lista],

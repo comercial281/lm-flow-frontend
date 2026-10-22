@@ -46,7 +46,7 @@ export function AvisoListaVaziaNumero({ aviso }: { aviso: AvisoListaVazia }) {
         icon={WifiOff}
         title={tituloForaDoAr(numeros)}
         description={fraseForaDoAr(numeros)}
-        action={{ label: CONECTAR_AGORA, onClick: () => navigate(enderecoConexao(numeros[0].id)) }}
+        action={{ label: CONECTAR_AGORA, onClick: () => navigate(enderecoConexao(numeros[0].id, numeros[0].oficial)) }}
       />
     );
   }
@@ -57,7 +57,7 @@ export function AvisoListaVaziaNumero({ aviso }: { aviso: AvisoListaVazia }) {
         {numeros.map((n) => (
           <li key={n.id} className="flex items-center justify-between gap-2 rounded-md border px-3 py-2 text-left">
             <span className="truncate text-sm">{n.nome}</span>
-            <Button size="sm" variant="outline" onClick={() => navigate(enderecoConexao(n.id))}>
+            <Button size="sm" variant="outline" onClick={() => navigate(enderecoConexao(n.id, n.oficial))}>
               {CONECTAR_AGORA}
             </Button>
           </li>
@@ -84,7 +84,7 @@ export function FaixaReconectar({ numeros }: { numeros: NumeroForaDoAr[] }) {
           size="sm"
           variant="outline"
           className="text-xs"
-          onClick={() => navigate(enderecoConexao(n.id))}
+          onClick={() => navigate(enderecoConexao(n.id, n.oficial))}
         >
           {numeros.length === 1 ? RECONECTAR : `${RECONECTAR} ${n.nome}`}
         </Button>

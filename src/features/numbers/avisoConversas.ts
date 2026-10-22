@@ -11,7 +11,11 @@
 //
 // Quem diz se o número está no ar é o SERVIDOR (`connection_status`, uma palavra
 // só). Número criado e nunca pareado já vem 'disconnected'. Nulo = canal sem
-// sessão (Cloud API, e-mail…): não tem o que cair, conta como funcionando.
+// sessão (e-mail…): não tem o que cair, conta como funcionando.
+//
+// Número da API oficial (desde 22/10/2026) também vem 'connected'/'disconnected',
+// mas não tem QR code: o caído é religado pela página dele em Canais
+// (`/channels/:id/oficial`), e a frase não manda ler QR.
 //
 // Textos LITERAIS de propósito: chave nova de t() não entra (o conferir-i18n só
 // aceita trocar valor de chave que já existe). Linguagem: "número de WhatsApp",
@@ -24,11 +28,14 @@ export interface NumeroDaConversa {
   name: string;
   connection_status?: ChannelConnectionStatus | null;
   owner_user_id?: string | null;
+  /** Número da API oficial: sem QR code, religa pela página dele. */
+  oficial?: boolean;
 }
 
 export interface NumeroForaDoAr {
   id: string;
   nome: string;
+  oficial?: boolean;
 }
 
 export type AvisoListaVazia =
@@ -59,7 +66,7 @@ function foraDoAr(numero: NumeroDaConversa): boolean {
 }
 
 function paraAviso(numero: NumeroDaConversa): NumeroForaDoAr {
-  return { id: String(numero.id), nome: numero.name };
+  return { id: String(numero.id), nome: numero.name, ...(numero.oficial ? { oficial: true } : {}) };
 }
 
 /**
@@ -112,9 +119,16 @@ export function tituloForaDoAr(numeros: NumeroForaDoAr[]): string {
 }
 
 export function fraseForaDoAr(numeros: NumeroForaDoAr[]): string {
-  return numeros.length === 1
-    ? `Leia o QR code com o celular do número ${numeros[0].nome} para as conversas começarem a chegar aqui.`
-    : 'Leia o QR code com o celular de cada número para as conversas começarem a chegar aqui.';
+  if (numeros.length === 1) {
+    return numeros[0].oficial
+      ? 'Reconecte este número pela página dele em Canais.'
+      : `Leia o QR code com o celular do número ${numeros[0].nome} para as conversas começarem a chegar aqui.`;
+  }
+  if (numeros.every((n) => n.oficial)) return 'Reconecte cada número pela página dele em Canais.';
+  if (numeros.some((n) => n.oficial)) {
+    return 'Reconecte cada número em Canais (pelo QR code ou, no número oficial, pela página dele) para as conversas começarem a chegar aqui.';
+  }
+  return 'Leia o QR code com o celular de cada número para as conversas começarem a chegar aqui.';
 }
 
 export function faixaReconectar(numeros: NumeroForaDoAr[]): string {
@@ -123,7 +137,10 @@ export function faixaReconectar(numeros: NumeroForaDoAr[]): string {
     : `${numeros.length} números seus estão desconectados. Mensagens novas só chegam depois de reconectar.`;
 }
 
-/** A configuração do número, aberta na parte da conexão (o mesmo destino do aviso de queda). */
-export function enderecoConexao(id: string): string {
-  return `/channels/${id}/settings?tab=configuration`;
+/**
+ * A configuração do número, aberta na parte da conexão (o mesmo destino do aviso
+ * de queda). Número oficial não tem QR: vai pra página dele.
+ */
+export function enderecoConexao(id: string, oficial = false): string {
+  return oficial ? `/channels/${id}/oficial` : `/channels/${id}/settings?tab=configuration`;
 }
