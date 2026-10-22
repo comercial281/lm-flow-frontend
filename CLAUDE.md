@@ -7352,6 +7352,18 @@ botão Aceitar.") no lugar de "Seu cargo não permite esta ação".
 14. **WhatsApp desconectado:** o *Corrigir* leva à configuração do número (`enderecoConexao`, onde se lê o QR code), não ao Canal, que só mostra *Desconectado*.
 15. **CVCRM na página Destino** (06/10, vindo do #485 que entrou no passo 2 antigo): dentro de *Sistema do cliente*, os cartões *CVCRM* · *Outro sistema*. Trocar o cartão não grava; *Usar o CVCRM* só acende com a conexão de Integrações → CVCRM (`handoff_cvcrm_connected`); empreendimento e fila gravam na hora. A pendência `destino_cvcrm_desconectado` aponta pra página Destino.
 
+## IA Vendedora · Passa direto, mesmo faltando pergunta (21/10/2026)
+
+**O problema.** No cenário "Perguntas obrigatórias respondidas", lead que recusava mandar documento (Nataly) ficava preso: a IA insistia nas perguntas e não passava. Na Pinot, pedido de visita no mesmo dia também travou: o servidor registrava o repasse como `regra`, e o portão do checklist barrava `regra`.
+
+**A decisão (dono do produto, 21/10/2026).**
+1. Página *Repasse · Critério* ganhou a seção **Passa direto, mesmo faltando pergunta**, só no cenário "Perguntas obrigatórias respondidas": 3 chaves (`LinhaComChave`, efeito na hora) — *Recusou mandar documento*, *Pediu ligação*, *Perguntou o que ela não sabe*.
+2. Gravam em `transfer_config.early_handoff` (`recusou_documento`, `pediu_ligacao`, `nao_sei`), campo listado no `campos` da página `criterio` em `paginas.ts`. Lida com `!== false`: **ligadas por padrão, inclusive nas IAs que já estão no ar** (sem a chave gravada, aparece ligada).
+3. **Visita fica fora das chaves.** Pedido de visita é a saída de emergência, que já é registrada como regra (ver "saída de emergência é regra, não exceção tolerada"). Passa sempre, junto com lead irritado, pedido de pessoa e "é IA". Não reabrir.
+4. A escrita não leva `mode:` na linha (trava do `handoffBriefing.spec.ts`); trocar o "Quando ela passa" e voltar não apaga `early_handoff` (`keepBriefing` preserva o resto do `transfer_config`).
+
+**Ordem de merge / rollback.** O backend (comercial281/lm-flow#514) tem que estar no ar antes deste PR. Voltar a tela é seguro: a seção some e a config gravada segue valendo no servidor.
+
 ## IA Vendedora · Ensinar no padrão do Configurar (11/10/2026)
 
 > Spec: `LM FLOW/specs/2026-10-11-ia-ensinar-refatoracao-design.md`; plano: `LM FLOW/plans/2026-10-11-ia-ensinar-refatoracao.md`. Protótipo: https://claude.ai/artifact/9uC2FJBqkVBozCLRwzTCVh
