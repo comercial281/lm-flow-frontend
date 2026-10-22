@@ -118,7 +118,7 @@ function snapshot(name: string, trigger: FlowTrigger, reentry: ReentrySetting, b
 export default function FlowAutomationCanvas({ banner, highlightedNodeId }: FlowAutomationCanvasProps = {}) {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const resources = useAutomationResources(true);
+  const resources = useAutomationResources(true, id);
   const messageVariables = useTenantMessageVariables();
   const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
   const sidePanel = useSidePanel(confirmar);

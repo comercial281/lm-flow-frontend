@@ -106,7 +106,12 @@ export interface AutomationResources {
   recarregar?: () => void;
 }
 
-export function useAutomationResources(enabled: boolean): AutomationResources {
+/**
+ * `automationId` (Fase 3): a automação que está sendo editada. A lista do bloco
+ * "Iniciar follow-up" vem do servidor pela regra dela: da equipe só lista
+ * follow-up da equipe; pessoal lista os do dono e os da equipe.
+ */
+export function useAutomationResources(enabled: boolean, automationId?: string | null): AutomationResources {
   const isSuperAdmin = useIsSuperAdmin();
   const [labels, setLabels] = useState<ContactLabel[]>([]);
   const [sequences, setSequences] = useState<FollowupSequence[]>([]);
@@ -165,7 +170,7 @@ export function useAutomationResources(enabled: boolean): AutomationResources {
         leadAutomationService.getFormOrigins(),
         messageFunnelsService.list({ activeOnly: false }),
         isSuperAdmin ? leadAutomationService.getEvolutionInstances() : Promise.resolve([]),
-        flowAutomationsService.list({ kind: 'followup' }),
+        flowAutomationsService.list({ kind: 'followup', startable: true, automationId }),
         flowAutomationsService.list({ kind: 'conversation' }),
         roletaConfigService.getAll(),
       ]);
@@ -208,7 +213,7 @@ export function useAutomationResources(enabled: boolean): AutomationResources {
 
       setLoading(false);
     })();
-  }, [enabled]); // eslint-disable-line react-hooks/exhaustive-deps -- isSuperAdmin só vale na primeira carga, como antes
+  }, [enabled, automationId]); // eslint-disable-line react-hooks/exhaustive-deps -- isSuperAdmin só vale na primeira carga, como antes
 
   useEffect(() => {
     carregar();

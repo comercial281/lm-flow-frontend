@@ -73,4 +73,18 @@ describe('Follow-up (linha do tempo)', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Vendas' }));
     expect(gravar).toHaveBeenCalledWith({ followup_pipeline_ids: ['f1'] });
   });
+
+  // Fase 3 (22/10/2026): a IA entrega só pra follow-up da equipe; o pessoal do corretor nem aparece.
+  it('IA lista só follow-ups da equipe', async () => {
+    listarFluxos.mockResolvedValue([
+      { id: 'equipe', name: 'Follow-up da casa', is_enabled: true, archived_at: null, team: true, owner_user_id: 'u1' },
+      { id: 'sem-dono', name: 'Follow-up antigo', is_enabled: true, archived_at: null, team: false, owner_user_id: null },
+      { id: 'pessoal', name: 'Follow-up do Caio', is_enabled: true, archived_at: null, team: false, owner_user_id: 'u2' },
+    ]);
+    abrir(agenteDeTeste({ followup_action: 'sequence', followup_flow_id: 'equipe' }));
+
+    expect(await screen.findByRole('option', { name: 'Follow-up da casa' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'Follow-up antigo' })).toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: 'Follow-up do Caio' })).toBeNull();
+  });
 });

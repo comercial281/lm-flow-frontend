@@ -30,6 +30,11 @@ export interface RunningFlow {
 export interface StartableFollowup {
   id: string;
   name: string;
+  /**
+   * Fase 3: `true` = da equipe; `false` = do próprio responsável pelo lead.
+   * Ausente (lista de `meta.startable_followups` do card) = sem selo.
+   */
+  team?: boolean;
 }
 
 /**
@@ -57,7 +62,7 @@ export interface ProgressoDoFollowup {
 export interface PlacePreview {
   default_flow_id: string | null;
   options: StartableFollowup[];
-  current: { flow_name: string | null; phase: string | null } | null;
+  current: { flow_automation_id: string | null; flow_name: string | null; phase: string | null } | null;
   progress: ProgressoDoFollowup | null;
   has_followup_column: boolean;
 }
@@ -78,15 +83,23 @@ const previewFrom = (body: unknown): PlacePreview => {
   const raw = (body && typeof body === 'object' && 'data' in body ? (body as { data: unknown }).data : body) as
     Record<string, unknown> | null;
   const options = Array.isArray(raw?.options)
-    ? (raw.options as Array<{ id?: unknown; name?: unknown } | null>).flatMap(o =>
-      o && o.id != null ? [{ id: String(o.id), name: String(o.name ?? '') }] : [])
+    ? (raw.options as Array<{ id?: unknown; name?: unknown; team?: unknown } | null>).flatMap(o =>
+      o && o.id != null
+        ? [{ id: String(o.id), name: String(o.name ?? ''), ...(typeof o.team === 'boolean' ? { team: o.team } : {}) }]
+        : [])
     : [];
-  const current = raw?.current as { flow_name?: unknown; phase?: unknown } | null | undefined;
+  const current = raw?.current as { flow_automation_id?: unknown; flow_name?: unknown; phase?: unknown } | null | undefined;
   const progress = raw?.progress as Record<string, unknown> | null | undefined;
   return {
     default_flow_id: raw?.default_flow_id != null ? String(raw.default_flow_id) : null,
     options,
-    current: current ? { flow_name: textoOuNulo(current.flow_name), phase: textoOuNulo(current.phase) } : null,
+    current: current
+      ? {
+        flow_automation_id: current.flow_automation_id != null ? String(current.flow_automation_id) : null,
+        flow_name: textoOuNulo(current.flow_name),
+        phase: textoOuNulo(current.phase),
+      }
+      : null,
     progress: progress && progress.flow_automation_id != null
       ? {
         flow_automation_id: String(progress.flow_automation_id),

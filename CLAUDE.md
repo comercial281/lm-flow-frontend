@@ -23,9 +23,25 @@ backend (ex.: deletar contato, endpoints, jobs) vai nesse outro repo, com base
 
 ## Follow-up: decisões já tomadas (não reabrir sem o dono pedir)
 
-- **Uma tela só manda no follow-up** (*Automações → Follow-up*): os funis, quem entra
-  sozinho e o histórico. O antigo item **Robô Sem Resposta** saiu do menu e virou a
-  seção *"Quem não respondeu"* dentro dela; `/automations/no-reply-robot` redireciona.
+- **Os follow-ups moram em *Funis de mensagem → aba Follow-up*** (desde a Fase 3,
+  22/10/2026): o menu não tem mais o item solto "Follow-up"; a página tem as abas
+  **Manual | Follow-up**. A rota `/automations/follow-ups` continua (é a aba) e os
+  endereços antigos (`follow-up-auto`, `no-reply-robot`, `/settings/follow-ups`)
+  redirecionam. O antigo **Robô Sem Resposta** virou a seção *"Quem não respondeu"*.
+- **Todo follow-up tem dono ou é "Da equipe"** (sem dono = da equipe). Lista: **Da
+  equipe · Meus · Dos corretores** (esta só pro gestor, com selo "De <nome>").
+  - **Corretor** cria o dele a partir do modelo "Follow-up padrão" ou **duplicando um
+    da equipe**, e edita no **modo guiado**: troca texto por áudio/foto/vídeo e muda o
+    tempo das esperas; **não acrescenta mensagem nem troca a coluna de resposta**. O
+    número é sempre o **do responsável pelo lead** (a tela diz "Sai pelo WhatsApp do
+    responsável pelo lead."). O follow-up da equipe, pro corretor, abre só pra ver.
+  - **"Meu padrão" × "padrão da conta"**: cada pessoa marca o seu (estrela); o **padrão
+    da conta é sempre da equipe** e só o gestor troca ("Tornar padrão da conta").
+  - **Quem usa o quê:** a **janela** "Colocar em follow-up" lista os do responsável pelo
+    lead + os da equipe e abre no padrão do responsável (lead sem responsável: padrão
+    da conta, só da equipe); a **coluna Follow-up** e a **automação** sem escolha usam o
+    padrão do responsável; a **IA Vendedora** e a **automação da equipe** só usam
+    follow-up da equipe; a **automação pessoal** usa os do dono + os da equipe.
 - **A Central de Notificações** saiu de *Automações de Lead* e vive em
   **Configurações → Conta**, que é onde alguém procura os próprios avisos.
   Desde 2026-08-25 ela mostra a **mesma lista** da Área do Admin — ver a seção
@@ -6012,8 +6028,10 @@ e não automação da empresa. Cada funil é um fluxo do construtor com `kind =
 
 O que aparece na tela:
 
-- **Página Funis de mensagem** (`/automations/message-funnels`), sem abas
-  internas: busca, **"+ Novo funil"** e as abas **Meus funis** / **Da equipe**
+- **Página Funis de mensagem** (`/automations/message-funnels`): desde a Fase 3
+  do follow-up (22/10/2026) a página tem as abas **Manual | Follow-up** (esta
+  leva ao follow-up, ver "Follow-up por usuário"); a Manual é esta lista, com
+  busca, **"+ Novo funil"** e as abas internas **Meus funis** / **Da equipe**
   (selo "Da equipe"). Cada funil mostra o estado: "Termine de montar: passo 2
   de 5" (com "Continuar o passo a passo"), "Pronto pra disparar" ou
   "Desligado". Chave Ligado (quem edita), chave **Da equipe** (só o gestor),
@@ -9425,7 +9443,7 @@ A Fase 1 deixou a coluna **Follow-up** só como marca. Agora ela é a **porta**:
 **Regras da janela:**
 
 - "**Continuar da mensagem N**" só aparece quando `progress.has_next` **e** o follow-up escolhido é o `progress.flow_automation_id` (o progresso vale só pro follow-up em que o lead parou; noutro, é "Começar do início"). Embaixo, a prévia da próxima mensagem; se for mídia, a frase "A próxima mensagem é uma mídia (foto, áudio ou vídeo)."
-- "**Mesmo follow-up**" é comparado **pelo nome** (`current.flow_name` x nome escolhido), porque o servidor não manda o id do atual. **Limitação:** dois follow-ups com o mesmo nome contam como o mesmo. Se isso doer, o servidor passa a mandar o id.
+- "**Mesmo follow-up**" é comparado **pelo id** desde a Fase 3 (`current.flow_automation_id` x escolhido; antes era pelo nome, e o seu e o da equipe com o mesmo nome contavam como um só).
 - Funil sem a coluna Follow-up: o follow-up começa e o card fica onde está (a janela diz).
 
 Este PR **depende do backend na frente** (`live_count`, o formato novo de `toggle`/`archive`, a recusa de apagar e do tipo da coluna, e o `place`). Servidor velho com tela nova: sem `live_count` a chave desliga direto, sem aviso, e o toast de "saindo" não aparece; o `place` não existe, então as portas falham.
@@ -9476,3 +9494,32 @@ Regras (peça 24 do `GLOSSARIO.md`):
 
 Código: `components/ui/ds.tsx` (`Checkbox`), `scripts/conferir-padrao.mjs` (`caixinhaCrua`). Testes: `conferir-padrao.spec.ts`.
 
+## Follow-up por usuário (Fase 3, 2026-10-22)
+
+Cada corretor passa a ter o follow-up dele, ao lado dos da equipe. Decisões do dono do produto em 21/10/2026 (spec `LM FLOW/specs/2026-10-20-follow-up-por-usuario-design.md`, "Decisões da Fase 3"; não reabrir sem ele pedir):
+
+1. O corretor edita o follow-up dele no **modo guiado** (o dos funis): troca texto por áudio/foto/vídeo e muda o tempo das esperas; **não acrescenta mensagem nem troca a coluna de resposta**. As mensagens do follow-up pessoal saem sempre pelo número do responsável.
+2. O corretor cria o dele **duplicando um da equipe ou a partir do modelo "Follow-up padrão"**; a cópia ganha marcação de progresso própria.
+3. O gestor vê os follow-ups dos corretores na seção **Dos corretores** (lista: Da equipe · Meus · Dos corretores).
+4. **IA e automação da equipe só usam follow-up da equipe**; a automação pessoal do corretor usa os dele + os da equipe.
+5. O **padrão da conta** é sempre da equipe, trocado pelo gestor na lista ("Tornar padrão da conta").
+6. **"Meu padrão"** vale quando quem abre a janela é o responsável pelo lead; no lead de outro, a janela abre com o padrão do responsável; lead sem responsável: padrão da conta e só os da equipe.
+7. O item "Follow-up" do menu saiu e virou a **aba Follow-up** de Funis de mensagem (Manual | Follow-up); os endereços antigos redirecionam.
+
+**Onde cada regra aparece na tela:**
+
+- **Janela "Colocar em follow-up"** (`JanelaColocarEmFollowup`): as opções vêm do servidor (`place_preview`: `options[{id, name, team}]`), cada uma com o selo **"Seu"** (`team === false`) ou **"Da equipe"** (`team === true`) depois do nome; o marcado vem de `default_flow_id` (o "meu padrão" do responsável, senão o da conta). "Mesmo follow-up" é por `current.flow_automation_id`, não por nome.
+- **IA Vendedora** (*Depois dela → Qual follow-up*): lista só os da equipe (`team` ou sem dono, `soFollowupsDaEquipe`). O servidor recusa o pessoal com 422 de qualquer jeito.
+- **Bloco "Iniciar follow-up" da automação** (`useAutomationResources(enabled, automationId)`): a lista vem de `GET /flow_automations?kind=followup&startable=1&automation_id=<id>`, e o servidor aplica a regra daquela automação (da equipe: só equipe e ligados; pessoal: os do dono + os da equipe, com a regra de número). Sem `automation_id` (formulários), vale a regra do gestor: só da equipe.
+
+**Celular:** o **Follow-up aparece na gaveta do celular só pra quem tem `followup_sequences.read`** (o gestor); o corretor não ganha "Vendas e automação" no celular. A aba **Manual** de Funis de mensagem continua **fora do celular** (decisão de 10/10/2026). O Follow-up do corretor fica no computador.
+
+Armadilhas:
+
+1. **Sem chave de permissão nova.** O corretor usa `message_funnels.*` (a aba Follow-up abre com `message_funnels.read` OU `followup_sequences.read`). O `featureKey` **`follow_ups` fica na aba** (não no item "Funis de mensagem"): desligar o catálogo some só com a aba Follow-up.
+2. **A cópia do follow-up ganha prefixo de progresso novo** (o servidor faz): duas cópias nunca dividem a marca do progresso no card. Não copiar o prefixo na tela.
+3. **O painel guiado do follow-up** mostra "Sai pelo WhatsApp do responsável pelo lead." no lugar de "Enviar pelo número" e **esconde o progresso** (`MessageBlockFields`: `guided && !conversation`). O canvas só aplica a regra de número de automação pessoal (`modoPessoal`) pra `kind === 'automation'`.
+4. **Backend primeiro.** Tela nova com servidor velho: sem dono/`team`, tudo cai em "Da equipe"; `my_default`, `account_default` e o `startable` não existem; a janela perde o selo e o `flow_automation_id` do atual (sem ele nada conta como "mesmo follow-up"). O backend (`claude/follow-up-por-usuario`) entra antes.
+5. **Textos literais** (sem chave nova de i18n), "Funis de mensagem → Follow-up" nas dicas.
+
+Código: `features/followup/JanelaColocarEmFollowup.tsx`, `features/flowAutomations/followupOptions.ts` (`soFollowupsDaEquipe`), `features/flowAutomations/editores/LeadAutomationsEditors.tsx` (`useAutomationResources`), `pages/Customer/Automations/FlowBuilder/ListaDeFollowups.tsx`, `FlowAutomationCanvas.tsx`, `pages/Customer/Automations/SalesAgents/configurar/paginas/Followup.tsx`, `components/layout/config/menuItems.ts`, `flowAutomationInstancesService.placePreview`, `flowAutomationsService.list({ startable, automationId })`. Testes: `JanelaColocarEmFollowup.spec.tsx`, `Followup.spec.tsx` (IA), `useAutomationResources.erroDeCarga.spec.tsx`, `FollowupPorUsuario.spec.tsx`, `FollowupCanvasCorretor.spec.tsx`, `menuItems.spec.ts`.
