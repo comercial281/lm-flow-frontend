@@ -26,12 +26,26 @@ class WhatsappService {
     return extractData<any>(response);
   }
 
-  // WhatsApp Cloud integration methods
-  async exchangeCode(payload: { code: string; business_account_id: string; waba_id: string }) {
-    const response = await api.post(`/whatsapp/authorization`, payload);
+  // API oficial: o servidor troca o código pelo acesso e cria o canal. O token nunca chega aqui.
+  async connectCloud(payload: {
+    code: string;
+    phone_number_id: string;
+    waba_id: string;
+    business_id: string;
+    mode: 'coexistence' | 'new_number';
+    inbox_id?: string;
+  }): Promise<{
+    inbox_id: string;
+    name: string;
+    phone_number: string;
+    verified_name: string;
+    message?: string;
+  }> {
+    const response = await api.post(`/whatsapp/cloud_connections`, payload);
     return extractData<any>(response);
   }
 
+  // Ainda usado por AuthorizationBanners (sai na F2).
   async createWhatsappCloudChannel(payload: {
     user_access_token: string;
     waba_id: string;

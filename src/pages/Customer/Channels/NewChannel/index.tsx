@@ -289,6 +289,7 @@ export default function NewChannel() {
 
   const shouldShowFooter = () => {
     return (
+      !(selectedChannel?.type === 'whatsapp' && selectedProvider?.id === 'whatsapp_cloud') &&
       selectedChannel?.type !== 'facebook' &&
       selectedChannel?.type !== 'instagram' &&
       selectedChannel?.type !== 'email'

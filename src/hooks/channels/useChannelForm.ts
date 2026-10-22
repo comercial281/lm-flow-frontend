@@ -63,18 +63,6 @@ export const useChannelForm = () => {
     if (!provider) return;
 
     switch (provider.id) {
-      case 'whatsapp_cloud':
-        setForm(prev => ({
-          ...prev,
-          name: prev.name || 'WhatsApp Cloud',
-          phone_number: prev.phone_number || '',
-          api_key: prev.api_key || '',
-          phone_number_id: prev.phone_number_id || '',
-          business_account_id: prev.business_account_id || '',
-          waba_id: prev.waba_id || '',
-        }));
-        break;
-
       case 'evolution':
         setForm(prev => ({
           ...prev,
