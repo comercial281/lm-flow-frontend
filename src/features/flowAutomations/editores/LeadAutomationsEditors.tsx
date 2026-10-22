@@ -1102,6 +1102,7 @@ export function ActionEditor({ action, onChange, resources, pessoal = false }: A
           <CreateTaskFields
             params={params}
             users={resources.users}
+            carregando={resources.loading}
             onChange={patch => onChange({ ...action, params: patch(params) })}
           />
         </>
@@ -1460,16 +1461,19 @@ type QuemRecebe = 'lead_owner' | 'user';
 type PrazoUnidade = 'h' | 'd';
 
 function CreateTaskFields({
-  params, users, onChange,
+  params, users, carregando, onChange,
 }: {
   params: Record<string, string | number>;
   users: User[];
+  carregando: boolean;
   onChange: (patch: (atual: Record<string, string | number>) => Record<string, string | number>) => void;
 }) {
   const quem: QuemRecebe = params.assignee_mode === 'user' ? 'user' : 'lead_owner';
-  const [unidade, setUnidade] = useState<PrazoUnidade>('h');
   const horas = Number(params.due_in_hours ?? 24);
-  const quantidade = unidade === 'd' ? Math.round(horas / 24) : horas;
+  // Como o Esperar: múltiplo de 24 abre em dias (24 vira "1 dia"), o resto em horas.
+  const [unidade, setUnidade] = useState<PrazoUnidade>(horas > 0 && horas % 24 === 0 ? 'd' : 'h');
+  const [vazio, setVazio] = useState(false);
+  const quantidade = unidade === 'd' ? Math.max(1, Math.round(horas / 24)) : horas;
   const pessoas = users.filter(u => !u.deactivated);
   const assigneeId = String(params.assignee_id ?? '');
   const naLista = pessoas.some(u => u.id === assigneeId);
@@ -1532,9 +1536,15 @@ function CreateTaskFields({
             className="mt-2"
           >
             <option value="">Escolha a pessoa</option>
-            {assigneeId && !naLista && <option value={assigneeId}>Pessoa que não está mais na equipe</option>}
+            {assigneeId && !naLista && (
+              <option value={assigneeId}>{carregando ? 'Carregando…' : 'Pessoa que não está mais na equipe'}</option>
+            )}
             {pessoas.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
           </Seletor>
+        )}
+        {quem === 'user' && !assigneeId && <p className="text-xs text-destructive mt-1">Escolha a pessoa.</p>}
+        {quem === 'user' && assigneeId && !naLista && !carregando && (
+          <p className="text-xs text-destructive mt-1">A pessoa escolhida não está mais na equipe.</p>
         )}
       </div>
       <div className="mt-2">
@@ -1542,10 +1552,16 @@ function CreateTaskFields({
         <div className="mt-1 flex flex-wrap items-center gap-2">
           <Input
             type="number"
-            min={0}
+            min={1}
             aria-label="Quanto tempo"
-            value={quantidade}
-            onChange={e => gravarPrazo(parseInt(e.target.value) || 0, unidade)}
+            value={vazio ? '' : quantidade}
+            onChange={e => {
+              const n = parseInt(e.target.value);
+              if (!n || n < 1) { setVazio(true); return; }
+              setVazio(false);
+              gravarPrazo(n, unidade);
+            }}
+            onBlur={() => setVazio(false)}
             className="w-24"
           />
           <BotoesDeEscolha<PrazoUnidade>
