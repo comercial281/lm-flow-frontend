@@ -111,8 +111,18 @@ class FlowAutomationsService {
   }
 
   // `team` (sprint 4): "Da equipe", só no funil de conversa e só o gestor.
-  async update(id: string, payload: Partial<Pick<FlowAutomation, 'name' | 'folder_id' | 'trigger' | 'reentry_window_hours' | 'once_per_lead' | 'business_hours_only' | 'max_depth' | 'team'>>): Promise<FlowAutomation> {
+  async update(id: string, payload: Partial<Pick<FlowAutomation, 'name' | 'folder_id' | 'trigger' | 'reentry_window_hours' | 'once_per_lead' | 'business_hours_only' | 'max_depth' | 'team' | 'send_from' | 'send_from_inbox_id' | 'number_conflict'>>): Promise<FlowAutomation> {
     return unwrap<FlowAutomation>(await api.patch(`${this.baseUrl}/${id}`, payload));
+  }
+
+  /** Resolve de uma vez os leads pausados por conversar em outro número. */
+  async resolveNumberConflicts(
+    id: string,
+    body: { choice: 'conversation' | 'flow'; always: boolean },
+  ): Promise<{ resumed: number; stopped: number; skipped: number; failed: number }> {
+    const res = await api.post(`${this.baseUrl}/${id}/resolve_number_conflicts`, body);
+    const d = (res.data as { data?: Partial<Record<'resumed' | 'stopped' | 'skipped' | 'failed', number>> } | null)?.data ?? {};
+    return { resumed: d.resumed ?? 0, stopped: d.stopped ?? 0, skipped: d.skipped ?? 0, failed: d.failed ?? 0 };
   }
 
   async destroy(id: string): Promise<void> {
