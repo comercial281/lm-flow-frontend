@@ -3,18 +3,20 @@ import { Button, Input, Label, Checkbox } from '@/components/ui/ds';
 import Aviso from '@/components/base/Aviso';
 import EmptyState from '@/components/base/EmptyState';
 import { Seletor } from '@/components/base/Seletor';
+import BotoesDeEscolha from '@/components/base/BotoesDeEscolha';
+import { SaidasDoBloco } from './SaidasDoBloco';
 import { applySendFrom } from '@/features/numbers/sendFrom';
 import type { FlowAutomationKind, FlowAutomationNode, FlowNodeConfig } from '@/types/flowAutomations';
 import { ActionEditor, type AutomationResources } from '@/features/flowAutomations/editores/LeadAutomationsEditors';
 import { HIDDEN_BLOCK_NOTICE, blockGroup, blockLabel, isVisibleNode } from '@/features/flowAutomations/palette';
 import { blockDescription, blockIcon } from '@/features/flowAutomations/blockInfo';
-import { nodeColor } from '@/lib/flowAutomationGraph';
+import { handleColor, nodeColor } from '@/lib/flowAutomationGraph';
 import { mesmoConteudo } from '@/hooks/useAlteracoesNaoSalvas';
 import { isFlowOnlyLeadAction, leadActionConfig, leadActionOf } from '@/features/flowAutomations/leadAction';
 import { nodeProblem } from '@/features/flowAutomations/readiness';
 import {
-  LEAD_WAIT_UNITS, SECONDS_UNITS, WAIT_FOR_REPLY_HELP, WAIT_UNITS, joinMinutes, joinSeconds, leadWaitSeconds,
-  splitMinutes, splitSeconds, waitTotalSeconds, type SecondsUnit, type WaitUnit,
+  LEAD_WAIT_UNITS, SECONDS_UNITS, WAIT_UNITS, joinMinutes, joinSeconds, leadWaitSeconds,
+  splitMinutes, splitSeconds, unitLabel, waitTotalSeconds, type SecondsUnit, type WaitUnit,
 } from '@/features/flowAutomations/waitTime';
 import { guideRequiredProblem, stepLabel } from '@/features/flowAutomations/guide';
 import {
@@ -108,7 +110,7 @@ function DurationField({ minutes, onChange, label }: { minutes: unknown; onChang
         aria-label="Unidade"
       >
         {WAIT_UNITS.map(u => (
-          <option key={u.value} value={u.value}>{u.label}</option>
+          <option key={u.value} value={u.value}>{unitLabel(u, amount)}</option>
         ))}
       </Seletor>
     </div>
@@ -135,7 +137,7 @@ function SecondsField({ config, onChange }: { config: FlowNodeConfig; onChange: 
         aria-label="Unidade"
       >
         {SECONDS_UNITS.map(u => (
-          <option key={u.value} value={u.value}>{u.label}</option>
+          <option key={u.value} value={u.value}>{unitLabel(u, amount)}</option>
         ))}
       </Seletor>
     </div>
@@ -162,7 +164,7 @@ function LeadWaitField({ config, onChange }: { config: FlowNodeConfig; onChange:
         aria-label="Unidade"
       >
         {LEAD_WAIT_UNITS.map(u => (
-          <option key={u.value} value={u.value}>{u.label}</option>
+          <option key={u.value} value={u.value}>{unitLabel(u, amount)}</option>
         ))}
       </Seletor>
     </div>
@@ -455,12 +457,14 @@ export function FlowNodePanel({ node, resources, onClose, onSave, onDirtyChange,
         return (
           <>
             <div className="space-y-1">
-              <Label className="text-xs">Esperar</Label>
-              <Seletor value={mode} onChange={e => setConfig(c => ({ ...c, mode: e.target.value }))} className={fieldClass} aria-label="Como esperar">
-                {WAIT_MODES.map(m => (
-                  <option key={m.value} value={m.value}>{m.label}</option>
-                ))}
-              </Seletor>
+              <Label className="text-xs">Esperar como?</Label>
+              <BotoesDeEscolha
+                rotulo="Esperar como?"
+                semNome
+                valor={mode}
+                opcoes={WAIT_MODES.map(m => ({ valor: m.value, rotulo: m.label }))}
+                aoEscolher={v => setConfig(c => ({ ...c, mode: v }))}
+              />
             </div>
             {mode === 'date' ? (
               <div className="space-y-1">
@@ -493,18 +497,18 @@ export function FlowNodePanel({ node, resources, onClose, onSave, onDirtyChange,
         return (
           <>
             <div className="space-y-2">
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="radio"
-                  name="flow-wait-reply-mode"
-                  checked={!indefinite}
-                  onChange={() => setConfig(c => ({ ...c, indefinite: false, minutes: Number(c.minutes) > 0 ? c.minutes : 30 }))}
-                  className="h-4 w-4 accent-primary"
-                />
-                Esperar até
-              </label>
+              <Label className="text-xs">Até quando esperar?</Label>
+              <BotoesDeEscolha
+                rotulo="Até quando esperar?"
+                semNome
+                valor={indefinite ? 'sem_limite' : 'prazo'}
+                opcoes={[{ valor: 'prazo', rotulo: 'Por um prazo' }, { valor: 'sem_limite', rotulo: 'Sem limite' }]}
+                aoEscolher={v => (v === 'sem_limite'
+                  ? set('indefinite', true)
+                  : setConfig(c => ({ ...c, indefinite: false, minutes: Number(c.minutes) > 0 ? c.minutes : 30 })))}
+              />
               {!indefinite && (
-                <div className="pl-6 space-y-2">
+                <div className="space-y-2">
                   <DurationField minutes={config.minutes ?? 1440} onChange={m => set('minutes', m)} label="Prazo" />
                   <BusinessHoursCheck
                     checked={waitUsesBusinessHours(config)}
@@ -512,23 +516,13 @@ export function FlowNodePanel({ node, resources, onClose, onSave, onDirtyChange,
                   />
                 </div>
               )}
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="radio"
-                  name="flow-wait-reply-mode"
-                  checked={indefinite}
-                  onChange={() => set('indefinite', true)}
-                  className="h-4 w-4 accent-primary"
-                />
-                Sem limite (espera até o lead responder)
-              </label>
             </div>
-            <p className="text-xs text-muted-foreground">{WAIT_FOR_REPLY_HELP}</p>
-            <p className="text-xs text-muted-foreground">
-              {indefinite
-                ? 'Sem limite, o bloco só tem a saída Respondeu.'
-                : 'Duas saídas: Respondeu, assim que o lead responder (em até 1 minuto), e Não respondeu, quando o prazo acabar.'}
-            </p>
+            <SaidasDoBloco
+              saidas={[
+                { rotulo: 'Respondeu', cor: handleColor('wait_for_reply', 'yes'), quando: 'Assim que o lead mandar qualquer mensagem, em até 1 minuto.' },
+                ...(indefinite ? [] : [{ rotulo: 'Não respondeu', cor: handleColor('wait_for_reply', 'no'), quando: 'Quando o prazo acabar.' }]),
+              ]}
+            />
           </>
         );
       }
