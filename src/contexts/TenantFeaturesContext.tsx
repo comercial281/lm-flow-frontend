@@ -24,6 +24,9 @@ export interface TenantFeaturesState {
   // super-admin, enquanto em desenvolvimento) — camada acima de `features`,
   // ver ArchivedFeatures no backend.
   archivedKeys: string[];
+  // Espaço de demonstração (data.demo_mode do payload público). false quando o
+  // campo falta, no fallback e em cache antigo. Libera a Sala de demonstração.
+  demoMode: boolean;
   // true enquanto ainda não terminou a primeira tentativa de fetch.
   loading: boolean;
   // último motivo do fallback, útil pra debug. Ex: 'no_env', 'fetch_failed', 'ok'.
@@ -33,6 +36,7 @@ export interface TenantFeaturesState {
 const DEFAULT_STATE: TenantFeaturesState = {
   features: {},
   archivedKeys: [],
+  demoMode: false,
   loading: true,
   source: 'fallback',
 };
@@ -42,6 +46,7 @@ const TenantFeaturesContext = createContext<TenantFeaturesState>(DEFAULT_STATE);
 interface FetchedPayload {
   features: Record<string, boolean>;
   archivedKeys: string[];
+  demoMode: boolean;
 }
 
 interface CachedPayload extends FetchedPayload {
@@ -54,7 +59,7 @@ function readCache(slug: string): CachedPayload | null {
     if (!raw) return null;
     const parsed = JSON.parse(raw) as CachedPayload;
     if (!parsed.ts || (Date.now() - parsed.ts) > CACHE_TTL_MS) return null;
-    return { ...parsed, archivedKeys: parsed.archivedKeys ?? [] };
+    return { ...parsed, archivedKeys: parsed.archivedKeys ?? [], demoMode: parsed.demoMode === true };
   } catch {
     return null;
   }
@@ -82,7 +87,7 @@ async function fetchFeatures(masterUrl: string, slug: string): Promise<FetchedPa
     const features = body?.data?.features;
     if (!features || typeof features !== 'object') return null;
     const archivedKeys = Array.isArray(body?.data?.archived_features) ? body.data.archived_features : [];
-    return { features: features as Record<string, boolean>, archivedKeys };
+    return { features: features as Record<string, boolean>, archivedKeys, demoMode: body?.data?.demo_mode === true };
   } catch {
     return null;
   } finally {
@@ -97,13 +102,13 @@ export function TenantFeaturesProvider({ children }: { children: ReactNode }) {
 
   const [state, setState] = useState<TenantFeaturesState>(() => {
     if (!masterUrl || !slug) {
-      return { features: {}, archivedKeys: [], loading: false, source: 'no_env' };
+      return { features: {}, archivedKeys: [], demoMode: false, loading: false, source: 'no_env' };
     }
     const cached = readCache(slug);
     if (cached) {
-      return { features: cached.features, archivedKeys: cached.archivedKeys, loading: false, source: 'cache' };
+      return { features: cached.features, archivedKeys: cached.archivedKeys, demoMode: cached.demoMode, loading: false, source: 'cache' };
     }
-    return { features: {}, archivedKeys: [], loading: true, source: 'fallback' };
+    return { features: {}, archivedKeys: [], demoMode: false, loading: true, source: 'fallback' };
   });
 
   useEffect(() => {
@@ -115,12 +120,12 @@ export function TenantFeaturesProvider({ children }: { children: ReactNode }) {
       if (cancelled) return;
       if (fresh) {
         writeCache(slug, fresh);
-        setState({ features: fresh.features, archivedKeys: fresh.archivedKeys, loading: false, source: 'ok' });
+        setState({ features: fresh.features, archivedKeys: fresh.archivedKeys, demoMode: fresh.demoMode, loading: false, source: 'ok' });
       } else {
         // Só sobrescreve pra fetch_failed se NÃO havia cache (caso contrário mantém cache exibido).
         setState(prev => prev.source === 'cache'
           ? prev
-          : { features: {}, archivedKeys: [], loading: false, source: 'fetch_failed' });
+          : { features: {}, archivedKeys: [], demoMode: false, loading: false, source: 'fetch_failed' });
       }
     })();
     return () => { cancelled = true; };
