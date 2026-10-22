@@ -36,6 +36,7 @@ const EXTRAS: Record<CaminhoOficial, Record<string, unknown>> = {
 };
 
 const EVENTOS_DE_FIM = ['FINISH', 'FINISH_WHATSAPP_BUSINESS_APP_ONBOARDING'];
+const PRAZO_DO_CODIGO_MS = 30_000;
 const LINK_PAGAMENTO = 'https://business.facebook.com/billing_hub/';
 
 export const CloudWhatsappForm = ({ canFB }: CloudWhatsappFormProps) => {
@@ -46,12 +47,26 @@ export const CloudWhatsappForm = ({ canFB }: CloudWhatsappFormProps) => {
   const [fbSDKReady, setFbSDKReady] = useState(false);
   const [carregando, setCarregando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
-  const [conectado, setConectado] = useState<{ inbox_id: string; name: string } | null>(null);
+  const [conectado, setConectado] = useState<{ inbox_id: string; name: string; message?: string } | null>(null);
   const [sessionInfo, setSessionInfo] = useState<any>(null);
   const [sdkResponse, setSdkResponse] = useState<any>(null);
   // O caminho vale no momento do clique, mesmo se o cartão mudar durante o fluxo.
   const caminhoDoLogin = useRef<CaminhoOficial | null>(null);
   const enviando = useRef(false);
+  const prazo = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const limparPrazo = () => {
+    if (prazo.current) clearTimeout(prazo.current);
+    prazo.current = null;
+  };
+
+  const falhar = (mensagem: string) => {
+    limparPrazo();
+    setErro(mensagem);
+    setCarregando(false);
+  };
+
+  useEffect(() => limparPrazo, []);
 
   const liberado = canFB && !!config.wpAppId;
 
@@ -70,14 +85,13 @@ export const CloudWhatsappForm = ({ canFB }: CloudWhatsappFormProps) => {
         if (EVENTOS_DE_FIM.includes(data.event)) {
           setSessionInfo(data);
         } else if (data.event === 'FINISH_ONLY_WABA') {
-          setErro('A Meta terminou sem escolher um número. Comece de novo e escolha o número no final.');
-          setCarregando(false);
+          falhar('A Meta terminou sem escolher um número. Comece de novo e escolha o número no final.');
         } else if (data.event === 'CANCEL') {
-          setErro('Você fechou a janela da Meta antes de terminar.');
-          setCarregando(false);
+          falhar(data.data?.error_message || 'Você fechou a janela da Meta antes de terminar.');
         } else if (data.event === 'ERROR') {
-          setErro(data.data?.error_message || 'A Meta não conseguiu concluir. Tente de novo.');
-          setCarregando(false);
+          falhar(data.data?.error_message || 'A Meta não conseguiu concluir. Tente de novo.');
+        } else if (typeof data.event === 'string' && data.event.startsWith('FINISH')) {
+          falhar('Esse tipo de conexão não é aceito aqui. Tente de novo escolhendo o número.');
         }
       } catch {
         // mensagem que não é JSON: não é da Meta
@@ -92,6 +106,7 @@ export const CloudWhatsappForm = ({ canFB }: CloudWhatsappFormProps) => {
     const code = sdkResponse?.authResponse?.code;
     if (!sessionInfo || !code || enviando.current) return;
     enviando.current = true;
+    limparPrazo();
     const { phone_number_id, waba_id, business_id } = sessionInfo.data || {};
     conectar({
       code,
@@ -140,7 +155,7 @@ export const CloudWhatsappForm = ({ canFB }: CloudWhatsappFormProps) => {
         ...dados,
         mode: caminhoDoLogin.current ?? 'new_number',
       });
-      setConectado({ inbox_id: result.inbox_id, name: result.name });
+      setConectado({ inbox_id: result.inbox_id, name: result.name, message: result.message });
     } catch (e: any) {
       setErro(e?.response?.data?.error || 'Não deu pra conectar o número agora. Tente de novo.');
       // libera uma nova tentativa
@@ -165,8 +180,13 @@ export const CloudWhatsappForm = ({ canFB }: CloudWhatsappFormProps) => {
       (response: any) => {
         setSdkResponse(response);
         if (!response?.authResponse) {
-          setErro('A conexão com a Meta foi cancelada.');
-          setCarregando(false);
+          falhar('A conexão com a Meta foi cancelada.');
+        } else {
+          // O código vale 30 s: se o evento de fim não chegar, libera a tela.
+          limparPrazo();
+          prazo.current = setTimeout(() => {
+            if (!enviando.current) falhar('A Meta não confirmou a conexão a tempo. Tente de novo.');
+          }, PRAZO_DO_CODIGO_MS);
         }
       },
       {
@@ -192,6 +212,7 @@ export const CloudWhatsappForm = ({ canFB }: CloudWhatsappFormProps) => {
         <Aviso tom="sucesso" titulo="Número conectado">
           {conectado.name} já está na sua lista de canais.
         </Aviso>
+        {conectado.message && <Aviso tom="info">{conectado.message}</Aviso>}
         <Aviso tom="atencao">
           A Meta cobra as mensagens no cartão da sua empresa. Cadastre a forma de pagamento no painel da Meta,
           senão o número só responde até 1.000 mensagens no mês.{' '}

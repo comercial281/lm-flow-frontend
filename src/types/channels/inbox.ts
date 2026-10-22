@@ -201,21 +201,6 @@ export interface WebWidgetPayload {
   };
 }
 
-export interface WhatsappCloudPayload {
-  name: string;
-  display_name?: string;
-  channel: {
-    type: 'whatsapp';
-    provider: 'whatsapp_cloud';
-    phone_number?: string;
-    provider_config: {
-      api_key: string;
-      phone_number_id: string;
-      waba_id: string;
-    };
-  };
-}
-
 export interface WhatsappEvolutionPayload {
   name: string;
   display_name?: string;
@@ -356,7 +341,6 @@ export type ChannelPayload =
   | SmsChannelPayload
   | TelegramChannelPayload
   | WebWidgetPayload
-  | WhatsappCloudPayload
   | WhatsappEvolutionPayload
   | WhatsappEvolutionGoPayload
   | WhatsappTwilioPayload

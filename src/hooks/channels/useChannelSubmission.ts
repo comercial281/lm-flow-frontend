@@ -409,7 +409,6 @@ export const useChannelSubmission = (form?: FormData) => {
           if (selectedProvider.id === 'whatsapp_cloud') {
             // A API oficial é conectada pelo servidor (CloudWhatsappForm -> cloud_connections).
             // O formulário não cria canal por aqui.
-            setIsSubmitting(false);
             return;
           } else if (selectedProvider.id === 'twilio') {
             // verify connection first

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { CloudWhatsappForm } from './CloudWhatsappForm';
 
@@ -82,6 +82,49 @@ describe('CloudWhatsappForm', () => {
     const real: any = (await vi.importActual('@/services/channels/whatsappService')).default;
     expect(real.exchangeCode).toBeUndefined();
     expect(typeof real.connectCloud).toBe('function');
+  });
+
+  it('depois do 422 o botão volta a funcionar', async () => {
+    connectCloud.mockRejectedValueOnce({ response: { data: { error: 'Frase do servidor.' } } });
+    render(<CloudWhatsappForm canFB />);
+    await conectarComo('Chip novo');
+    await screen.findByText('Frase do servidor.');
+    const botao = screen.getByRole('button', { name: /Conectar pela Meta/ }) as HTMLButtonElement;
+    expect(botao.disabled).toBe(false);
+    await act(async () => {
+      fireEvent.click(botao);
+      sinal('FINISH', { phone_number_id: 'pn1', waba_id: 'wa1', business_id: 'b1' });
+      loginCb?.({ authResponse: { code: 'codigo2' } });
+    });
+    await waitFor(() => expect(connectCloud).toHaveBeenCalledTimes(2));
+    expect(connectCloud.mock.calls[1][0].code).toBe('codigo2');
+  });
+
+  describe('sem evento de fim', () => {
+    beforeEach(() => vi.useFakeTimers());
+    afterEach(() => vi.useRealTimers());
+
+    it('libera a tela depois de 30 s', async () => {
+      render(<CloudWhatsappForm canFB />);
+      fireEvent.click(screen.getByRole('radio', { name: /Chip novo/ }));
+      fireEvent.click(screen.getByRole('button', { name: /Conectar pela Meta/ }));
+      act(() => loginCb?.({ authResponse: { code: 'c' } }));
+      act(() => { vi.advanceTimersByTime(30_000); });
+      expect(screen.getByText('A Meta não confirmou a conexão a tempo. Tente de novo.')).toBeTruthy();
+      expect((screen.getByRole('button', { name: /Conectar pela Meta/ }) as HTMLButtonElement).disabled).toBe(false);
+      expect(connectCloud).not.toHaveBeenCalled();
+    });
+
+    it('evento de fim não tratado vira erro', () => {
+      render(<CloudWhatsappForm canFB />);
+      fireEvent.click(screen.getByRole('radio', { name: /Chip novo/ }));
+      fireEvent.click(screen.getByRole('button', { name: /Conectar pela Meta/ }));
+      act(() => loginCb?.({ authResponse: { code: 'c' } }));
+      act(() => sinal('FINISH_OBO_MIGRATION', {}));
+      expect(screen.getByText('Esse tipo de conexão não é aceito aqui. Tente de novo escolhendo o número.')).toBeTruthy();
+      act(() => { vi.advanceTimersByTime(30_000); });
+      expect(screen.queryByText(/não confirmou a conexão a tempo/)).toBeNull();
+    });
   });
 
   it('sem wpAppId mostra que não está liberado e sem botão', () => {
