@@ -44,7 +44,7 @@ import { FLOW_KIND_COPY, kindOf } from '@/features/flowAutomations/kind';
 import { avisoLeadsSaindo, leadsDentro, pedidoDesligarFollowup } from '@/features/flowAutomations/desligarFollowup';
 import { freshBlockConfig, paletteItems, podeSoltarBloco, type PaletteItem } from '@/features/flowAutomations/palette';
 import {
-  modoPessoal, NUMERO_FIXO_NA_EQUIPE, personalAvailabilityState, personalBlockState, personalTriggerGroups,
+  modoPessoal, numeroFixoNaEquipe, personalAvailabilityState, personalBlockState, personalTriggerGroups,
   presaNaEquipe, tirarDaEquipe, useEhCorretorDeAutomacao,
 } from '@/features/flowAutomations/personal';
 import { usePersonalCapabilities } from '@/features/flowAutomations/usePersonalCapabilities';
@@ -769,7 +769,7 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
               ligada={daEquipe}
               aoMudar={marcarEquipe}
               desabilitada={presa}
-              descricao={presa ? NUMERO_FIXO_NA_EQUIPE : undefined}
+              descricao={presa ? numeroFixoNaEquipe(automation) : undefined}
             />
           ) : daEquipe && (
             <Badge variant="secondary" className="shrink-0 gap-1 text-[10px]">
@@ -967,6 +967,7 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
           settings={{ reentry, businessHoursOnly, ...(numeroDoFluxoVale ? { number: numberSetting } : {}) }}
           numberDivergent={numberDivergent && !numberTouched}
           numbers={sendNumbers.numbers}
+          numberOwnerRule={sendNumbers.ownerRule}
           numbersState={sendNumbers.state}
           triggerEvent={messageEvent}
           onClose={() => setEditingSettings(false)}

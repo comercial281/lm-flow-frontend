@@ -120,8 +120,21 @@ describe('FlowSettingsDialog: número do fluxo', () => {
     expect(aoSalvar).toHaveBeenCalledWith({ ...base, number: { mode: '', inboxId: '', onConflict: 'follow_conversation' } });
   });
 
+  it('a descrição da janela fala do número quando o grupo aparece', () => {
+    render(<FlowSettingsDialog open settings={comNumero()} numbers={numbers} triggerEvent="lead.created" onClose={vi.fn()} onSave={vi.fn()} />);
+    expect(screen.getByText('Por qual número o fluxo fala, quando o mesmo lead pode passar por ele outra vez e em que horário as mensagens saem.')).toBeInTheDocument();
+  });
+
+  it('lista que não carregou avisa embaixo do seletor', async () => {
+    render(<FlowSettingsDialog open settings={comNumero({ mode: 'number', inboxId: 'i9' })} numbers={[]} numbersState="failed"
+      triggerEvent="lead.created" onClose={vi.fn()} onSave={vi.fn()} />);
+    expect(screen.getByText('Não consegui carregar os números agora. Salvar mantém a escolha que já estava.')).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'O número escolhido antes (a lista não carregou)' })).toBeInTheDocument();
+  });
+
   it('sem regra de número (pessoal, follow-up) não mostra o grupo', () => {
     render(<FlowSettingsDialog open settings={base} triggerEvent="lead.created" onClose={vi.fn()} onSave={vi.fn()} />);
+    expect(screen.getByText('Quando o mesmo lead pode passar por este fluxo outra vez, e em que horário as mensagens saem.')).toBeInTheDocument();
     expect(screen.queryByRole('group', { name: 'Por qual número este fluxo fala com o lead' })).not.toBeInTheDocument();
   });
 });

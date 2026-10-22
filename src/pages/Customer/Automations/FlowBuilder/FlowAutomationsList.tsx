@@ -23,7 +23,7 @@ import { FlowTemplateList, FlowTemplatesDialog } from '@/components/flowAutomati
 import ListaDeFollowups from './ListaDeFollowups';
 
 import {
-  isPersonalFlow, NUMERO_FIXO_NA_EQUIPE, presaNaEquipe, tirarDaEquipe, useEhCorretorDeAutomacao,
+  isPersonalFlow, numeroFixoNaEquipe, presaNaEquipe, tirarDaEquipe, useEhCorretorDeAutomacao,
 } from '@/features/flowAutomations/personal';
 import { useAuthStore } from '@/store/authStore';
 import { useCan } from '@/hooks/useCan';
@@ -419,7 +419,7 @@ function ListaDeAutomacoes({ kind }: { kind: FlowAutomationKind }) {
                       ligada={!isPersonalFlow(a)}
                       aoMudar={next => markTeam(a, next)}
                       desabilitada={presaNaEquipe(a)}
-                      descricao={presaNaEquipe(a) ? NUMERO_FIXO_NA_EQUIPE : undefined}
+                      descricao={presaNaEquipe(a) ? numeroFixoNaEquipe(a) : undefined}
                     />
                   </div>
                 )}

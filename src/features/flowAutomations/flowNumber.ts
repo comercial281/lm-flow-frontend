@@ -111,7 +111,8 @@ export function flowNumberMessageLine(v: FlowNumberView): string {
 /** O corpo do "Passar para a IA" quando o fluxo tem número; null = o texto de sempre. */
 export function flowNumberAiLine(v: FlowNumberView): string | null {
   if (v.mode === '') return null;
-  return v.mode === 'number' && v.final
+  if (v.mode === 'owner') return 'Quem atende: a IA do número do responsável pelo lead.';
+  return v.final
     ? `Quem atende: a IA do número do fluxo (final ${v.final}).`
     : 'Quem atende: a IA do número do fluxo.';
 }

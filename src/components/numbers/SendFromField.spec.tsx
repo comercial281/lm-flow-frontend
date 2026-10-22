@@ -83,7 +83,7 @@ describe('SendFromField', () => {
       />,
     );
 
-    expect(await screen.findByRole('option', { name: 'Número que não existe mais — escolha outro' })).toBeInTheDocument();
+    expect(await screen.findByRole('option', { name: 'Número que não existe mais. Escolha outro.' })).toBeInTheDocument();
     expect((screen.getByRole('combobox') as HTMLSelectElement).value).toBe('number:apagado');
   });
 

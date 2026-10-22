@@ -147,7 +147,7 @@ export function missingSelection(v: SendFromValue, numbers: SendNumberOption[]):
 export function missingSelectionLabel(state: SendNumbersState): string {
   if (state === 'loading') return 'Carregando os números…';
   if (state === 'failed') return 'O número escolhido antes (a lista não carregou)';
-  return 'Número que não existe mais — escolha outro';
+  return 'Número que não existe mais. Escolha outro.';
 }
 
 export function sendNumbersFrom(data: Partial<SendNumbers> | null | undefined): SendNumbers {

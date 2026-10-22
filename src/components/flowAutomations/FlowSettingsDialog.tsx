@@ -18,7 +18,7 @@ import {
   type FlowNumberSetting,
 } from '@/features/flowAutomations/flowNumber';
 import {
-  missingSelection, missingSelectionLabel, numberOptionLabel, type SendFromMode, type SendNumberOption, type SendNumbersState,
+  SEND_FROM_LOAD_FAILED, missingSelection, missingSelectionLabel, numberOptionLabel, type SendFromMode, type SendNumberOption, type SendNumbersState,
 } from '@/features/numbers/sendFrom';
 import type { NumberConflictMode } from '@/types/flowAutomations';
 
@@ -55,10 +55,13 @@ interface Props {
   /** Os números do "Por um número específico" (o canvas busca). */
   numbers?: SendNumberOption[];
   numbersState?: SendNumbersState | 'idle';
+  /** A regra do dono ligada no cliente: o seletor diz de quem é cada número. */
+  numberOwnerRule?: boolean;
 }
 
 export function FlowSettingsDialog({
   open, settings, triggerEvent, onClose, onSave, numberDivergent = false, numbers = [], numbersState = 'loaded',
+  numberOwnerRule = false,
 }: Props) {
   const [draft, setDraft] = useState<ReentrySetting>(settings.reentry);
   const [businessHoursOnly, setBusinessHoursOnly] = useState(settings.businessHoursOnly);
@@ -98,7 +101,11 @@ export function FlowSettingsDialog({
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>Configurações do fluxo</DialogTitle>
-          <DialogDescription>Quando o mesmo lead pode passar por este fluxo outra vez, e em que horário as mensagens saem.</DialogDescription>
+          <DialogDescription>
+            {settings.number
+              ? 'Por qual número o fluxo fala, quando o mesmo lead pode passar por ele outra vez e em que horário as mensagens saem.'
+              : 'Quando o mesmo lead pode passar por este fluxo outra vez, e em que horário as mensagens saem.'}
+          </DialogDescription>
         </DialogHeader>
 
         <div className="grid gap-5 py-2">
@@ -126,9 +133,10 @@ export function FlowSettingsDialog({
                     <option value="">Escolha o número</option>
                     {lostNumber && <option value={number.inboxId}>{missingSelectionLabel(numbersState === 'idle' ? 'loading' : numbersState)}</option>}
                     {numbers.map(n => (
-                      <option key={n.inbox_id} value={n.inbox_id}>{numberOptionLabel(n, false)}</option>
+                      <option key={n.inbox_id} value={n.inbox_id}>{numberOptionLabel(n, numberOwnerRule)}</option>
                     ))}
                   </Seletor>
+                  {numbersState === 'failed' && <Aviso tom="atencao" compacto>{SEND_FROM_LOAD_FAILED}</Aviso>}
                 </CampoDaJanela>
               )}
             </GrupoDaJanela>

@@ -143,6 +143,15 @@ export function saiPeloWhatsAppDe(nome: string | null | undefined): string {
 export const NUMERO_FIXO_NA_EQUIPE =
   'Esta automação manda por um número específico. Pra virar pessoal, troque o número nos blocos.';
 
+/** Entrega 4: com o número escolhido nas Configurações do fluxo, a troca é lá. */
+export const NUMERO_FIXO_NO_FLUXO =
+  'Esta automação manda por um número específico. Pra virar pessoal, troque o número nas Configurações do fluxo.';
+
+/** O texto da trava de "Da equipe": aponta pra onde o número específico mora. */
+export function numeroFixoNaEquipe(flow: Pick<FlowAutomation, 'send_from'>): string {
+  return flow.send_from === 'number' ? NUMERO_FIXO_NO_FLUXO : NUMERO_FIXO_NA_EQUIPE;
+}
+
 /** Da equipe com bloco preso a número específico: "Da equipe" não sai (o servidor diz). */
 export function presaNaEquipe(flow: Pick<FlowAutomation, 'permissions'>): boolean {
   return !isPersonalFlow(flow) && flow.permissions?.fixed_number === true;

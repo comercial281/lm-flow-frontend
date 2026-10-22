@@ -125,7 +125,11 @@ describe('número do fluxo: salvar', () => {
   });
 
   it('fluxo antigo sem mexer nas Configurações salva sem send_from e sem tocar as Mensagens', async () => {
-    const original = flow({ nodes: [mensagem({ send_from: 'owner', send_from_inbox_id: '' }, 'n1', 'n2'), ia] });
+    // Mensagem antiga de verdade (sem as chaves de número) e outra com a
+    // "Instância de envio (admin)": nada disso pode mudar no Salvar.
+    const legada: FlowAutomationNode = { ...mensagem({}, 'n1', 'n3'), config: { text: 'Oi' } } as FlowAutomationNode;
+    const comInstancia = mensagem({ sender_instance: 'inst-velha' }, 'n3', 'n2');
+    const original = flow({ nodes: [legada, comInstancia, ia] });
     get.mockResolvedValue(original);
     saveFlow.mockImplementation(async () => original);
     renderCanvas();
@@ -146,6 +150,67 @@ describe('número do fluxo: salvar', () => {
     });
     expect(Object.keys(update.mock.calls[0][1]).filter(k => NUMBER_KEYS.includes(k))).toEqual([]);
     expect(saveFlow).toHaveBeenCalledWith('fa1', buildSaveFlowPayload(normalizeLoadedNodes(original.nodes as FlowAutomationNode[]), 'n1'));
+    const [, payload] = saveFlow.mock.calls[0];
+    const configs = payload.nodes.map((n: { config: Record<string, unknown> }) => n.config);
+    expect(configs[0]).toEqual({ text: 'Oi' });
+    expect(configs[1]).toEqual({ text: 'Oi', sender_instance: 'inst-velha' });
+  });
+
+  it('abrir as Configurações e salvar sem mudar nada não deixa "Alterações não salvas"', async () => {
+    get.mockResolvedValue(flow());
+    renderCanvas();
+    fireEvent.click(await screen.findByRole('button', { name: /Configurações/ }));
+    fireEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Salvar' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(screen.queryByText('Alterações não salvas')).toBeNull();
+  });
+
+  it('depois de salvar, o Início mostra a regra salva e o fluxo não fica com alteração', async () => {
+    get.mockResolvedValue(flow());
+    saveFlow.mockImplementation(async () => flow({ send_from: 'owner', send_from_inbox_id: '', number_conflict: 'pause' }));
+    renderCanvas();
+    fireEvent.click(await screen.findByRole('button', { name: /Configurações/ }));
+    const dialogo = await screen.findByRole('dialog');
+    fireEvent.click(within(dialogo).getByRole('radio', { name: 'Pelo número da conversa do lead' }));
+    fireEvent.click(within(dialogo).getByRole('radio', { name: 'Pelo número do responsável pelo lead' }));
+    fireEvent.click(within(dialogo).getByRole('radio', { name: 'Pausar e esperar alguém escolher' }));
+    fireEvent.click(within(dialogo).getByRole('button', { name: 'Salvar' }));
+    await clicarSalvarDoTopo();
+    await waitFor(() => expect(saveFlow).toHaveBeenCalled());
+    expect(await screen.findByText('Fala pelo responsável pelo lead')).toBeTruthy();
+    await waitFor(() => expect(screen.queryByText('Alterações não salvas')).toBeNull());
+  });
+
+  it('lista de números que não carregou avisa e tenta de novo ao reabrir', async () => {
+    get.mockResolvedValue(flow());
+    sendNumbers.mockReset().mockRejectedValueOnce(new Error('rede')).mockResolvedValue({ number_owner_rule: false, numbers: numeros });
+    renderCanvas();
+    fireEvent.click(await screen.findByRole('button', { name: /Configurações/ }));
+    let dialogo = await screen.findByRole('dialog');
+    fireEvent.click(within(dialogo).getByRole('radio', { name: 'Por um número específico' }));
+    expect(await within(dialogo).findByText('Não consegui carregar os números agora. Salvar mantém a escolha que já estava.')).toBeTruthy();
+    fireEvent.click(within(dialogo).getByRole('button', { name: 'Cancelar' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+
+    fireEvent.click(screen.getByRole('button', { name: /Configurações/ }));
+    dialogo = await screen.findByRole('dialog');
+    await waitFor(() => expect(sendNumbers).toHaveBeenCalledTimes(2));
+    fireEvent.click(within(dialogo).getByRole('radio', { name: 'Por um número específico' }));
+    expect(await within(dialogo).findByRole('option', { name: /^Loja/ })).toBeTruthy();
+    expect(within(dialogo).queryByText(/Não consegui carregar os números/)).toBeNull();
+  });
+
+  it('com a regra do dono ligada, o seletor mostra de quem é o número', async () => {
+    get.mockResolvedValue(flow());
+    sendNumbers.mockReset().mockResolvedValue({
+      number_owner_rule: true,
+      numbers: [{ ...numeros[0], owner: { id: 'u1', name: 'Ana' } }],
+    });
+    renderCanvas();
+    fireEvent.click(await screen.findByRole('button', { name: /Configurações/ }));
+    const dialogo = await screen.findByRole('dialog');
+    fireEvent.click(within(dialogo).getByRole('radio', { name: 'Por um número específico' }));
+    expect(await within(dialogo).findByRole('option', { name: /de Ana$/ })).toBeTruthy();
   });
 
   it('fluxo com a regra salva manda a regra de novo no Salvar, mesmo sem mexer', async () => {
@@ -204,6 +269,16 @@ describe('número do fluxo: Início e Mensagem', () => {
     renderCanvas();
     fireEvent.click(await screen.findByLabelText('Editar Passar para a IA'));
     expect(await screen.findByText('Quem atende: a IA do número do fluxo (final 92).')).toBeTruthy();
+  });
+
+  it('Passar para a IA de fluxo pelo responsável diz a IA do número do responsável', async () => {
+    get.mockResolvedValue(flow({
+      send_from: 'owner', send_from_inbox_id: '', number_conflict: 'pause',
+      nodes: [mensagem({ send_from: 'owner', send_from_inbox_id: '' }, 'n1', 'n2'), ia],
+    }));
+    renderCanvas();
+    fireEvent.click(await screen.findByLabelText('Editar Passar para a IA'));
+    expect(await screen.findByText('Quem atende: a IA do número do responsável pelo lead.')).toBeTruthy();
   });
 
   it('Mensagem no modo conversa diz o número da conversa do lead', async () => {
