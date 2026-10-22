@@ -50,6 +50,8 @@ export const ROUTE_PERMISSIONS: readonly RoutePermission[] = [
   { path: '/bolsao', resource: 'bolsao_leads', action: 'read' },
   { path: '/equipe', resource: 'users', action: 'read' },
   { path: '/ia-vendedora', resource: 'sales_agents', action: 'read' },
+  // Sala de demonstração (21/10/2026): escondida; o servidor só atende administrador e a tela confere o cargo também.
+  { path: '/sala-demonstracao', resource: 'sales_agents', action: 'update' },
   { path: '/disparos', resource: 'broadcasts', action: 'read' },
   // Monitoria de um disparo: quem vê a lista vê a fila.
   { path: '/disparos/:id', resource: 'broadcasts', action: 'read' },
