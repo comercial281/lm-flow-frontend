@@ -30,6 +30,18 @@ const EXTRAS: Record<CaminhoOficial, Record<string, unknown>> = {
 const EVENTOS_DE_FIM = ['FINISH', 'FINISH_WHATSAPP_BUSINESS_APP_ONBOARDING'];
 const PRAZO_DO_CODIGO_MS = 30_000;
 
+// A janela da Meta fala de facebook.com ou de qualquer subdomínio dele
+// (www, web, business...). Comparar pelo nome do host evita aceitar
+// "evilfacebook.com", que termina igual mas é outro domínio.
+export function origemDaMeta(origem: string): boolean {
+  try {
+    const host = new URL(origem).hostname;
+    return host === 'facebook.com' || host.endsWith('.facebook.com');
+  } catch {
+    return false;
+  }
+}
+
 export type ResultadoDaConexao = Awaited<ReturnType<typeof WhatsappService.connectCloud>>;
 
 interface Opcoes {
@@ -53,6 +65,9 @@ export function useConexaoOficial({ inboxId, ativo = true, aoConectar }: Opcoes)
   // O caminho vale no momento do clique, mesmo se o cartão mudar durante o fluxo.
   const caminhoDoLogin = useRef<CaminhoOficial | null>(null);
   const enviando = useRef(false);
+  // A tentativa atual já falhou (cancelou, deu erro ou estourou o prazo):
+  // o que chegar depois dela é ignorado.
+  const falhou = useRef(false);
   const prazo = useRef<ReturnType<typeof setTimeout> | null>(null);
   const aoConectarRef = useRef(aoConectar);
   aoConectarRef.current = aoConectar;
@@ -64,13 +79,18 @@ export function useConexaoOficial({ inboxId, ativo = true, aoConectar }: Opcoes)
 
   const falhar = (mensagem: string) => {
     limparPrazo();
+    falhou.current = true;
+    // Zera o par código + evento: um evento de fim atrasado não pode mais
+    // disparar a conexão com o código vencido.
+    setSessionInfo(null);
+    setSdkResponse(null);
     setErro(mensagem);
     setCarregando(false);
   };
 
   useEffect(() => limparPrazo, []);
 
-  const liberado = !!config.wpAppId;
+  const liberado = !!config.wpAppId && !!config.wpWhatsappConfigId;
 
   useEffect(() => {
     if (ativo && liberado) loadFacebookSDK();
@@ -79,20 +99,20 @@ export function useConexaoOficial({ inboxId, ativo = true, aoConectar }: Opcoes)
   useEffect(() => {
     if (!ativo) return;
     const handleMessage = (event: MessageEvent) => {
-      if (event.origin !== 'https://www.facebook.com' && event.origin !== 'https://web.facebook.com') {
-        return;
-      }
+      if (!origemDaMeta(event.origin)) return;
       try {
         const data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
         if (data?.type !== 'WA_EMBEDDED_SIGNUP') return;
+        if (falhou.current) return;
         if (EVENTOS_DE_FIM.includes(data.event)) {
           setSessionInfo(data);
         } else if (data.event === 'FINISH_ONLY_WABA') {
           falhar('A Meta terminou sem escolher um número. Comece de novo e escolha o número no final.');
         } else if (data.event === 'CANCEL') {
-          falhar(data.data?.error_message || 'Você fechou a janela da Meta antes de terminar.');
+          // Frase nossa, nunca o error_message cru da Meta (vem em inglês).
+          falhar('Você fechou a janela da Meta antes de terminar.');
         } else if (data.event === 'ERROR') {
-          falhar(data.data?.error_message || 'A Meta não conseguiu concluir. Tente de novo.');
+          falhar('A Meta não conseguiu concluir a conexão. Tente de novo.');
         } else if (typeof data.event === 'string' && data.event.startsWith('FINISH')) {
           falhar('Esse tipo de conexão não é aceito aqui. Tente de novo escolhendo o número.');
         }
@@ -107,7 +127,7 @@ export function useConexaoOficial({ inboxId, ativo = true, aoConectar }: Opcoes)
   // Junta o evento (ids do número) com a resposta do login (código)
   useEffect(() => {
     const code = sdkResponse?.authResponse?.code;
-    if (!sessionInfo || !code || enviando.current) return;
+    if (!sessionInfo || !code || enviando.current || falhou.current) return;
     enviando.current = true;
     limparPrazo();
     const { phone_number_id, waba_id, business_id } = sessionInfo.data || {};
@@ -177,11 +197,15 @@ export function useConexaoOficial({ inboxId, ativo = true, aoConectar }: Opcoes)
     setSessionInfo(null);
     setSdkResponse(null);
     enviando.current = false;
+    falhou.current = false;
     caminhoDoLogin.current = caminho;
     setCarregando(true);
 
     window.FB.login(
       (response: any) => {
+        // Falhou antes do retorno do login (cancelou ou erro na janela):
+        // nada de guardar o código nem armar o prazo.
+        if (falhou.current) return;
         setSdkResponse(response);
         if (!response?.authResponse) {
           falhar('A conexão com a Meta foi cancelada.');
