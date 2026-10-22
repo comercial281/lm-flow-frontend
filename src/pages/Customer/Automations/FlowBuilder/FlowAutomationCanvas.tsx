@@ -60,6 +60,8 @@ import {
   flowNumberOf, flowNumberStartLine, serializeFlowNumber, withFlowSendFrom, type FlowNumberSetting, type FlowNumberView,
 } from '@/features/flowAutomations/flowNumber';
 import { finalDoNumero } from '@/features/numbers/numberTexts';
+import { numberWarnings } from '@/features/flowAutomations/numberWarnings';
+import { salesAgentsService } from '@/services/salesAgents/salesAgentsService';
 import { useSendNumbers } from '@/features/numbers/useSendNumbers';
 import { useAuthStore } from '@/store/authStore';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
@@ -251,6 +253,26 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
       : null;
     return { mode: numberSetting.mode, final: finalDoNumero(phone) };
   }, [numeroAtivo, numberSetting, sendNumbers.numbers]);
+  // Avisos de número (Entrega 4): sem bloquear. Os agentes de IA carregam uma
+  // vez, só se houver "Passar para a IA"; se a lista falhar, o aviso "sem IA" some.
+  const temPassarParaIA = nodes.some(n => n.kind === 'hand_to_ai');
+  const [inboxesWithAi, setInboxesWithAi] = useState<Set<string> | null>(null);
+  const agentesPedidos = useRef(false);
+  useEffect(() => {
+    if (!numeroAtivo || !temPassarParaIA || agentesPedidos.current) return;
+    agentesPedidos.current = true;
+    salesAgentsService.list()
+      .then(list => setInboxesWithAi(new Set(list.filter(a => a.enabled && a.inbox_id).map(a => a.inbox_id as string))))
+      .catch(() => setInboxesWithAi(null));
+  }, [numeroAtivo, temPassarParaIA]);
+  const avisosDeNumero = useMemo(() => {
+    if (!numeroAtivo) return [];
+    const list = numberWarnings({
+      trigger, nodes, initialNodeId, setting: numberSetting, inboxesWithAi: inboxesWithAi ?? new Set<string>(),
+    });
+    // Lista de IA que não veio: não adivinhar "não tem IA".
+    return inboxesWithAi === null ? list.filter(w => !w.startsWith('Esse número não tem IA')) : list;
+  }, [numeroAtivo, trigger, nodes, initialNodeId, numberSetting, inboxesWithAi]);
   const gatilhosDoCargo = useMemo(() => (pessoal ? personalTriggerGroups(FLOW_TRIGGER_GROUPS) : undefined), [pessoal]);
   const guided = isGuided(automation);
   const builderTools = !readOnly && !guided;
@@ -828,6 +850,9 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
         {reentryAlert && (
           <Faixa tom="atencao">{reentryAlert}</Faixa>
         )}
+        {avisosDeNumero.map(w => (
+          <Faixa key={w} tom="atencao">{w}</Faixa>
+        ))}
         {banner !== undefined ? (
           banner && <div data-testid="faixa-do-canvas">{banner}</div>
         ) : (
@@ -915,6 +940,13 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
                 <button className="text-xs text-muted-foreground" onClick={() => setTestResult(null)}>fechar</button>
               </div>
               <p className="text-xs text-muted-foreground mb-3">Estado final: <strong>{testResult.state}</strong>{testResult.stop_reason ? ` — ${testResult.stop_reason}` : ''}</p>
+              {avisosDeNumero.length > 0 && (
+                <div className="mb-3 space-y-2">
+                  {avisosDeNumero.map(w => (
+                    <Faixa key={w} tom="atencao">{w}</Faixa>
+                  ))}
+                </div>
+              )}
               <ol className="space-y-2">
                 {testResult.steps.map((s, i) => (
                   <li key={i} className="text-xs border border-border rounded p-2">
