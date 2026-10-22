@@ -246,6 +246,12 @@ const SENDING_LEAD_ACTIONS = new Set([
   'send_whatsapp_message', 'send_audio', 'send_image', 'send_video', 'send_document', 'send_sticker', 'send_quick_reply',
 ]);
 
+// Ações antigas que mantêm o número próprio. send_message_funnel e send_quick_reply
+// seguem o número do fluxo no servidor, então ficam de fora.
+const OWN_NUMBER_LEAD_ACTIONS = new Set([
+  'send_whatsapp_message', 'send_audio', 'send_image', 'send_video', 'send_document', 'send_sticker',
+]);
+
 /** Pessoal: o bloco que manda mensagem grava `send_from: 'owner'` (o servidor também força). */
 function withOwnerSendFrom(kind: string, config: FlowNodeConfig): FlowNodeConfig {
   if (kind === 'send_whatsapp') return applySendFrom(config, OWNER_SEND);
@@ -473,7 +479,6 @@ export function FlowNodePanel({ node, resources, onClose, onSave, onDirtyChange,
               <Label className="text-xs">Esperar como?</Label>
               <BotoesDeEscolha
                 rotulo="Esperar como?"
-                semNome
                 valor={mode}
                 opcoes={WAIT_MODES.map(m => ({ valor: m.value, rotulo: m.label }))}
                 aoEscolher={v => setConfig(c => ({ ...c, mode: v }))}
@@ -513,7 +518,6 @@ export function FlowNodePanel({ node, resources, onClose, onSave, onDirtyChange,
               <Label className="text-xs">Até quando esperar?</Label>
               <BotoesDeEscolha
                 rotulo="Até quando esperar?"
-                semNome
                 valor={indefinite ? 'sem_limite' : 'prazo'}
                 opcoes={[{ valor: 'prazo', rotulo: 'Por um prazo' }, { valor: 'sem_limite', rotulo: 'Sem limite' }]}
                 aoEscolher={v => (v === 'sem_limite'
@@ -565,6 +569,11 @@ export function FlowNodePanel({ node, resources, onClose, onSave, onDirtyChange,
               resources={resources}
               pessoal={peloDono}
             />
+            {numeroDoFluxo && OWN_NUMBER_LEAD_ACTIONS.has(String(config.action_type)) && (
+              <Aviso tom="atencao" compacto>
+                Bloco antigo: sai pelo número dele. Troque por uma Mensagem pra seguir o número do fluxo.
+              </Aviso>
+            )}
             {peloDono && SENDING_LEAD_ACTIONS.has(String(config.action_type)) && (
               <LinhaDoEnvio
                 pessoal={pessoal}

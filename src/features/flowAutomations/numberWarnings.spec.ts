@@ -59,4 +59,14 @@ describe('numberWarnings', () => {
     const nodes = [node('a', 'wait', 'b'), node('b', 'wait', 'a'), node('h', 'hand_to_ai')];
     expect(() => numberWarnings({ ...base, trigger: trig('lead.created'), nodes, initialNodeId: 'a', setting: set('') })).not.toThrow();
   });
+  it('Disparar funil antes do Passar para a IA conta como mensagem', () => {
+    for (const action_type of ['send_message_funnel', 'send_quick_reply', 'send_whatsapp_message', 'send_audio']) {
+      const nodes = [node('f', 'lead_action', 'h', { config: { action_type, params: {} } } as Partial<FlowAutomationNode>), node('h', 'hand_to_ai')];
+      expect(numberWarnings({ ...base, trigger: trig('lead.created'), nodes, initialNodeId: 'f', setting: set('') })).toEqual([]);
+    }
+  });
+  it('lead_action que não manda mensagem não conta', () => {
+    const nodes = [node('f', 'lead_action', 'h', { config: { action_type: 'add_label', params: {} } } as Partial<FlowAutomationNode>), node('h', 'hand_to_ai')];
+    expect(numberWarnings({ ...base, trigger: trig('lead.created'), nodes, initialNodeId: 'f', setting: set('') })).toEqual([NO_OPEN]);
+  });
 });

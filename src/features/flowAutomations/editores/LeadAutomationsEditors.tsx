@@ -1128,7 +1128,7 @@ export function ActionEditor({ action, onChange, resources, pessoal = false }: A
           <Field
             label="Número"
             hint={isSuperAdmin
-              ? 'De qual WhatsApp sai o aviso — e de onde os grupos são listados. Para grupo de cliente use a central da Leal Mídia.'
+              ? 'De qual WhatsApp sai o aviso, e de onde os grupos são listados. Para grupo de cliente use a central da Leal Mídia.'
               : 'De qual WhatsApp sai o aviso. Na central da Leal Mídia aparecem só os grupos liberados pra este CRM.'}
           >
             {isSuperAdmin ? (resources.evolutionInstances.length > 0 ? (
@@ -1405,7 +1405,7 @@ export function ActionEditor({ action, onChange, resources, pessoal = false }: A
         setUserIds(selectedIds.includes(id) ? selectedIds.filter(x => x !== id) : [...selectedIds, id]);
       return (
         <>
-          <Field label="Notificar quais usuários? *" hint="Recebe o push só quem ativou o Modo Plantão no app/celular.">
+          <Field label="Notificar quais usuários? *" hint="Recebe o aviso só quem ativou o Modo Plantão no app/celular.">
             <div className="mt-1 max-h-44 overflow-y-auto rounded-md border border-input bg-background divide-y divide-input">
               {resources.users.length === 0 && resources.loading && (
                 <Carregando linhas={2} rotulo="Carregando a equipe…" className="p-2" />
@@ -1427,7 +1427,7 @@ export function ActionEditor({ action, onChange, resources, pessoal = false }: A
               ))}
             </div>
           </Field>
-          <Field label="Título da notificação" hint="Aparece em negrito no push. Padrão: LM Flow.">
+          <Field label="Título da notificação" hint="Aparece em negrito no aviso. Padrão: LM Flow.">
             <Input
               value={String(params.title ?? '')}
               onChange={e => setParam('title', e.target.value)}
@@ -1435,7 +1435,7 @@ export function ActionEditor({ action, onChange, resources, pessoal = false }: A
               className="mt-1"
             />
           </Field>
-          <Field label="Mensagem *" hint="Texto do push. Toque numa variável pra inserir.">
+          <Field label="Mensagem *" hint="Texto do aviso. Toque numa variável pra inserir.">
             <Textarea
               value={String(params.message ?? '')}
               onChange={e => setParam('message', e.target.value)}

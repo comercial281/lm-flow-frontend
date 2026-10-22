@@ -24,7 +24,7 @@ const montar = (params?: Record<string, string | number>) => {
 };
 
 describe('ação "Criar tarefa"', () => {
-  it('bloco antigo abre em Responsável pelo lead com 24 horas', () => {
+  it('bloco antigo abre em Responsável pelo lead com 1 dia', () => {
     const onChange = montar({ title: 'Ligar' });
     expect(screen.getByRole('radiogroup', { name: 'Pra quem' })).toBeInTheDocument();
     expect(screen.getByRole('radiogroup', { name: 'Unidade do prazo' })).toBeInTheDocument();

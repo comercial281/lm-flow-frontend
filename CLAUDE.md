@@ -9545,14 +9545,15 @@ Em 21/10/2026 o Tony fez o raio-x das 19 janelas de bloco do construtor de autom
 
 O que mudou na tela:
 
-- **Início:** texto de ajuda novo explicando de onde a automação parte.
+- **Início:** texto de ajuda do filtro de funil reescrito (o que o filtro faz), sem mexer no resto da janela.
 - **"Lead recuperado":** novo nome do bloco, com um parágrafo só e uma dica curta.
 - **Janelas da IA** (passar pra IA, desligar a IA): sem a frase repetida.
 - **"Mandar resposta rápida"** saiu da lista de Blocos. Bloco já salvo continua abrindo e rodando.
 - **Grupo Controle:** cor `#475569` (cinza azulado), pra não confundir com Distribuição.
 - **Número de envio:** "Pelo número da conversa do lead" no lugar de "Automático (como sempre foi)".
 - **Mover de etapa:** só "etapa específica", com o chip da etapa (bolinha na cor, nome da etapa e do funil). Bloco salvo por nome mostra o Aviso `Coluna "nome" do funil do card` e o botão "Trocar por uma etapa específica".
-- **Esperar e Aguardar resposta:** "Esperar como?" e "Até quando esperar?" em `BotoesDeEscolha` (Por um prazo / Sem limite); unidades no singular ("1 dia", não "1 dias"); as saídas (Respondeu, Não respondeu) desenhadas pelo `SaidasDoBloco`.
+- **Esperar e Aguardar resposta:** "Esperar como?" e "Até quando esperar?" em `BotoesDeEscolha`: Esperar com “Por um tempo / Até uma data e hora”, Aguardar resposta com “Por um prazo / Sem limite” (cada grupo tem o nome acessível do rótulo); unidades no singular ("1 dia", não "1 dias"); as saídas (Respondeu, Não respondeu) desenhadas pelo `SaidasDoBloco`.
+- **Marcar progresso:** a caixa perdeu a borda interna.
 - **Notificação:** "Quem recebe" e "Mensagem" (obrigatórios com asterisco), sem emoji nos números; opção "WhatsApp deste CRM (final NN)" só quando o cliente tem exatamente 1 número conectado, senão "WhatsApp deste CRM (o número da conversa do lead)"; "Central da Leal Mídia" continua pro cliente; "LM01" some do texto que o cliente vê; o aviso vermelho solto virou Aviso de erro compacto, sem a palavra "lembrete".
 
 Decisões (não reabrir sem o dono pedir):
@@ -9561,13 +9562,13 @@ Decisões (não reabrir sem o dono pedir):
 2. **Mover de etapa só por etapa específica.** Editar o nome da coluna à mão acabou; quem tem bloco por nome troca pelo botão.
 3. **Cor do Controle `#475569`**, distinta de Distribuição `#EA580C`.
 4. **Final do número só com exatamente 1 conectado.** O servidor não tem um número único do CRM: a Notificação sai pelo número da conversa do lead, então com 2 ou mais a opção não inventa final.
-5. **"Central da Leal Mídia" fica pro cliente** (é escolha real dos avisos de grupo); o seletor de números por nome segue só pro superadmin.
+5. **"Central da Leal Mídia" fica pro cliente** (é escolha real dos avisos de grupo); o seletor de números por nome segue só pro superadmin, e a opção dele agora diz “WhatsApp deste CRM”.
 6. **Unidade no singular pela quantidade nas janelas do construtor** (`unitLabel`), sem mexer no `UNITS` do Follow-up.
 7. **Texto que sai pro lead não muda.**
 
 Armadilhas:
 
-1. **`MessageSequenceEditor`** (o título mudou) também aparece em Disparo em massa e Funis de mensagem: conferir os três ao mexer.
+1. **`MessageSequenceEditor`** (só perdeu o maiúsculo do título; o texto é o mesmo) também aparece em Disparo em massa e Funis de mensagem: conferir os três ao mexer.
 2. **`SendFromField`** (o rótulo "Pelo número da conversa do lead") também aparece no follow-up e na ação antiga de enviar WhatsApp.
 3. **`UNITS`, `LEAD_WAIT_UNITS` e `SECONDS_UNITS` ficam intactos** (compartilhados com o Follow-up); só o rótulo mostrado passa por `unitLabel`.
 4. **Valores gravados não mudam** (`config` de cada bloco): só texto e desenho de tela. Bloco antigo abre igual.
@@ -9635,7 +9636,7 @@ Armadilhas:
 3. **Escape dentro da janela do Radix fecha a janela**, então a busca não limpa com Escape (tentamos e tiramos). Enter fica.
 4. **Criar tarefa depende do backend #522** (`assignee_mode` e `assignee_id` no `create_task`): o backend entra primeiro, senão o servidor ignora a pessoa.
 5. **Pessoa desativada:** o servidor cai pro dono do lead. A tela avisa "A pessoa escolhida não está mais na equipe." e mostra "Pessoa que não está mais na equipe" pra não perder o valor em silêncio.
-6. **Bloco antigo de Criar tarefa abre em horas** (24 horas) e não grava `assignee_mode` até a pessoa mexer em "Pra quem".
+6. **Bloco antigo de Criar tarefa abre na unidade do valor salvo** (um prazo de 24 horas abre como “1 dia”) e não grava `assignee_mode` até a pessoa mexer em "Pra quem".
 
 Código: `components/flowAutomations/EscolhaDeEtiqueta.tsx`, `components/labels/labelColors.ts` (cores compartilhadas com `LabelMultiSelect` e `ContactTagsManager`), `components/flowAutomations/FlowNodePanel.tsx`, `features/flowAutomations/editores/LeadAutomationsEditors.tsx` (`CreateTaskFields`), `features/flowAutomations/leadAction.ts` (`leadActionProblem`). Testes: `EscolhaDeEtiqueta.spec.tsx`, `FlowBlocks.spec.tsx`, `editores/createTask.spec.tsx`, `leadAction.spec.ts`.
 
@@ -9646,24 +9647,27 @@ Em 21 e 22/10/2026 o Tony reclamou que o sistema vivia "pulverizando com número
 O que aparece:
 
 - **Configurações do fluxo, grupo "Por qual número este fluxo fala com o lead":** Pelo número da conversa do lead / Pelo número do responsável pelo lead / Por um número específico (com o seletor "Número do fluxo"). Só aparece em automação da equipe (não em follow-up, funil nem fluxo pessoal).
-- **Grupo "Se o lead já conversa com a equipe em outro número":** Pausar o lead (padrão) / Seguir pela conversa dele. Só aparece quando o fluxo fala pelo responsável ou por um número específico.
+- **Grupo "Se o lead já conversa com a equipe em outro número":** três opções: “Pausar e esperar alguém escolher” (padrão), “Seguir pela conversa dele” e “Mandar pelo número do fluxo mesmo assim”. Só aparece quando o fluxo fala pelo responsável ou por um número específico.
 - **Início:** linha "Fala pelo final 92", "Fala pelo responsável pelo lead" ou "Fala pelo número da conversa".
 - **Mensagem:** uma linha "Sai pelo número do fluxo" no lugar do seletor de número. A IA mostra "Quem atende: a IA do número do fluxo (final 92)".
-- **Fluxo antigo com números diferentes nos blocos:** Aviso "Esse fluxo fala por números diferentes" nas Configurações e na Mensagem; a Mensagem mantém o seletor próprio até a pessoa escolher a regra.
-- **Avisos na hora de montar e no Simular (`numberWarnings.ts`):** número escolhido sem IA, bloco que pode falar por número diferente do fluxo e afins, em Faixa de atenção depois do aviso de reentrada e no topo do resultado do Simular.
-- **Lista e mapa:** "N leads pausados: já conversam em outro número" com botão Resolver (só quem edita). O Resolver abre o `ResolverPausasDialog`: duas escolhas (seguir pela conversa dele / falar pelo número do fluxo), caixa "Fazer sempre assim neste fluxo" (só quem edita o fluxo) e o texto das 48 h.
+- **Fluxo antigo com números diferentes nos blocos:** Aviso “Este fluxo fala por números diferentes. Escolha um nas Configurações.” nas Configurações e na Mensagem; a Mensagem mantém o seletor próprio até a pessoa escolher a regra.
+- **Avisos na hora de montar e no Simular (`numberWarnings.ts`):** três avisos: gatilho Visita realizada ou Mudou de etapa com número específico ou responsável (o lead costuma já conversar com o corretor em outro número); “Esse número não tem IA. Escolha o número da IA ou tire o bloco Passar para a IA.” (some quando a lista de IAs não carregou); e “A IA só responde, não abre conversa. Ponha uma Mensagem antes do Passar para a IA.” quando nenhum bloco que manda WhatsApp (Mensagem, Disparar funil, resposta rápida, WhatsApp e mídias antigas) vem antes. Aparecem em Faixa de atenção depois do aviso de reentrada e no topo do resultado do Simular.
+- **Bloco antigo de ação no lead (Enviar WhatsApp, áudio, imagem, vídeo, documento, figurinha) num fluxo com número:** Aviso compacto “Bloco antigo: sai pelo número dele. Troque por uma Mensagem pra seguir o número do fluxo.” Disparar funil e resposta rápida não mostram, porque seguem o número do fluxo no servidor.
+- **Lista e mapa:** "N leads pausados: já conversam em outro número" com botão Resolver (só quem edita). O Resolver abre o `ResolverPausasDialog`: duas escolhas (mandar pela conversa dele / mandar pelo número do fluxo), caixa "Fazer sempre assim neste fluxo" (só quem edita o fluxo) e o texto das 48 h.
 - **Quadro:** selo "Pausado" no card (`SeloDePausaDeNumero`), com o nome do fluxo no title.
 - **Ficha do lead:** bloco com os dois botões (com os finais dos números). Quando o número da conversa não manda mensagem sozinho, some o botão "pela conversa" e aparece "Esse número não manda mensagem sozinho.". "Fazer sempre assim" só para quem edita fluxos.
 
 Decisões (não reabrir sem o dono pedir):
 
 1. **Um número por fluxo.** Não existe número por bloco; o número mora nas Configurações e a Mensagem só mostra a linha.
-2. **Conflito pausa o lead.** É o padrão de regra nova; "Seguir pela conversa dele" é escolha explícita.
+2. **Conflito pausa o lead.** É o padrão de regra nova; “Seguir pela conversa dele” e “Mandar pelo número do fluxo mesmo assim” (`force_flow_number`, fala por cima da conversa do corretor) são escolhas explícitas, e a segunda existe pra quem quer o número do fluxo acima de tudo.
 3. **Só selo, sem notificação.** Nada de aviso pro responsável; quem acompanha vê o selo, a contagem e o Resolver.
 4. **Pausa de 48 h** e a resposta do lead não solta a pausa.
 5. **Conversa só com IA não conta como conflito** (ex.: Basel, "Corretor aceitou"); conta conversa aberta ou pendente com mensagem de uma pessoa da equipe nos últimos 7 dias em outro número do cliente.
 6. **Fluxo antigo não muda até salvar as Configurações.** Sem mexer no grupo do número, o salvamento sai idêntico ao de hoje (sem `send_from`, sem espelho nas Mensagens). Fluxo antigo mexido começa em "Seguir pela conversa dele"; fluxo novo nasce com `''` (modo conversa).
 7. **Sem exceção por bloco.** Quem precisa de outro número faz outro fluxo.
+8. **“Seguir pela conversa dele” gruda.** Usada uma vez, vale pro resto do fluxo para aquele lead (backend, sendo implementado).
+9. **Passar para a IA espera o horário comercial** quando teria que abrir uma conversa (backend, sendo implementado).
 
 Armadilhas:
 
@@ -9671,8 +9675,10 @@ Armadilhas:
 2. **`''` não é `null` em `send_from`.** `''` é "salvo, modo conversa"; `null` ou ausente é fluxo antigo. Tratar `''` como falso reabre o fluxo antigo sem querer (`flowNumberOf`).
 3. **O espelho nas Mensagens ao salvar é a proteção de volta de versão.** Salvar com regra grava o mesmo número em cada bloco Mensagem (`withFlowSendFrom`), assim um rollback do backend continua falando pelo número certo. Não tirar.
 4. **"Aceitou na roleta" fica fora do aviso de conflito.** Esse caso é tratado pelo servidor; o aviso da tela não o simula.
-5. **Blocos antigos de ação no lead (`lead_action`) mantêm o número próprio.** O gate do servidor só vale para Mensagem, Disparar funil, resposta rápida e Passar para a IA; o `send_whatsapp_message` e os blocos antigos de Sequência e Funil não são gateados.
+5. **Blocos antigos de ação no lead (`lead_action`) mantêm o número próprio.** O gate do servidor só vale para Mensagem, Disparar funil, resposta rápida e Passar para a IA; `send_whatsapp_message` e as mídias antigas não são gateados (a tela avisa). Os blocos antigos de Sequência e Funil (StepCursor) também pulam o gate: num fluxo com número salvo saem pela última conversa decidida, sem checar conflito (nenhum fluxo vivo os usa).
 6. **O selo do quadro atualiza na próxima leitura do quadro.** Resolver pela ficha ou pela lista não repinta o quadro na hora.
-7. **A lista de números falha em silêncio se não for tratada.** `useSendNumbers` só busca com a janela aberta (ou regra de número ativa) e volta a `idle` ao fechar, para tentar de novo. Fluxo de número fixo aberto no mapa só tenta de novo ao recarregar.
+7. **`useSendNumbers` só busca quando precisa** (Configurações abertas ou fluxo com número específico); se falhou, volta a `idle` ao fechar as Configurações pra tentar de novo. Com o mapa aberto num fluxo de número específico, a falha só se resolve recarregando (o Início fica sem o final).
+8. **Desligar a IA também prefere a conversa decidida.**
+9. **Não voltar só a tela.** Com o servidor novo e a tela ANTIGA, “Retomar” não manda escolha e recebe 422 “Escolha por qual número mandar.”; a tela não pode voltar sem o servidor.
 
 Código: `features/flowAutomations/flowNumber.ts` (`flowNumberOf`, `serializeFlowNumber`, `withFlowSendFrom`, textos), `features/flowAutomations/numberWarnings.ts`, `features/flowAutomations/pausas.ts`, `features/flowAutomations/personal.ts` (`numeroFixoNaEquipe`), `features/numbers/useSendNumbers.ts`, `components/flowAutomations/FlowSettingsDialog.tsx`, `FlowNodePanel.tsx`, `FlowNodeCard.tsx`, `ResolverPausasDialog.tsx`, `FlowAutomationsList.tsx`, `pages/Customer/Automations/FlowBuilder/FlowAutomationCanvas.tsx`, `SeloDePausaDeNumero` e `BlocoPausaDeNumero` (quadro e ficha). Testes: `flowNumber.spec.ts`, `numberWarnings.spec.ts`, `FlowSettingsDialog.spec.tsx`, `FlowCanvasNumero.spec.tsx`, `ResolverPausasDialog.spec.tsx`, `AutomationsOwnership.spec.tsx`, `PipelineItemCard.spec.tsx`, `FollowupTimeline.spec.tsx`.

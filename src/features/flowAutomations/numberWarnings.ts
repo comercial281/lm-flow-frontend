@@ -13,6 +13,18 @@ export const WARN_CONFLICT =
 export const WARN_NO_AI = 'Esse número não tem IA. Escolha o número da IA ou tire o bloco Passar para a IA.';
 export const WARN_AI_ONLY_REPLIES = 'A IA só responde, não abre conversa. Ponha uma Mensagem antes do Passar para a IA.';
 
+// Ações de lead que mandam WhatsApp: contam como "uma mensagem antes" do Passar para a IA.
+export const MESSAGE_SENDING_ACTIONS = new Set([
+  'send_message_funnel', 'send_quick_reply', 'send_whatsapp_message',
+  'send_audio', 'send_image', 'send_video', 'send_document', 'send_sticker',
+]);
+
+function sendsMessage(n: FlowAutomationNode | undefined): boolean {
+  if (!n) return false;
+  if (n.kind === 'send_whatsapp') return true;
+  return n.kind === 'lead_action' && MESSAGE_SENDING_ACTIONS.has(String((n.config as Record<string, unknown> | null)?.action_type));
+}
+
 function nextsOf(n: FlowAutomationNode): string[] {
   return [n.next_node_id, n.next_yes_node_id, n.next_no_node_id].filter((x): x is string => !!x);
 }
@@ -60,7 +72,7 @@ export function numberWarnings(input: {
         const id = st.pop()!;
         if (seen.has(id)) continue;
         seen.add(id);
-        if (byId.get(id)?.kind === 'send_whatsapp') return true;
+        if (sendsMessage(byId.get(id))) return true;
         st.push(...(preds.get(id) ?? []));
       }
       return false;

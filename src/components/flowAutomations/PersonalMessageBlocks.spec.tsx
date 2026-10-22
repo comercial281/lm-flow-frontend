@@ -179,4 +179,33 @@ describe('Mensagem do fluxo com número', () => {
     );
     expect(screen.getByText('Enviar pelo número')).toBeTruthy();
   });
+
+  describe('bloco antigo de lead_action com número do fluxo', () => {
+    const AVISO = 'Bloco antigo: sai pelo número dele. Troque por uma Mensagem pra seguir o número do fluxo.';
+    const leadAction = (action_type: string) =>
+      node({ kind: 'lead_action', config: { action_type, params: {} } });
+    it.each(['send_whatsapp_message', 'send_audio', 'send_image', 'send_video', 'send_document', 'send_sticker'])(
+      'avisa em %s', action => {
+        render(
+          <FlowNodePanel node={leadAction(action)} resources={resources} onClose={() => {}} onSave={vi.fn()}
+            numeroDoFluxo={{ mode: 'number', final: '92' }} />,
+        );
+        expect(screen.getByText(AVISO)).toBeTruthy();
+      },
+    );
+    it.each(['send_message_funnel', 'send_quick_reply'])('não avisa em %s (segue o número do fluxo)', action => {
+      render(
+        <FlowNodePanel node={leadAction(action)} resources={resources} onClose={() => {}} onSave={vi.fn()}
+          numeroDoFluxo={{ mode: 'number', final: '92' }} />,
+      );
+      expect(screen.queryByText(AVISO)).toBeNull();
+    });
+    it('sem regra de número não avisa', () => {
+      render(
+        <FlowNodePanel node={leadAction('send_audio')} resources={resources} onClose={() => {}} onSave={vi.fn()}
+          numeroDoFluxo={null} />,
+      );
+      expect(screen.queryByText(AVISO)).toBeNull();
+    });
+  });
 });

@@ -62,7 +62,7 @@ import {
   flowNumberOf, flowNumberStartLine, serializeFlowNumber, withFlowSendFrom, type FlowNumberSetting, type FlowNumberView,
 } from '@/features/flowAutomations/flowNumber';
 import { finalDoNumero } from '@/features/numbers/numberTexts';
-import { numberWarnings } from '@/features/flowAutomations/numberWarnings';
+import { numberWarnings, WARN_NO_AI } from '@/features/flowAutomations/numberWarnings';
 import { salesAgentsService } from '@/services/salesAgents/salesAgentsService';
 import { useSendNumbers } from '@/features/numbers/useSendNumbers';
 import { useAuthStore } from '@/store/authStore';
@@ -274,7 +274,7 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
       trigger, nodes, initialNodeId, setting: numberSetting, inboxesWithAi: inboxesWithAi ?? new Set<string>(),
     });
     // Lista de IA que não veio: não adivinhar "não tem IA".
-    return inboxesWithAi === null ? list.filter(w => !w.startsWith('Esse número não tem IA')) : list;
+    return inboxesWithAi === null ? list.filter(w => w !== WARN_NO_AI) : list;
   }, [numeroAtivo, trigger, nodes, initialNodeId, numberSetting, inboxesWithAi]);
   const gatilhosDoCargo = useMemo(() => (pessoal ? personalTriggerGroups(FLOW_TRIGGER_GROUPS) : undefined), [pessoal]);
   const guided = isGuided(automation);
