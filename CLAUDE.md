@@ -7382,6 +7382,8 @@ botão Aceitar.") no lugar de "Seu cargo não permite esta ação".
 
 **Ordem de merge / rollback.** O backend (comercial281/lm-flow#514) tem que estar no ar antes deste PR. Voltar a tela é seguro: a seção some e a config gravada segue valendo no servidor.
 
+**22/10/2026: uma seção só (dono do produto).** A seção à parte repetia a pergunta da **Passagem imediata** ("quando ela passa na hora?"). Agora é tudo na Passagem imediata: *Lead irritado*, *Pediu pra falar com uma pessoa ou pediu ligação*, *Perguntou se é robô* e, só no cenário das perguntas obrigatórias, *Recusou mandar documento* e *Perguntou o que ela não sabe*. "Pediu ligação" deixou de ter chave própria: quem pede ligação cai em `pediu_humano`, que passa sempre, então desligar só a ligação prometia uma trava que não existia. A chave de pessoa grava `escalate_on_human_request` **e** `early_handoff.pediu_ligacao` no mesmo clique. ⚠️ Ensaio de 22/10: *Perguntou o que ela não sabe* ainda não funciona só por instrução (ela promete "vou confirmar com o corretor" e segue perguntando, no Haiku e no Sonnet); a correção é no servidor.
+
 ## IA Vendedora · Ensinar no padrão do Configurar (11/10/2026)
 
 > Spec: `LM FLOW/specs/2026-10-11-ia-ensinar-refatoracao-design.md`; plano: `LM FLOW/plans/2026-10-11-ia-ensinar-refatoracao.md`. Protótipo: https://claude.ai/artifact/9uC2FJBqkVBozCLRwzTCVh
