@@ -32,7 +32,73 @@ export interface StartableFollowup {
   name: string;
 }
 
+/**
+ * O lead que vai pro follow-up (Fase 2, 20/10/2026): o card quando a porta é o
+ * funil, a conversa no painel, o contato no resto. Vai tudo o que houver.
+ */
+export interface RefDoLead {
+  contactId?: string | null;
+  conversationId?: string | null;
+  pipelineItemId?: string | null;
+}
+
+/** Onde o lead parou num follow-up (`progress` da prévia). */
+export interface ProgressoDoFollowup {
+  flow_automation_id: string;
+  step: number;
+  total: number;
+  /** Existe a mensagem `step + 1`: é ISTO que oferece "Continuar" (não o texto). */
+  has_next: boolean;
+  /** O texto da próxima; nulo quando ela é só mídia (ou não existe). */
+  next_text: string | null;
+}
+
+/** O que a janela "Colocar em follow-up" precisa saber antes de abrir. */
+export interface PlacePreview {
+  default_flow_id: string | null;
+  options: StartableFollowup[];
+  current: { flow_name: string | null; phase: string | null } | null;
+  progress: ProgressoDoFollowup | null;
+  has_followup_column: boolean;
+}
+
+export type ModoDoFollowup = 'restart' | 'continue';
+
 const BASE = '/flow_automation_instances';
+
+const paramsDoLead = (ref: RefDoLead) => ({
+  ...(ref.pipelineItemId ? { pipeline_item_id: ref.pipelineItemId } : {}),
+  ...(ref.contactId ? { contact_id: ref.contactId } : {}),
+  ...(ref.conversationId ? { conversation_id: ref.conversationId } : {}),
+});
+
+const textoOuNulo = (v: unknown) => (typeof v === 'string' && v.trim() ? v : null);
+
+const previewFrom = (body: unknown): PlacePreview => {
+  const raw = (body && typeof body === 'object' && 'data' in body ? (body as { data: unknown }).data : body) as
+    Record<string, unknown> | null;
+  const options = Array.isArray(raw?.options)
+    ? (raw.options as Array<{ id?: unknown; name?: unknown } | null>).flatMap(o =>
+      o && o.id != null ? [{ id: String(o.id), name: String(o.name ?? '') }] : [])
+    : [];
+  const current = raw?.current as { flow_name?: unknown; phase?: unknown } | null | undefined;
+  const progress = raw?.progress as Record<string, unknown> | null | undefined;
+  return {
+    default_flow_id: raw?.default_flow_id != null ? String(raw.default_flow_id) : null,
+    options,
+    current: current ? { flow_name: textoOuNulo(current.flow_name), phase: textoOuNulo(current.phase) } : null,
+    progress: progress && progress.flow_automation_id != null
+      ? {
+        flow_automation_id: String(progress.flow_automation_id),
+        step: Number(progress.step) || 0,
+        total: Number(progress.total) || 0,
+        has_next: progress.has_next === true,
+        next_text: textoOuNulo(progress.next_text),
+      }
+      : null,
+    has_followup_column: raw?.has_followup_column === true,
+  };
+};
 
 const startableFrom = (body: unknown): StartableFollowup[] => {
   const meta = body && typeof body === 'object' ? (body as { meta?: { startable_followups?: unknown } }).meta : undefined;
@@ -80,6 +146,28 @@ export const flowAutomationInstancesService = {
       ...(ref.conversationId ? { conversation_id: ref.conversationId } : {}),
     };
     const res = await api.post(`${BASE}/start`, { ...lead, flow_automation_id: flowAutomationId });
+    return { message: (res.data as { message?: string } | null)?.message, started: res.status !== 200 };
+  },
+
+  /** A prévia da janela "Colocar em follow-up": opções, o padrão, onde o lead parou e se o funil tem a coluna. */
+  async placePreview(ref: RefDoLead): Promise<PlacePreview> {
+    const { data } = await api.get(`${BASE}/place_preview`, { params: paramsDoLead(ref) });
+    return previewFrom(data);
+  },
+
+  /**
+   * Coloca o lead no follow-up escolhido (a ação única do servidor, que também
+   * leva o card pra coluna Follow-up). 201 = começou; 200 = já estava nele.
+   */
+  async place(
+    ref: RefDoLead,
+    escolha: { flowAutomationId?: string | null; mode: ModoDoFollowup },
+  ): Promise<{ message?: string; started: boolean }> {
+    const res = await api.post(`${BASE}/place`, {
+      ...paramsDoLead(ref),
+      ...(escolha.flowAutomationId ? { flow_automation_id: escolha.flowAutomationId } : {}),
+      mode: escolha.mode,
+    });
     return { message: (res.data as { message?: string } | null)?.message, started: res.status !== 200 };
   },
 

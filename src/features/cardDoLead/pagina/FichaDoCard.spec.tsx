@@ -40,6 +40,7 @@ const cardFalso = (recursos = { imoveis: true, notas: true, agendarEnvio: true }
   situacao: { item: situacao ? { ...(item as object), status: situacao } : null },
   conversa: { abrir: vi.fn(), abrindo: false },
   historico: { recarregar: vi.fn() },
+  etapa: { aoColocarEmFollowup: vi.fn() },
   recursos,
 }) as never;
 
