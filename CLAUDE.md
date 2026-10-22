@@ -5321,7 +5321,7 @@ O que mudou na tela:
 
 - **Mensagem de follow-up mostra o selo amarelo *Follow-up automático*** no lugar de
   *Atendente*, sem nome ao lado. Vale para os dois follow-ups: o de funil
-  (*Automações*) e o da IA Vendedora (*IA Vendedora → Configuração → Follow-up
+  (*Funis de mensagem → aba Follow-up*) e o da IA Vendedora (*IA Vendedora → Configuração → Follow-up
   automático*). A bolha continua verde, como toda mensagem nossa.
 - Resposta normal da IA, automação de lead e disparo agendado continuam como
   *Atendente*.
@@ -5713,7 +5713,7 @@ O que aparece na tela, em *IA Vendedora → Configuração → Follow-up automá
 Decisões (não reabrir sem o dono pedir):
 
 - **Só quem conversou e parou no meio.** Quem nunca respondeu é do *Robô Sem
-  Resposta*, em Automações.
+  Resposta* (hoje a seção *Quem não respondeu* da aba Follow-up, em *Funis de mensagem*).
 - **É uma etapa do follow-up**, não uma automação: só funciona com ele ligado, segue
   o MESMO horário (*Quando o follow-up pode sair*), o mesmo gotejamento e o mesmo
   público. Nada de horário próprio: seriam duas verdades sobre quando a IA toma a
@@ -5825,7 +5825,7 @@ Armadilhas:
 7. **A IA grava `followup_flow_id`** (no `saveAgent` com `in`, pra limpar com
    `null`). O servidor guarda na coluna do slug com a marca `flow:`; a tela só vê
    os dois campos.
-8. **Permissão da aba Follow-up continua `followup_sequences.read`** (rota, menu e
+8. **Permissão da aba Follow-up: `followup_sequences.read`** (desde a Fase 3 abre também com `message_funnels.read`; rota, menu e
    `permissionRoutes`): o servidor aceita as chaves `followup_sequences.*` em
    `/flow_automations` pra fluxo `kind=followup`. Quem via o Follow-up continua vendo.
 9. **Card:** fluxos de `/flow_automation_instances` filtrados por `kind ===
@@ -8392,7 +8392,7 @@ Decisões do dono (não reabrir sem ele pedir):
 
 1. **No computador nada muda.** Todo esconder é só abaixo de 768px.
 2. **Esconder não é bloquear**: a rota continua aberta no celular. Só o construtor troca o desenho pelo aviso, porque arrastar bloco numa tela pequena não funciona.
-3. **Follow-up e Automações ficam no menu do celular**: a lista serve pra ligar e desligar, e o desenho vira o aviso.
+3. **Follow-up e Automações ficam no menu do celular**: a lista serve pra ligar e desligar, e o desenho vira o aviso. (Desde a Fase 3 o Follow-up é a aba de *Funis de mensagem*, sem item próprio no menu; a regra vale pra aba.)
 
 Armadilhas:
 
