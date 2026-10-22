@@ -8,6 +8,7 @@ import { labelsService } from '@/services/contacts/labelsService';
 import { useAppDataStore } from '@/store/appDataStore';
 import chatService from '@/services/chat/chatService';
 import type { Label } from '@/types/settings';
+import { colorForName } from '@/components/labels/labelColors';
 
 interface ContactTagsManagerProps {
   contactId: string;
@@ -18,9 +19,6 @@ interface ContactTagsManagerProps {
 }
 
 // Paleta da identidade (obsidiana/violeta) pra tags novas sem cor definida.
-const PALETTE = ['#7c3aed', '#9333ea', '#2563eb', '#0891b2', '#16a34a', '#d97706', '#dc2626', '#db2777'];
-const colorForName = (name: string) =>
-  PALETTE[[...name].reduce((a, c) => a + c.charCodeAt(0), 0) % PALETTE.length];
 
 // Quantas etiquetas do catálogo aparecem de uma vez (a busca filtra o resto).
 const MAX_SUGESTOES = 12;

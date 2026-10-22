@@ -72,6 +72,25 @@ const node = (patch: Partial<FlowAutomationNode>): FlowAutomationNode => ({
   ...patch,
 });
 
+describe('etiquetas com o catálogo fora do ar', () => {
+  const falhou = { ...resources, erros: { labels: true }, recarregar: () => {} };
+  it('Aplicar etiqueta: etiqueta salva não vira "não existe mais" e oferece Tentar de novo', () => {
+    render(<FlowNodePanel node={node({ kind: 'add_label', config: { labels: ['quente'] } })} resources={falhou} onClose={() => {}} onSave={() => {}} />);
+    expect(screen.queryByText('não existe mais')).toBeNull();
+    expect(screen.getByText('Tentar de novo')).toBeTruthy();
+  });
+  it('Condição Tem a etiqueta: mesmo cuidado', () => {
+    render(<FlowNodePanel node={node({ kind: 'condition', config: { criterion: 'has_label', label: 'quente' } })} resources={falhou} onClose={() => {}} onSave={() => {}} />);
+    expect(screen.queryByText('não existe mais')).toBeNull();
+    expect(screen.getByText('Tentar de novo')).toBeTruthy();
+  });
+  it('carregando: mostra o carregando, nunca "Nenhuma etiqueta ainda"', () => {
+    render(<FlowNodePanel node={node({ kind: 'condition', config: { criterion: 'has_label' } })} resources={{ ...resources, loading: true }} onClose={() => {}} onSave={() => {}} />);
+    expect(screen.getByText('Carregando as etiquetas…')).toBeTruthy();
+    expect(screen.queryByText(/Nenhuma etiqueta ainda/)).toBeNull();
+  });
+});
+
 describe('janela do bloco', () => {
   it('Aguardar resposta: "Sem limite" grava indefinite', async () => {
     const onSave = vi.fn();

@@ -206,11 +206,17 @@ function StagePicker({ value, onPick, resources }: { value: string; onPick: (id:
   );
 }
 
+// Catálogo ainda carregando ou que falhou: não dá pra dizer que uma etiqueta salva "não existe mais".
+function catalogoEmEspera(resources: AutomationResources) {
+  if (resources.labels.length > 0) return null;
+  if (resources.loading) return <p className="text-xs text-muted-foreground">Carregando as etiquetas…</p>;
+  if (resources.erros?.labels) return <EmptyState tipo="erro" tamanho="compacto" aoTentarDeNovo={resources.recarregar} className="p-3 text-xs" />;
+  return null;
+}
+
 function LabelChecklist({ selected, onChange, resources, ordem }: { selected: string[]; onChange: (next: string[]) => void; resources: AutomationResources; ordem: 'nome' | 'mais_leads' }) {
-  if (resources.labels.length === 0 && selected.length === 0) {
-    if (resources.loading) return <p className="text-xs text-muted-foreground">Carregando as etiquetas…</p>;
-    if (resources.erros?.labels) return <EmptyState tipo="erro" tamanho="compacto" aoTentarDeNovo={resources.recarregar} className="p-3 text-xs" />;
-  }
+  const espera = catalogoEmEspera(resources);
+  if (espera) return espera;
   return (
     <EscolhaDeEtiqueta
       modo="varias"
@@ -318,13 +324,15 @@ export function FlowNodePanel({ node, resources, onClose, onSave, onDirtyChange,
         )}
         {criterion === 'has_label' && (
           <div className="space-y-1">
-            <EscolhaDeEtiqueta
-              modo="uma"
-              escolhidas={currentLabel ? [currentLabel] : []}
-              aoMudar={([titulo]) => setConfig(c => withLabel(kind, c, titulo ?? ''))}
-              etiquetas={resources.labels}
-              aoCriar={async () => resources.reloadLabels()}
-            />
+            {catalogoEmEspera(resources) ?? (
+              <EscolhaDeEtiqueta
+                modo="uma"
+                escolhidas={currentLabel ? [currentLabel] : []}
+                aoMudar={([titulo]) => setConfig(c => withLabel(kind, c, titulo ?? ''))}
+                etiquetas={resources.labels}
+                aoCriar={async () => resources.reloadLabels()}
+              />
+            )}
           </div>
         )}
         {criterion === 'at_stage' && (

@@ -99,4 +99,40 @@ describe('EscolhaDeEtiqueta', () => {
     fireEvent.change(screen.getByPlaceholderText('Buscar ou criar etiqueta'), { target: { value: 'e1' } });
     expect(screen.getAllByRole('checkbox').length).toBeGreaterThan(30);
   });
+
+  it('createLabel falha: avisa e não muda a escolha', async () => {
+    mocks.createLabel.mockRejectedValue(new Error('x'));
+    render(<EscolhaDeEtiqueta {...base} />);
+    fireEvent.change(screen.getByPlaceholderText('Buscar ou criar etiqueta'), { target: { value: 'Quente' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Criar etiqueta “Quente”' }));
+    await waitFor(() => expect(mocks.error).toHaveBeenCalled());
+    expect(base.aoMudar).not.toHaveBeenCalled();
+  });
+
+  it('nome saneado igual a um título existente só seleciona, sem criar', () => {
+    render(<EscolhaDeEtiqueta {...base} etiquetas={[et('quente', { category: 'property' })]} />);
+    fireEvent.change(screen.getByPlaceholderText('Buscar ou criar etiqueta'), { target: { value: 'Quente.' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Criar etiqueta “Quente”' }));
+    expect(mocks.createLabel).not.toHaveBeenCalled();
+    expect(base.aoMudar).toHaveBeenCalledWith(['quente']);
+  });
+
+  it('Enter marca a primeira da busca; Escape limpa a busca sem fechar a janela', () => {
+    const fechar = vi.fn();
+    render(<div onKeyDown={e => { if (e.key === 'Escape') fechar(); }}><EscolhaDeEtiqueta {...base} /></div>);
+    const campo = screen.getByPlaceholderText('Buscar ou criar etiqueta');
+    fireEvent.change(campo, { target: { value: 'a' } });
+    fireEvent.keyDown(campo, { key: 'Enter' });
+    expect(base.aoMudar).toHaveBeenCalledWith(['alfa']);
+    fireEvent.keyDown(campo, { key: 'Escape' });
+    expect((campo as HTMLInputElement).value).toBe('');
+    expect(fechar).not.toHaveBeenCalled();
+    fireEvent.keyDown(campo, { key: 'Escape' });
+    expect(fechar).toHaveBeenCalled();
+  });
+
+  it('modo uma chama o campo de Etiqueta, no singular', () => {
+    render(<EscolhaDeEtiqueta {...base} modo="uma" />);
+    expect(screen.getByText('Etiqueta')).toBeTruthy();
+  });
 });

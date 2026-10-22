@@ -1,10 +1,10 @@
-import { useMemo, useState } from 'react';
+import { useId, useMemo, useState } from 'react';
 import { ChevronRight, Plus, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import EmptyState from '@/components/base/EmptyState';
 import { Label as CampoLabel } from '@/components/ui/ds';
 import { labelsService } from '@/services/contacts/labelsService';
-import { colorForName, sanitizeTitle } from '@/components/labels/LabelMultiSelect';
+import { colorForName, sanitizeTitle } from '@/components/labels/labelColors';
 import type { Label } from '@/types/settings/labels';
 import { cn } from '@/lib/utils';
 
@@ -46,6 +46,7 @@ const paraLinha = (l: Label): Linha => ({
 });
 
 export function EscolhaDeEtiqueta({ modo, escolhidas, aoMudar, etiquetas, ordem = 'nome', aoCriar }: EscolhaDeEtiquetaProps) {
+  const idBusca = useId();
   const [busca, setBusca] = useState('');
   const [sistemaAberto, setSistemaAberto] = useState(false);
   const [criando, setCriando] = useState(false);
@@ -171,7 +172,7 @@ export function EscolhaDeEtiqueta({ modo, escolhidas, aoMudar, etiquetas, ordem 
   return (
     <div className="space-y-1.5">
       <div className="flex items-center justify-between">
-        <CampoLabel className="text-xs" htmlFor="busca-etiqueta">Etiquetas</CampoLabel>
+        <CampoLabel className="text-xs" htmlFor={idBusca}>{modo === 'uma' ? 'Etiqueta' : 'Etiquetas'}</CampoLabel>
         <span className="text-xs text-muted-foreground">
           {textoMarcadas(escolhidas.length)}
           {modo === 'varias' && escolhidas.length > 0 && (
@@ -187,14 +188,22 @@ export function EscolhaDeEtiqueta({ modo, escolhidas, aoMudar, etiquetas, ordem 
       <div className="relative">
         <Search className="absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
         <input
-          id="busca-etiqueta"
+          id={idBusca}
           type="text"
           value={busca}
           onChange={e => setBusca(e.target.value)}
           onKeyDown={e => {
-            if (e.key === 'Enter' && semResultado) {
+            if (e.key === 'Enter') {
               e.preventDefault();
-              void criar();
+              if (semResultado) void criar();
+              else if (q) {
+                const primeira = [...equipeLivre, ...sistemaLivre][0];
+                if (primeira) alternar(primeira.titulo);
+              }
+            } else if (e.key === 'Escape' && busca) {
+              e.preventDefault();
+              e.stopPropagation();
+              setBusca('');
             }
           }}
           placeholder="Buscar ou criar etiqueta"
@@ -217,7 +226,7 @@ export function EscolhaDeEtiqueta({ modo, escolhidas, aoMudar, etiquetas, ordem 
             className="flex w-full items-center gap-2 px-2.5 py-2 text-left text-sm text-primary hover:bg-muted/50 disabled:opacity-60"
           >
             <Plus className="h-3.5 w-3.5" aria-hidden="true" />
-            <span className="truncate">Criar etiqueta “{q}”</span>
+            <span className="truncate">Criar etiqueta “{sanitizeTitle(q)}”</span>
           </button>
         ) : (
           <>
