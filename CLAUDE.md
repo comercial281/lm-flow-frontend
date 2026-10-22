@@ -9638,3 +9638,41 @@ Armadilhas:
 6. **Bloco antigo de Criar tarefa abre em horas** (24 horas) e não grava `assignee_mode` até a pessoa mexer em "Pra quem".
 
 Código: `components/flowAutomations/EscolhaDeEtiqueta.tsx`, `components/labels/labelColors.ts` (cores compartilhadas com `LabelMultiSelect` e `ContactTagsManager`), `components/flowAutomations/FlowNodePanel.tsx`, `features/flowAutomations/editores/LeadAutomationsEditors.tsx` (`CreateTaskFields`), `features/flowAutomations/leadAction.ts` (`leadActionProblem`). Testes: `EscolhaDeEtiqueta.spec.tsx`, `FlowBlocks.spec.tsx`, `editores/createTask.spec.tsx`, `leadAction.spec.ts`.
+
+## Construtor: número do fluxo e pausa por conversa em outro número (desde 2026-10-22)
+
+Em 21 e 22/10/2026 o Tony reclamou que o sistema vivia "pulverizando com números": o mesmo lead recebia mensagem de números diferentes conforme o bloco, e quando já conversava com a equipe por um número, o fluxo falava por outro. Decidiu que cada fluxo da equipe tem um número só, e que, se o lead já conversa com uma pessoa da equipe em outro número, o fluxo pausa em vez de falar por cima. O aviso é só um selo, sem notificação. Spec: `LM FLOW/specs/2026-10-22-construtor-janelas-e-numero-do-fluxo-design.md` (Frente 4). Depende do backend #524 (`send_from`, `send_from_inbox_id`, `number_conflict`, pausa `other_number`).
+
+O que aparece:
+
+- **Configurações do fluxo, grupo "Por qual número este fluxo fala com o lead":** Pelo número da conversa do lead / Pelo número do responsável pelo lead / Por um número específico (com o seletor "Número do fluxo"). Só aparece em automação da equipe (não em follow-up, funil nem fluxo pessoal).
+- **Grupo "Se o lead já conversa com a equipe em outro número":** Pausar o lead (padrão) / Seguir pela conversa dele. Só aparece quando o fluxo fala pelo responsável ou por um número específico.
+- **Início:** linha "Fala pelo final 92", "Fala pelo responsável pelo lead" ou "Fala pelo número da conversa".
+- **Mensagem:** uma linha "Sai pelo número do fluxo" no lugar do seletor de número. A IA mostra "Quem atende: a IA do número do fluxo (final 92)".
+- **Fluxo antigo com números diferentes nos blocos:** Aviso "Esse fluxo fala por números diferentes" nas Configurações e na Mensagem; a Mensagem mantém o seletor próprio até a pessoa escolher a regra.
+- **Avisos na hora de montar e no Simular (`numberWarnings.ts`):** número escolhido sem IA, bloco que pode falar por número diferente do fluxo e afins, em Faixa de atenção depois do aviso de reentrada e no topo do resultado do Simular.
+- **Lista e mapa:** "N leads pausados: já conversam em outro número" com botão Resolver (só quem edita). O Resolver abre o `ResolverPausasDialog`: duas escolhas (seguir pela conversa dele / falar pelo número do fluxo), caixa "Fazer sempre assim neste fluxo" (só quem edita o fluxo) e o texto das 48 h.
+- **Quadro:** selo "Pausado" no card (`SeloDePausaDeNumero`), com o nome do fluxo no title.
+- **Ficha do lead:** bloco com os dois botões (com os finais dos números). Quando o número da conversa não manda mensagem sozinho, some o botão "pela conversa" e aparece "Esse número não manda mensagem sozinho.". "Fazer sempre assim" só para quem edita fluxos.
+
+Decisões (não reabrir sem o dono pedir):
+
+1. **Um número por fluxo.** Não existe número por bloco; o número mora nas Configurações e a Mensagem só mostra a linha.
+2. **Conflito pausa o lead.** É o padrão de regra nova; "Seguir pela conversa dele" é escolha explícita.
+3. **Só selo, sem notificação.** Nada de aviso pro responsável; quem acompanha vê o selo, a contagem e o Resolver.
+4. **Pausa de 48 h** e a resposta do lead não solta a pausa.
+5. **Conversa só com IA não conta como conflito** (ex.: Basel, "Corretor aceitou"); conta conversa aberta ou pendente com mensagem de uma pessoa da equipe nos últimos 7 dias em outro número do cliente.
+6. **Fluxo antigo não muda até salvar as Configurações.** Sem mexer no grupo do número, o salvamento sai idêntico ao de hoje (sem `send_from`, sem espelho nas Mensagens). Fluxo antigo mexido começa em "Seguir pela conversa dele"; fluxo novo nasce com `''` (modo conversa).
+7. **Sem exceção por bloco.** Quem precisa de outro número faz outro fluxo.
+
+Armadilhas:
+
+1. **Backend #524 entra primeiro.** Tela nova com backend velho mostra uma regra que o servidor ignora.
+2. **`''` não é `null` em `send_from`.** `''` é "salvo, modo conversa"; `null` ou ausente é fluxo antigo. Tratar `''` como falso reabre o fluxo antigo sem querer (`flowNumberOf`).
+3. **O espelho nas Mensagens ao salvar é a proteção de volta de versão.** Salvar com regra grava o mesmo número em cada bloco Mensagem (`withFlowSendFrom`), assim um rollback do backend continua falando pelo número certo. Não tirar.
+4. **"Aceitou na roleta" fica fora do aviso de conflito.** Esse caso é tratado pelo servidor; o aviso da tela não o simula.
+5. **Blocos antigos de ação no lead (`lead_action`) mantêm o número próprio.** O gate do servidor só vale para Mensagem, Disparar funil, resposta rápida e Passar para a IA; o `send_whatsapp_message` e os blocos antigos de Sequência e Funil não são gateados.
+6. **O selo do quadro atualiza na próxima leitura do quadro.** Resolver pela ficha ou pela lista não repinta o quadro na hora.
+7. **A lista de números falha em silêncio se não for tratada.** `useSendNumbers` só busca com a janela aberta (ou regra de número ativa) e volta a `idle` ao fechar, para tentar de novo. Fluxo de número fixo aberto no mapa só tenta de novo ao recarregar.
+
+Código: `features/flowAutomations/flowNumber.ts` (`flowNumberOf`, `serializeFlowNumber`, `withFlowSendFrom`, textos), `features/flowAutomations/numberWarnings.ts`, `features/flowAutomations/pausas.ts`, `features/flowAutomations/personal.ts` (`numeroFixoNaEquipe`), `features/numbers/useSendNumbers.ts`, `components/flowAutomations/FlowSettingsDialog.tsx`, `FlowNodePanel.tsx`, `FlowNodeCard.tsx`, `ResolverPausasDialog.tsx`, `FlowAutomationsList.tsx`, `pages/Customer/Automations/FlowBuilder/FlowAutomationCanvas.tsx`, `SeloDePausaDeNumero` e `BlocoPausaDeNumero` (quadro e ficha). Testes: `flowNumber.spec.ts`, `numberWarnings.spec.ts`, `FlowSettingsDialog.spec.tsx`, `FlowCanvasNumero.spec.tsx`, `ResolverPausasDialog.spec.tsx`, `AutomationsOwnership.spec.tsx`, `PipelineItemCard.spec.tsx`, `FollowupTimeline.spec.tsx`.
