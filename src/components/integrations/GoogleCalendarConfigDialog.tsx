@@ -15,6 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
   Switch,
+  Checkbox,
 } from '@/components/ui/ds';
 import Abas from '@/components/base/Abas';
 import { useAbaDaJanela } from '@/hooks/useAbaDaJanela';
@@ -719,11 +720,9 @@ const GoogleCalendarConfigDialog = ({
                       return (
                         <div key={day} className="flex items-center gap-3">
                           <div className="flex items-center gap-2 w-32">
-                            <input
-                              type="checkbox"
+                            <Checkbox
                               checked={dayData?.enabled}
-                              onChange={(e) => updateBusinessHours(day, 'enabled', e.target.checked)}
-                              className="rounded"
+                              onCheckedChange={(v) => updateBusinessHours(day, 'enabled', v === true)}
                             />
                             <Label className="text-sm capitalize">{t(`edit.integrations.googleCalendar.businessHours.days.${day}`) || day}</Label>
                           </div>

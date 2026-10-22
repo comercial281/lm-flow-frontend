@@ -92,8 +92,8 @@ describe('"Só em horário comercial"', () => {
   it('Esperar: o modo antigo "saindo em horário comercial" aparece marcado, e desmarcar volta pro tempo comum', async () => {
     const onSave = vi.fn();
     render(<FlowNodePanel node={node({ kind: 'wait', config: { mode: 'schedule', minutes: 60 } })} resources={resources} onClose={() => {}} onSave={onSave} />);
-    const caixa = screen.getByLabelText('Só em horário comercial (seg–sex 8h–20h, sáb 9h–18h)') as HTMLInputElement;
-    expect(caixa.checked).toBe(true);
+    const caixa = screen.getByRole('checkbox', { name: 'Só em horário comercial (seg–sex 8h–20h, sáb 9h–18h)' });
+    expect(caixa).toBeChecked();
     fireEvent.click(caixa);
     fireEvent.click(screen.getByText('Salvar'));
     await waitFor(() => expect(onSave).toHaveBeenCalled());

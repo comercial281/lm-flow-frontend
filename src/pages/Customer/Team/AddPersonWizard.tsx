@@ -5,6 +5,7 @@ import { Check, CheckCircle2, Loader2, MessageCircle, ShieldCheck, TriangleAlert
 import {
   Button, Input, Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
   DialogDescription, Label as UILabel,
+  Checkbox,
 } from '@/components/ui/ds';
 import { usersService } from '@/services/users';
 import InboxMembersService from '@/services/channels/inboxMembersService';
@@ -448,11 +449,9 @@ export default function AddPersonWizard({ open, roles, inboxes, members = [], on
               {canCreateNumber && (
                 <div className="space-y-2 rounded-lg border border-border p-3">
                   <label className="flex cursor-pointer items-center gap-2 text-sm font-medium">
-                    <input
-                      type="checkbox"
+                    <Checkbox
                       checked={makeNumber}
-                      onChange={e => setMakeNumberEdit(e.target.checked)}
-                      className="h-4 w-4 rounded"
+                      onCheckedChange={v => setMakeNumberEdit(v === true)}
                     />
                     Criar um número novo para {name.trim()}
                   </label>
@@ -495,11 +494,9 @@ export default function AddPersonWizard({ open, roles, inboxes, members = [], on
                         const state = numberState({ connection: ib.connection ?? null, never_connected: false });
                         return (
                           <label key={ib.id} className="flex cursor-pointer items-center gap-3 rounded-lg border border-border p-2.5 hover:bg-muted/30">
-                            <input
-                              type="checkbox"
+                            <Checkbox
                               checked={inboxIds.has(String(ib.id))}
-                              onChange={() => toggleInbox(String(ib.id))}
-                              className="h-4 w-4 rounded"
+                              onCheckedChange={() => toggleInbox(String(ib.id))}
                             />
                             <span className="flex-1 text-sm">
                               {ib.name}

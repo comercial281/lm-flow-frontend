@@ -49,7 +49,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
   const { t } = useLanguage('layout');
   const { user, logout } = useAuth();
   const { can, canAny, canAll } = usePermissions();
-  const { features: tenantFeatures, archivedKeys } = useTenantFeatures();
+  const { features: tenantFeatures, archivedKeys, demoMode } = useTenantFeatures();
   // Suporte da Leal Mídia (Fase 1 — Cargos): vem do servidor, não do e-mail.
   const isSupport = useIsSuperAdmin();
   const navigate = useNavigate();
@@ -117,7 +117,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
   // Menu em seções (fase 4), já filtrado por cargo, função do cliente e
   // arquivamento. A MESMA lista desenha o menu, a gaveta do celular, a busca e
   // as abas das páginas (MenuContext) — nunca discordam.
-  const regras = [can, canAny, canAll, user?.role?.key, user?.email, tenantFeatures, archivedKeys, isSupport] as const;
+  const regras = [can, canAny, canAll, user?.role?.key, user?.email, tenantFeatures, archivedKeys, isSupport, demoMode] as const;
   // Gestão de proprietários: aparece (ou não) e ganha a bolinha conforme o dado, não só o cargo.
   const { visivel: proprietariosVisivel, marcador: proprietariosMarcador } = useProprietariosNoMenu();
   const secoes = useMemo(() => {

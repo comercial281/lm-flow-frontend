@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Input,
   Label,
+  Checkbox,
 } from '@/components/ui/ds';
 import Aviso from '@/components/base/Aviso';
 import { toast } from 'sonner';
@@ -393,11 +394,10 @@ export const Auth: React.FC = () => {
 
                     <motion.div custom={3} variants={fadeUpVariant} initial="hidden" animate="visible" className="flex justify-between items-center">
                       <label className="flex items-center gap-2 cursor-pointer select-none">
-                        <input
-                          type="checkbox"
+                        <Checkbox
                           checked={rememberMe}
-                          onChange={e => setRememberMe(e.target.checked)}
-                          className="w-3.5 h-3.5 rounded accent-violet-500 cursor-pointer"
+                          onCheckedChange={v => setRememberMe(v === true)}
+                          className="border-white/25 bg-white/10"
                         />
                         <span className="text-xs" style={{ color: 'rgba(255,255,255,0.5)' }}>Lembrar de mim</span>
                       </label>

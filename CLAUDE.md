@@ -9451,3 +9451,40 @@ Armadilhas:
 5. **Textos literais** (sem chave nova de i18n). Plural com `plural()` de `@/lib/formato` (a trava do build recusa "lead(s)"), por isso "1 lead vai sair..." / "3 leads vão sair...".
 
 Código: `features/followup/` (`JanelaColocarEmFollowup`, `useColocarEmFollowup`, `erroDeEtapa`), `features/flowAutomations/desligarFollowup.ts`, `FlowAutomationsList.tsx`, `FlowAutomationCanvas.tsx` (`alternarLigado`), `flowAutomationInstancesService.place`/`placePreview`. Testes: `JanelaColocarEmFollowup.spec.tsx`, `useBoardDrag.spec.ts`, `FollowupList.spec.tsx`, `FlowCanvasEquipe.spec.tsx`, `erroDeEtapa.spec.ts`.
+
+## Sala de demonstração (desde 2026-10-22)
+
+Tela escondida em `/sala-demonstracao` para as calls de venda: o Tony ou o Giovani compartilham a tela no Meet, o lead escaneia o QR, conversa com a IA no WhatsApp e vê, ao lado, o que a IA está entendendo e o follow-up. Spec em `LM FLOW/specs/2026-10-20-sala-demonstracao-design.md` (fora do git, na pasta do Tony). Servidor: `/api/v1/demo_room` (backend #513).
+
+O que aparece na tela:
+
+- **Sem demonstração:** "Preparar" (Conferir antes da call, Ajustes da Sala, nome do lead). Só libera "Nova demonstração" com nome e a conferência toda verde; Enter no nome faz o mesmo, com as mesmas travas.
+- **Esperando o lead:** o QR, o número da Sala e "Aguardando <nome> mandar a primeira mensagem…" (sem artigo, vale pra qualquer nome).
+- **No ar, lado a lado** (empilha em tela pequena): à esquerda a conversa ao vivo (áudio tocável, sem nota interna; desce só a caixa da conversa, nunca a página); à direita os **Bastidores** (etapa, temperatura em português, caminho, intenção, o que a IA anotou como região e orçamento, respostas da qualificação, resumo; quando a IA decide passar o lead, o cartão "Aqui a IA passaria o lead pro corretor" com "O que o corretor receberia" e "Por que", cada um só quando tem texto) e o **Follow-up** (linha do tempo dos passos com ícone por tipo, espera como "1 dia depois na vida real" ou "Na hora", passo só de mídia diz o que é, como "Áudio gravado" ou "Book do imóvel", e selo Enviado/Próximo; botão "Simular que o lead sumiu"; três cartões "Outros jeitos de fazer follow-up").
+- **Recomeçar** no cabeçalho, só com demonstração em andamento. Pergunta "Recomeçar a demonstração?", apaga a conversa e volta pro Preparar.
+
+Decisões (não reabrir sem o dono pedir):
+
+1. **Só no espaço de demonstração** (a chave de modo demonstração que já existe) e **só administrador: o servidor decide; quem não pode vê a tela de sem acesso** (o usuário do app não traz a chave do cargo, então a tela e o menu não adivinham: o item aparece no espaço de demonstração pela permissão da rota). Fora do espaço de demonstração o servidor responde 404 e a tela diz que a Sala só existe lá. Simular follow-up ou Recomeçar numa demonstração que já acabou diz "Essa demonstração já foi encerrada. Recarregue a página.".
+2. **Repasse só indicado:** a IA mostra que passaria o lead pro corretor, mas nada é enviado a ninguém.
+3. **Uma call = uma conversa.** Cada demonstração é uma sessão com código próprio; Recomeçar encerra a sessão e a tela volta pro Preparar (sessão `ended` vale como sem sessão). Só a resposta da consulta mais recente vale, pra conversa antiga não voltar à tela depois do Recomeçar.
+4. **O número da Sala é só pras calls**, nunca o botão da landing page.
+5. **O follow-up da Sala é automação comum "só por chamada"** com blocos Esperar (nunca "Aguardar resposta"). Na vida real o follow-up para quando o lead responde; na Sala ele segue pra mostrar todos os formatos, e a tela diz isso. O botão "Simular que o lead sumiu" fica travado enquanto o pedido está em andamento (o envio sai pela fila e o selo vira "Enviado" na próxima consulta de 3 s).
+6. **Retomada da IA:** as horas (2 h e 8 h por padrão) são lidas da IA da Sala (`reengagement_first_hours` / `reengagement_second_hours`).
+
+Código: `src/pages/Customer/SalaDemonstracao/` (`SalaDemonstracao`, `Preparar`, `QrDaSala`, `ConversaAoVivo`, `Bastidores`, `FollowupDaSala`), `src/services/demoRoom/demoRoomService.ts`, `src/types/demoRoom.ts`. Testes: os `.spec.tsx` da mesma pasta.
+
+## Caixinha da casa em tudo (desde 2026-10-21)
+
+**O que mudou na tela:** toda caixinha de marcar do app é a mesma: quadradinho de 16 px, canto levemente arredondado, roxa com ✓ branco quando marcada. Saíram as 52 caixinhas cruas do navegador (azuis no Chrome) de 38 telas: Login, Conversas (seleção em lote), Tarefa, Funis, Funis de mensagem, Construtor de automações, Cadastro do imóvel, Equipe, Cargos, IA Vendedora, Robô sem resposta, Pixel, Respostas rápidas, Google Agenda, Portais, editor de landing, canais e o painel raiz. Escolha do dono em 21/10/2026, olhando as duas lado a lado. O que cada caixinha faz não mudou.
+
+Regras (peça 24 do `GLOSSARIO.md`):
+
+1. **É o `Checkbox` de `@/components/ui/ds`.** O embrulho da casa pinta também o "parcial" (`checked="indeterminate"`) de roxo com um traço; o do pacote deixava branco com ✓. Usado em Tokens de acesso (Selecionar tudo e por grupo).
+2. **`onCheckedChange` recebe `true | false | 'indeterminate'`:** comparar com `=== true`, nunca passar o valor direto pra um campo booleano.
+3. **Caixinha dentro de linha ou cartão clicável** (lista de Conversas, cartões de servidor e ferramenta da IA) leva `onClick={e => e.stopPropagation()}`: sem isso o clique alterna duas vezes ou abre a conversa.
+4. **Site público é exceção.** O Anuncie seu imóvel não carrega o pacote do app (nenhuma página de `pages/Public` carrega); lá a caixinha é o input pintado com o mesmo desenho na cor do cliente (`--brand`). Não importar `ds` no site público por causa de caixinha.
+5. **Trava `caixinhaCrua`** no `conferir-padrao` (app inteiro, teto 0): reprova `type="checkbox"` e o import de `@evoapi/design-system/checkbox`. Exceções na própria régua: `ui/ds.tsx` e `PortalAnunciePage.tsx`.
+
+Código: `components/ui/ds.tsx` (`Checkbox`), `scripts/conferir-padrao.mjs` (`caixinhaCrua`). Testes: `conferir-padrao.spec.ts`.
+

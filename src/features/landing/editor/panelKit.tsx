@@ -3,6 +3,7 @@ import { GripVertical, Trash2 } from 'lucide-react';
 import { RichTextEditor, type RichTextEditorRef } from '@/components/chat/rich-text-editor';
 import { landingTextSchema } from '@/components/chat/rich-text-editor/schema';
 import api from '@/services/core/api';
+import { Checkbox } from '@/components/ui/ds';
 
 /**
  * Peças dos painéis de configuração do editor.
@@ -196,7 +197,7 @@ export function Check({
 }) {
   return (
     <label className="flex items-center gap-2 text-xs text-foreground">
-      <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} />
+      <Checkbox checked={checked} onCheckedChange={(v) => onChange(v === true)} />
       {label}
     </label>
   );

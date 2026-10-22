@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Card, Button } from '@/components/ui/ds';
+import { Card, Button, Checkbox } from '@/components/ui/ds';
 import { toast } from 'sonner';
 import { Loader2, Check, Lightbulb, Users, MessageSquare, Sparkles, X } from 'lucide-react';
 import { dolar, plural } from '@/lib/formato';
@@ -189,10 +189,9 @@ export default function TelaSugestoes({ agent }: { agent: SalesAgent }) {
       {/* Automático */}
       <Card className="gap-2 p-4">
         <label className="flex items-center gap-2 text-sm cursor-pointer">
-          <input
-            type="checkbox"
+          <Checkbox
             checked={data?.auto.auto ?? false}
-            onChange={(e) => void salvarAuto({ auto: e.target.checked })}
+            onCheckedChange={(v) => void salvarAuto({ auto: v === true })}
           />
           Analisar sozinha toda semana
         </label>

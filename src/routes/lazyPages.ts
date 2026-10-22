@@ -25,6 +25,8 @@ export const BolsaoBatches = lazyWithRetry(() => import('@/pages/Customer/Bolsao
 export const Disparos = lazyWithRetry(() => import('@/pages/Customer/Disparos/Disparos'));
 // Monitoria de um disparo (/disparos/:id): abre pela lista de Disparos.
 export const DisparoDetalhe = lazyWithRetry(() => import('@/pages/Customer/Disparos/DisparoDetalhe'));
+// Sala de demonstração (/sala-demonstracao): só no espaço de demonstração, só administrador.
+export const SalaDemonstracao = lazyWithRetry(() => import('@/pages/Customer/SalaDemonstracao/SalaDemonstracao'));
 export const TeamAccess = lazyWithRetry(() => import('@/pages/Customer/Team/TeamAccessPage'));
 export const AccountSettings = lazyWithRetry(() => import('@/pages/Customer/Settings/Account').then(m => ({ default: m.AccountSettings })));
 export const Labels = lazyWithRetry(() => import('@/pages/Customer/Settings/Labels'));

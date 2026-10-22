@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { Secao } from '@/components/base/Secao';
 import LeadDestinationFields, { type LeadDestinationValue } from './LeadDestinationFields';
 import type { LeadDestinationOptions } from './useLeadDestinationOptions';
+import { Checkbox } from '@/components/ui/ds';
 
 interface Props {
   sale: LeadDestinationValue;
@@ -51,11 +52,9 @@ export default function SaleRentDestination({
       </Secao>
       <Secao titulo={titulos.locacao} descricao={descricoes.locacao}>
         <label className="flex items-center gap-2 text-sm cursor-pointer">
-          <input
-            type="checkbox"
+          <Checkbox
             checked={rentSameAsSale}
-            onChange={e => onRentSameAsSale(e.target.checked)}
-            className="h-4 w-4 accent-primary"
+            onCheckedChange={v => onRentSameAsSale(v === true)}
           />
           Mesmo destino da venda
         </label>

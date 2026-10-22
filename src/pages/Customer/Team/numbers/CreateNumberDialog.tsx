@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import {
   Button, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Input, Label,
+  Checkbox,
 } from '@/components/ui/ds';
 import { BrPhoneInput } from '@/components/shared/BrPhoneInput';
 import Aviso from '@/components/base/Aviso';
@@ -195,10 +196,9 @@ export default function CreateNumberDialog({ member, open, onClose, onDone, link
                     <p>{member.name} ainda não tem celular cadastrado, e precisa de um celular para receber o link de acesso.</p>
                   </Aviso>
                   <label className="flex items-center gap-2 text-sm">
-                    <input
-                      type="checkbox"
+                    <Checkbox
                       checked={sameAsNumber}
-                      onChange={e => setSameAsNumber(e.target.checked)}
+                      onCheckedChange={v => setSameAsNumber(v === true)}
                       aria-label="É o mesmo telefone do número"
                     />
                     <span>É o mesmo telefone do número</span>

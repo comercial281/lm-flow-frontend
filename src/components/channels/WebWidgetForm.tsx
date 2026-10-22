@@ -1,4 +1,4 @@
-import { Input } from '@/components/ui/ds';
+import { Input, Checkbox } from '@/components/ui/ds';
 import { useLanguage } from '@/hooks/useLanguage';
 import  { sanitizeInboxName } from '@/utils/sanitizeName';
 
@@ -47,11 +47,9 @@ export default function WebWidgetForm({
 
   const renderCheckbox = (label: string, valueKey: string) => (
     <label className="flex items-center gap-2 text-sm text-sidebar-foreground/80 select-none">
-      <input
-        type="checkbox"
+      <Checkbox
         checked={!!form[valueKey]}
-        onChange={(e) => onFormChange(valueKey, e.target.checked)}
-        className="h-4 w-4 rounded border-sidebar-border bg-sidebar text-primary focus:ring-0"
+        onCheckedChange={(v) => onFormChange(valueKey, v === true)}
       />
       <span>{label}</span>
     </label>

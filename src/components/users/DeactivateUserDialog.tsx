@@ -9,6 +9,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  Checkbox,
 } from '@/components/ui/ds';
 import { Seletor } from '@/components/base/Seletor';
 import { usersService } from '@/services/users';
@@ -199,11 +200,10 @@ export default function DeactivateUserDialog({ open, user, users, onClose, onDon
               o WhatsApp da imobiliária inteira — a opção nem se desenha. */}
           {offersDisconnect && (
             <label className="flex items-start gap-2 text-xs">
-              <input
-                type="checkbox"
+              <Checkbox
                 className="mt-0.5"
                 checked={disconnectNumber}
-                onChange={e => setDisconnectNumber(e.target.checked)}
+                onCheckedChange={v => setDisconnectNumber(v === true)}
               />
               <span>
                 Desconectar o WhatsApp dele

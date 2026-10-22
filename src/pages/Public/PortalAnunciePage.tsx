@@ -56,9 +56,12 @@ function Field({
 function Check({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
   return (
     <label className="flex cursor-pointer items-center gap-2.5 text-[14px] text-neutral-700">
+      {/* Mesmo desenho da caixinha da casa (16 px, canto de 4 px, ✓ branco), na cor
+          do cliente. O site público não carrega o pacote do app, por isso é o
+          input pintado aqui (exceção da trava `caixinhaCrua`). */}
       <input
         type="checkbox" checked={checked} onChange={e => onChange(e.target.checked)}
-        className="h-4 w-4 rounded border-black/20 accent-[var(--brand)]"
+        className="grid h-4 w-4 shrink-0 cursor-pointer appearance-none place-content-center rounded-[4px] border border-black/20 bg-white shadow-xs transition-colors checked:border-[var(--brand)] checked:bg-[var(--brand)] before:hidden before:h-2.5 before:w-2.5 before:bg-[var(--brand-ink)] before:content-[''] before:[clip-path:polygon(14%_44%,0_65%,50%_100%,100%_16%,80%_0%,43%_62%)] checked:before:block focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand)]"
       />
       {label}
     </label>

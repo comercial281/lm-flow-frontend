@@ -13,6 +13,7 @@ import {
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
+  Checkbox,
 } from '@/components/ui/ds';
 import { Search } from 'lucide-react';
 import type { AccessToken, AccessTokenFormData } from '@/types/auth';
@@ -268,24 +269,23 @@ export default function AccessTokenModal({
               {/* Global actions */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
-                  <input
-                    type="checkbox"
+                  <Checkbox
                     id="select-all-resources"
-                    checked={selectedScopes.length > 0 && selectedScopes.length === Object.values(categorizedPermissions).flatMap(c => c.permissions).length}
-                    ref={ref => {
-                      if (ref) {
-                        ref.indeterminate = selectedScopes.length > 0 && selectedScopes.length < Object.values(categorizedPermissions).flatMap(c => c.permissions).length;
-                      }
-                    }}
-                    onChange={(e) => {
-                      if (e.target.checked) {
+                    checked={
+                      selectedScopes.length === 0
+                        ? false
+                        : selectedScopes.length === Object.values(categorizedPermissions).flatMap(c => c.permissions).length
+                          ? true
+                          : 'indeterminate'
+                    }
+                    onCheckedChange={v => {
+                      if (v === true) {
                         selectAllScopes();
                       } else {
                         deselectAllScopes();
                       }
                     }}
                     disabled={loadingScopes}
-                    className="w-4 h-4 text-primary bg-background border-2 rounded focus:ring-primary"
                   />
                   <UILabel htmlFor="select-all-resources" className="text-sm font-medium">
                     {t('form.labels.selectAll')}
@@ -346,21 +346,12 @@ export default function AccessTokenModal({
                           <AccordionTrigger className="px-4 py-3 hover:no-underline">
                             <div className="flex items-center justify-between w-full">
                               <div className="flex items-center space-x-3">
-                                <input
-                                  type="checkbox"
+                                <Checkbox
                                   id={`select-resource-${resource}`}
-                                  checked={allResourceActionsSelected}
-                                  ref={ref => {
-                                    if (ref) {
-                                      ref.indeterminate = someResourceActionsSelected;
-                                    }
-                                  }}
-                                  onChange={(e) => {
-                                    e.stopPropagation();
-                                    toggleResourceActions(resource);
-                                  }}
+                                  checked={allResourceActionsSelected ? true : someResourceActionsSelected ? 'indeterminate' : false}
+                                  onCheckedChange={() => toggleResourceActions(resource)}
+                                  onClick={e => e.stopPropagation()}
                                   disabled={loadingScopes}
-                                  className="w-4 h-4 text-primary bg-background border-2 rounded focus:ring-primary"
                                 />
                                 <span className="font-medium text-left">{category.name}</span>
                               </div>
@@ -385,13 +376,11 @@ export default function AccessTokenModal({
                                   const fullActionKey = permission.key;
                                   return (
                                     <div key={permission.key} className="flex items-center space-x-2">
-                                      <input
-                                        type="checkbox"
+                                      <Checkbox
                                         id={fullActionKey}
                                         checked={selectedScopes.includes(fullActionKey)}
-                                        onChange={(e) => handleScopeToggle(fullActionKey, e.target.checked)}
+                                        onCheckedChange={v => handleScopeToggle(fullActionKey, v === true)}
                                         disabled={loadingScopes}
-                                        className="w-4 h-4 text-primary bg-background border-2 rounded focus:ring-primary"
                                       />
                                       <UILabel 
                                         htmlFor={fullActionKey} 

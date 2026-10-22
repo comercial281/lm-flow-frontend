@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { ArrowLeft, Archive, LogIn } from 'lucide-react';
-import { Button, Textarea } from '@/components/ui/ds';
+import { Button, Textarea, Checkbox } from '@/components/ui/ds';
 import NoAccessState from '@/components/permissions/NoAccessState';
 import { useConfirmacao } from '@/hooks/useConfirmacao';
 import { erroDaApi, type SupportStatus } from '@/services/support/supportService';
@@ -111,7 +111,7 @@ export default function SuporteChamado() {
           placeholder="Responder o cliente"
           extra={
             <label className="flex items-center gap-1.5 text-sm text-muted-foreground">
-              <input type="checkbox" checked={resolverAoEnviar} onChange={e => setResolverAoEnviar(e.target.checked)} aria-label="Resolver ao enviar" />
+              <Checkbox checked={resolverAoEnviar} onCheckedChange={v => setResolverAoEnviar(v === true)} aria-label="Resolver ao enviar" />
               Resolver
             </label>
           }

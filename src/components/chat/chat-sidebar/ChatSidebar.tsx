@@ -1,6 +1,6 @@
 import { ordemDaLista } from '@/features/conversas/itemDaLista';
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { Button } from '@/components/ui/ds';
+import { Button, Checkbox } from '@/components/ui/ds';
 import { Input } from '@evoapi/design-system/input';
 import { Badge } from '@evoapi/design-system/badge';
 import {
@@ -826,20 +826,18 @@ const ChatSidebar = ({
                   <div className="p-4 pl-5">
                     <div className="flex items-start justify-between">
                       <div className="flex items-start gap-3 min-w-0 flex-1">
-                        <input
-                          type="checkbox"
+                        <Checkbox
                           checked={selectedConversations.has(String(conversation.id))}
-                          onChange={e => {
-                            e.stopPropagation();
+                          onCheckedChange={v => {
                             setSelectedConversations(prev => {
                               const next = new Set(prev);
-                              if (e.target.checked) next.add(String(conversation.id));
+                              if (v === true) next.add(String(conversation.id));
                               else next.delete(String(conversation.id));
                               return next;
                             });
                           }}
                           onClick={e => e.stopPropagation()}
-                          className="mt-1 flex-shrink-0 cursor-pointer"
+                          className="mt-1 flex-shrink-0"
                         />
                         {/* Robozinho roxo: a IA Vendedora já passou por esta conversa?
                             À esquerda do avatar de propósito (pedido do Giovani, 19/08) —

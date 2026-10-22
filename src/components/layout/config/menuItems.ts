@@ -36,6 +36,7 @@ import {
   UserRoundCheck,
   ListTodo,
   ListOrdered,
+  Presentation,
 } from 'lucide-react';
 import { openSupport } from '@/components/support/openSupport';
 
@@ -89,6 +90,13 @@ export interface MenuItem {
   clientToggleGestor?: string;
   /** Quando true, só aparece no tenant raiz (VITE_IS_ROOT_TENANT=true). */
   rootTenantOnly?: boolean;
+  /**
+   * Tela que só existe no espaço de demonstração (tenant com demo_mode). Fora
+   * dele some pra TODO mundo, suporte inclusive; dentro dele segue a permissão
+   * da rota. Quem pode abrir de fato o servidor decide (o usuário do app não
+   * traz a chave do cargo); quem não pode vê a tela de sem acesso.
+   */
+  somenteDemonstracao?: boolean;
   /** O inverso: some no painel raiz (app.lmflow), tela que só faz sentido no CRM do cliente. */
   hideOnRoot?: boolean;
   /**
@@ -136,6 +144,8 @@ export interface SubMenuItem {
    */
   clientToggleGestor?: string;
   rootTenantOnly?: boolean;
+  /** Ver `MenuItem.somenteDemonstracao`. */
+  somenteDemonstracao?: boolean;
   hideOnRoot?: boolean;
   hiddenFromClient?: boolean;
   /**
@@ -250,6 +260,8 @@ export const getCustomerMenuSections = (): MenuSection[] => [
       { name: 'Dashboard', href: '/dashboard', icon: PieChart, ...permissionFromRoute('/dashboard'), featureKey: 'dashboard' },
       { name: 'Conversas', href: '/conversations', icon: MessageSquare, ...permissionFromRoute('/conversations'), featureKey: 'conversations' },
       { name: 'Funil de vendas', href: '/pipelines', icon: SquareKanban, ...permissionFromRoute('/pipelines'), featureKey: 'pipelines' },
+      // Só no espaço de demonstração (ver somenteDemonstracao); o servidor decide quem entra.
+      { name: 'Sala de demonstração', href: '/sala-demonstracao', icon: Presentation, ...permissionFromRoute('/sala-demonstracao'), somenteDemonstracao: true },
     ],
   },
   {
@@ -528,9 +540,16 @@ export const shouldShowMenuItem = (
   // Suporte da Leal Mídia (Fase 1 — Cargos): vem do SERVIDOR (useIsSuperAdmin),
   // nunca mais deduzido do e-mail aqui. Suporte vê e opera tudo, mesmo o que
   // está OFF pro cliente.
-  isSupport = false
+  isSupport = false,
+  // Espaço de demonstração (useTenantFeatures().demoMode).
+  demoMode = false
 ): boolean => {
   const isSuper = isSupport;
+
+  // Tela só do espaço de demonstração: fora dele some pra TODO mundo (suporte
+  // inclusive); dentro, segue a permissão da rota. Sem adivinhar o cargo aqui:
+  // o servidor decide e a tela mostra o sem acesso pra quem ele recusa.
+  if (item.somenteDemonstracao && !demoMode) return false;
 
   // Menu arquivado GLOBALMENTE (painel Clientes > Arquivados) some pra TODO
   // MUNDO, sem exceção pro super-admin — ao contrário dos gates abaixo, que o
@@ -608,7 +627,8 @@ export const filterMenuItemsByPermissions = (
   features?: Record<string, boolean>,
   archivedKeys?: string[],
   // Ver o comentário em shouldShowMenuItem.
-  isSupport = false
+  isSupport = false,
+  demoMode = false
 ): MenuItem[] => {
   const isSuper = isSupport;
   // Só o super-admin recebe o selo "oculto pro cliente"; o cliente nunca vê
@@ -616,7 +636,7 @@ export const filterMenuItemsByPermissions = (
   const mark = (item: MenuItem | SubMenuItem) =>
     isSuper ? isHiddenFromClient(item, features) : false;
   const mostra = (item: MenuItem | SubMenuItem) =>
-    shouldShowMenuItem(item, canFunction, canAnyFunction, canAllFunction, userRoleKey, userEmail, features, archivedKeys, isSupport);
+    shouldShowMenuItem(item, canFunction, canAnyFunction, canAllFunction, userRoleKey, userEmail, features, archivedKeys, isSupport, demoMode);
 
   return items
     .map((item): MenuItem | null => {

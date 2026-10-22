@@ -30,7 +30,7 @@ import { ConversationCreateData } from '@/types/chat/api';
 import { apiErrorMessage } from '@/utils/apiHelpers';
 import Aviso from '@/components/base/Aviso';
 import CampoDaJanela from '@/components/base/janela/CampoDaJanela';
-import { Checkbox } from '@evoapi/design-system/checkbox';
+import { Checkbox } from '@/components/ui/ds';
 
 interface StartConversationModalProps {
   open: boolean;

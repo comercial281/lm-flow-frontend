@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Input, Label as UILabel, Textarea } from '@/components/ui/ds';
+import { Input, Label as UILabel, Textarea, Checkbox } from '@/components/ui/ds';
 import { ExternalLink } from 'lucide-react';
 
 import { messageFunnelsService } from '@/services/messageFunnels/messageFunnelsService';
@@ -323,11 +323,9 @@ export function ConditionEditor({ trigger, condition, onChange, resources, semQu
                     key={f.form_id}
                     className="flex items-center gap-2 px-2.5 py-2 cursor-pointer hover:bg-muted/50 text-sm"
                   >
-                    <input
-                      type="checkbox"
+                    <Checkbox
                       checked={selectedForms.includes(f.form_id)}
-                      onChange={() => toggleForm(f.form_id)}
-                      className="h-4 w-4 accent-primary"
+                      onCheckedChange={() => toggleForm(f.form_id)}
                     />
                     <span className="truncate">
                       {(f.form_name || f.form_id)}
@@ -398,11 +396,9 @@ export function ConditionEditor({ trigger, condition, onChange, resources, semQu
                 key={o.id}
                 className="flex items-center gap-2 px-2.5 py-2 cursor-pointer hover:bg-muted/50 text-sm"
               >
-                <input
-                  type="checkbox"
+                <Checkbox
                   checked={selected.includes(o.id)}
-                  onChange={() => toggle(o.id)}
-                  className="h-4 w-4 accent-primary"
+                  onCheckedChange={() => toggle(o.id)}
                 />
                 <span className="truncate">
                   {o.name}
@@ -1408,10 +1404,9 @@ export function ActionEditor({ action, onChange, resources, pessoal = false }: A
               )}
               {resources.users.map(u => (
                 <label key={u.id} className="flex items-center gap-2 px-3 py-2 text-sm cursor-pointer hover:bg-muted/50">
-                  <input
-                    type="checkbox"
+                  <Checkbox
                     checked={selectedIds.includes(String(u.id))}
-                    onChange={() => toggleUser(String(u.id))}
+                    onCheckedChange={() => toggleUser(String(u.id))}
                   />
                   <span>{u.name}</span>
                 </label>

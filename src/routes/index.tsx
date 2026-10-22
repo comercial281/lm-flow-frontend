@@ -35,6 +35,7 @@ import {
   Contracts,
   AutomationsLayout,
   SalesAgents,
+  SalaDemonstracao,
   PortalsList,
   DashboardAppPage,
   Tutorials,
@@ -611,6 +612,17 @@ const AppRouter = () => {
               element={
                 <PermissionRoute resource="sales_agents" action="read">
                   <SalesAgents />
+                </PermissionRoute>
+              }
+            />
+
+            {/* Sala de demonstração (21/10/2026): escondida. A tela confere o
+                administrador e o servidor devolve 404 fora do espaço de demonstração. */}
+            <Route
+              path="/sala-demonstracao"
+              element={
+                <PermissionRoute resource="sales_agents" action="update">
+                  <SalaDemonstracao />
                 </PermissionRoute>
               }
             />
