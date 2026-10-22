@@ -31,7 +31,7 @@ describe('paginas', () => {
     const antes = [
       'name', 'persona_kind', 'lead_facing_name', 'transfer_config.voice', 'handoff_target', 'handoff_roleta_config_id',
       'handoff_user_id', 'reaction_enabled', 'reaction_emojis', 'reaction_max_per_conversation', 'reach', 'booking_enabled',
-      'handoff_webhook_url', 'transfer_config.mode', 'transfer_config.min_temperature', 'transfer_config.briefing_enabled',
+      'handoff_webhook_url', 'transfer_config.mode', 'transfer_config.min_temperature', 'transfer_config.briefing_enabled', 'transfer_config.early_handoff',
       'pipeline_move_enabled', 'pipeline_id', 'pipeline_stage_map', 'crm_policy.cold', 'ask_google_review', 'google_review_link',
       'greeting', 'intent_question', 'playbook.intent_question_mode', 'playbook.vars.caminhos_intencao', 'playbook.vars.fora_dos_caminhos', 'default_origin', 'opening_image_url', 'opening_audio_url',
       'openings', 'qualification_questions', 'transfer_config.required_questions', 'ai_limits.address', 'ai_limits.discount',

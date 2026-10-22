@@ -68,6 +68,14 @@ describe('Critério', () => {
       );
     });
 
+    it('trocar o "Quando ela passa" não apaga early_handoff', async () => {
+      const gravar = abrir({ transfer_config: { ...base, early_handoff: { pediu_ligacao: false } } });
+      await userEvent.click(screen.getByRole('radio', { name: 'Ela decide' }));
+      const [patch, campos] = gravar.mock.calls[gravar.mock.calls.length - 1];
+      expect(patch.transfer_config?.early_handoff).toEqual({ pediu_ligacao: false });
+      expect(campos).toEqual(['transfer_config.mode', 'transfer_config.min_temperature']);
+    });
+
     it('fora do checklist a seção não aparece', () => {
       abrir({ transfer_config: { mode: 'temperatura' } });
       expect(screen.queryByText('Passa direto, mesmo faltando pergunta')).not.toBeInTheDocument();
