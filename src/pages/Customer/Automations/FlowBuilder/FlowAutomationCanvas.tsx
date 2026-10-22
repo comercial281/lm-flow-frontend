@@ -10,6 +10,8 @@ import { ArrowLeft, Save, Play, Loader2, Settings2, LayoutGrid, Copy, Users } fr
 import { Badge, Button, Input } from '@/components/ui/ds';
 import Chave from '@/components/base/Chave';
 import Faixa from '@/components/base/Faixa';
+import ResolverPausasDialog from '@/components/flowAutomations/ResolverPausasDialog';
+import { textoDePausados } from '@/features/flowAutomations/pausas';
 import { toCondition, willConvert } from '@/features/flowAutomations/filterToCondition';
 import { flowAutomationsService } from '@/services/flowAutomations/flowAutomationsService';
 import type { FlowAutomation, FlowAutomationNode, TestRunResult } from '@/types/flowAutomations';
@@ -219,6 +221,7 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
   const kind = kindOf(automation);
   const isConversation = kind === 'conversation';
   const readOnly = isReadOnly(automation);
+  const [resolvendoPausas, setResolvendoPausas] = useState(false);
   // Automação PESSOAL: o corretor monta com os gatilhos e blocos do cargo; o
   // gestor na pessoal DELE tem tudo, mas a mensagem sai pelo número dele
   // ("Indisponível" sem número ou sem IA); na pessoal de outra pessoa, o bloco
@@ -850,6 +853,14 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
         {reentryAlert && (
           <Faixa tom="atencao">{reentryAlert}</Faixa>
         )}
+        {(automation.paused_other_number_count ?? 0) > 0 && (
+          <Faixa
+            tom="atencao"
+            acao={<Button size="sm" variant="outline" className="text-xs" onClick={() => setResolvendoPausas(true)}>Resolver</Button>}
+          >
+            <span data-testid="faixa-pausados">{textoDePausados(automation.paused_other_number_count ?? 0)}</span>
+          </Faixa>
+        )}
         {avisosDeNumero.map(w => (
           <Faixa key={w} tom="atencao">{w}</Faixa>
         ))}
@@ -1014,6 +1025,23 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
             setEditingSettings(false);
           }}
         />
+        {resolvendoPausas && (
+          <ResolverPausasDialog
+            open
+            flowId={automation.id}
+            flowName={automation.name}
+            count={automation.paused_other_number_count ?? 0}
+            flowFinal={numberView?.final ?? null}
+            canAlways={!readOnly}
+            onClose={() => setResolvendoPausas(false)}
+            onResolved={() => {
+              // Só a contagem: recarregar o fluxo apagaria o que ainda não foi salvo.
+              void flowAutomationsService.get(automation.id)
+                .then(f => setAutomation(a => (a ? { ...a, paused_other_number_count: f.paused_other_number_count ?? 0 } : a)))
+                .catch(() => undefined);
+            }}
+          />
+        )}
         {dialogoDeConfirmacao}
       </div>
     </RecolherVariaveisContext.Provider>

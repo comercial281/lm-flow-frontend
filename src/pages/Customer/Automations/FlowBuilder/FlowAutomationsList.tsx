@@ -20,6 +20,8 @@ import { isForbiddenError } from '@/services/core/forbidden';
 import { enableProblem } from '@/features/flowAutomations/readiness';
 import { serverMessage } from '@/features/flowAutomations/guide';
 import { FlowTemplateList, FlowTemplatesDialog } from '@/components/flowAutomations/FlowTemplates';
+import ResolverPausasDialog from '@/components/flowAutomations/ResolverPausasDialog';
+import { textoDePausados } from '@/features/flowAutomations/pausas';
 import ListaDeFollowups from './ListaDeFollowups';
 
 import {
@@ -61,6 +63,7 @@ function ListaDeAutomacoes({ kind }: { kind: FlowAutomationKind }) {
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(false);
   const [recusado, setRecusado] = useState(false);
+  const [resolvendo, setResolvendo] = useState<FlowAutomation | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -384,6 +387,12 @@ function ListaDeAutomacoes({ kind }: { kind: FlowAutomationKind }) {
               <div className="text-xs text-muted-foreground mb-3 truncate" title={flowTriggerSummary(normalizeTrigger(a.trigger))}>
                 {triggerEvents(normalizeTrigger(a.trigger)).length ? flowTriggerSummary(normalizeTrigger(a.trigger)) : 'Sem gatilho definido'}
               </div>
+              {(a.paused_other_number_count ?? 0) > 0 && (
+                <div className="mb-2 flex flex-wrap items-center gap-2 text-xs text-amber-700 dark:text-amber-400" data-pausados>
+                  <span>{textoDePausados(a.paused_other_number_count ?? 0)}</span>
+                  <Button size="sm" variant="outline" className="text-xs" onClick={() => setResolvendo(a)}>Resolver</Button>
+                </div>
+              )}
               <div className="flex flex-wrap items-center gap-1">
                 {canEdit ? (
                   <>
@@ -430,6 +439,17 @@ function ListaDeAutomacoes({ kind }: { kind: FlowAutomationKind }) {
         })}
       </ul>
     </Pagina>
+      {resolvendo && (
+        <ResolverPausasDialog
+          open
+          flowId={resolvendo.id}
+          flowName={resolvendo.name}
+          count={resolvendo.paused_other_number_count ?? 0}
+          canAlways={ehCorretor ? resolvendo.permissions?.can_edit === true : resolvendo.permissions?.can_edit !== false}
+          onClose={() => setResolvendo(null)}
+          onResolved={() => void load()}
+        />
+      )}
       <FlowTemplatesDialog open={templatesOpen} onClose={() => setTemplatesOpen(false)} onApplied={openFlow} team={teamDoModelo} />
       {dialogoDeConfirmacao}
       {dialogoDePergunta}

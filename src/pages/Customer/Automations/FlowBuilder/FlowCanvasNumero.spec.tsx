@@ -13,10 +13,11 @@ const update = vi.hoisted(() => vi.fn());
 const saveFlow = vi.hoisted(() => vi.fn());
 const sendNumbers = vi.hoisted(() => vi.fn());
 const personalCapabilities = vi.hoisted(() => vi.fn());
+const resolverConflitos = vi.hoisted(() => vi.fn());
 
 vi.mock('@/services/flowAutomations/flowAutomationsService', () => ({
   flowAutomationsService: {
-    get, update, saveFlow, personalCapabilities, testRun: vi.fn(), toggle: vi.fn(), movePositions: vi.fn(),
+    get, update, saveFlow, personalCapabilities, resolveNumberConflicts: resolverConflitos, testRun: vi.fn(), toggle: vi.fn(), movePositions: vi.fn(),
   },
   flowAutomationFoldersService: {},
 }));
@@ -222,6 +223,26 @@ describe('número do fluxo: salvar', () => {
     await clicarSalvarDoTopo();
     await waitFor(() => expect(saveFlow).toHaveBeenCalled());
     expect(update.mock.calls[0][1]).toMatchObject({ send_from: '', send_from_inbox_id: '', number_conflict: 'pause' });
+  });
+});
+
+describe('número do fluxo: leads pausados', () => {
+  it('a faixa mostra a contagem e Resolver chama resolveNumberConflicts', async () => {
+    get.mockResolvedValue(flow({ paused_other_number_count: 3, send_from: 'number', send_from_inbox_id: 'i1' }));
+    resolverConflitos.mockResolvedValue({ resumed: 3, stopped: 0, skipped: 0, failed: 0 });
+    renderCanvas();
+    expect(await screen.findByText('3 leads pausados: já conversam em outro número')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Resolver' }));
+    const dialogo = await screen.findByRole('dialog');
+    fireEvent.click(within(dialogo).getByRole('button', { name: /Mandar pelo número do fluxo/ }));
+    await waitFor(() => expect(resolverConflitos).toHaveBeenCalledWith('fa1', { choice: 'flow', always: false }));
+  });
+
+  it('sem pausados não tem faixa', async () => {
+    get.mockResolvedValue(flow({ paused_other_number_count: 0 }));
+    renderCanvas();
+    await screen.findByRole('textbox', { name: 'Nome do fluxo' });
+    expect(screen.queryByTestId('faixa-pausados')).toBeNull();
   });
 });
 
