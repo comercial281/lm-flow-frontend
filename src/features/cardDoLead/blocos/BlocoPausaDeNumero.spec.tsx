@@ -7,6 +7,8 @@ const resume = vi.fn();
 vi.mock('@/services/flowAutomations/flowAutomationInstancesService', () => ({
   flowAutomationInstancesService: { forCard: (...a: unknown[]) => forCard(...a), resume: (...a: unknown[]) => resume(...a) },
 }));
+let podeEditar = true;
+vi.mock('@/hooks/useCan', () => ({ useCan: () => () => podeEditar }));
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 import { toast } from 'sonner';
 
@@ -17,7 +19,7 @@ const pausado = (sendable = true) => ({
 });
 
 describe('BlocoPausaDeNumero', () => {
-  beforeEach(() => { vi.clearAllMocks(); resume.mockResolvedValue({ message: 'Retomado.' }); });
+  beforeEach(() => { vi.clearAllMocks(); podeEditar = true; resume.mockResolvedValue({ message: 'Retomado.' }); });
 
   it('não desenha nada sem pausa por número', async () => {
     forCard.mockResolvedValue({ flows: [{ ...pausado(), paused_code: 'disconnected' }], startable: [] });
@@ -44,6 +46,25 @@ describe('BlocoPausaDeNumero', () => {
     fireEvent.click(screen.getByRole('checkbox'));
     fireEvent.click(screen.getByRole('button', { name: 'Mandar pelo número do fluxo (final 92)' }));
     await waitFor(() => expect(resume).toHaveBeenCalledWith('inst1', { choice: 'flow', always: true }));
+  });
+
+  it('quem não edita automações não vê "Fazer sempre assim" e manda always false', async () => {
+    podeEditar = false;
+    forCard.mockResolvedValue({ flows: [pausado()], startable: [] });
+    render(<BlocoPausaDeNumero contactId="c1" conversationId={null} />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Mandar pelo número do fluxo (final 92)' }));
+    expect(screen.queryByText('Fazer sempre assim neste fluxo')).toBeNull();
+    await waitFor(() => expect(resume).toHaveBeenCalledWith('inst1', { choice: 'flow', always: false }));
+  });
+
+  it('depois do 422 os botões voltam a ficar ativos', async () => {
+    forCard.mockResolvedValue({ flows: [pausado()], startable: [] });
+    resume.mockRejectedValue({ response: { data: { errors: ['Escolha um número.'] } } });
+    render(<BlocoPausaDeNumero contactId="c1" conversationId={null} />);
+    const b = await screen.findByRole('button', { name: 'Mandar pelo número do fluxo (final 92)' });
+    fireEvent.click(b);
+    await waitFor(() => expect(toast.error).toHaveBeenCalled());
+    await waitFor(() => expect((b as HTMLButtonElement).disabled).toBe(false));
   });
 
   it('mostra a mensagem do servidor no 422', async () => {

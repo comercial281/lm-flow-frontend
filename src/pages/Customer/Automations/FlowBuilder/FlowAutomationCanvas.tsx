@@ -856,7 +856,7 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
         {(automation.paused_other_number_count ?? 0) > 0 && (
           <Faixa
             tom="atencao"
-            acao={<Button size="sm" variant="outline" className="text-xs" onClick={() => setResolvendoPausas(true)}>Resolver</Button>}
+            acao={readOnly ? undefined : <Button size="sm" variant="outline" className="text-xs" onClick={() => setResolvendoPausas(true)}>Resolver</Button>}
           >
             <span data-testid="faixa-pausados">{textoDePausados(automation.paused_other_number_count ?? 0)}</span>
           </Faixa>

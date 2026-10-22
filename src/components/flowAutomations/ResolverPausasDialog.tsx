@@ -31,11 +31,16 @@ export default function ResolverPausasDialog({ open, flowId, flowName, count, fl
     setBusy(choice);
     try {
       const r = await flowAutomationsService.resolveNumberConflicts(flowId, { choice, always: canAlways && always });
+      if (r.resumed + r.stopped + r.failed + r.skipped === 0) toast.info('Nada pra resolver.');
       const partes: string[] = [];
       if (r.resumed > 0) partes.push(r.resumed === 1 ? '1 lead seguiu' : `${r.resumed} leads seguiram`);
       if (r.stopped > 0) partes.push(r.stopped === 1 ? '1 lead encerrado' : `${r.stopped} leads encerrados`);
       if (r.failed > 0) partes.push(r.failed === 1 ? '1 não deu certo' : `${r.failed} não deram certo`);
-      if (partes.length > 0) toast.success(partes.join(', ') + '.');
+      if (partes.length > 0) {
+        const msg = partes.join(', ') + '.';
+        if (r.failed > 0) (r.resumed + r.stopped === 0 ? toast.error : toast.warning)(msg);
+        else toast.success(msg);
+      }
       if (r.skipped > 0) {
         toast.warning(
           r.skipped === 1

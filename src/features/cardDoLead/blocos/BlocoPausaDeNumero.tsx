@@ -1,8 +1,7 @@
 // Fluxo pausado porque o lead já conversa em outro número (Entrega 4): a ficha
 // do card diz qual fluxo e deixa escolher por qual número seguir. Lê dos mesmos
 // fluxos do card (`forCard`); sem pausa por número, não desenha nada. O servidor
-// decide; "Fazer sempre assim" aparece pra todos e o servidor só honra de quem
-// edita o fluxo (o card não tem a permissão de edição do fluxo à mão).
+// decide; "Fazer sempre assim" só aparece pra quem pode editar automações.
 import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Button, Checkbox } from '@/components/ui/ds';
@@ -10,13 +9,14 @@ import {
   flowAutomationInstancesService,
   type RunningFlow,
 } from '@/services/flowAutomations/flowAutomationInstancesService';
+import { useCan } from '@/hooks/useCan';
 import { serverMessage } from '@/features/flowAutomations/guide';
 import CaixaDoCard from './CaixaDoCard';
 
 interface Props {
   contactId: string | null;
   conversationId: string | null;
-  /** Depois de resolver, o card relê o que mostra (selos do quadro). */
+  /** Depois de resolver, o histórico do card recarrega (o quadro não tem gancho de recarga aqui; o selo some na próxima leitura dele). */
   aoResolver?: () => void;
 }
 
@@ -25,6 +25,7 @@ const SEM_MENSAGEM = 'Esse número não manda mensagem sozinho.';
 export default function BlocoPausaDeNumero({ contactId, conversationId, aoResolver }: Props) {
   const [pausas, setPausas] = useState<RunningFlow[]>([]);
   const [sempre, setSempre] = useState(false);
+  const podeEditar = useCan()('flow_automations', 'update');
   const [ocupado, setOcupado] = useState(false);
 
   const carregar = useCallback(async () => {
@@ -42,7 +43,7 @@ export default function BlocoPausaDeNumero({ contactId, conversationId, aoResolv
   async function resolver(id: string, choice: 'conversation' | 'flow') {
     setOcupado(true);
     try {
-      const r = await flowAutomationInstancesService.resume(id, { choice, always: sempre });
+      const r = await flowAutomationInstancesService.resume(id, { choice, always: podeEditar && sempre });
       toast.success(r.message || 'Pronto.');
       await carregar();
       aoResolver?.();
@@ -85,10 +86,12 @@ export default function BlocoPausaDeNumero({ contactId, conversationId, aoResolv
             </div>
           );
         })}
-        <label className="flex items-center gap-2 text-xs cursor-pointer">
-          <Checkbox checked={sempre} onCheckedChange={v => setSempre(v === true)} />
-          Fazer sempre assim neste fluxo
-        </label>
+        {podeEditar && (
+          <label className="flex items-center gap-2 text-xs cursor-pointer">
+            <Checkbox checked={sempre} onCheckedChange={v => setSempre(v === true)} />
+            Fazer sempre assim neste fluxo
+          </label>
+        )}
       </div>
     </CaixaDoCard>
   );

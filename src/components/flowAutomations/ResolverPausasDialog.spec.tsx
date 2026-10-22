@@ -7,7 +7,7 @@ const resolve = vi.fn();
 vi.mock('@/services/flowAutomations/flowAutomationsService', () => ({
   flowAutomationsService: { resolveNumberConflicts: (...a: unknown[]) => resolve(...a) },
 }));
-vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn(), warning: vi.fn() } }));
+vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn(), warning: vi.fn(), info: vi.fn() } }));
 import { toast } from 'sonner';
 
 const base = { open: true, flowId: 'f1', count: 3, flowFinal: '92', canAlways: true, onClose: vi.fn(), onResolved: vi.fn() };
@@ -34,6 +34,32 @@ describe('ResolverPausasDialog', () => {
     expect(screen.queryByText('Fazer sempre assim neste fluxo')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Mandar pela conversa dele' }));
     await waitFor(() => expect(resolve).toHaveBeenCalledWith('f1', { choice: 'conversation', always: false }));
+  });
+
+  it('failed com algum sucesso vira aviso; só failed vira erro; tudo zero diz que não há nada', async () => {
+    resolve.mockResolvedValueOnce({ resumed: 1, stopped: 0, skipped: 0, failed: 2 });
+    const { unmount } = render(<ResolverPausasDialog {...base} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Mandar pela conversa dele' }));
+    await waitFor(() => expect(toast.warning).toHaveBeenCalledWith('1 lead seguiu, 2 não deram certo.'));
+    unmount();
+    resolve.mockResolvedValueOnce({ resumed: 0, stopped: 0, skipped: 0, failed: 2 });
+    const r2 = render(<ResolverPausasDialog {...base} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Mandar pela conversa dele' }));
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith('2 não deram certo.'));
+    r2.unmount();
+    resolve.mockResolvedValueOnce({ resumed: 0, stopped: 0, skipped: 0, failed: 0 });
+    render(<ResolverPausasDialog {...base} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Mandar pela conversa dele' }));
+    await waitFor(() => expect(toast.info).toHaveBeenCalledWith('Nada pra resolver.'));
+  });
+
+  it('depois do 422 os botões voltam a ficar ativos', async () => {
+    resolve.mockRejectedValue({ response: { data: { errors: ['Falhou aqui.'] } } });
+    render(<ResolverPausasDialog {...base} />);
+    const b = screen.getByRole('button', { name: 'Mandar pela conversa dele' });
+    fireEvent.click(b);
+    await waitFor(() => expect(toast.error).toHaveBeenCalled());
+    await waitFor(() => expect((b as HTMLButtonElement).disabled).toBe(false));
   });
 
   it('mostra o erro do servidor', async () => {

@@ -390,7 +390,9 @@ function ListaDeAutomacoes({ kind }: { kind: FlowAutomationKind }) {
               {(a.paused_other_number_count ?? 0) > 0 && (
                 <div className="mb-2 flex flex-wrap items-center gap-2 text-xs text-amber-700 dark:text-amber-400" data-pausados>
                   <span>{textoDePausados(a.paused_other_number_count ?? 0)}</span>
-                  <Button size="sm" variant="outline" className="text-xs" onClick={() => setResolvendo(a)}>Resolver</Button>
+                  {canEdit && (
+                    <Button size="sm" variant="outline" className="text-xs" onClick={() => setResolvendo(a)}>Resolver</Button>
+                  )}
                 </div>
               )}
               <div className="flex flex-wrap items-center gap-1">
@@ -445,7 +447,7 @@ function ListaDeAutomacoes({ kind }: { kind: FlowAutomationKind }) {
           flowId={resolvendo.id}
           flowName={resolvendo.name}
           count={resolvendo.paused_other_number_count ?? 0}
-          canAlways={ehCorretor ? resolvendo.permissions?.can_edit === true : resolvendo.permissions?.can_edit !== false}
+          canAlways
           onClose={() => setResolvendo(null)}
           onResolved={() => void load()}
         />

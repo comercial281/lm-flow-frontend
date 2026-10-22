@@ -238,6 +238,13 @@ describe('número do fluxo: leads pausados', () => {
     await waitFor(() => expect(resolverConflitos).toHaveBeenCalledWith('fa1', { choice: 'flow', always: false }));
   });
 
+  it('só leitura vê a contagem mas não o Resolver', async () => {
+    get.mockResolvedValue(flow({ paused_other_number_count: 2, permissions: { ...gestor, can_edit: false, personal: false } }));
+    renderCanvas();
+    expect(await screen.findByText('2 leads pausados: já conversam em outro número')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Resolver' })).toBeNull();
+  });
+
   it('sem pausados não tem faixa', async () => {
     get.mockResolvedValue(flow({ paused_other_number_count: 0 }));
     renderCanvas();
