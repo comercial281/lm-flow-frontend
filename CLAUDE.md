@@ -9577,3 +9577,208 @@ login: toda conta tem. Decisão do Tony.
 **Card criado direto na coluna Follow-up começa o padrão, por qualquer porta.** Criar o card já na coluna Follow-up pela API, por formulário, pelo MCP ou por qualquer outra entrada começa o follow-up padrão do responsável pelo lead (o da conta, sem responsável). Quem já tem follow-up vivo fica com o dele: não troca nem recomeça. O `move_lead` do MCP avisa quando isso aconteceu.
 
 **Nome do follow-up pessoal de outra pessoa não aparece.** No card do lead e no selo "Follow-up ativo" do quadro, quem não é o dono, nem gestor, e quando o follow-up também não é do responsável pelo lead, vê "Follow-up de {dono}" (ou "Follow-up pessoal" quando o dono não é achado), nunca o nome que o dono escolheu. A tela mostra esse nome como veio, sem aspas e sem repetir "follow-up". Automação, follow-up da equipe, o dono e o gestor veem o nome real. A lista de fluxos do card só abre pra quem vê o lead.
+
+## Construtor: janelas revisadas (desde 2026-10-22)
+
+Em 21/10/2026 o Tony fez o raio-x das 19 janelas de bloco do construtor de automações e achou que pareciam outro app: a limpeza visual de 30/09 a 14/10 nunca chegou ao conteúdo dessas janelas (só à casca). Ele marcou cada bloco, e a Entrega 1 corrige direto o que foi marcado, sem mexer no que o bloco faz. Spec em `LM FLOW/specs/2026-10-22-construtor-janelas-e-numero-do-fluxo-design.md` (fora do git, na pasta do Tony).
+
+O que mudou na tela:
+
+- **Início:** texto de ajuda do filtro de funil reescrito (o que o filtro faz), sem mexer no resto da janela.
+- **"Lead recuperado":** novo nome do bloco, com um parágrafo só e uma dica curta.
+- **Janelas da IA** (passar pra IA, desligar a IA): sem a frase repetida.
+- **"Mandar resposta rápida"** saiu da lista de Blocos. Bloco já salvo continua abrindo e rodando.
+- **Grupo Controle:** cor `#475569` (cinza azulado), pra não confundir com Distribuição.
+- **Número de envio:** "Pelo número da conversa do lead" no lugar de "Automático (como sempre foi)".
+- **Mover de etapa:** só "etapa específica", com o chip da etapa (bolinha na cor, nome da etapa e do funil). Bloco salvo por nome mostra o Aviso `Coluna "nome" do funil do card` e o botão "Trocar por uma etapa específica".
+- **Esperar e Aguardar resposta:** "Esperar como?" e "Até quando esperar?" em `BotoesDeEscolha`: Esperar com “Por um tempo / Até uma data e hora”, Aguardar resposta com “Por um prazo / Sem limite” (cada grupo tem o nome acessível do rótulo); unidades no singular ("1 dia", não "1 dias"); as saídas (Respondeu, Não respondeu) desenhadas pelo `SaidasDoBloco`.
+- **Marcar progresso:** a caixa perdeu a borda interna.
+- **Notificação:** "Quem recebe" e "Mensagem" (obrigatórios com asterisco), sem emoji nos números; opção "WhatsApp deste CRM (final NN)" só quando o cliente tem exatamente 1 número conectado, senão "WhatsApp deste CRM (o número da conversa do lead)"; "Central da Leal Mídia" continua pro cliente; "LM01" some do texto que o cliente vê; o aviso vermelho solto virou Aviso de erro compacto, sem a palavra "lembrete".
+
+Decisões (não reabrir sem o dono pedir):
+
+1. **Resposta rápida sai da lista, não do motor.** Bloco salvo continua abrindo e rodando.
+2. **Mover de etapa só por etapa específica.** Editar o nome da coluna à mão acabou; quem tem bloco por nome troca pelo botão.
+3. **Cor do Controle `#475569`**, distinta de Distribuição `#EA580C`.
+4. **Final do número só com exatamente 1 conectado.** O servidor não tem um número único do CRM: a Notificação sai pelo número da conversa do lead, então com 2 ou mais a opção não inventa final.
+5. **"Central da Leal Mídia" fica pro cliente** (é escolha real dos avisos de grupo); o seletor de números por nome segue só pro superadmin, e a opção dele agora diz “WhatsApp deste CRM”.
+6. **Unidade no singular pela quantidade nas janelas do construtor** (`unitLabel`), sem mexer no `UNITS` do Follow-up.
+7. **Texto que sai pro lead não muda.**
+
+Armadilhas:
+
+1. **`MessageSequenceEditor`** (só perdeu o maiúsculo do título; o texto é o mesmo) também aparece em Disparo em massa e Funis de mensagem: conferir os três ao mexer.
+2. **`SendFromField`** (o rótulo "Pelo número da conversa do lead") também aparece no follow-up e na ação antiga de enviar WhatsApp.
+3. **`UNITS`, `LEAD_WAIT_UNITS` e `SECONDS_UNITS` ficam intactos** (compartilhados com o Follow-up); só o rótulo mostrado passa por `unitLabel`.
+4. **Valores gravados não mudam** (`config` de cada bloco): só texto e desenho de tela. Bloco antigo abre igual.
+5. **Bloco de Mover de etapa por nome mantém `stage_name`** enquanto o usuário não clicar em trocar; salvar sem clicar não perde nada.
+6. **`instanceStatusLabel`** perdeu o emoji e vale também pra ação antiga de WhatsApp.
+7. **Teto `avisoSoltoNaJanela` desceu de 3 pra 2** no `conferir-padrao`; tetos só descem.
+
+Código: `components/flowAutomations/FlowNodePanel.tsx` (Mover de etapa, Esperar, Aguardar resposta), `components/flowAutomations/SaidasDoBloco.tsx`, `features/flowAutomations/editores/LeadAutomationsEditors.tsx` (Notificação), `features/flowAutomations/waitTime.ts` (`unitLabel`), `features/flowAutomations/leadAction.ts`, `features/flowAutomations/recovered.ts`, `lib/flowAutomationGraph.ts` (cor do Controle), `features/numbers/sendFrom.ts`, `features/numbers/numberTexts.ts` (`finalDoNumero`, `instanceStatusLabel`), `components/messaging/MessageSequenceEditor.tsx`, `components/flowAutomations/MessageBlockFields.tsx`. Testes: `BlockTexts.spec.tsx`, `FollowupBlocks.spec.tsx`, `FlowBlocks.spec.tsx`, `FlowLayoutPieces.spec.tsx`, `palette.spec.ts`, `waitTime.spec.ts`, `sendFrom.spec.ts`, `numberTexts.spec.ts`, `SendFromField.spec.tsx`, `notifyGroupCliente.spec.tsx`.
+
+## Construtor: bloco Condição (desde 2026-10-22)
+
+Em 21 e 22/10/2026 o Tony pediu pra juntar "Se / senão" e "Só continuar se" num bloco condicional só: os dois testavam o lead e o fluxo seguia por caminhos diferentes, o que confundia na hora de montar. A Entrega 2 troca os dois por **Condição**. Spec em `LM FLOW/specs/2026-10-22-construtor-janelas-e-numero-do-fluxo-design.md` (Frente 3, fora do git).
+
+O que aparece:
+
+- **Lista de Blocos, grupo Controle:** Esperar, Aguardar resposta, Condição.
+- **Janela da Condição:** o campo "Seguir pelo Sim quando" com os critérios; as saídas Sim e Não desenhadas pelo `SaidasDoBloco`.
+- **Frase embaixo:** "Sem nada ligado no Não, o fluxo para aqui pra esse lead."
+- **Bloco antigo "Só continuar se" com critério** abre como Condição; salvo, mostra o Sim ligado ao bloco seguinte.
+
+Decisões (não reabrir sem o dono pedir):
+
+1. **Um bloco só.** Condição substitui Se / senão e Só continuar se na lista.
+2. **Não vazio para o fluxo daquele lead.** Sem nada ligado no Não, o lead para ali.
+3. **Diferença aceita:** o lead que não passa termina como concluído; no "Só continuar se" antigo ele terminava como parado.
+4. **Filtro legado sem critério** (só etiquetas) fica como está: continua "Só continuar se", não vira Condição.
+5. **`filter_label` salvo com critério converte** quando alguém abre e salva fora do modo guiado.
+6. **No modo guiado nunca converte** e abre como antes ("Só continua se").
+
+Armadilhas:
+
+1. **O backend rejeita `next_node_id` em `condition`:** a ligação do Sim vai em `next_yes`, não no `next_node_id` do filtro antigo. Na conversão o `next_node_id` vira `next_yes`.
+2. **O `GuidedSave` rejeita mudança de tipo e de ligação**, por isso o guarda do modo guiado (`willConvert(node, guided)`): converter lá quebraria o salvamento.
+3. **O motor atual lê só `label` pro `has_label`:** a conversão descarta etiquetas e modo do filtro antigo. Por isso só converte quando há critério, e filtro só de etiquetas fica intacto.
+4. **`filter_label` continua em `FLOW_NODE_DEFS`** pra bloco salvo manter nome e ícone.
+5. **A conversão preserva** id, rótulo, posição e `guide_done`.
+
+Código: `features/flowAutomations/filterToCondition.ts` (`canBecomeCondition`, `toCondition`, `willConvert`), `features/flowAutomations/palette.ts`, `components/flowAutomations/FlowNodePanel.tsx` (janela, título e descrição), `pages/Customer/Automations/FlowBuilder/FlowAutomationCanvas.tsx` (`handleSaveNodeConfig`), `lib/flowAutomationGraph.ts`, `types/flowAutomations.ts`. Testes: `filterToCondition.spec.ts`, `palette.spec.ts`, `conditions.spec.ts`, `FlowBlocks.spec.tsx`.
+
+## Construtor: Etiqueta e Criar tarefa (desde 2026-10-22)
+
+Em 22/10/2026 o Tony achou a janela de Etiqueta do construtor feia ("não dá pra buscar nem nada") e escolheu a versão B ("Lista com grupos") entre 3 protótipos clicáveis. Na mesma rodada apareceu que o bloco Criar tarefa prometia "pra alguém da equipe" sem ter campo pra escolher a pessoa. A Entrega 3 resolve os dois.
+
+O que aparece:
+
+- **Escolher etiqueta (`EscolhaDeEtiqueta`, versão B):** busca no topo; "N marcadas" com botão Limpar; as Marcadas fixas no alto; depois Da equipe; Do sistema recolhido. Cada linha tem bolinha na cor da etiqueta, o nome bonito (`display_name`), a contagem de leads e a caixinha à direita. Etiqueta salva que sumiu aparece como "não existe mais". Digitou um nome que não existe: botão Criar etiqueta “x” na própria lista. Enter escolhe a primeira que casa com a busca; sem resultado, Enter cria a etiqueta.
+- **Conta com mais de 200 etiquetas, sem busca:** mostra as Marcadas, as 30 com mais leads e um rodapé pedindo pra buscar.
+- **Mesmo componente em três lugares:** Aplicar etiqueta (ordem por nome), Tirar etiqueta (ordem por mais leads) e Condição "Tem a etiqueta" (escolhe uma só, sem Limpar).
+- **Carregando ou catálogo fora do ar** nunca mostra "não existe mais" falso.
+- **Criar tarefa:** "Pra quem" com Responsável pelo lead / Uma pessoa da equipe (seletor só com gente ativa, só o nome); "Prazo" com número e horas/dias; os textos de ajuda do protótipo; "Escolha a pessoa." aparece embaixo do seletor vazio; "Falta escolher a pessoa." bloqueia ligar o fluxo.
+
+Decisões (não reabrir sem o dono pedir):
+
+1. **Versão B, Lista com grupos.** As outras duas foram descartadas.
+2. **Grava o título, mostra o `display_name`.** O valor salvo no bloco não muda.
+3. **Etiqueta do sistema = categoria diferente da própria da conta.** Ficam em Do sistema, recolhido.
+4. **Regra dos 200:** acima disso, sem busca, só Marcadas + 30 mais usadas + rodapé.
+5. **Unidade do prazo derivada do valor salvo, como no Esperar:** múltiplo positivo de 24 abre em dias, senão em horas. Trocar a unidade mantém o número digitado; prazo mínimo 1.
+6. **"Uma pessoa da equipe" exige a pessoa.** Sem ela, "Escolha a pessoa." aparece embaixo do seletor e "Falta escolher a pessoa." bloqueia ligar o fluxo.
+
+Armadilhas:
+
+1. **O backend casa etiqueta por título** e põe em minúsculas ao criar. Criar “Quente” quando já existe “quente” reaproveita a existente.
+2. **`getLabels` com `withCounts` agora vive em `useAutomationResources`:** o `LeadAdsForms` também paga a contagem.
+3. **Escape dentro da janela do Radix fecha a janela**, então a busca não limpa com Escape (tentamos e tiramos). Enter fica.
+4. **Criar tarefa depende do backend #522** (`assignee_mode` e `assignee_id` no `create_task`): o backend entra primeiro, senão o servidor ignora a pessoa.
+5. **Pessoa desativada:** o servidor cai pro dono do lead. A tela avisa "A pessoa escolhida não está mais na equipe." e mostra "Pessoa que não está mais na equipe" pra não perder o valor em silêncio.
+6. **Bloco antigo de Criar tarefa abre na unidade do valor salvo** (um prazo de 24 horas abre como “1 dia”) e não grava `assignee_mode` até a pessoa mexer em "Pra quem".
+
+Código: `components/flowAutomations/EscolhaDeEtiqueta.tsx`, `components/labels/labelColors.ts` (cores compartilhadas com `LabelMultiSelect` e `ContactTagsManager`), `components/flowAutomations/FlowNodePanel.tsx`, `features/flowAutomations/editores/LeadAutomationsEditors.tsx` (`CreateTaskFields`), `features/flowAutomations/leadAction.ts` (`leadActionProblem`). Testes: `EscolhaDeEtiqueta.spec.tsx`, `FlowBlocks.spec.tsx`, `editores/createTask.spec.tsx`, `leadAction.spec.ts`.
+
+## Construtor: número do fluxo e pausa por conversa em outro número (desde 2026-10-22)
+
+Em 21 e 22/10/2026 o Tony reclamou que o sistema vivia "pulverizando com números": o mesmo lead recebia mensagem de números diferentes conforme o bloco, e quando já conversava com a equipe por um número, o fluxo falava por outro. Decidiu que cada fluxo da equipe tem um número só, e que, se o lead já conversa com uma pessoa da equipe em outro número, o fluxo pausa em vez de falar por cima. O aviso é só um selo, sem notificação. Spec: `LM FLOW/specs/2026-10-22-construtor-janelas-e-numero-do-fluxo-design.md` (Frente 4). Depende do backend #524 (`send_from`, `send_from_inbox_id`, `number_conflict`, pausa `other_number`).
+
+O que aparece:
+
+- **Configurações do fluxo, grupo "Por qual número este fluxo fala com o lead":** Pelo número da conversa do lead / Pelo número do responsável pelo lead / Por um número específico (com o seletor "Número do fluxo"). Só aparece em automação da equipe (não em follow-up, funil nem fluxo pessoal).
+- **Grupo "Se o lead já conversa com a equipe em outro número":** três opções: “Pausar e esperar alguém escolher” (padrão), “Seguir pela conversa dele” e “Mandar pelo número do fluxo mesmo assim”. Só aparece quando o fluxo fala pelo responsável ou por um número específico.
+- **Início:** linha "Fala pelo final 92", "Fala pelo responsável pelo lead" ou "Fala pelo número da conversa".
+- **Mensagem:** uma linha "Sai pelo número do fluxo" no lugar do seletor de número. A IA mostra "Quem atende: a IA do número do fluxo (final 92)".
+- **Fluxo antigo com números diferentes nos blocos:** Aviso “Este fluxo fala por números diferentes. Escolha um nas Configurações.” nas Configurações e na Mensagem; a Mensagem mantém o seletor próprio até a pessoa escolher a regra.
+- **Avisos na hora de montar e no Simular (`numberWarnings.ts`):** três avisos: gatilho Visita realizada ou Mudou de etapa com número específico ou responsável (o lead costuma já conversar com o corretor em outro número); “Esse número não tem IA. Escolha o número da IA ou tire o bloco Passar para a IA.” (some quando a lista de IAs não carregou); e “A IA só responde, não abre conversa. Ponha uma Mensagem antes do Passar para a IA.” quando nenhum bloco que manda WhatsApp (Mensagem, Disparar funil, resposta rápida, WhatsApp e mídias antigas) vem antes. Aparecem em Faixa de atenção depois do aviso de reentrada e no topo do resultado do Simular.
+- **Bloco antigo de ação no lead (Enviar WhatsApp, áudio, imagem, vídeo, documento, figurinha) num fluxo com número:** Aviso compacto “Bloco antigo: sai pelo número dele. Troque por uma Mensagem pra seguir o número do fluxo.” Disparar funil e resposta rápida não mostram, porque seguem o número do fluxo no servidor.
+- **Lista e mapa:** "N leads pausados: já conversam em outro número" com botão Resolver (só quem edita). O Resolver abre o `ResolverPausasDialog`: duas escolhas (mandar pela conversa dele / mandar pelo número do fluxo), caixa "Fazer sempre assim neste fluxo" (só quem edita o fluxo) e o texto das 48 h.
+- **Quadro:** selo "Pausado" no card (`SeloDePausaDeNumero`), com o nome do fluxo no title.
+- **Ficha do lead:** bloco com os dois botões (com os finais dos números). Quando o número da conversa não manda mensagem sozinho, some o botão "pela conversa" e aparece "Esse número não manda mensagem sozinho.". "Fazer sempre assim" só para quem edita fluxos.
+
+Decisões (não reabrir sem o dono pedir):
+
+1. **Um número por fluxo.** Não existe número por bloco; o número mora nas Configurações e a Mensagem só mostra a linha.
+2. **Conflito pausa o lead.** É o padrão de regra nova; “Seguir pela conversa dele” e “Mandar pelo número do fluxo mesmo assim” (`force_flow_number`, fala por cima da conversa do corretor) são escolhas explícitas, e a segunda existe pra quem quer o número do fluxo acima de tudo.
+3. **Só selo, sem notificação.** Nada de aviso pro responsável; quem acompanha vê o selo, a contagem e o Resolver.
+4. **Pausa de 48 h** e a resposta do lead não solta a pausa.
+5. **Conversa só com IA não conta como conflito** (ex.: Basel, "Corretor aceitou"); conta conversa aberta ou pendente com mensagem de uma pessoa da equipe nos últimos 7 dias em outro número do cliente.
+6. **Fluxo antigo não muda até salvar as Configurações.** Sem mexer no grupo do número, o salvamento sai idêntico ao de hoje (sem `send_from`, sem espelho nas Mensagens). Fluxo antigo mexido começa em "Seguir pela conversa dele"; fluxo novo nasce com `''` (modo conversa).
+7. **Sem exceção por bloco.** Quem precisa de outro número faz outro fluxo.
+8. **“Seguir pela conversa dele” gruda.** Usada uma vez, vale pro resto do fluxo para aquele lead (backend, PR #524).
+9. **Passar para a IA espera o horário comercial** quando teria que abrir uma conversa (backend, PR #524).
+
+Armadilhas:
+
+1. **Backend #524 entra primeiro.** Tela nova com backend velho mostra uma regra que o servidor ignora.
+2. **`''` não é `null` em `send_from`.** `''` é "salvo, modo conversa"; `null` ou ausente é fluxo antigo. Tratar `''` como falso reabre o fluxo antigo sem querer (`flowNumberOf`).
+3. **O espelho nas Mensagens ao salvar é a proteção de volta de versão.** Salvar com regra grava o mesmo número em cada bloco Mensagem (`withFlowSendFrom`), assim um rollback do backend continua falando pelo número certo. Não tirar.
+4. **"Aceitou na roleta" fica fora do aviso de conflito.** Esse caso é tratado pelo servidor; o aviso da tela não o simula.
+5. **Blocos antigos de ação no lead (`lead_action`) mantêm o número próprio.** O gate do servidor só vale para Mensagem, Disparar funil, resposta rápida e Passar para a IA; `send_whatsapp_message` e as mídias antigas não são gateados (a tela avisa). Os blocos antigos de Sequência e Funil (StepCursor) também pulam o gate: num fluxo com número salvo saem pela última conversa decidida, sem checar conflito (nenhum fluxo vivo os usa).
+6. **O selo do quadro atualiza na próxima leitura do quadro.** Resolver pela ficha ou pela lista não repinta o quadro na hora.
+7. **`useSendNumbers` só busca quando precisa** (Configurações abertas ou fluxo com número específico); se falhou, volta a `idle` ao fechar as Configurações pra tentar de novo. Com o mapa aberto num fluxo de número específico, a falha só se resolve recarregando (o Início fica sem o final).
+8. **Desligar a IA também prefere a conversa decidida.**
+9. **Não voltar só a tela.** Com o servidor novo e a tela ANTIGA, “Retomar” não manda escolha e recebe 422 “Escolha por qual número mandar.”; a tela não pode voltar sem o servidor.
+
+Código: `features/flowAutomations/flowNumber.ts` (`flowNumberOf`, `serializeFlowNumber`, `withFlowSendFrom`, textos), `features/flowAutomations/numberWarnings.ts`, `features/flowAutomations/pausas.ts`, `features/flowAutomations/personal.ts` (`numeroFixoNaEquipe`), `features/numbers/useSendNumbers.ts`, `components/flowAutomations/FlowSettingsDialog.tsx`, `FlowNodePanel.tsx`, `FlowNodeCard.tsx`, `ResolverPausasDialog.tsx`, `FlowAutomationsList.tsx`, `pages/Customer/Automations/FlowBuilder/FlowAutomationCanvas.tsx`, `SeloDePausaDeNumero` e `BlocoPausaDeNumero` (quadro e ficha). Testes: `flowNumber.spec.ts`, `numberWarnings.spec.ts`, `FlowSettingsDialog.spec.tsx`, `FlowCanvasNumero.spec.tsx`, `ResolverPausasDialog.spec.tsx`, `AutomationsOwnership.spec.tsx`, `PipelineItemCard.spec.tsx`, `FollowupTimeline.spec.tsx`.
+
+## API oficial do WhatsApp (desde 2026-10-22)
+
+O cliente passa a poder conectar um número pela API oficial da Meta, sem QR Code, direto em **Canais**. Entrega A (base): conectar, ver a situação, reconectar, desconectar e a aba **Modelos de mensagem** na página do número. A gestão completa (qualidade, limites, métricas por número) é a Fase 2, com o esboço aprovado em https://claude.ai/artifact/7RsnJbPnXLDstRfGUE7s1N.
+
+O que muda pra quem usa:
+
+1. **Sem item novo no menu.** A gestão abre pelo próprio número, em Canais (botão **Gerenciar** do card). Decisão do Tony em 21/10.
+2. **Dois caminhos pra conectar**, na mesma janela: **"Já uso esse número no app WhatsApp Business"** (coexistência: o número continua no celular) e **"Chip novo, só pra API oficial"**.
+3. **A conta é criada pelo servidor.** A tela só abre o login do Facebook e repassa o código; o token da conta nunca passa pela tela nem fica no navegador. O formulário antigo de colar token saiu.
+4. **Aviso de cobrança da Meta depois de conectar**: a Meta cobra **por mensagem** e o aviso aparece quando a conexão termina.
+5. **Número já conectado por QR neste cliente: desconectar antes** (decisão do Tony, opção a). O servidor recusa com a frase pronta; a tela só mostra.
+6. **Página do número** (`NumeroOficial`): situação, **Abrir no painel da Meta**, **Reconectar** e **Desconectar**. Desconectar **mantém as conversas** (a caixa e o histórico ficam; o número só para de receber e enviar).
+7. **Desconectar só aparece pra quem edita caixa; Reconectar pede editar E criar caixa** (o servidor exige `inboxes.update` pra desconectar e `inboxes.create` na rota de conectar, que é a mesma do religar). Vale na página do número e no banner da configuração. Quem só lê vê a situação e não mexe.
+8. **Sem a conexão liberada** (falta o id do app da Meta ou o id da configuração do login no ambiente), Reconectar mostra a frase **"A conexão com a API oficial ainda não está liberada neste LM Flow."** em vez de botão desabilitado mudo.
+9. **Canal oficial mantém Configurar ao lado de Gerenciar.** Configurar abre as configurações da caixa (atendentes, horário etc.); tirar esconderia o resto.
+10. **Nesta entrega a página tem só a aba Modelos de mensagem.** O resto da gestão é a Fase 2.
+11. O banner de reautorização esconde o Reconectar de quem não edita caixa, em todos os provedores (o clique falharia).
+12. **Aba Modelos só pra quem edita caixa.** Quem não edita vê "Os modelos são do gestor do número." no lugar da lista (criar e apagar modelo exige editar a caixa).
+13. **Número oficial desconectado nunca pede QR Code.** Em Canais o Reconectar do card leva pra página do número; na configuração o banner diz **Desconectado** (não "Ativo"); em Conversas a frase é "Reconecte este número pela página dele em Canais." e o botão vai pra `/channels/:id/oficial`. Quem decide é `whatsapp_cloud.connected` (o servidor também manda `connection_status`).
+14. **A janela da Meta é aceita de `facebook.com` e de qualquer subdomínio** (`www`, `web`, `business`...), comparando pelo nome do host: `evilfacebook.com` não passa.
+15. **Cancelou ou deu erro na janela da Meta: frase nossa em pt-BR** ("Você fechou a janela da Meta antes de terminar." e "A Meta não conseguiu concluir a conexão. Tente de novo."), nunca a mensagem crua da Meta. Passou o prazo de 30 s, o evento atrasado não conecta mais.
+16. **Gerenciar em Integrações, WhatsApp Oficial** abre a página do número (`/channels/:id/oficial`).
+
+Este PR **depende do backend na frente** (PR #516 entra antes): sem ele a conexão, a situação e o Desconectar não existem no servidor.
+
+Armadilhas:
+
+1. **Os extras do login do Facebook (v4) e o formato do aviso da coexistência são suposição até testar com número real.** Primeiro teste ao vivo: conferir os dois caminhos e ajustar `useConexaoOficial.ts`.
+2. **O código que a Meta devolve vale ~30 s.** A tela repassa na hora ao servidor; não guardar, não reenviar, não pôr em fila. Passou do prazo, o servidor recusa e o cliente tenta de novo.
+3. **Frase de erro do servidor vem pronta**; a tela não reescreve. As frases da janela da Meta (cancelou, erro, prazo) são nossas (decisão 15).
+4. **Texto de tela sem "WABA", "token", "webhook", "template" nem "Evolution"**; é "modelo de mensagem". O `MessageTemplateForm` é herdado e lia "Template": o pt-BR do bloco `settings.messageTemplates.*` (`i18n/locales/pt-BR/channels.json`) foi trocado pra "modelo" (vale também nas Configurações da caixa). Chave nova ou texto novo ali: "modelo", nunca "template". Repo público: nenhum número, segredo ou dado de lead em teste ou exemplo.
+
+Código: `components/channels/forms/whatsapp/` (`CloudWhatsappForm`, `EscolhaCaminhoOficial`, `useConexaoOficial`), `pages/Customer/Channels/NumeroOficial/`, `ChannelCard.tsx`, `AuthorizationBanners.tsx`, `services/channels/whatsappService.ts`, `features/numbers/avisoConversas.ts` + `useNumerosDaConversa.ts` (Conversas), `pages/Customer/Settings/Integrations/WhatsappOficialPartes.tsx`. Testes: `CloudWhatsappForm.spec.tsx`, `useConexaoOficial.spec.tsx`, `NumeroOficial.spec.tsx`, `ChannelCard.spec.tsx`, `AuthorizationBanners.spec.tsx`, `avisoConversas.spec.ts`, `useNumerosDaConversa.spec.ts`, `AvisoNumero.spec.tsx`, `WhatsappOficial.spec.tsx`.
+
+Não reabrir sem o dono pedir.
+
+## IA Vendedora na API oficial (desde 2026-10-22)
+
+A IA Vendedora passa a poder atender por um número da API oficial. Entrega C do backend manda a mensagem; a tela só mostra o que o servidor decide. Quem usa Evolution não vê diferença.
+
+O que muda pra quem usa:
+
+1. **O seletor de número da IA marca o número oficial com "(API oficial)"** depois do nome, em Configurar, página Canal. Os outros números aparecem como sempre.
+2. **Aviso na página Canal, só com número oficial escolhido**: "Pela API oficial a IA responde normalmente quem chamar. Abrir conversa com lead de formulário e mandar follow-up depois de 24h ainda não funcionam neste número. Acima de 1.000 respostas no mês, a Meta cobra cada resposta."
+3. **O aviso diz o que ainda não funciona porque é verdade hoje.** Pela oficial, texto livre só sai dentro de 24h da última mensagem do lead. Abrir conversa com lead de formulário e follow-up depois de 24h precisam de modelo de mensagem aprovado, o que vem nas entregas B e D. Quando a D entrar, o texto troca; não prometer antes.
+4. **O aviso fala em 1.000 respostas, não em "cada mensagem é cobrada".** Desde 01/10/2026 a Meta deixa grátis a resposta dentro de 24h, até 1.000 por mês por número. Dizer que toda mensagem é cobrada assustaria à toa e estaria errado. Fonte: página de preços da WhatsApp Cloud API da Meta ("For each business phone number, Meta provides 1,000 free service messages per month", lida em 21/10/2026; resposta de atendimento cobrada desde 01/10/2026).
+5. **Os motivos novos chegam prontos do servidor** no histórico da IA ("Fora da janela de 24h: pela API oficial só sai modelo aprovado" e "O número oficial desta IA está desconectado"). A tela não traduz chave nem reescreve a frase.
+6. **Número oficial desconectado não desliga a IA.** Ela segue ligada, a escolha do número se mantém, o motivo aparece no histórico e o envio volta sozinho quando o número é religado.
+7. **"Corrigir" da conexão de uma IA com número oficial leva pra página do número** (`/channels/:id/oficial`), onde se reconecta. Em número Evolution continua levando pra configuração do número (QR Code).
+
+Armadilhas:
+
+1. **Texto de tela sem "WABA", "token", "webhook", "template" nem "Evolution"**; é "modelo de mensagem". Repo público: nada de dado real em teste ou exemplo.
+2. **O aviso tem teste pela frase inicial** (`Canal.spec.tsx`); mudar o texto pede mudar o teste.
+
+Código: `pages/Customer/Automations/SalesAgents/configurar/paginas/Canal.tsx`, `features/salesAgents/situacao.ts` (parâmetro `oficial`), `TelaVisaoGeral.tsx`, `DuplicateAgentDialog.tsx` (o seletor de número da cópia também marca "(API oficial)"), `SalesAgents.tsx`.
+
+Este PR **depende do backend da C na frente**: sem ele a IA não envia pela oficial e os motivos novos não existem.
+
+Não reabrir sem o dono pedir.
