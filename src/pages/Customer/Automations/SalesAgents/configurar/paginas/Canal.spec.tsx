@@ -8,7 +8,7 @@ import { gravarDeTeste } from '@/test/salesAgents/gravarDeTeste';
 vi.mock('../blocos/TriggersSection', () => ({ TriggersSection: () => <p>condições</p> }));
 import Canal from './Canal';
 
-const INBOXES = [{ id: 'inbox-1', name: 'Vendas (11) 98765-4321' }, { id: 'inbox-2', name: 'Lançamentos' }];
+const INBOXES = [{ id: 'inbox-1', name: 'Vendas (11) 98765-4321', oficial: false }, { id: 'inbox-2', name: 'Lançamentos', oficial: false }, { id: 'inbox-3', name: 'Oficial 1', oficial: true }];
 
 function abrir(agent: SalesAgent = agenteDeTeste(), diagnostico: never | null = null) {
   const gravar = gravarDeTeste('canal');
@@ -16,6 +16,23 @@ function abrir(agent: SalesAgent = agenteDeTeste(), diagnostico: never | null = 
   render(<Canal agent={agent} inboxes={INBOXES} gravar={gravar} irPara={irPara} diagnostico={diagnostico} />);
   return { gravar, irPara };
 }
+
+describe('Canal · API oficial', () => {
+  const AVISO = /Pela API oficial a IA responde normalmente quem chamar/;
+  it('a opção do número oficial leva o sufixo; os outros não', () => {
+    abrir(agenteDeTeste({ inbox_id: null }));
+    expect(screen.getByRole('option', { name: 'Oficial 1 (API oficial)' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'Lançamentos' })).toBeInTheDocument();
+  });
+  it('com o oficial escolhido mostra o aviso', () => {
+    abrir(agenteDeTeste({ inbox_id: 'inbox-3' }));
+    expect(screen.getByText(AVISO)).toBeInTheDocument();
+  });
+  it('Evolution escolhido: sem aviso', () => {
+    abrir(agenteDeTeste({ inbox_id: 'inbox-1' }));
+    expect(screen.queryByText(AVISO)).not.toBeInTheDocument();
+  });
+});
 
 describe('Canal', () => {
   it('cartão do número com a situação do WhatsApp; Trocar grava na hora', async () => {

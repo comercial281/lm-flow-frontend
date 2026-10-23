@@ -18,7 +18,7 @@ import { CampoDaJanela, GrupoDaJanela } from '@/components/base/janela';
 
 interface Props {
   agent: SalesAgent;
-  inboxes: { id: string | number; name: string }[];
+  inboxes: { id: string | number; name: string; oficial?: boolean }[];
   onClose: () => void;
   onDuplicated: (copy: DuplicatedSalesAgent) => void;
 }
@@ -79,7 +79,7 @@ export default function DuplicateAgentDialog({ agent, inboxes, onClose, onDuplic
               >
                 <option value="">— Escolher depois —</option>
                 {inboxes.map((i) => (
-                  <option key={i.id} value={String(i.id)}>{i.name}</option>
+                  <option key={i.id} value={String(i.id)}>{i.oficial ? `${i.name} (API oficial)` : i.name}</option>
                 ))}
               </Seletor>
             </CampoDaJanela>

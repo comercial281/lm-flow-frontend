@@ -47,6 +47,12 @@ describe('situacaoDaIa', () => {
     expect(s.corrigir?.rota).toBe(`/channels/${ia().inbox_id}/settings?tab=configuration`);
   });
 
+  it('número oficial desconectado: corrigir leva à página do número', () => {
+    const s = situacaoDaIa(ia(), diag(['credentials', 'error']), [], true);
+    expect(s.tipo).toBe('parada');
+    expect(s.corrigir?.rota).toBe(`/channels/${ia().inbox_id}/oficial`);
+  });
+
   it('"só follow-up" para a resposta ao vivo, mesmo sem Diagnóstico', () => {
     expect(situacaoDaIa(ia({ followup_only: true })).tipo).toBe('restricao');
   });
@@ -90,6 +96,14 @@ describe('restricaoDosGatilhos (espelho do TriggerGate)', () => {
   it('com E, um gatilho em branco trava todo mundo e o veredito vira parada', () => {
     const agente = ia({ trigger_match_mode: 'all', triggers: [{ type: 'origin', mode: 'ads' }, { type: 'tag', value: ' ' }] });
     expect(situacaoDaIa(agente)).toEqual({ tipo: 'parada', frase: 'Parada: um gatilho está em branco e não deixa ninguém passar', corrigir: { tela: 'configurar', pagina: 'canal' } });
+  });
+});
+
+describe('pendenciasDaIa · número oficial', () => {
+  it('WhatsApp desconectado leva à tela do número oficial, não ao QR', () => {
+    const d = diag(['credentials', 'error']);
+    expect(pendenciasDaIa(ia(), d, true)[0].corrigir?.rota).toBe('/channels/inbox-1/oficial');
+    expect(pendenciasDaIa(ia(), d)[0].corrigir?.rota).toBe('/channels/inbox-1/settings?tab=configuration');
   });
 });
 

@@ -202,10 +202,12 @@ export interface TelaVisaoGeralProps {
   aoSalvo?: (a: SalesAgent) => void;
   /** Quem edita a IA oculta aviso amarelo do Painel (11/10/2026). */
   podeOcultar?: boolean;
+  /** O número da IA é da API oficial: "Reconectar" leva à tela dele, não ao QR. */
+  numeroOficial?: boolean;
 }
 
-export default function TelaVisaoGeral({ agent, situacao, diagnostico, conferindo, falhou = false, mostrarSugestoes, equipe, aoIr, aoSalvo, podeOcultar = false }: TelaVisaoGeralProps) {
-  const { visiveis, ocultas } = separarOcultas(pendenciasDaIa(agent, diagnostico), agent.hidden_warnings);
+export default function TelaVisaoGeral({ agent, situacao, diagnostico, conferindo, falhou = false, mostrarSugestoes, equipe, aoIr, aoSalvo, podeOcultar = false, numeroOficial = false }: TelaVisaoGeralProps) {
+  const { visiveis, ocultas } = separarOcultas(pendenciasDaIa(agent, diagnostico, numeroOficial), agent.hidden_warnings);
   const [verOcultas, setVerOcultas] = useState(false);
   const [gravando, setGravando] = useState<string | null>(null);
 
