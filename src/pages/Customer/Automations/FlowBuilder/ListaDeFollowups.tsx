@@ -1,14 +1,17 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Archive, Copy, Pause, Pencil, Play, Plus, Repeat, Star, Trash2 } from 'lucide-react';
+import { Archive, Copy, Pause, Pencil, Pin, Play, Plus, Repeat, Star, Trash2 } from 'lucide-react';
 import {
   Badge, Button, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from '@/components/ui/ds';
 import { BaseHeader, Pagina } from '@/components/base';
+import BotaoMaisAcoes from '@/components/base/BotaoMaisAcoes';
 import Chave from '@/components/base/Chave';
 import CartoesDeEscolha from '@/components/base/CartoesDeEscolha';
 import EmptyState from '@/components/base/EmptyState';
+import IconActionButton from '@/components/base/IconActionButton';
 import { CartaoDeFluxo } from '@/components/flowAutomations/CartaoDeFluxo';
 import { LegacyFollowupStrip } from '@/components/flowAutomations/LegacyFollowupStrip';
 import NoAccessState from '@/components/permissions/NoAccessState';
@@ -33,10 +36,13 @@ import { cn } from '@/lib/utils';
 // - "Meus": os meus, que não são da equipe. O corretor edita no modo guiado.
 // - "Dos corretores" (só o gestor): os pessoais de outra pessoa, com o nome.
 //
-// Por item: Editar/Ver, Duplicar, a estrela "Meu padrão" (o follow-up que
-// começa quando EU mando o lead pra coluna Follow-up), o selo "Padrão da conta"
-// e, só pro gestor e só nos da equipe, "Tornar padrão da conta". Quem pode o
-// quê vem do servidor (`permissions`); a tela só esconde o que ele recusaria.
+// Por item (23/10/2026, pedido do dono): a ESTRELA ao lado do estado é o
+// padrão da conta (cheia = é o padrão; vazia, só pro gestor e só nos da equipe
+// ligados = "Tornar padrão da conta"). O ALFINETE é o "Meu padrão" (o follow-up
+// que começa quando EU mando o lead pra coluna Follow-up): dois símbolos pra
+// duas marcas, nada de duas estrelas. À vista só alfinete, ligar/desligar e
+// lápis (Ver, pra quem não edita); Duplicar, Arquivar e Excluir moram no ⋮.
+// Quem pode o quê vem do servidor (`permissions`); a tela só esconde o que ele recusaria.
 //
 // "Novo follow-up" nasce do modelo "Follow-up padrão" (o servidor monta). O
 // gestor escolhe antes se é "Da equipe" ou "Só meu"; o corretor cria o dele direto.
@@ -274,7 +280,7 @@ export default function ListaDeFollowups() {
 
   const item = (f: FlowAutomation, secao: 'equipe' | 'meus' | 'corretores') => {
     const canEdit = f.permissions ? f.permissions.can_edit === true : ehGestor;
-    const comEstrela = secao !== 'corretores';
+    const comAlfinete = secao !== 'corretores';
     // Só ligado (e não arquivado): o servidor recusa o resto.
     const podeTornarPadrao = ehGestor && secao === 'equipe' && f.is_enabled && !f.account_default && !f.archived_at;
     const estado = f.archived_at ? 'Arquivado' : f.is_enabled ? 'Ligado' : 'Desligado';
@@ -288,17 +294,34 @@ export default function ListaDeFollowups() {
         estado={estadoDoCartao}
         selos={
           <>
-            {f.account_default && <Badge variant="secondary" className="shrink-0 text-[10px]">Padrão da conta</Badge>}
             {secao === 'corretores' && f.owner_name && <Badge variant="outline" className="shrink-0 text-[10px]">{`De ${f.owner_name}`}</Badge>}
             <Badge variant={f.archived_at ? 'secondary' : f.is_enabled ? 'default' : 'outline'} className="shrink-0 text-[10px]">
               {estado}
             </Badge>
+            {f.account_default ? (
+              <span
+                role="img"
+                aria-label="Padrão da conta"
+                title="Padrão da conta"
+                className="inline-flex h-6 w-6 items-center justify-center"
+              >
+                <Star className="h-4 w-4 fill-amber-400 text-amber-500" aria-hidden="true" />
+              </span>
+            ) : podeTornarPadrao && (
+              <IconActionButton
+                label="Tornar padrão da conta"
+                icon={<Star className="h-4 w-4" />}
+                variant="ghost"
+                className="h-6 w-6 text-muted-foreground"
+                onClick={() => void tornarPadraoDaConta(f)}
+              />
+            )}
           </>
         }
         linha={<span className="block truncate" title={gatilho}>{gatilho}</span>}
         acoes={
           <div className="flex w-full flex-wrap items-center gap-1">
-            {comEstrela && (
+            {comAlfinete && (
               <Button
                 type="button"
                 size="icon"
@@ -309,44 +332,54 @@ export default function ListaDeFollowups() {
                 title={f.my_default ? 'Seu padrão: clique pra desmarcar' : 'Marcar como meu padrão'}
                 onClick={() => void marcarMeuPadrao(f)}
               >
-                <Star className={cn('h-4 w-4', f.my_default && 'fill-amber-400 text-amber-500')} aria-hidden="true" />
+                <Pin className={cn('h-4 w-4', f.my_default && 'fill-primary text-primary')} aria-hidden="true" />
               </Button>
             )}
             {canEdit ? (
               <>
-                <Button size="sm" variant="outline" onClick={() => openFlow(f)}>
-                  <Pencil className="h-3.5 w-3.5 mr-1" aria-hidden="true" /> Editar
-                </Button>
-                <Button size="sm" variant="ghost" onClick={() => void toggle(f)} title={f.is_enabled ? 'Desligar' : 'Ligar'}>
-                  {f.is_enabled ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
-                </Button>
-                <Button size="sm" variant="ghost" onClick={() => pedirDuplicar(f)} title="Duplicar" aria-label="Duplicar">
-                  <Copy className="h-3.5 w-3.5" />
-                </Button>
-                <Button size="sm" variant="ghost" onClick={() => void archive(f)} title="Arquivar">
-                  <Archive className="h-3.5 w-3.5" />
-                </Button>
-                <Button size="sm" variant="ghost" onClick={() => void destroy(f)} title="Excluir">
-                  <Trash2 className="h-3.5 w-3.5" />
-                </Button>
+                <IconActionButton
+                  label={f.is_enabled ? 'Desligar' : 'Ligar'}
+                  icon={f.is_enabled ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
+                  variant="ghost"
+                  className="h-8 w-8"
+                  onClick={() => void toggle(f)}
+                />
+                <IconActionButton
+                  label="Editar"
+                  icon={<Pencil className="h-3.5 w-3.5" />}
+                  variant="ghost"
+                  className="h-8 w-8"
+                  onClick={() => openFlow(f)}
+                />
               </>
             ) : (
-              <>
-                <Button size="sm" variant="outline" onClick={() => openFlow(f)}>Ver</Button>
-                <Button size="sm" variant="ghost" onClick={() => pedirDuplicar(f)} title="Duplicar pra ter a sua cópia" aria-label="Duplicar pra ter a sua cópia">
-                  <Copy className="h-3.5 w-3.5" />
-                </Button>
-              </>
+              <Button size="sm" variant="outline" onClick={() => openFlow(f)}>Ver</Button>
             )}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <BotaoMaisAcoes compacto className="ml-auto" aria-label={`Mais ações de ${f.name}`} />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => pedirDuplicar(f)}>
+                  <Copy className="h-4 w-4" /> {canEdit ? 'Duplicar' : 'Duplicar pra ter a sua cópia'}
+                </DropdownMenuItem>
+                {canEdit && (
+                  <>
+                    <DropdownMenuItem onClick={() => void archive(f)}>
+                      <Archive className="h-4 w-4" /> Arquivar
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem variant="destructive" onClick={() => void destroy(f)}>
+                      <Trash2 className="h-4 w-4" /> Excluir
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
             {ehGestor && (
               <div className="w-full">
                 <Chave rotulo="Da equipe" ligada={followupDaEquipe(f)} aoMudar={next => marcarEquipe(f, next)} semAviso />
               </div>
-            )}
-            {podeTornarPadrao && (
-              <Button size="sm" variant="ghost" className="ml-auto" onClick={() => void tornarPadraoDaConta(f)}>
-                Tornar padrão da conta
-              </Button>
             )}
           </div>
         }
