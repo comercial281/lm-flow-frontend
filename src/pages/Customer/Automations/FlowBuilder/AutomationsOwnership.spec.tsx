@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 
 // Automações por cargo (15/10/2026): a lista ganha dono e equipe. Corretor vê
@@ -65,8 +66,16 @@ beforeEach(() => {
   can.manager = false;
 });
 
+// Cartão único (23/10/2026): à vista só ligar/desligar e Editar (ou "Ver");
+// Duplicar, Arquivar, Passar/Tirar da equipe e Excluir moram no ⋮.
+const abrirMenu = async (item: HTMLElement, nome: string) => {
+  await userEvent.click(within(item).getByRole('button', { name: `Mais ações de ${nome}` }));
+  return screen.findByRole('menu');
+};
+const itensDoMenu = (menu: HTMLElement) => within(menu).getAllByRole('menuitem').map(i => i.textContent?.trim());
+
 describe('corretor', () => {
-  it('vê Minhas e Da equipe; a da equipe é só leitura, sem chave Ligado, com Duplicar', async () => {
+  it('vê Minhas e Da equipe; a da equipe é só leitura: Ver e, no ⋮, só Duplicar', async () => {
     list.mockResolvedValue([flow('a1', 'Boas-vindas'), teamFlow('a2', 'Lembrete de visita')]);
     renderPage();
     expect(await screen.findByText('Boas-vindas')).toBeTruthy();
@@ -77,18 +86,30 @@ describe('corretor', () => {
     fireEvent.click(screen.getByRole('tab', { name: /Da equipe \(1\)/ }));
     const item = (await screen.findByText('Lembrete de visita')).closest('li')!;
     expect(within(item).getByRole('button', { name: 'Ver' })).toBeTruthy();
-    expect(within(item).getByLabelText('Duplicar pra ter a sua cópia')).toBeTruthy();
-    expect(within(item).queryByLabelText('Excluir')).toBeNull();
-    expect(within(item).queryByLabelText('Arquivar')).toBeNull();
+    for (const t of ['Ligar', 'Desligar', 'Editar']) expect(within(item).queryByLabelText(t)).toBeNull();
     expect(within(item).queryByRole('switch')).toBeNull();
+    const menu = await abrirMenu(item, 'Lembrete de visita');
+    expect(itensDoMenu(menu)).toEqual(['Duplicar pra ter a sua cópia']);
   });
 
-  it('cria direto, sem team', async () => {
+  it('a minha: ligar/desligar e Editar à vista; Duplicar, Arquivar e Excluir no ⋮', async () => {
+    list.mockResolvedValue([flow('a1', 'Boas-vindas')]);
+    renderPage();
+    const item = (await screen.findByText('Boas-vindas')).closest('li')!;
+    expect(within(item).getByLabelText('Desligar')).toBeTruthy();
+    expect(within(item).getByLabelText('Editar')).toBeTruthy();
+    expect(within(item).queryByText(/ATIVO|DESLIGADO/)).toBeNull();
+    const menu = await abrirMenu(item, 'Boas-vindas');
+    expect(itensDoMenu(menu)).toEqual(['Duplicar', 'Arquivar', 'Excluir']);
+  });
+
+  it('"Nova automação" cria direto, sem perguntar e sem team', async () => {
     list.mockResolvedValue([]);
     create.mockResolvedValue({ id: 'n1' });
     renderPage();
-    fireEvent.click((await screen.findAllByRole('button', { name: /Novo fluxo/ }))[0]);
+    fireEvent.click((await screen.findAllByRole('button', { name: /Nova automação/ }))[0]);
     await waitFor(() => expect(create).toHaveBeenCalledTimes(1));
+    expect(screen.queryByRole('radiogroup')).toBeNull();
     expect(create.mock.calls[0][0]).not.toHaveProperty('team');
     expect(await screen.findByText('canvas da automação')).toBeTruthy();
   });
@@ -101,8 +122,9 @@ describe('permissions ausente ou negada', () => {
     fireEvent.click(await screen.findByRole('tab', { name: /Da equipe/ }));
     const item = (await screen.findByText('Sem perms')).closest('li')!;
     expect(within(item).getByRole('button', { name: 'Ver' })).toBeTruthy();
-    expect(within(item).getByLabelText('Duplicar pra ter a sua cópia')).toBeTruthy();
-    for (const t of ['Ligar', 'Desligar', 'Arquivar', 'Excluir']) expect(within(item).queryByTitle(t)).toBeNull();
+    for (const t of ['Ligar', 'Desligar', 'Editar']) expect(within(item).queryByLabelText(t)).toBeNull();
+    const menu = await abrirMenu(item, 'Sem perms');
+    expect(itensDoMenu(menu)).toEqual(['Duplicar pra ter a sua cópia']);
   });
 
   it('gestor: can_edit false não mostra botões de edição', async () => {
@@ -111,7 +133,9 @@ describe('permissions ausente ou negada', () => {
     renderPage();
     const item = (await screen.findByText('Travada')).closest('li')!;
     expect(within(item).getByRole('button', { name: 'Ver' })).toBeTruthy();
-    for (const t of ['Ligar', 'Desligar', 'Arquivar', 'Excluir']) expect(within(item).queryByTitle(t)).toBeNull();
+    for (const t of ['Ligar', 'Desligar', 'Editar']) expect(within(item).queryByLabelText(t)).toBeNull();
+    const menu = await abrirMenu(item, 'Travada');
+    expect(itensDoMenu(menu)).toEqual(['Duplicar pra ter a sua cópia']);
   });
 
   it('gestor: item sem permissions segue editável e cai em Da equipe', async () => {
@@ -120,8 +144,8 @@ describe('permissions ausente ou negada', () => {
     renderPage();
     fireEvent.click(await screen.findByRole('tab', { name: /Da equipe \(1\)/ }));
     const item = (await screen.findByText('Antiga')).closest('li')!;
-    expect(within(item).getByTitle('Arquivar')).toBeTruthy();
-    expect(within(item).getByTitle('Excluir')).toBeTruthy();
+    const menu = await abrirMenu(item, 'Antiga');
+    expect(itensDoMenu(menu)).toEqual(['Duplicar', 'Arquivar', 'Excluir']);
   });
 });
 
@@ -145,26 +169,38 @@ describe('gestor', () => {
     expect(screen.queryByText('Minha')).toBeNull();
   });
 
-  it('liga "Da equipe" no cartão', async () => {
+  it('"Da equipe" aparece uma vez só no cartão, como selo, sem chave', async () => {
+    can.manager = true;
+    list.mockResolvedValue([teamFlow('a3', 'Da casa', { permissions: { ...mgrPerms, personal: false } })]);
+    renderPage();
+    const item = (await screen.findByText('Da casa')).closest('li')!;
+    expect(within(item).getAllByText('Da equipe')).toHaveLength(1);
+    expect(within(item).queryByRole('switch')).toBeNull();
+  });
+
+  it('"Passar pra equipe" no ⋮', async () => {
     can.manager = true;
     list.mockResolvedValue([flow('a1', 'Minha', { permissions: { ...mgrPerms, personal: true } })]);
     update.mockResolvedValue({});
     renderPage();
-    await screen.findByText('Minha');
-    fireEvent.click(screen.getByRole('switch', { name: 'Da equipe' }));
+    const item = (await screen.findByText('Minha')).closest('li')!;
+    const menu = await abrirMenu(item, 'Minha');
+    expect(itensDoMenu(menu)).toEqual(['Duplicar', 'Arquivar', 'Passar pra equipe', 'Excluir']);
+    await userEvent.click(within(menu).getByRole('menuitem', { name: 'Passar pra equipe' }));
     await waitFor(() => expect(update).toHaveBeenCalledWith('a1', { team: true }));
   });
 
   // Revisão final (I3): tirar "Da equipe" pergunta antes, e a lista fica com o
   // que o servidor devolveu (sem dono, a automação passa a ser de quem tirou).
-  it('desliga "Da equipe": pergunta antes e usa a resposta do servidor', async () => {
+  it('"Tirar da equipe": pergunta antes e usa a resposta do servidor', async () => {
     can.manager = true;
     list.mockResolvedValue([teamFlow('a3', 'Da casa', { permissions: { ...mgrPerms, personal: false } })]);
     update.mockResolvedValue(flow('a3', 'Da casa', { team: false, owner_user_id: 'u1', owner_name: 'Eu',
                                                     permissions: { ...mgrPerms, personal: true } }));
     renderPage();
-    await screen.findByText('Da casa');
-    fireEvent.click(screen.getByRole('switch', { name: 'Da equipe' }));
+    const item = (await screen.findByText('Da casa')).closest('li')!;
+    const menu = await abrirMenu(item, 'Da casa');
+    await userEvent.click(within(menu).getByRole('menuitem', { name: 'Tirar da equipe' }));
     expect(await screen.findByText('Tirar da equipe?')).toBeTruthy();
     expect(screen.getByText('Esta automação passa a valer só pros seus leads e a mandar pelo seu WhatsApp.')).toBeTruthy();
     expect(update).not.toHaveBeenCalled();
@@ -175,13 +211,14 @@ describe('gestor', () => {
     expect(screen.getByRole('tab', { name: /Da equipe \(0\)/ })).toBeTruthy();
   });
 
-  it('desliga "Da equipe" da automação de outro dono: o aviso fala dos leads dele', async () => {
+  it('"Tirar da equipe" da automação de outro dono: o aviso fala dos leads dele', async () => {
     can.manager = true;
     list.mockResolvedValue([flow('a2', 'Da Ana', { team: true, owner_user_id: 'u2', owner_name: 'Ana',
                                                     permissions: { ...mgrPerms, personal: false } })]);
     renderPage();
-    await screen.findByText('Da Ana');
-    fireEvent.click(screen.getByRole('switch', { name: 'Da equipe' }));
+    const item = (await screen.findByText('Da Ana')).closest('li')!;
+    const menu = await abrirMenu(item, 'Da Ana');
+    await userEvent.click(within(menu).getByRole('menuitem', { name: 'Tirar da equipe' }));
     expect(await screen.findByText('Esta automação passa a valer só pros leads de Ana e a mandar pelo WhatsApp de Ana.')).toBeTruthy();
   });
 
@@ -189,27 +226,29 @@ describe('gestor', () => {
     can.manager = true;
     list.mockResolvedValue([teamFlow('a3', 'Da casa', { permissions: { ...mgrPerms, personal: false } })]);
     renderPage();
-    await screen.findByText('Da casa');
-    fireEvent.click(screen.getByRole('switch', { name: 'Da equipe' }));
+    const item = (await screen.findByText('Da casa')).closest('li')!;
+    const menu = await abrirMenu(item, 'Da casa');
+    await userEvent.click(within(menu).getByRole('menuitem', { name: 'Tirar da equipe' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Cancelar' }));
     await waitFor(() => expect(screen.queryByText('Tirar da equipe?')).toBeNull());
     expect(update).not.toHaveBeenCalled();
-    expect(screen.getByRole('switch', { name: 'Da equipe' }).getAttribute('aria-checked')).toBe('true');
+    expect(within(item).getByText('Da equipe')).toBeTruthy();
   });
 
   // Ajuste do dono do produto (16/10/2026): bloco preso a número específico.
-  it('"Da equipe" travada quando algum bloco manda por número específico, com o porquê', async () => {
+  it('"Tirar da equipe" apagado quando a automação manda por número específico, com o porquê', async () => {
     can.manager = true;
     list.mockResolvedValue([
       teamFlow('a3', 'Presa', { permissions: { ...mgrPerms, personal: false, fixed_number: true } }),
     ]);
     renderPage();
     const item = (await screen.findByText('Presa')).closest('li')!;
-    const chave = within(item).getByRole('switch', { name: 'Da equipe' });
-    expect(chave.getAttribute('aria-checked')).toBe('true');
-    expect((chave as HTMLButtonElement).disabled).toBe(true);
-    expect(within(item).getByText('Esta automação manda por um número específico. Pra virar pessoal, troque o número nos blocos.')).toBeTruthy();
-    fireEvent.click(chave);
+    expect(within(item).queryByText(/número específico/)).toBeNull();
+    const menu = await abrirMenu(item, 'Presa');
+    const tirar = within(menu).getByRole('menuitem', { name: /Tirar da equipe/ });
+    expect(tirar.getAttribute('aria-disabled')).toBe('true');
+    expect(within(tirar).getByText('Esta automação manda por um número específico. Pra virar pessoal, troque o número nos blocos.')).toBeTruthy();
+    fireEvent.click(tirar);
     expect(screen.queryByText('Tirar da equipe?')).toBeNull();
     expect(update).not.toHaveBeenCalled();
   });
@@ -219,22 +258,39 @@ describe('gestor', () => {
     list.mockResolvedValue([flow('a1', 'Minha', { permissions: { ...mgrPerms, personal: true, fixed_number: true } })]);
     update.mockResolvedValue({});
     renderPage();
-    await screen.findByText('Minha');
-    const chave = screen.getByRole('switch', { name: 'Da equipe' });
-    expect((chave as HTMLButtonElement).disabled).toBe(false);
-    expect(screen.queryByText(/número específico/)).toBeNull();
-    fireEvent.click(chave);
+    const item = (await screen.findByText('Minha')).closest('li')!;
+    const menu = await abrirMenu(item, 'Minha');
+    const passar = within(menu).getByRole('menuitem', { name: 'Passar pra equipe' });
+    expect(passar.getAttribute('aria-disabled')).toBeNull();
+    expect(within(menu).queryByText(/número específico/)).toBeNull();
+    await userEvent.click(passar);
     await waitFor(() => expect(update).toHaveBeenCalledWith('a1', { team: true }));
   });
 
-  it('cria Pessoal (team false) ou Da equipe (team true)', async () => {
+  it('"Nova automação" pergunta de quem é: Da equipe (padrão) ou Só minha', async () => {
     can.manager = true;
     list.mockResolvedValue([flow('a1', 'Minha', { permissions: { ...mgrPerms, personal: true } })]);
     create.mockResolvedValue({ id: 'n1' });
     renderPage();
     await screen.findByText('Minha');
-    fireEvent.click(screen.getByRole('button', { name: /Nova pessoal/ }));
+    expect(screen.queryByRole('button', { name: /Nova pessoal|Nova da equipe/ })).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: /Nova automação/ }));
+    const janela = await screen.findByRole('dialog');
+    expect(within(janela).getByRole('radio', { name: /Da equipe/ }).getAttribute('aria-checked')).toBe('true');
+    fireEvent.click(within(janela).getByRole('radio', { name: /Só minha/ }));
+    fireEvent.click(within(janela).getByRole('button', { name: 'Criar' }));
     await waitFor(() => expect(create).toHaveBeenCalledWith(expect.objectContaining({ team: false })));
+  });
+
+  it('"Nova automação" sem mexer na escolha cria da equipe', async () => {
+    can.manager = true;
+    list.mockResolvedValue([]);
+    create.mockResolvedValue({ id: 'n1' });
+    renderPage();
+    fireEvent.click((await screen.findAllByRole('button', { name: /Nova automação/ }))[0]);
+    fireEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Criar' }));
+    await waitFor(() => expect(create).toHaveBeenCalledWith(expect.objectContaining({ team: true })));
   });
 });
 

@@ -9782,3 +9782,27 @@ Código: `pages/Customer/Automations/SalesAgents/configurar/paginas/Canal.tsx`, 
 Este PR **depende do backend da C na frente**: sem ele a IA não envia pela oficial e os motivos novos não existem.
 
 Não reabrir sem o dono pedir.
+
+## Automações: cartão único e um botão só de criar (desde 2026-10-23)
+
+Pedido do dono (23/10/2026): o cartão da lista de Automações estava "horrível". O "Da equipe" aparecia duas vezes (selo e chave, com um "Ligado" que parecia ser da automação e o textão do número fixo), os quatro ícones soltos e dois botões de criar. Agora o cartão é o mesmo dos Funis de mensagem e do Follow-up (`CartaoDeFluxo`).
+
+O que muda pra quem usa:
+
+1. **À vista só ligar/desligar e Editar** (lápis). Quem não edita vê **Ver**.
+2. **No ⋮:** Duplicar, Arquivar, Passar pra equipe / Tirar da equipe (só o gestor), separador e Excluir em vermelho. Quem não edita vê só "Duplicar pra ter a sua cópia".
+3. **"Da equipe" é só o selo** ao lado do título. Pôr ou tirar da equipe é pelo ⋮. Na automação presa a número específico, "Tirar da equipe" aparece apagado com o motivo embaixo (o mesmo texto de antes, que saiu do cartão). Tirar continua perguntando antes, com o mesmo aviso.
+4. **Sem selo ATIVO/DESLIGADO:** o filete colorido e o botão de ligar/desligar dizem o estado. Arquivada ganha o selo "Arquivada".
+5. **Um botão só, "Nova automação"** (saem "Nova pessoal" e "Nova da equipe"). O gestor escolhe antes "Da equipe" (padrão) ou "Só minha"; o corretor cria a dele direto. Modelos não muda.
+
+Decisões (não reabrir sem o dono pedir):
+
+1. **A chave "Da equipe" saiu do cartão da automação.** Isso reabre, a pedido do dono, a linha "a opção de marcar uma automação como da equipe" da seção de Automações por cargo: a opção continua, mas no ⋮.
+2. **Disparar a automação num lead não fica no cartão.** Vai pro Disparo em massa (Disparos), como opção "Automação", com lista de leads e a regra "quem tem número manda". É um projeto à parte, com backend.
+
+Armadilhas:
+
+1. **Item apagado do menu ainda recebe clique no teste** (o Radix só corta o `onSelect`): o "Tirar da equipe" confere `presa` dentro do `onClick`.
+2. **A aba Follow-up ainda mostra a chave "Da equipe" à vista** (PR #619). Se o dono quiser os dois iguais, o Follow-up passa a usar o ⋮ e a `JanelaDeQuemE` compartilhada.
+
+Código: `pages/Customer/Automations/FlowBuilder/FlowAutomationsList.tsx`, `components/flowAutomations/JanelaDeQuemE.tsx` (a escolha "de quem é", reaproveitável), `features/flowAutomations/kind.ts` (`newButton`). Testes: `AutomationsOwnership.spec.tsx`.
