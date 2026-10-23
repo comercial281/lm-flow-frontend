@@ -5,6 +5,7 @@ import EmptyState from '@/components/base/EmptyState';
 import { Seletor } from '@/components/base/Seletor';
 import BotoesDeEscolha from '@/components/base/BotoesDeEscolha';
 import { SaidasDoBloco } from './SaidasDoBloco';
+import { EscolhaDeEtiqueta } from './EscolhaDeEtiqueta';
 import { applySendFrom } from '@/features/numbers/sendFrom';
 import type { FlowAutomationKind, FlowAutomationNode, FlowNodeConfig } from '@/types/flowAutomations';
 import { ActionEditor, type AutomationResources } from '@/features/flowAutomations/editores/LeadAutomationsEditors';
@@ -205,38 +206,26 @@ function StagePicker({ value, onPick, resources }: { value: string; onPick: (id:
   );
 }
 
-function LabelChecklist({ selected, onChange, resources }: { selected: string[]; onChange: (next: string[]) => void; resources: AutomationResources }) {
-  const missing = selected.filter(t => !resources.labels.some(l => l.title === t));
-  const toggle = (title: string) =>
-    onChange(selected.includes(title) ? selected.filter(t => t !== title) : [...selected, title]);
+// Catálogo ainda carregando ou que falhou: não dá pra dizer que uma etiqueta salva "não existe mais".
+function catalogoEmEspera(resources: AutomationResources) {
+  if (resources.labels.length > 0) return null;
+  if (resources.loading) return <p className="text-xs text-muted-foreground">Carregando as etiquetas…</p>;
+  if (resources.erros?.labels) return <EmptyState tipo="erro" tamanho="compacto" aoTentarDeNovo={resources.recarregar} className="p-3 text-xs" />;
+  return null;
+}
+
+function LabelChecklist({ selected, onChange, resources, ordem }: { selected: string[]; onChange: (next: string[]) => void; resources: AutomationResources; ordem: 'nome' | 'mais_leads' }) {
+  const espera = catalogoEmEspera(resources);
+  if (espera) return espera;
   return (
-    <div className="space-y-1">
-      <Label className="text-xs">Etiquetas</Label>
-      <div className="max-h-52 overflow-y-auto rounded-md border border-border divide-y divide-border">
-        {resources.labels.length === 0 && missing.length === 0 && (
-          resources.loading ? (
-            <p className="text-xs text-muted-foreground p-2">Carregando as etiquetas…</p>
-          ) : resources.erros?.labels ? (
-            <EmptyState tipo="erro" tamanho="compacto" aoTentarDeNovo={resources.recarregar} className="m-2 p-3 text-xs" />
-          ) : (
-            <EmptyState
-              tamanho="compacto"
-              title="Nenhuma etiqueta cadastrada. Crie em Configurações → Etiquetas."
-              className="m-2 p-3 text-xs"
-            />
-          )
-        )}
-        {[...resources.labels.map(l => l.title), ...missing].map(title => (
-          <label key={title} className="flex items-center gap-2 px-2.5 py-2 cursor-pointer hover:bg-muted/50 text-sm">
-            <Checkbox
-              checked={selected.includes(title)}
-              onCheckedChange={() => toggle(title)}
-            />
-            <span className="truncate">{title}</span>
-          </label>
-        ))}
-      </div>
-    </div>
+    <EscolhaDeEtiqueta
+      modo="varias"
+      escolhidas={selected}
+      aoMudar={onChange}
+      etiquetas={resources.labels}
+      ordem={ordem}
+      aoCriar={async () => resources.reloadLabels()}
+    />
   );
 }
 
@@ -335,21 +324,15 @@ export function FlowNodePanel({ node, resources, onClose, onSave, onDirtyChange,
         )}
         {criterion === 'has_label' && (
           <div className="space-y-1">
-            <Label className="text-xs">Etiqueta</Label>
-            <Seletor
-              value={currentLabel}
-              onChange={e => setConfig(c => withLabel(kind, c, e.target.value))}
-              className={fieldClass}
-              aria-label="Etiqueta"
-            >
-              <option value="">Escolha a etiqueta</option>
-              {currentLabel && !resources.labels.some(l => l.title === currentLabel) && (
-                <option value={currentLabel}>{currentLabel}</option>
-              )}
-              {resources.labels.map(l => (
-                <option key={l.id} value={l.title}>{l.title}</option>
-              ))}
-            </Seletor>
+            {catalogoEmEspera(resources) ?? (
+              <EscolhaDeEtiqueta
+                modo="uma"
+                escolhidas={currentLabel ? [currentLabel] : []}
+                aoMudar={([titulo]) => setConfig(c => withLabel(kind, c, titulo ?? ''))}
+                etiquetas={resources.labels}
+                aoCriar={async () => resources.reloadLabels()}
+              />
+            )}
           </div>
         )}
         {criterion === 'at_stage' && (
@@ -405,6 +388,7 @@ export function FlowNodePanel({ node, resources, onClose, onSave, onDirtyChange,
             selected={Array.isArray(config.labels) ? (config.labels as string[]) : []}
             onChange={next => set('labels', next)}
             resources={resources}
+            ordem={activeNode.kind === 'remove_label' ? 'mais_leads' : 'nome'}
           />
         );
       case 'move_stage': {

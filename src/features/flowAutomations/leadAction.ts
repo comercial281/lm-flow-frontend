@@ -174,7 +174,13 @@ export function leadActionProblem(config: FlowNodeConfig | null | undefined): st
   const action = leadActionOf(config);
   if (!isLeadActionType(action.type)) return null;
   const missing = missingActionParams(action);
-  if (missing.length === 0) return null;
+  if (missing.length === 0) {
+    // Criar tarefa pra "Uma pessoa da equipe" sem escolher a pessoa: o servidor cairia no responsável pelo lead sem avisar.
+    if (action.type === 'create_task' && action.params?.assignee_mode === 'user' && !String(action.params.assignee_id ?? '').trim()) {
+      return 'Falta escolher a pessoa.';
+    }
+    return null;
+  }
   const names = missing.map(key => paramName(action.type, key));
   const list = names.length === 1 ? names[0] : `${names.slice(0, -1).join(', ')} e ${names[names.length - 1]}`;
   return `Falta preencher ${list}.`;
