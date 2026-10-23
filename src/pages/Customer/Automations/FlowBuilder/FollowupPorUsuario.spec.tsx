@@ -13,6 +13,7 @@ const duplicate = vi.hoisted(() => vi.fn());
 const myDefault = vi.hoisted(() => vi.fn());
 const accountDefault = vi.hoisted(() => vi.fn());
 const getAll = vi.hoisted(() => vi.fn());
+const update = vi.hoisted(() => vi.fn());
 const toastError = vi.hoisted(() => vi.fn());
 const toastSuccess = vi.hoisted(() => vi.fn());
 const can = vi.hoisted(() => ({ manager: false }));
@@ -20,7 +21,7 @@ const can = vi.hoisted(() => ({ manager: false }));
 vi.mock('@/services/flowAutomations/flowAutomationsService', () => ({
   flowAutomationsService: {
     list, create, duplicate, myDefault, accountDefault,
-    get: vi.fn(), toggle: vi.fn(), archive: vi.fn(), destroy: vi.fn(), update: vi.fn(),
+    get: vi.fn(), toggle: vi.fn(), archive: vi.fn(), destroy: vi.fn(), update,
   },
   flowAutomationFoldersService: { list: vi.fn().mockResolvedValue([]) },
 }));
@@ -74,7 +75,7 @@ const secao = (nome: string) => screen.getByRole('region', { name: nome });
 const itemDe = (nome: string) => screen.getByText(nome).closest('li')!;
 
 beforeEach(() => {
-  [list, create, duplicate, myDefault, accountDefault, getAll, toastError, toastSuccess].forEach(m => m.mockReset());
+  [list, create, duplicate, myDefault, accountDefault, getAll, update, toastError, toastSuccess].forEach(m => m.mockReset());
   getAll.mockResolvedValue([]);
   can.manager = false;
 });
@@ -306,5 +307,103 @@ describe('Duplicar', () => {
     expect(within(janela).getByRole('radio', { name: /Da equipe/ }).getAttribute('aria-checked')).toBe('true');
     fireEvent.click(within(janela).getByRole('button', { name: 'Duplicar' }));
     await waitFor(() => expect(duplicate).toHaveBeenCalledWith('t1', { team: true }));
+  });
+});
+
+describe('Da equipe: o gestor põe e tira (Fase 4)', () => {
+  const chaveDe = (nome: string) => within(itemDe(nome)).getByRole('switch', { name: 'Da equipe' });
+
+  it('gestor tira "Da equipe" de um com dono: pergunta com o nome do dono e o cartão vai pra Dos corretores', async () => {
+    can.manager = true;
+    list.mockResolvedValue([
+      fu('t2', 'Pós-visita', { team: true, owner_user_id: 'u2', owner_name: 'Bruno', permissions: gestor }),
+      fu('m1', 'Meu do gestor', { permissions: { ...gestor, personal: true } }),
+    ]);
+    update.mockResolvedValue(fu('t2', 'Pós-visita', { team: false, owner_user_id: 'u2', owner_name: 'Bruno', permissions: gestor }));
+    renderPage();
+    await screen.findByText('Pós-visita');
+    expect(within(secao('Da equipe')).getByText('Pós-visita')).toBeTruthy();
+
+    fireEvent.click(chaveDe('Pós-visita'));
+    const janela = await screen.findByRole('dialog');
+    expect(within(janela).getByText('Tirar "Pós-visita" da equipe?')).toBeTruthy();
+    expect(within(janela).getByText(
+      'Ele passa a ser só de Bruno: a IA e as automações da equipe deixam de usar, e os leads que entrarem saem pelo WhatsApp do dono.',
+    )).toBeTruthy();
+    expect(update).not.toHaveBeenCalled();
+    fireEvent.click(within(janela).getByRole('button', { name: 'Tirar da equipe' }));
+
+    await waitFor(() => expect(update).toHaveBeenCalledWith('t2', { team: false }));
+    await waitFor(() => expect(within(secao('Dos corretores')).getByText('Pós-visita')).toBeTruthy());
+    expect(within(secao('Da equipe')).queryByText('Pós-visita')).toBeNull();
+  });
+
+  it('sem dono (ou dono é o gestor) a pergunta diz "você" e o cartão vai pra Meus', async () => {
+    can.manager = true;
+    list.mockResolvedValue([daEquipe('t1', 'Follow-up padrão', { permissions: gestor })]);
+    update.mockResolvedValue(fu('t1', 'Follow-up padrão', { team: false, owner_user_id: 'u1', owner_name: 'Eu', permissions: gestor }));
+    renderPage();
+    await screen.findByText('Follow-up padrão');
+
+    fireEvent.click(chaveDe('Follow-up padrão'));
+    const janela = await screen.findByRole('dialog');
+    expect(within(janela).getByText(
+      'Ele passa a ser só de você: a IA e as automações da equipe deixam de usar, e os leads que entrarem saem pelo WhatsApp do dono.',
+    )).toBeTruthy();
+    fireEvent.click(within(janela).getByRole('button', { name: 'Tirar da equipe' }));
+    await waitFor(() => expect(within(secao('Meus')).getByText('Follow-up padrão')).toBeTruthy());
+    expect(within(secao('Da equipe')).queryByText('Follow-up padrão')).toBeNull();
+  });
+
+  it('cancelar a pergunta não chama o servidor e a chave continua ligada', async () => {
+    can.manager = true;
+    list.mockResolvedValue([daEquipe('t1', 'Follow-up padrão', { permissions: gestor })]);
+    renderPage();
+    await screen.findByText('Follow-up padrão');
+    fireEvent.click(chaveDe('Follow-up padrão'));
+    const janela = await screen.findByRole('dialog');
+    fireEvent.click(within(janela).getByRole('button', { name: 'Cancelar' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(update).not.toHaveBeenCalled();
+    expect(chaveDe('Follow-up padrão').getAttribute('aria-checked')).toBe('true');
+  });
+
+  it('gestor põe "Da equipe" num follow-up de corretor: sem pergunta, vai pra Da equipe', async () => {
+    can.manager = true;
+    list.mockResolvedValue([fu('c1', 'Do Bruno', { owner_user_id: 'u2', owner_name: 'Bruno', permissions: gestor })]);
+    update.mockResolvedValue(fu('c1', 'Do Bruno', { team: true, owner_user_id: 'u2', owner_name: 'Bruno', permissions: gestor }));
+    renderPage();
+    await screen.findByText('Do Bruno');
+    expect(within(secao('Dos corretores')).getByText('Do Bruno')).toBeTruthy();
+    expect(chaveDe('Do Bruno').getAttribute('aria-checked')).toBe('false');
+
+    fireEvent.click(chaveDe('Do Bruno'));
+    await waitFor(() => expect(update).toHaveBeenCalledWith('c1', { team: true }));
+    expect(screen.queryByRole('dialog')).toBeNull();
+    await waitFor(() => expect(within(secao('Da equipe')).getByText('Do Bruno')).toBeTruthy());
+    expect(within(secao('Dos corretores')).queryByText('Do Bruno')).toBeNull();
+  });
+
+  it('422 do padrão da conta: mostra a frase do servidor e a chave continua ligada', async () => {
+    can.manager = true;
+    const frase = 'Esse é o padrão da conta. Escolha outro padrão antes de tirar da equipe.';
+    list.mockResolvedValue([daEquipe('t1', 'Follow-up padrão', { account_default: true, permissions: gestor })]);
+    update.mockRejectedValue({ response: { status: 422, data: { errors: [frase] } } });
+    renderPage();
+    await screen.findByText('Follow-up padrão');
+
+    fireEvent.click(chaveDe('Follow-up padrão'));
+    const janela = await screen.findByRole('dialog');
+    fireEvent.click(within(janela).getByRole('button', { name: 'Tirar da equipe' }));
+    await waitFor(() => expect(toastError).toHaveBeenCalledWith(frase));
+    expect(within(secao('Da equipe')).getByText('Follow-up padrão')).toBeTruthy();
+    await waitFor(() => expect(chaveDe('Follow-up padrão').getAttribute('aria-checked')).toBe('true'));
+  });
+
+  it('corretor não vê a chave "Da equipe"', async () => {
+    list.mockResolvedValue([daEquipe('t1', 'Follow-up padrão'), fu('m1', 'Meu reaquecimento')]);
+    renderPage();
+    await screen.findByText('Meu reaquecimento');
+    expect(screen.queryByRole('switch', { name: 'Da equipe' })).toBeNull();
   });
 });

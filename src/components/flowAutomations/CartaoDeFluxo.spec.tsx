@@ -43,6 +43,8 @@ describe('CartaoDeFluxo', () => {
     expect(titulo.className).toContain('text-sm');
     expect(titulo.className).toContain('font-semibold');
     expect(titulo.className).toContain('truncate');
+    // Nome cortado pelo truncate aparece inteiro ao pairar.
+    expect(titulo.getAttribute('title')).toBe('Pós-visita');
     fireEvent.click(titulo);
     expect(abrir).toHaveBeenCalledTimes(1);
     expect(screen.getByText('selo-x')).toBeTruthy();

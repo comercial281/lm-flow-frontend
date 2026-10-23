@@ -39,7 +39,7 @@ export function CartaoDeFluxo({ titulo, aoAbrir, estado, selos, linha, acoes, ch
       <div className={cn('w-1.5 shrink-0', FILETE[estado])} data-testid="filete-do-cartao" aria-hidden="true" />
       <div className="flex-1 min-w-0 p-3 flex flex-col gap-2">
         <div className="flex items-start justify-between gap-2">
-          <button type="button" className="min-w-0 truncate text-left text-sm font-semibold hover:underline" onClick={aoAbrir}>
+          <button type="button" className="min-w-0 truncate text-left text-sm font-semibold hover:underline" title={titulo} onClick={aoAbrir}>
             {titulo}
           </button>
           {selos && <div className="flex shrink-0 flex-wrap items-center justify-end gap-1">{selos}</div>}

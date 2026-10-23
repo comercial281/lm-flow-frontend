@@ -6,6 +6,7 @@ import {
   Badge, Button, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/ds';
 import { BaseHeader, Pagina } from '@/components/base';
+import Chave from '@/components/base/Chave';
 import CartoesDeEscolha from '@/components/base/CartoesDeEscolha';
 import EmptyState from '@/components/base/EmptyState';
 import { CartaoDeFluxo } from '@/components/flowAutomations/CartaoDeFluxo';
@@ -226,6 +227,39 @@ export default function ListaDeFollowups() {
     }
   };
 
+  // "Da equipe" (gestor). Tirar muda de quem são os leads e por qual WhatsApp
+  // saem: pergunta antes. Sem dono, quem tira passa a ser o dono (o servidor faz;
+  // aqui só espelhamos até o servidor responder). Padrão da conta o servidor recusa
+  // (422) e a frase dele aparece como veio. Devolve boolean: a chave volta se não mudou.
+  const marcarEquipe = async (f: FlowAutomation, next: boolean): Promise<boolean> => {
+    if (!next) {
+      const semDono = f.owner_user_id == null || String(f.owner_user_id) === '';
+      const deOutro = !semDono && String(f.owner_user_id) !== meId;
+      const nomeDoDono = f.owner_name?.trim();
+      const deQuem = deOutro ? nomeDoDono || 'quem criou' : 'você';
+      const ok = await confirmar({
+        titulo: `Tirar "${f.name}" da equipe?`,
+        descricao: `Ele passa a ser só de ${deQuem}: a IA e as automações da equipe deixam de usar, e os leads que entrarem saem pelo WhatsApp do dono.`,
+        rotuloDaAcao: 'Tirar da equipe',
+      });
+      if (!ok) return false;
+    }
+    try {
+      const atualizado = await flowAutomationsService.update(f.id, { team: next });
+      const semDono = f.owner_user_id == null || String(f.owner_user_id) === '';
+      setFollowups(lista => lista.map(x => (
+        x.id === f.id
+          ? { ...x, team: next, ...(!next && semDono ? { owner_user_id: meId } : {}), ...(atualizado ?? {}) }
+          : x
+      )));
+      toast.success(next ? `"${f.name}" agora é da equipe.` : `"${f.name}" saiu da equipe.`);
+      return true;
+    } catch (e) {
+      toast.error(serverMessage(e, 'Não deu pra mudar agora. Tente de novo.'));
+      return false;
+    }
+  };
+
   const secoes = useMemo(() => {
     const daEquipe = followups.filter(followupDaEquipe);
     const pessoais = followups.filter(f => !followupDaEquipe(f));
@@ -303,6 +337,11 @@ export default function ListaDeFollowups() {
                   <Copy className="h-3.5 w-3.5" />
                 </Button>
               </>
+            )}
+            {ehGestor && (
+              <div className="w-full">
+                <Chave rotulo="Da equipe" ligada={followupDaEquipe(f)} aoMudar={next => marcarEquipe(f, next)} semAviso />
+              </div>
             )}
             {podeTornarPadrao && (
               <Button size="sm" variant="ghost" className="ml-auto" onClick={() => void tornarPadraoDaConta(f)}>
