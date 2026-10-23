@@ -15,7 +15,7 @@ const funnel = (id: string, name: string, extra: Partial<FlowAutomation> = {}) =
   ({ id, name, kind: 'conversation', is_enabled: true, guide_done: true, archived_at: null, team: false, ...extra }) as FlowAutomation;
 
 const resources: AutomationResources = {
-  labels: [], sequences: [], followupFlows: [], users: [], pipelines: [], stagesByPipeline: {}, quickReplies: [],
+  labels: [], followupFlows: [], users: [], pipelines: [], stagesByPipeline: {}, quickReplies: [],
   adOrigins: [], formOrigins: [],
   messageFunnels: [{ id: 'old-1', name: 'Boas-vindas antigo' } as MessageFunnel],
   conversationFunnels: [

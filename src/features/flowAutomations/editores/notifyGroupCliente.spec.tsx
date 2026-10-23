@@ -14,7 +14,7 @@ const equipe = vi.hoisted(() => ({ valor: false }));
 vi.mock('@/hooks/useIsSuperAdmin', () => ({ useIsSuperAdmin: () => equipe.valor }));
 
 const resources = {
-  labels: [], sequences: [], followupFlows: [], users: [], pipelines: [], stagesByPipeline: {}, quickReplies: [],
+  labels: [], followupFlows: [], users: [], pipelines: [], stagesByPipeline: {}, quickReplies: [],
   adOrigins: [], formOrigins: [], messageFunnels: [], conversationFunnels: [], evolutionInstances: [], roletas: [],
   reloadFunnels: () => {}, reloadLabels: () => {}, loading: false, erros: {}, erro: false, recarregar: () => {},
 } as never;

@@ -20,7 +20,7 @@ vi.mock('@/services/roletaConfig/roletaConfigService', async (orig) => {
   return { ...real, roletaConfigService: { getAll: vi.fn().mockResolvedValue([]) } };
 });
 const recursos = vi.hoisted(() => ({
-  labels: [], sequences: [], followupFlows: [], quickReplies: [], adOrigins: [], formOrigins: [],
+  labels: [], followupFlows: [], quickReplies: [], adOrigins: [], formOrigins: [],
   messageFunnels: [], conversationFunnels: [], evolutionInstances: [], loading: false,
   users: [], pipelines: [], stagesByPipeline: {},
   reloadLabels: () => {}, reloadFunnels: () => {},

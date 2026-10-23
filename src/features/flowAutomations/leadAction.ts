@@ -97,8 +97,8 @@ export const LEAD_ACTION_GROUP: Record<string, FlowNodeGroup> = {
  * e edita normalmente, elas só não são oferecidas duas vezes na paleta.
  *
  * "Iniciar follow-up" é `start_followup_flow` (escolhe um fluxo de follow-up,
- * sprint 3). O `start_followup_sequence` (funil antigo) abre e edita, mas não
- * é mais oferecido.
+ * sprint 3). O `start_followup_sequence` (funil antigo, desligado na Fase 4)
+ * abre só pra avisar que não faz mais nada, e não é mais oferecido.
  */
 export const PALETTE_LEAD_ACTIONS: string[] = [
   // Áudio, imagem, vídeo, documento e figurinha saíram (PR 8, 16/10/2026): são

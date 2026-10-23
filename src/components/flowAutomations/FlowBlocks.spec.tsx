@@ -17,7 +17,7 @@ import type { AutomationResources } from '@/features/flowAutomations/editores/Le
 import type { FlowAutomationNode } from '@/types/flowAutomations';
 
 const resources: AutomationResources = {
-  labels: [], sequences: [], followupFlows: [], users: [], pipelines: [], stagesByPipeline: {}, quickReplies: [],
+  labels: [], followupFlows: [], users: [], pipelines: [], stagesByPipeline: {}, quickReplies: [],
   adOrigins: [], formOrigins: [], messageFunnels: [], conversationFunnels: [], evolutionInstances: [],
   reloadFunnels: () => {}, reloadLabels: () => {}, loading: false,
 };

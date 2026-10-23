@@ -8,7 +8,7 @@ import { podeSoltarBloco } from '@/features/flowAutomations/palette';
 import type { AutomationResources } from '@/features/flowAutomations/editores/LeadAutomationsEditors';
 
 const resources: AutomationResources = {
-  labels: [], sequences: [], followupFlows: [], users: [{ id: 'u1', name: 'Ana' }], pipelines: [], stagesByPipeline: {}, quickReplies: [],
+  labels: [], followupFlows: [], users: [{ id: 'u1', name: 'Ana' }], pipelines: [], stagesByPipeline: {}, quickReplies: [],
   adOrigins: [], formOrigins: [], messageFunnels: [], conversationFunnels: [], evolutionInstances: [],
   reloadFunnels: () => {}, reloadLabels: () => {}, loading: false,
 } as unknown as AutomationResources;

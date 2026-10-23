@@ -3,7 +3,6 @@ import { followupFlowOptions, followupPadraoId, legacySequenceNotice } from './f
 import { FLOW_KIND_COPY, flowPath, kindOf } from './kind';
 import { businessHoursOnlyOf, waitUsesBusinessHours, withWaitBusinessHours } from './businessHours';
 import { cleanProgressPrefix, withProgress } from './progress';
-import { legacyQueueLine, legacyQueuesWithPending } from './legacyFollowup';
 
 describe('follow-ups pra escolher (IA Vendedora e assistente)', () => {
   it('lista os não arquivados, marcando o desligado', () => {
@@ -49,19 +48,6 @@ describe('marcar progresso', () => {
   it('limpa o nome da etiqueta', () => {
     expect(cleanProgressPrefix('Follow-up Ação 1')).toBe('follow-up-acao-1');
     expect(withProgress({ text: 'x' }, { on: true, prefix: 'fu', step: 0 })).toEqual({ text: 'x', progress_tag_prefix: 'fu', progress_step: 1 });
-  });
-});
-
-describe('faixa do formato antigo', () => {
-  it('só os funis com fila, do maior pro menor, com a frase da spec', () => {
-    const filas = legacyQueuesWithPending([
-      { id: '1', name: 'Apto', pending: 13 },
-      { id: '2', name: 'Zerado', pending: 0 },
-      { id: '3', name: 'Follow-up longo', pending: 87 },
-    ]);
-    expect(filas.map(f => f.id)).toEqual(['3', '1']);
-    expect(legacyQueueLine(filas[0])).toBe('Follow-up longo — 87 mensagens programadas');
-    expect(legacyQueueLine({ id: 'x', name: 'Um', pending: 1 })).toBe('Um — 1 mensagem programada');
   });
 });
 

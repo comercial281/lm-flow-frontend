@@ -6,7 +6,7 @@ import Carregando from '@/components/base/Carregando';
 import EmptyState from '@/components/base/EmptyState';
 import { conversationAPI } from '@/services/conversations/conversationService';
 import { chatService } from '@/services/chat/chatService';
-import { httpStatusOf } from '@/services/leadFollowup/leadFollowupService';
+import { httpStatusOf } from '@/services/core/httpError';
 import { DispararFunilPanel } from '@/components/chat/message-funnels/DispararFunilPanel';
 import { useWebSocketContext } from '@/contexts/chat/WebSocketContext';
 import {
