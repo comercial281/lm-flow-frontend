@@ -62,7 +62,7 @@ beforeEach(() => {
 });
 
 describe('Meus funis e Da equipe', () => {
-  it('separa os meus dos da equipe, sem abas de Variáveis/Atributos', async () => {
+  it('duas listas empilhadas (Da equipe e Meus funis), sem fileira de abas', async () => {
     list.mockResolvedValue([
       funnel('f1', 'Primeiro contato'),
       funnel('f2', 'Pós-visita', { guide_pending: [{ node_id: 'n', step: 2, total: 3, title: 'x' }], is_enabled: false }),
@@ -71,17 +71,28 @@ describe('Meus funis e Da equipe', () => {
     renderPage();
     expect(await screen.findByText('Primeiro contato')).toBeTruthy();
     expect(screen.getByText('Termine de montar: passo 2 de 3')).toBeTruthy();
-    expect(screen.queryByText('Pedir documentos')).toBeNull();
-    expect(screen.queryByRole('tab', { name: /Variáveis|Atributos/ })).toBeNull();
+    // Aba dentro de aba foi recusada: a moldura já tem "Manual | Follow-up".
+    expect(screen.queryByRole('tab')).toBeNull();
     expect(list).toHaveBeenCalledWith({ kind: 'conversation' });
 
-    fireEvent.click(screen.getByRole('tab', { name: /Da equipe \(1\)/ }));
-    const item = (await screen.findByText('Pedir documentos')).closest('li')!;
+    const meus = screen.getByRole('list', { name: 'Meus funis' });
+    expect(within(meus).getByText('Primeiro contato')).toBeTruthy();
+    expect(within(meus).queryByText('Pedir documentos')).toBeNull();
+    const equipe = screen.getByRole('list', { name: 'Da equipe' });
+    const item = within(equipe).getByText('Pedir documentos').closest('li')!;
     // Corretor: o da equipe não edita (sem chave nem Excluir), só vê e duplica.
     expect(within(item).getByRole('button', { name: 'Ver' })).toBeTruthy();
     expect(within(item).getByLabelText('Duplicar pra ter a sua cópia')).toBeTruthy();
     expect(within(item).queryByLabelText('Excluir')).toBeNull();
     expect(within(item).queryByRole('switch')).toBeNull();
+  });
+
+  it('lista vazia de um lado mostra o aviso daquela lista e mantém a outra', async () => {
+    list.mockResolvedValue([funnel('f1', 'Primeiro contato')]);
+    renderPage();
+    await screen.findByText('Primeiro contato');
+    expect(screen.getByText(/Nenhum funil da equipe/)).toBeTruthy();
+    expect(screen.queryByText('Nenhum funil ainda')).toBeNull();
   });
 
   it('o corretor não vê a chave "Da equipe"; o gestor vê e marca', async () => {
