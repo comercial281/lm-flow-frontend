@@ -10,6 +10,11 @@ describe('SeloDoFollowup', () => {
     expect(selo).toHaveAttribute('data-followup', 'active');
   });
 
+  it('nome mascarado vai no title como veio', () => {
+    render(<SeloDoFollowup followup={{ state: 'active', flow_name: 'Follow-up de Ana', flow_masked: true, reason: null }} />);
+    expect(screen.getByText('Follow-up ativo')).toHaveAttribute('title', 'Follow-up de Ana');
+  });
+
   it('mostra Pausado com o motivo no title', () => {
     render(<SeloDoFollowup followup={{ state: 'paused', flow_name: 'Pós-visita', reason: 'Número desconectado' }} />);
     const selo = screen.getByText('Pausado');

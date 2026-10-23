@@ -41,7 +41,10 @@ export function linhaDoFluxo(fluxo: RunningFlow, agora: Date = new Date()): Linh
   const followup = fluxo.kind === 'followup';
   const funil = fluxo.kind === 'conversation';
   const rotulo = followup ? 'Follow-up' : funil ? 'Funil' : 'Fluxo';
-  const nome = fluxo.flow_name ? `${rotulo} "${fluxo.flow_name}"` : rotulo;
+  // Nome já mascarado pelo servidor ("Follow-up de Ana"): vale como veio, sem aspas nem outro rótulo.
+  const nome = fluxo.flow_name
+    ? (fluxo.flow_masked ? fluxo.flow_name : `${rotulo} "${fluxo.flow_name}"`)
+    : rotulo;
   let fase = 'em andamento';
   if (fluxo.phase === 'waiting_reply') {
     fase = fluxo.until ? `aguardando resposta até ${quando(fluxo.until, agora)}` : 'aguardando resposta, sem limite';

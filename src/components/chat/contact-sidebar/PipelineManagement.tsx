@@ -115,8 +115,22 @@ const PipelineManagement: React.FC<PipelineManagementProps> = ({
     return undefined;
   };
 
+  // Conversa sem card neste funil: o card nasceria direto na coluna escolhida, e
+  // na coluna Follow-up isso já começa o follow-up padrão (e manda WhatsApp). Por
+  // isso essa lista não oferece a Follow-up; o caminho é "Colocar em follow-up"
+  // (card existente, coluna Follow-up, abre a janela que pergunta qual).
+  const semCardNoFunil = !cardDaConversa();
+  const etapasOferecidas = semCardNoFunil
+    ? availableStages.filter(s => !ehColunaDeFollowup(s))
+    : availableStages;
+
   const handleSaveClick = async () => {
     if (!selectedPipelineId || !selectedStageId) {
+      toast.error(t('contactSidebar.pipeline.selectError'));
+      return;
+    }
+    if (semCardNoFunil && ehColunaDeFollowup(availableStages.find(s => String(s.id) === selectedStageId))) {
+      setSelectedStageId('');
       toast.error(t('contactSidebar.pipeline.selectError'));
       return;
     }
@@ -287,7 +301,7 @@ const PipelineManagement: React.FC<PipelineManagementProps> = ({
               <SelectValue placeholder={t('contactSidebar.pipeline.selectStage')} />
             </SelectTrigger>
             <SelectContent>
-              {availableStages
+              {[...etapasOferecidas]
                 .sort((a, b) => a.position - b.position)
                 .map(stage => (
                   <SelectItem key={stage.id} value={String(stage.id)}>

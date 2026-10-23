@@ -130,6 +130,17 @@ describe('JanelaColocarEmFollowup', () => {
     ).toBeInTheDocument();
   });
 
+  it('follow-up atual mascarado aparece como veio, sem aspas nem "follow-up" repetido', async () => {
+    placePreview.mockResolvedValue(preview({
+      current: { flow_automation_id: 'f1', flow_name: 'Follow-up de Ana', flow_masked: true, phase: 'waiting' },
+    }));
+    abrir();
+
+    expect(
+      await screen.findByText('Este lead já está no Follow-up de Ana. Iniciar troca pelo escolhido.'),
+    ).toBeInTheDocument();
+  });
+
   it('mesmo follow-up pelo id', async () => {
     // Dois follow-ups com o MESMO nome (um seu, um da equipe): só o id diz qual é o atual.
     placePreview.mockResolvedValue(preview({

@@ -113,6 +113,42 @@ describe('Meus funis e Da equipe', () => {
   });
 });
 
+describe('Um título, um cartão (22/10/2026)', () => {
+  const SUBTITULO =
+    'Sequências de mensagens prontas. As manuais você dispara numa conversa; o follow-up vai atrás do lead que parou de responder.';
+
+  it('título e subtítulo fixos, botão e busca da aba Manual', async () => {
+    list.mockResolvedValue([funnel('f1', 'Primeiro contato')]);
+    renderPage();
+    await screen.findByText('Primeiro contato');
+    expect(screen.getByRole('heading', { name: 'Funis de mensagem' })).toBeTruthy();
+    expect(screen.getByText(SUBTITULO)).toBeTruthy();
+    expect(screen.getAllByRole('button', { name: /Novo funil/ }).length).toBeGreaterThan(0);
+    expect(screen.getByPlaceholderText('Buscar funil...')).toBeTruthy();
+  });
+
+  it('as listas usam a grade de 3 colunas e o cartão compartilhado, com o filete do estado', async () => {
+    list.mockResolvedValue([
+      funnel('f1', 'Primeiro contato'),
+      funnel('f2', 'Pós-visita', { is_enabled: false }),
+      funnel('f3', 'Documentos', { guide_pending: [{ node_id: 'n', step: 2, total: 3, title: 'x' }], is_enabled: false }),
+    ]);
+    renderPage();
+    await screen.findByText('Primeiro contato');
+    const grade = screen.getByRole('list', { name: 'Meus funis' });
+    expect(grade.className).toContain('grid-cols-1 sm:grid-cols-2 lg:grid-cols-3');
+    const cartoes = screen.getAllByTestId('cartao-de-fluxo');
+    expect(cartoes).toHaveLength(3);
+    const estadoDe = (nome: string) => screen.getByText(nome).closest('[data-testid="cartao-de-fluxo"]')!.getAttribute('data-estado');
+    expect(estadoDe('Primeiro contato')).toBe('ligado');
+    expect(estadoDe('Pós-visita')).toBe('desligado');
+    expect(estadoDe('Documentos')).toBe('montando');
+    const montando = screen.getByText('Documentos').closest('[data-testid="cartao-de-fluxo"]') as HTMLElement;
+    expect(within(montando).getByText('Termine de montar: passo 2 de 3')).toBeTruthy();
+    expect(within(montando).getByTestId('filete-do-cartao').className).toContain('bg-amber-500');
+  });
+});
+
 describe('+ Novo funil', () => {
   it('mostra os modelos com a sequência e "Usar este modelo" abre o canvas do funil criado', async () => {
     list.mockResolvedValue([]);

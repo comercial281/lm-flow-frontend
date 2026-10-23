@@ -12,6 +12,8 @@ export interface RunningFlow {
   id: string;
   flow_automation_id: string;
   flow_name: string | null;
+  /** `true` = o servidor já mascarou o nome ("Follow-up de Ana"): mostrar como veio, sem aspas nem rótulo. */
+  flow_masked?: boolean;
   state: string;
   active: boolean;
   phase: FlowInstancePhase;
@@ -66,7 +68,7 @@ export interface ProgressoDoFollowup {
 export interface PlacePreview {
   default_flow_id: string | null;
   options: StartableFollowup[];
-  current: { flow_automation_id: string | null; flow_name: string | null; phase: string | null } | null;
+  current: { flow_automation_id: string | null; flow_name: string | null; flow_masked?: boolean; phase: string | null } | null;
   progress: ProgressoDoFollowup | null;
   has_followup_column: boolean;
 }
@@ -92,7 +94,7 @@ const previewFrom = (body: unknown): PlacePreview => {
         ? [{ id: String(o.id), name: String(o.name ?? ''), ...(typeof o.team === 'boolean' ? { team: o.team } : {}) }]
         : [])
     : [];
-  const current = raw?.current as { flow_automation_id?: unknown; flow_name?: unknown; phase?: unknown } | null | undefined;
+  const current = raw?.current as { flow_automation_id?: unknown; flow_name?: unknown; flow_masked?: unknown; phase?: unknown } | null | undefined;
   const progress = raw?.progress as Record<string, unknown> | null | undefined;
   return {
     default_flow_id: raw?.default_flow_id != null ? String(raw.default_flow_id) : null,
@@ -101,6 +103,7 @@ const previewFrom = (body: unknown): PlacePreview => {
       ? {
         flow_automation_id: current.flow_automation_id != null ? String(current.flow_automation_id) : null,
         flow_name: textoOuNulo(current.flow_name),
+        ...(current.flow_masked === true ? { flow_masked: true } : {}),
         phase: textoOuNulo(current.phase),
       }
       : null,
