@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { ehColunaDeFollowup } from '@/features/pipelines/situacao/situacao';
 import { useLanguage } from '@/hooks/useLanguage';
 import {
   Dialog,
@@ -144,6 +145,10 @@ export default function AddItemModal({
   const [newLead, setNewLead] = useState({ name: '', phone: '', email: '', origin: '' });
   const [isCreating, setIsCreating] = useState(false);
 
+  // Card novo não nasce na coluna Follow-up pela tela: pôr o lead em follow-up
+  // é o "Colocar em follow-up", que escolhe qual follow-up roda (Fase 4, 22/10/2026).
+  const etapasDoNovoCard = useMemo(() => stages.filter(s => !ehColunaDeFollowup(s)), [stages]);
+
   // Initialize modal
   useEffect(() => {
     if (open) {
@@ -155,14 +160,14 @@ export default function AddItemModal({
       setMode('existing');
       setNewLead({ name: '', phone: '', email: '', origin: '' });
 
-      // Pre-select stage
-      if (preselectedStage) {
+      // Pre-select stage (nunca a coluna Follow-up: ver `etapasDoNovoCard`)
+      if (preselectedStage && !ehColunaDeFollowup(preselectedStage)) {
         setSelectedStage(preselectedStage);
-      } else if (stages.length > 0) {
-        setSelectedStage(stages[0]);
+      } else {
+        setSelectedStage(etapasDoNovoCard[0] ?? null);
       }
     }
-  }, [open, preselectedStage, stages]);
+  }, [open, preselectedStage, etapasDoNovoCard]);
 
   // Load available items from API
   const loadAvailableItems = useCallback(async () => {
@@ -366,7 +371,7 @@ export default function AddItemModal({
             <Select
               value={selectedStage?.id.toString()}
               onValueChange={value => {
-                const stage = stages.find(s => s.id.toString() === value);
+                const stage = etapasDoNovoCard.find(s => s.id.toString() === value);
                 setSelectedStage(stage || null);
               }}
             >
@@ -374,7 +379,7 @@ export default function AddItemModal({
                 <SelectValue placeholder={t('addItem.chooseStage')} />
               </SelectTrigger>
               <SelectContent>
-                {stages.map(stage => (
+                {etapasDoNovoCard.map(stage => (
                   <SelectItem key={stage.id} value={stage.id.toString()}>
                     <div className="flex items-center gap-2">
                       <div
