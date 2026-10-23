@@ -86,7 +86,9 @@ export default function JanelaColocarEmFollowup({ lead, aoCancelar, aoConcluir }
     : mesmoFollowup
       ? 'Este lead já está neste follow-up.'
       : nomeAtual
-        ? `Este lead já está no follow-up "${nomeAtual}". Iniciar troca pelo escolhido.`
+        ? (previa?.current?.flow_masked
+          ? `Este lead já está no ${nomeAtual}. Iniciar troca pelo escolhido.`
+          : `Este lead já está no follow-up "${nomeAtual}". Iniciar troca pelo escolhido.`)
         : 'Este lead já está em um follow-up. Iniciar troca pelo escolhido.';
 
   const iniciar = async () => {
