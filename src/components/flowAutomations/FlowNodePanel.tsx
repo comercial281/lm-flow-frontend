@@ -36,6 +36,7 @@ import {
   withWaitBusinessHours,
 } from '@/features/flowAutomations/businessHours';
 import { moveStageModeOf, stageNameOf, withMoveStageMode, withStageName } from '@/features/flowAutomations/moveStage';
+import { willConvert } from '@/features/flowAutomations/filterToCondition';
 import { FormAnswerPicker } from './FormAnswerPicker';
 import { FlowBlockDialog } from './FlowBlockDialog';
 import { NotificationFields } from './NotificationFields';
@@ -281,10 +282,12 @@ export function FlowNodePanel({ node, resources, onClose, onSave, onDirtyChange,
   const hidden = !isVisibleNode(activeNode);
   // O nome que a pessoa deu ao bloco (renomeado no cartão) vira o título; o tipo
   // do bloco passa pra frente da descrição, pra não sumir ("Mensagem · …").
-  const typeName = blockLabel(activeNode);
+  // Só continuar se com critério vira Condição ao salvar: título e descrição já são os dela.
+  const shownNode = willConvert(activeNode, guided) ? { ...activeNode, kind: 'condition' as const } : activeNode;
+  const typeName = blockLabel(shownNode);
   const givenName = (activeNode.label ?? '').trim();
   const title = givenName || typeName;
-  const baseDescription = hidden ? '' : blockDescription(activeNode);
+  const baseDescription = hidden ? '' : blockDescription(shownNode);
   const description = givenName
     ? [typeName, baseDescription].filter(Boolean).join(' · ')
     : baseDescription || undefined;
@@ -300,7 +303,7 @@ export function FlowNodePanel({ node, resources, onClose, onSave, onDirtyChange,
     return (
       <>
         <div className="space-y-1">
-          <Label className="text-xs">{kind === 'condition' ? 'Se' : 'Só continua se'}</Label>
+          <Label className="text-xs">{kind === 'condition' ? 'Seguir pelo Sim quando' : 'Só continua se'}</Label>
           <Seletor
             value={criterion}
             onChange={e => setConfig(configForCriterion(kind, e.target.value))}
@@ -360,6 +363,17 @@ export function FlowNodePanel({ node, resources, onClose, onSave, onDirtyChange,
         )}
         {kind === 'filter_label' && (
           <p className="text-xs text-muted-foreground">Se não passar, o fluxo para aqui pra esse lead.</p>
+        )}
+        {kind === 'condition' && (
+          <>
+            <SaidasDoBloco
+              saidas={[
+                { rotulo: 'Sim', cor: handleColor('condition', 'yes'), quando: 'Quando o lead passa na condição.' },
+                { rotulo: 'Não', cor: handleColor('condition', 'no'), quando: 'Quando o lead não passa.' },
+              ]}
+            />
+            <p className="text-xs text-muted-foreground">Sem nada ligado no Não, o fluxo para aqui pra esse lead.</p>
+          </>
         )}
       </>
     );
@@ -529,7 +543,9 @@ export function FlowNodePanel({ node, resources, onClose, onSave, onDirtyChange,
       case 'condition':
         return conditionFields('condition');
       case 'filter_label':
-        return conditionFields('filter_label');
+        // Com critério, abre como Condição (o canvas converte ao salvar);
+        // o legado, só com etiquetas, abre como sempre.
+        return conditionFields(willConvert(activeNode, guided) ? 'condition' : 'filter_label');
       // Ação das Automações: o MESMO editor da tela de regras, gravando
       // `{ action_type, params }` (leadAction.ts).
       case 'lead_action':

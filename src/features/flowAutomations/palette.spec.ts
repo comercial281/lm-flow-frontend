@@ -21,7 +21,7 @@ describe('paleta da sprint 2', () => {
       ['IA', ['Passar para a IA', 'Desligar a IA']],
       ['Distribuição', ['Definir corretor', 'Distribuir pela roleta']],
       ['Notificação', ['Notificação']],
-      ['Controle', ['Esperar', 'Aguardar resposta', 'Se / senão', 'Só continuar se']],
+      ['Controle', ['Esperar', 'Aguardar resposta', 'Condição']],
     ]);
   });
 
@@ -71,7 +71,7 @@ describe('paleta da sprint 2', () => {
 
   it('a busca ignora acento e maiúscula', () => {
     expect(paletteGroups('AGUARDAR').flatMap(g => g.items.map(i => i.kind))).toEqual(['wait_for_reply']);
-    expect(paletteGroups('so continuar').flatMap(g => g.items.map(i => i.kind))).toEqual(['filter_label']);
+    expect(paletteGroups('condicao').flatMap(g => g.items.map(i => i.kind))).toEqual(['condition']);
     expect(paletteGroups('notificacao').flatMap(g => g.items.map(i => i.label))).toEqual(['Notificação']);
     expect(paletteGroups('nada disso')).toEqual([]);
   });

@@ -44,7 +44,7 @@ const NATIVE_BY_GROUP: Record<FlowNodeGroup, FlowNodeKind[]> = {
   ai: ['hand_to_ai', 'disable_ai'],
   distribution: [],
   notify: [],
-  control: ['wait', 'wait_for_reply', 'condition', 'filter_label'],
+  control: ['wait', 'wait_for_reply', 'condition'],
 };
 
 /** Um botão da paleta: o bloco que ele cria, já com a config inicial. */
