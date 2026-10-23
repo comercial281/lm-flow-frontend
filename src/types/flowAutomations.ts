@@ -245,7 +245,7 @@ export const FLOW_NODE_DEFS: FlowNodeDef[] = [
   { kind: 'http_call', label: 'Chamar uma API', group: 'notify', canFail: true, defaultConfig: { method: 'POST', url: '', headers: '', body: '' } },
   // Nome e grupo de cada ação vêm de features/flowAutomations/leadAction.ts.
   { kind: 'lead_action', label: 'Ação', group: 'contact', canFail: true, defaultConfig: { action_type: '', params: {} } },
-  { kind: 'followup_recovered', label: 'Marcar como recuperado pelo follow-up', group: 'contact', canFail: false, defaultConfig: {} },
+  { kind: 'followup_recovered', label: 'Lead recuperado', group: 'contact', canFail: false, defaultConfig: {} },
   { kind: 'hand_to_ai', label: 'Passar para a IA', group: 'ai', canFail: false, defaultConfig: {} },
   { kind: 'disable_ai', label: 'Desligar a IA', group: 'ai', canFail: false, defaultConfig: {} },
 ];

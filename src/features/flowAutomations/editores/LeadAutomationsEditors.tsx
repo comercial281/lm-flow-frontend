@@ -26,6 +26,8 @@ import {
   missingActionParams,
 } from '@/services/leadAutomation/leadAutomationService';
 import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
+import numbersService from '@/services/numbers/numbersService';
+import { finalDoNumero } from '@/features/numbers/numberTexts';
 import SendFromField from '@/components/numbers/SendFromField';
 import { applySendFrom, sendFromOf, sendFromProblem } from '@/features/numbers/sendFrom';
 import { teamNameWarning } from '@/features/numbers/teamNameWarning';
@@ -246,9 +248,9 @@ const baseSelectClass =
 // escolher uma desconectada é o caminho mais curto pro aviso não chegar.
 function instanceStatusLabel(status: string): string {
   switch (status) {
-    case 'open':       return 'conectada ✓';
+    case 'open':       return 'conectada';
     case 'connecting': return 'conectando…';
-    case 'close':      return 'desconectada ⚠️';
+    case 'close':      return 'desconectada';
     default:           return status || 'estado desconhecido';
   }
 }
@@ -700,14 +702,12 @@ export function PipelineFilterEditor({
         ))}
       </Seletor>
       <p className="text-xs text-muted-foreground mt-1">
-        Em branco = vale para todo lead do CRM. Escolhendo um funil, essa automação
-        só roda para o lead cujo card está nele — é assim que o mesmo CRM tem uma IA
-        no funil de lançamento e outra no de locação.
+        Em branco, vale pra todo lead do CRM. Escolhendo um funil, o fluxo só roda pro lead que está nele.
         {trigger === 'lead.created' && (
           <>
             {' '}O lead de anúncio e de landing entra no funil logo depois de nascer,
             então essa automação espera o card aparecer antes de disparar (cerca de
-            meio minuto). Sem funil escolhido, nada muda: dispara na hora.
+            meio minuto). Sem funil escolhido, nada muda e dispara na hora.
           </>
         )}
       </p>
@@ -774,6 +774,26 @@ export function ActionEditor({ action, onChange, resources, pessoal = false }: A
       .finally(() => { if (!cancelled) setLoadingGroups(false); });
     return () => { cancelled = true; };
   }, [action.type, instanceParam]);
+
+  // Rótulo da opção "WhatsApp deste CRM" (só a tela do cliente a mostra). A
+  // Notificação sai pelo número da conversa do lead: o final só aparece quando
+  // há exatamente 1 número conectado. Carregando ou falhando, fica o texto simples.
+  const [conectados, setConectados] = useState<string[] | null>(null);
+  useEffect(() => {
+    if (action.type !== 'notify_group' || isSuperAdmin) return;
+    let vivo = true;
+    numbersService
+      .sendNumbers('lead_automation_rules')
+      .then(r => { if (vivo) setConectados(r.numbers.filter(n => n.connection === 'connected').map(n => n.phone ?? '')); })
+      .catch(() => { if (vivo) setConectados(null); });
+    return () => { vivo = false; };
+  }, [action.type, isSuperAdmin]);
+  const finalUnico = conectados && conectados.length === 1 ? finalDoNumero(conectados[0]) : null;
+  const rotuloDoCrm = conectados === null
+    ? 'WhatsApp deste CRM'
+    : conectados.length > 1
+      ? 'WhatsApp deste CRM (o número da conversa do lead)'
+      : finalUnico ? `WhatsApp deste CRM (final ${finalUnico})` : 'WhatsApp deste CRM';
 
   // Usuários do sistema com WhatsApp cadastrado — pra mandar o lembrete no privado deles.
   const usersWithWhatsapp = resources.users.filter(
@@ -948,13 +968,13 @@ export function ActionEditor({ action, onChange, resources, pessoal = false }: A
                 <option value="">— Padrão do cliente —</option>
                 {resources.evolutionInstances.map(inst => (
                   <option key={inst.name} value={inst.name}>
-                    {inst.name} {inst.status === 'open' ? '✓' : `(${inst.status})`}
+                    {inst.name} ({instanceStatusLabel(inst.status)})
                   </option>
                 ))}
               </Seletor>
               {params.sender_instance && (
                 <p className="text-xs text-amber-500 mt-1">
-                  ⚠️ Mensagem enviada pelo número selecionado, não pelo número do cliente.
+                  Mensagem enviada pelo número selecionado, não pelo número do cliente.
                 </p>
               )}
             </Field>
@@ -1117,7 +1137,7 @@ export function ActionEditor({ action, onChange, resources, pessoal = false }: A
           <Field
             label="Número"
             hint={isSuperAdmin
-              ? 'De qual WhatsApp sai o aviso — e de onde os grupos são listados. Para grupo de cliente use a central Operacional (LM01).'
+              ? 'De qual WhatsApp sai o aviso — e de onde os grupos são listados. Para grupo de cliente use a central da Leal Mídia.'
               : 'De qual WhatsApp sai o aviso. Na central da Leal Mídia aparecem só os grupos liberados pra este CRM.'}
           >
             {isSuperAdmin ? (resources.evolutionInstances.length > 0 ? (
@@ -1126,7 +1146,7 @@ export function ActionEditor({ action, onChange, resources, pessoal = false }: A
                 onChange={e => setParam('instance', e.target.value)}
                 className={baseSelectClass}
               >
-                <option value="">— WhatsApp do próprio cliente —</option>
+                <option value="">WhatsApp deste CRM</option>
                 {resources.evolutionInstances.map(inst => (
                   <option key={inst.name} value={inst.name}>
                     {inst.name} — {instanceStatusLabel(inst.status)}
@@ -1159,12 +1179,12 @@ export function ActionEditor({ action, onChange, resources, pessoal = false }: A
                 disabled={travado}
                 className={baseSelectClass}
               >
-                <option value="proprio">WhatsApp deste CRM</option>
+                <option value="proprio">{rotuloDoCrm}</option>
                 <option value="central">Central da Leal Mídia</option>
               </Seletor>
             )}
           </Field>
-          <Field label="Destino do lembrete *" hint={loadingGroups ? 'Carregando…' : 'O grupo do cliente, ou um usuário (vai no WhatsApp privado dele).'}>
+          <Field label="Quem recebe *" hint={loadingGroups ? 'Carregando…' : 'O grupo do cliente, ou um usuário (vai no WhatsApp privado dele).'}>
             <Seletor
               value={String(params.group_jid ?? '')}
               onChange={e => setParam('group_jid', e.target.value)}
@@ -1241,11 +1261,11 @@ export function ActionEditor({ action, onChange, resources, pessoal = false }: A
             </Seletor>
           </Field>
           {selected && !selectedWa && (
-            <p className="text-xs text-red-500 mt-1">
-              Esse usuário não tem WhatsApp cadastrado. Cadastre em Configurações &gt; Usuários pra ele receber o lembrete.
-            </p>
+            <Aviso tom="erro" compacto className="mt-1">
+              Esse usuário não tem WhatsApp cadastrado. Cadastre em Configurações &gt; Usuários pra ele receber o aviso.
+            </Aviso>
           )}
-          <Field label="Mensagem do lembrete *" hint="Enviada no WhatsApp do usuário escolhido. Toque numa variável pra inserir.">
+          <Field label="Mensagem *" hint="Enviada no WhatsApp do usuário escolhido. Toque numa variável pra inserir.">
             <Textarea
               value={String(params.message ?? '')}
               onChange={e => setParam('message', e.target.value)}
@@ -1424,7 +1444,7 @@ export function ActionEditor({ action, onChange, resources, pessoal = false }: A
               className="mt-1"
             />
           </Field>
-          <Field label="Mensagem do push *" hint="Texto do push. Toque numa variável pra inserir.">
+          <Field label="Mensagem *" hint="Texto do push. Toque numa variável pra inserir.">
             <Textarea
               value={String(params.message ?? '')}
               onChange={e => setParam('message', e.target.value)}

@@ -8,6 +8,8 @@ vi.mock('@/services/leadAutomation/leadAutomationService', async importOriginal 
   const real = await importOriginal<typeof import('@/services/leadAutomation/leadAutomationService')>();
   return { ...real, leadAutomationService: { ...real.leadAutomationService, ...svc } };
 });
+const numeros = vi.hoisted(() => ({ sendNumbers: vi.fn() }));
+vi.mock('@/services/numbers/numbersService', () => ({ default: numeros }));
 const equipe = vi.hoisted(() => ({ valor: false }));
 vi.mock('@/hooks/useIsSuperAdmin', () => ({ useIsSuperAdmin: () => equipe.valor }));
 
@@ -22,7 +24,34 @@ function acao(params: Record<string, string>) {
 }
 
 describe('Avisar no grupo, na tela do cliente', () => {
-  beforeEach(() => { equipe.valor = false; });
+  beforeEach(() => {
+    equipe.valor = false;
+    numeros.sendNumbers.mockReset();
+    numeros.sendNumbers.mockRejectedValue(new Error('rede'));
+  });
+
+  const numero = (phone: string, connection = 'connected') => ({ inbox_id: phone, name: 'n', phone, connection, owner: null });
+
+  it('com 1 número conectado, a opção mostra o final dele', async () => {
+    svc.getGroupsResult.mockResolvedValue({ groups: [], reason: null, instance: null });
+    numeros.sendNumbers.mockResolvedValue({ number_owner_rule: false, numbers: [numero('+55 (11) 91234-1292'), numero('+55 (11) 90000-0001', 'disconnected')] });
+    render(<ActionEditor action={acao({})} onChange={() => {}} resources={resources} />);
+    expect(await screen.findByRole('option', { name: 'WhatsApp deste CRM (final 92)' })).toBeInTheDocument();
+  });
+
+  it('com mais de 1 conectado, diz que é o número da conversa do lead', async () => {
+    svc.getGroupsResult.mockResolvedValue({ groups: [], reason: null, instance: null });
+    numeros.sendNumbers.mockResolvedValue({ number_owner_rule: false, numbers: [numero('+55 (11) 91234-1292'), numero('+55 (11) 90000-0001')] });
+    render(<ActionEditor action={acao({})} onChange={() => {}} resources={resources} />);
+    expect(await screen.findByRole('option', { name: 'WhatsApp deste CRM (o número da conversa do lead)' })).toBeInTheDocument();
+  });
+
+  it('nenhum texto da janela do cliente fala de lembrete, LM01 ou emoji', async () => {
+    svc.getGroupsResult.mockResolvedValue({ groups: [], reason: null, instance: null });
+    const { container } = render(<ActionEditor action={acao({})} onChange={() => {}} resources={resources} />);
+    await waitFor(() => expect(screen.getByText('Quem recebe *')).toBeInTheDocument());
+    expect(container.textContent).not.toMatch(/lembrete|LM01|✓|⚠️/i);
+  });
 
   it('troca o campo livre por duas opções e não fala da central pelo nome', async () => {
     svc.getGroupsResult.mockResolvedValue({ groups: [], reason: null, instance: null });

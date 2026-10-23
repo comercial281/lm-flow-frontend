@@ -34,6 +34,16 @@ export function describeMinutes(minutes: unknown): string {
   return plural(amount, 'minuto', 'minutos');
 }
 
+/** "dias" com 1 vira "dia": só o rótulo mostrado nas janelas, os dados das unidades não mudam. */
+export function unitLabel(unit: { label: string; value: string }, amount: number): string {
+  if (amount !== 1) return unit.label;
+  if (unit.value === 'd') return 'dia';
+  if (unit.value === 'h') return 'hora';
+  if (unit.value === 'min') return 'minuto';
+  if (unit.value === 's') return 'segundo';
+  return unit.label;
+}
+
 // ── Aguardar resposta ───────────────────────────────────────────────────────
 
 /** Texto de ajuda do bloco (spec 02/10, seção 1). */

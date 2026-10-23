@@ -76,10 +76,22 @@ describe('janela do bloco', () => {
   it('Aguardar resposta: "Sem limite" grava indefinite', async () => {
     const onSave = vi.fn();
     render(<FlowNodePanel node={node({ config: { minutes: 30, indefinite: false } })} resources={resources} onClose={() => {}} onSave={onSave} />);
-    expect(screen.getByText('Respondeu: o lead mandou qualquer mensagem depois da última que este fluxo enviou.')).toBeTruthy();
-    fireEvent.click(screen.getByLabelText('Sem limite (espera até o lead responder)'));
+    expect(screen.getByText('Até quando esperar?')).toBeTruthy();
+    expect(screen.getByText('Respondeu')).toBeTruthy();
+    expect(screen.getByText('Não respondeu')).toBeTruthy();
+    fireEvent.click(screen.getByRole('radio', { name: 'Sem limite' }));
+    expect(screen.getByText('Respondeu')).toBeTruthy();
+    expect(screen.queryByText('Não respondeu')).toBeNull();
     fireEvent.click(screen.getByText('Salvar'));
     await waitFor(() => expect(onSave).toHaveBeenCalledWith('n1', expect.objectContaining({ config: expect.objectContaining({ indefinite: true }) })));
+  });
+
+  it('Esperar: escolha em botões e unidade no singular com 1', () => {
+    render(<FlowNodePanel node={node({ kind: 'wait', config: { mode: 'interval', minutes: 1440 } })} resources={resources} onClose={() => {}} onSave={() => {}} />);
+    expect(screen.getByText('Esperar como?')).toBeTruthy();
+    expect(screen.getByRole('radio', { name: 'Por um tempo' })).toBeTruthy();
+    expect(screen.getByRole('radio', { name: 'Até uma data e hora' })).toBeTruthy();
+    expect(screen.getByRole('option', { name: 'dia' })).toBeTruthy();
   });
 
   it('Aguardar resposta: 2 horas vira 120 minutos', async () => {

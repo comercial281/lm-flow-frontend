@@ -34,7 +34,7 @@ describe('SendFromField', () => {
 
     expect(await screen.findByRole('option', { name: 'Loja · (11) 91234-1234' })).toBeInTheDocument();
     expect(screen.getByRole('option', { name: 'Da Ana · desconectado · de Ana' })).toBeInTheDocument();
-    expect(screen.getByRole('option', { name: 'Automático (como sempre foi)' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'Pelo número da conversa do lead' })).toBeInTheDocument();
     expect(screen.getByRole('option', { name: 'O número do responsável pelo lead' })).toBeInTheDocument();
     expect(screen.getByText('Enviar pelo número')).toBeInTheDocument();
     expect(sendNumbers).toHaveBeenCalledWith('lead_automation_rules');
@@ -47,7 +47,7 @@ describe('SendFromField', () => {
 
     expect(await screen.findByRole('option', { name: 'O número do responsável pelo lead (padrão)' })).toBeInTheDocument();
     expect(screen.queryByRole('option', { name: 'O número do responsável pelo lead' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('option', { name: 'Automático (como sempre foi)' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: 'Pelo número da conversa do lead' })).not.toBeInTheDocument();
     expect((screen.getByRole('combobox') as HTMLSelectElement).value).toBe('');
     expect(screen.getByText(/sai como antes: pelo número da conversa do lead/)).toBeInTheDocument();
   });

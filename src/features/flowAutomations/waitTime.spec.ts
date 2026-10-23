@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { describeWait, describeWaitForReply, joinMinutes, splitMinutes } from './waitTime';
+import { describeWait, describeWaitForReply, joinMinutes, splitMinutes, unitLabel } from './waitTime';
 
 describe('tempo em minutos, horas ou dias (guardado em minutos)', () => {
   it('ida e volta', () => {
@@ -56,5 +56,16 @@ describe('Esperar dos fluxos de lead: segundos a dias (08/10/2026)', () => {
     expect(leadWaitSeconds({ minutes: 0, seconds: 15 })).toBe(15);
     expect(describeWait({ mode: 'interval', minutes: 0, seconds: 15, business_hours: true }))
       .toBe('Espera 15 segundos, em horário comercial');
+  });
+});
+
+describe('rótulo da unidade acompanha a quantidade', () => {
+  it('singular com 1, plural nos outros', () => {
+    expect(unitLabel({ label: 'dias', value: 'd' }, 1)).toBe('dia');
+    expect(unitLabel({ label: 'dias', value: 'd' }, 2)).toBe('dias');
+    expect(unitLabel({ label: 'horas', value: 'h' }, 1)).toBe('hora');
+    expect(unitLabel({ label: 'minutos', value: 'min' }, 1)).toBe('minuto');
+    expect(unitLabel({ label: 'segundos', value: 's' }, 1)).toBe('segundo');
+    expect(unitLabel({ label: 'segundos', value: 's' }, 30)).toBe('segundos');
   });
 });

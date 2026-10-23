@@ -249,7 +249,7 @@ export const GROUP_COLORS: Record<string, string> = {
   contact: '#0891B2',
   ai: '#4F46E5',
   distribution: '#EA580C',
-  control: '#D97706',
+  control: '#475569',
   notify: '#DB2777',
 };
 

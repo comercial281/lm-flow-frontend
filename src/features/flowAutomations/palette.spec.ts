@@ -13,9 +13,9 @@ describe('paleta da sprint 2', () => {
   it('os blocos da spec, nos seis grupos e na ordem da tabela', () => {
     expect(paletteGroups().map(g => [g.label, g.items.map(i => i.label)])).toEqual([
       // PR 8 (16/10/2026): áudio, imagem, vídeo, documento e figurinha viraram itens do bloco Mensagem.
-      ['Mensagem', ['Mensagem', 'Mandar resposta rápida', 'Disparar funil de mensagens']],
+      ['Mensagem', ['Mensagem', 'Disparar funil de mensagens']],
       ['Lead', [
-        'Aplicar etiqueta', 'Tirar etiqueta', 'Mover de etapa', 'Marcar como recuperado pelo follow-up',
+        'Aplicar etiqueta', 'Tirar etiqueta', 'Mover de etapa', 'Lead recuperado',
         'Criar tarefa', 'Iniciar follow-up',
       ]],
       ['IA', ['Passar para a IA', 'Desligar a IA']],
@@ -41,13 +41,15 @@ describe('paleta da sprint 2', () => {
   it('toda ação das Automações tem bloco, menos "Aguardar (delay)" e o follow-up antigo', () => {
     const actions = new Set(paletteItems().filter(i => i.kind === 'lead_action').map(i => i.config.action_type));
     const comBlocoProprio = ['send_whatsapp_message', 'add_label', 'remove_label', 'move_pipeline_stage'];
+    // A resposta rápida saiu da lista (22/10/2026); o bloco salvo continua abrindo.
+    const foraDaLista = ['send_quick_reply'];
     // Os envios de mídia são itens do bloco Mensagem (PR 8); os blocos antigos continuam abrindo.
     const itensDaMensagem = ['send_audio', 'send_image', 'send_video', 'send_document', 'send_sticker'];
     itensDaMensagem.forEach(t => expect(actions.has(t)).toBe(false));
     // Os outros quatro avisos são escolhas do bloco Notificação (PR 9); os blocos antigos continuam abrindo.
     const escolhasDaNotificacao = ['notify_user', 'notify_broker', 'notify_gestor', 'notify_push'];
     escolhasDaNotificacao.forEach(t => expect(actions.has(t)).toBe(false));
-    const faltando = Object.keys(ACTION_TYPE_LABELS).filter(t => !actions.has(t) && !comBlocoProprio.includes(t) && !itensDaMensagem.includes(t) && !escolhasDaNotificacao.includes(t));
+    const faltando = Object.keys(ACTION_TYPE_LABELS).filter(t => !actions.has(t) && !comBlocoProprio.includes(t) && !itensDaMensagem.includes(t) && !escolhasDaNotificacao.includes(t) && !foraDaLista.includes(t));
     expect(faltando).toEqual(['start_followup_sequence', 'wait']);
     expect(paletteItems().find(i => i.label === 'Iniciar follow-up')?.config).toEqual({ action_type: 'start_followup_flow', params: {} });
   });

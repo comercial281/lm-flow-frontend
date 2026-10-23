@@ -194,7 +194,7 @@ export default function MessageSequenceEditor({
 
   return (
     <div>
-      <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+      <h4 className="text-xs font-semibold text-muted-foreground mb-2">
         Itens em sequência ({items.length})
       </h4>
       <div className="space-y-2">
