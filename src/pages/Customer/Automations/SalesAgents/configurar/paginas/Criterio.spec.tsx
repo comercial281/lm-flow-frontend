@@ -39,21 +39,26 @@ describe('Critério', () => {
     expect(gravar).toHaveBeenLastCalledWith({ escalate_on_ai_detected: false });
   });
 
-  describe('Passa direto, mesmo faltando pergunta', () => {
+  // 22/10/2026: as chaves de "passar direto" entraram na Passagem imediata (eram uma
+  // seção à parte que repetia a mesma pergunta), e "Pediu ligação" virou parte de
+  // "falar com uma pessoa": quem pede ligação cai em pediu_humano e passa de qualquer jeito.
+  describe('Passagem imediata única', () => {
     const base = { mode: 'checklist', required_questions: ['Renda'], voice: 'first_person' };
-    const nomes = ['Recusou mandar documento', 'Pediu ligação', 'Perguntou o que ela não sabe'];
+    const nomes = ['Lead irritado', 'Pediu pra falar com uma pessoa ou pediu ligação', 'Perguntou se é robô',
+      'Recusou mandar documento', 'Perguntou o que ela não sabe'];
 
-    it('mostra as 3 chaves, todas ligadas sem early_handoff', () => {
+    it('uma seção só, com as 5 chaves ligadas por padrão', () => {
       abrir();
-      expect(screen.getByText('Passa direto, mesmo faltando pergunta')).toBeInTheDocument();
+      expect(screen.queryByText('Passa direto, mesmo faltando pergunta')).not.toBeInTheDocument();
+      expect(screen.getAllByRole('switch')).toHaveLength(6); // 5 + lead frio
       for (const n of nomes) expect(screen.getByRole('switch', { name: n })).toHaveAttribute('aria-checked', 'true');
     });
 
-    it('desligar Pediu ligação grava só essa subchave', async () => {
+    it('a chave de pessoa ou ligação grava as duas coisas no mesmo clique', async () => {
       const gravar = abrir();
-      await userEvent.click(screen.getByRole('switch', { name: 'Pediu ligação' }));
+      await userEvent.click(screen.getByRole('switch', { name: 'Pediu pra falar com uma pessoa ou pediu ligação' }));
       expect(gravar).toHaveBeenLastCalledWith(
-        { transfer_config: { ...base, early_handoff: { pediu_ligacao: false } } },
+        { escalate_on_human_request: false, transfer_config: { ...base, early_handoff: { pediu_ligacao: false } } },
         ['transfer_config.early_handoff'],
       );
     });
@@ -76,9 +81,11 @@ describe('Critério', () => {
       expect(campos).toEqual(['transfer_config.mode', 'transfer_config.min_temperature']);
     });
 
-    it('fora do checklist a seção não aparece', () => {
+    it('fora do checklist só as 3 de sempre aparecem', () => {
       abrir({ transfer_config: { mode: 'temperatura' } });
-      expect(screen.queryByText('Passa direto, mesmo faltando pergunta')).not.toBeInTheDocument();
+      expect(screen.queryByRole('switch', { name: 'Recusou mandar documento' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('switch', { name: 'Perguntou o que ela não sabe' })).not.toBeInTheDocument();
+      expect(screen.getByRole('switch', { name: 'Pediu pra falar com uma pessoa ou pediu ligação' })).toBeInTheDocument();
     });
   });
 });
