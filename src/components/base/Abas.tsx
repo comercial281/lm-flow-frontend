@@ -77,7 +77,7 @@ function AbasDeLink({ abas, rotulo, className }: AbasProps) {
   const { aoClicar, dialogoDeConfirmacao } = useGuardaDeSaida();
   const { pathname } = useLocation();
   return (
-    <nav aria-label={rotulo} onClickCapture={aoClicar} className={cn('flex items-center gap-1 overflow-x-auto', className)}>
+    <nav aria-label={rotulo} onClickCapture={aoClicar} className={cn('flex shrink-0 items-center gap-1 overflow-x-auto', className)}>
       {abas.map(({ chave, rotulo: nome, icone: Icone, para, exata, tambem, marcador, contagem }) => {
         const conteudo = (
           <>
@@ -125,7 +125,7 @@ function AbasDeEstado({ abas, rotulo, ativa, aoTrocar, className }: AbasProps) {
   };
 
   return (
-    <div role="tablist" aria-label={rotulo} className={cn('flex items-center gap-1 overflow-x-auto border-b border-border', className)}>
+    <div role="tablist" aria-label={rotulo} className={cn('flex shrink-0 items-center gap-1 overflow-x-auto border-b border-border', className)}>
       {abas.map(({ chave, rotulo: nome, icone: Icone, marcador, contagem }, i) => (
         <button
           key={chave}
