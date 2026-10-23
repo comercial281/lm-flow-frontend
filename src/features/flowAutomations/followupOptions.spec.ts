@@ -15,6 +15,7 @@ describe('follow-ups pra escolher (IA Vendedora e assistente)', () => {
 
   it('avisa quando a IA ainda aponta só pro funil antigo', () => {
     expect(legacySequenceNotice({ followup_sequence_slug: 'follow-up-longo' })).toContain('"follow-up-longo"');
+    expect(legacySequenceNotice({ followup_sequence_slug: 'follow-up-longo' })).toContain('os leads vão pro Follow-up padrão da conta');
     expect(legacySequenceNotice({ followup_sequence_slug: 'x', followup_flow_id: 'f1' })).toBeNull();
     expect(legacySequenceNotice({})).toBeNull();
   });

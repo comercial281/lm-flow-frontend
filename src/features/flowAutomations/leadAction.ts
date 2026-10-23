@@ -35,7 +35,7 @@ export const LEAD_ACTION_BLOCK_LABELS: Record<string, string> = {
   assign_broker: 'Definir corretor',
   assign_via_roleta: 'Distribuir pela roleta',
   create_task: 'Criar tarefa',
-  start_followup_sequence: 'Iniciar follow-up (formato antigo)',
+  start_followup_sequence: 'Follow-up antigo (inativo)',
   start_followup_flow: 'Iniciar follow-up',
   notify_group: 'Notificação',
   notify_user: 'Notificação',

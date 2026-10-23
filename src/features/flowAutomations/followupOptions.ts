@@ -28,7 +28,7 @@ export function followupFlowOptions(list: Array<Pick<FlowAutomation, 'id' | 'nam
 /** A IA ainda aponta pro funil antigo (só o slug)? A frase que a tela mostra, ou null. */
 export function legacySequenceNotice(agent: { followup_flow_id?: string | null; followup_sequence_slug?: string | null }): string | null {
   if (agent.followup_flow_id || !agent.followup_sequence_slug) return null;
-  return `Hoje ela entrega pro funil antigo "${agent.followup_sequence_slug}". Se ele já foi convertido, o lead vai pro follow-up novo dele. Escolha aqui o follow-up pra deixar isso claro.`;
+  return `Hoje ela aponta pro funil antigo "${agent.followup_sequence_slug}", que não existe mais: os leads vão pro Follow-up padrão da conta. Escolha aqui o follow-up que ela deve usar.`;
 }
 
 export const FOLLOWUP_PADRAO_NOME = 'Follow-up padrão';
