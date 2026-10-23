@@ -114,6 +114,16 @@ describe('Follow-up do card — fluxo de follow-up', () => {
     expect(running).toHaveBeenCalledTimes(2);
   });
 
+  it('follow-up pessoal de outra pessoa: nome mascarado como veio, sem aspas nem rótulo repetido', async () => {
+    running.mockResolvedValue([instance({ flow_name: 'Follow-up de Ana', flow_masked: true })]);
+
+    render(<FollowupTimeline contactId="c-1" />);
+
+    expect(await screen.findByText('Follow-up de Ana · aguardando resposta, sem limite')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Parar Follow-up de Ana' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Parar o follow-up Follow-up de Ana/ })).not.toBeInTheDocument();
+  });
+
   it('fluxo comum (automação) não aparece no bloco de follow-up', async () => {
     running.mockResolvedValue([instance({ kind: 'automation', flow_name: 'Boas-vindas' })]);
 

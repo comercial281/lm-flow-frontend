@@ -8,6 +8,7 @@ import Chave from '@/components/base/Chave';
 import EmptyState from '@/components/base/EmptyState';
 import IconActionButton from '@/components/base/IconActionButton';
 import NoAccessState from '@/components/permissions/NoAccessState';
+import { CartaoDeFluxo } from '@/components/flowAutomations/CartaoDeFluxo';
 import { FunnelTemplatePicker } from '@/components/flowAutomations/FunnelTemplatePicker';
 import { flowAutomationsService } from '@/services/flowAutomations/flowAutomationsService';
 import { isForbiddenError } from '@/services/core/forbidden';
@@ -24,7 +25,8 @@ import { cn } from '@/lib/utils';
 // ele dispara numa conversa. Cada funil é um fluxo do construtor (`kind =
 // conversation`) com gatilho fixo. A página não tem abas internas (Variáveis
 // e Atributos saíram): são duas listas empilhadas, "Da equipe" e "Meus funis",
-// igual à aba Follow-up. ⚠️ Nada de fileira de abas aqui dentro: a moldura já
+// igual à aba Follow-up, e o MESMO cartão (CartaoDeFluxo) e o mesmo título nas
+// duas abas (22/10/2026). ⚠️ Nada de fileira de abas aqui dentro: a moldura já
 // desenha "Manual | Follow-up" e aba dentro de aba foi recusada pelo dono
 // (20/10 e 22/10/2026).
 //
@@ -147,62 +149,67 @@ export default function ConversationFunnels() {
     const status = statusOf(f);
     const canEdit = f.permissions?.can_edit !== false;
     const canMarkTeam = f.permissions?.can_mark_team ?? isManager;
+    const estado = status.tone === 'amber' ? 'montando' : f.is_enabled ? 'ligado' : 'desligado';
     return (
-      <li key={f.id} className="rounded-lg border border-border p-3 flex flex-col gap-2" data-testid="funil">
-        <div className="flex items-start justify-between gap-2">
-          <button type="button" className="min-w-0 text-left" onClick={() => open(f)}>
-            <span className="block truncate text-base font-semibold hover:underline">{f.name}</span>
-            {f.team && f.owner_name && <span className="block text-xs text-muted-foreground">Criado por {f.owner_name}</span>}
-          </button>
-          {f.team && (
-            <Badge variant="secondary" className="shrink-0 gap-1 text-[10px]">
-              <Users className="h-3 w-3" aria-hidden="true" /> Da equipe
-            </Badge>
-          )}
-        </div>
-        <p
-          className={cn(
-            'text-xs',
-            status.tone === 'amber' && 'text-amber-700 dark:text-amber-300',
-            status.tone === 'green' && 'text-emerald-700 dark:text-emerald-300',
-            status.tone === 'muted' && 'text-muted-foreground',
-          )}
-        >
-          {status.text}
-        </p>
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-          {status.tone === 'amber' && canEdit && (
-            <Button size="sm" onClick={() => open(f)}>Continuar o passo a passo</Button>
-          )}
-          {status.tone !== 'amber' && canEdit && (
-            <Chave rotulo="Ligado" ligada={f.is_enabled} aoMudar={() => toggle(f)} />
-          )}
-          {canMarkTeam && (
-            <Chave rotulo="Da equipe" ligada={!!f.team} aoMudar={next => markTeam(f, next)} />
-          )}
-          <div className="ml-auto flex items-center gap-1">
-            {!canEdit && (
-              <Button size="sm" variant="outline" onClick={() => open(f)}>Ver</Button>
+      <CartaoDeFluxo
+        key={f.id}
+        titulo={f.name}
+        aoAbrir={() => open(f)}
+        estado={estado}
+        selos={f.team && (
+          <Badge variant="secondary" className="shrink-0 gap-1 text-[10px]">
+            <Users className="h-3 w-3" aria-hidden="true" /> Da equipe
+          </Badge>
+        )}
+        linha={
+          <>
+            <span
+              className={cn(
+                'block',
+                status.tone === 'amber' && 'text-amber-700 dark:text-amber-300',
+                status.tone === 'green' && 'text-emerald-700 dark:text-emerald-300',
+              )}
+            >
+              {status.text}
+            </span>
+            {f.team && f.owner_name && <span className="block">Criado por {f.owner_name}</span>}
+          </>
+        }
+        acoes={
+          <>
+            {status.tone === 'amber' && canEdit && (
+              <Button size="sm" onClick={() => open(f)}>Continuar o passo a passo</Button>
             )}
-            <IconActionButton
-              label={canEdit ? 'Duplicar' : 'Duplicar pra ter a sua cópia'}
-              icon={<Copy className="h-3.5 w-3.5" />}
-              variant="ghost"
-              className="h-8 w-8"
-              onClick={() => void duplicate(f)}
-            />
-            {canEdit && (
+            {status.tone !== 'amber' && canEdit && (
+              <Chave rotulo="Ligado" ligada={f.is_enabled} aoMudar={() => toggle(f)} />
+            )}
+            {canMarkTeam && (
+              <Chave rotulo="Da equipe" ligada={!!f.team} aoMudar={next => markTeam(f, next)} />
+            )}
+            <div className="ml-auto flex items-center gap-1">
+              {!canEdit && (
+                <Button size="sm" variant="outline" onClick={() => open(f)}>Ver</Button>
+              )}
               <IconActionButton
-                label="Excluir"
-                icon={<Trash2 className="h-3.5 w-3.5" />}
+                label={canEdit ? 'Duplicar' : 'Duplicar pra ter a sua cópia'}
+                icon={<Copy className="h-3.5 w-3.5" />}
                 variant="ghost"
                 className="h-8 w-8"
-                onClick={() => void destroy(f)}
+                onClick={() => void duplicate(f)}
               />
-            )}
-          </div>
-        </div>
-      </li>
+              {canEdit && (
+                <IconActionButton
+                  label="Excluir"
+                  icon={<Trash2 className="h-3.5 w-3.5" />}
+                  variant="ghost"
+                  className="h-8 w-8"
+                  onClick={() => void destroy(f)}
+                />
+              )}
+            </div>
+          </>
+        }
+      />
     );
   };
 
@@ -215,7 +222,7 @@ export default function ConversationFunnels() {
       {lista.length === 0 ? (
         <EmptyState tamanho="compacto" title={vazio} />
       ) : (
-        <ul className="grid grid-cols-1 lg:grid-cols-2 gap-3" aria-label={titulo}>
+        <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3" aria-label={titulo}>
           {lista.map(card)}
         </ul>
       )}

@@ -32,7 +32,7 @@ import { useCelular } from '@/hooks/useCelular';
 import AvisoDoCardForaDoQuadro from '@/features/cardDoLead/AvisoDoCardForaDoQuadro';
 import { useCardNoEndereco } from './useCardNoEndereco';
 import { STATUS_DA_ABA, pertenceAAba, podeArrastarNaAba } from './quadro/enderecoDoQuadro';
-import { comSituacaoNova, situacaoDe } from '@/features/pipelines/situacao/situacao';
+import { comSituacaoNova, ehColunaDeFollowup, situacaoDe } from '@/features/pipelines/situacao/situacao';
 import { useBoardDrag } from './quadro/useBoardDrag';
 import { useColocarEmFollowup } from '@/features/followup/useColocarEmFollowup';
 import { mensagemDaColunaDeFollowup } from '@/features/followup/erroDeEtapa';
@@ -619,7 +619,8 @@ export default function PipelineKanban() {
 
   // Item management handlers
   const handleAddItem = (stage?: PipelineStage) => {
-    setSelectedStageForItem(stage || stages[0] || null);
+    // Nunca a coluna Follow-up: o card novo não nasce nela pela tela (o modal também filtra).
+    setSelectedStageForItem(stage || stages.find(s => !ehColunaDeFollowup(s)) || null);
     setShowAddItemModal(true);
   };
 

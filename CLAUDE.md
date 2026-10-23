@@ -9540,6 +9540,13 @@ Armadilhas:
 
 Código: `features/followup/JanelaColocarEmFollowup.tsx`, `features/flowAutomations/followupOptions.ts` (`soFollowupsDaEquipe`), `features/flowAutomations/editores/LeadAutomationsEditors.tsx` (`useAutomationResources`), `pages/Customer/Automations/FlowBuilder/ListaDeFollowups.tsx`, `FlowAutomationCanvas.tsx`, `pages/Customer/Automations/SalesAgents/configurar/paginas/Followup.tsx`, `components/layout/config/menuItems.ts`, `flowAutomationInstancesService.placePreview`, `flowAutomationsService.list({ startable, automationId })`. Testes: `JanelaColocarEmFollowup.spec.tsx`, `Followup.spec.tsx` (IA), `useAutomationResources.erroDeCarga.spec.tsx`, `FollowupPorUsuario.spec.tsx`, `FollowupCanvasCorretor.spec.tsx`, `menuItems.spec.ts`.
 
+## Funis de mensagem: listas empilhadas, nunca aba dentro de aba (2026-10-22)
+
+Pedido do dono, depois de ver a aba Manual com uma segunda fileira "Meus funis | Da equipe" embaixo de "Manual | Follow-up" (e as duas cortadas ao meio). Ele já tinha pedido em 20/10: "duas listas, uma da equipe e a outra pessoal... não vai poder ter um monte de menuzinho ali".
+
+- **Uma fileira de abas só por página.** Em Funis de mensagem a fileira é a da moldura (Manual | Follow-up). Dentro de cada aba, as divisões são **listas empilhadas com título e contagem** (Manual: Da equipe, Meus funis; Follow-up: Da equipe, Meus, Dos corretores pro gestor). Lista vazia mostra o aviso dela e a outra continua aparecendo. Não reabrir sem o dono pedir.
+- **Abas não encolhem.** Em página com `rolagem="conteudo"` a coluna é flex com `min-h-0`, e a fileira com `overflow-x-auto` encolhia até cortar o texto. O componente `Abas` agora é `shrink-0` (vale pra toda tela).
+
 ## Esqueci minha senha só por e-mail (desde 2026-10-22)
 
 **Por quê:** o link ia pelo WhatsApp do cadastro, saindo do número da Sara. Quem
@@ -9558,12 +9565,19 @@ login: toda conta tem. Decisão do Tony.
   `desfecho=not_delivered motivo=envio de e-mail nao configurado`.
 - O roteiro de Suporte ("Esqueci minha senha") diz que o link chega no e-mail.
 
-## Funis de mensagem: listas empilhadas, nunca aba dentro de aba (2026-10-22)
 
-Pedido do dono, depois de ver a aba Manual com uma segunda fileira "Meus funis | Da equipe" embaixo de "Manual | Follow-up" (e as duas cortadas ao meio). Ele já tinha pedido em 20/10: "duas listas, uma da equipe e a outra pessoal... não vai poder ter um monte de menuzinho ali".
+## Follow-up, Fase 4 (Entrega A): telas e regras (2026-10-22)
 
-- **Uma fileira de abas só por página.** Em Funis de mensagem a fileira é a da moldura (Manual | Follow-up). Dentro de cada aba, as divisões são **listas empilhadas com título e contagem** (Manual: Da equipe, Meus funis; Follow-up: Da equipe, Meus, Dos corretores pro gestor). Lista vazia mostra o aviso dela e a outra continua aparecendo. Não reabrir sem o dono pedir.
-- **Abas não encolhem.** Em página com `rolagem="conteudo"` a coluna é flex com `min-h-0`, e a fileira com `overflow-x-auto` encolhia até cortar o texto. O componente `Abas` agora é `shrink-0` (vale pra toda tela).
+**Funis de mensagem: um título, um cartão.** A página tem um título e um subtítulo só, iguais nas duas abas (Manual e Follow-up): "Funis de mensagem" e "Sequências de mensagens prontas. As manuais você dispara numa conversa; o follow-up vai atrás do lead que parou de responder." Quem troca de aba muda a lista, não a página. O botão e a busca continuam por aba (Novo funil / Novo follow-up). As duas listas usam a mesma grade (1 coluna no celular, 2 no tablet, 3 no computador) e o mesmo cartão (`CartaoDeFluxo`): filete colorido à esquerda (verde ligado, vermelho desligado, âmbar montando, cinza arquivado), nome, selos à direita, uma linha de apoio e a fileira de ações. O funil com passo do guia pendente aparece como "montando" e diz "Termine de montar: passo X de Y". Não reabrir sem o dono pedir: aba dentro de aba, título diferente por aba e cartão diferente por aba foram recusados ("o pior visual da história").
+
+**Gestor liga e desliga "Da equipe" na lista.** Na lista de follow-ups, o gestor vê a chave "Da equipe" em cada cartão, inclusive na seção "Meus" dele (senão não teria como compartilhar o follow-up pessoal). Corretor nunca vê a chave. Ligar é direto. Desligar pergunta antes: "Tirar "{nome}" da equipe?" e explica que ele passa a ser só do dono, que a IA e as automações da equipe deixam de usar e que os leads novos saem pelo WhatsApp do dono. Se o servidor recusar (por exemplo, é o padrão da conta), o aviso aparece exatamente como veio e a chave volta pra onde estava.
+
+**"Novo card" e a conversa sem card não oferecem a coluna Follow-up.** No Novo card do funil e na seção Funil da conversa que ainda não tem card naquele funil, a lista de colunas não mostra a Follow-up (o card nasceria nela e já começaria o follow-up, com WhatsApp saindo). O caminho na tela é "Colocar em follow-up": card que já existe movido pra coluna Follow-up abre a janela que pergunta qual follow-up. Funil com a Follow-up como primeira coluna: o card novo nasce na primeira coluna comum.
+
+**Card criado direto na coluna Follow-up começa o padrão, por qualquer porta.** Criar o card já na coluna Follow-up pela API, por formulário, pelo MCP ou por qualquer outra entrada começa o follow-up padrão do responsável pelo lead (o da conta, sem responsável). Quem já tem follow-up vivo fica com o dele: não troca nem recomeça. O `move_lead` do MCP avisa quando isso aconteceu.
+
+**Nome do follow-up pessoal de outra pessoa não aparece.** No card do lead e no selo "Follow-up ativo" do quadro, quem não é o dono, nem gestor, e quando o follow-up também não é do responsável pelo lead, vê "Follow-up de {dono}" (ou "Follow-up pessoal" quando o dono não é achado), nunca o nome que o dono escolheu. A tela mostra esse nome como veio, sem aspas e sem repetir "follow-up". Automação, follow-up da equipe, o dono e o gestor veem o nome real. A lista de fluxos do card só abre pra quem vê o lead.
+
 ## Construtor: janelas revisadas (desde 2026-10-22)
 
 Em 21/10/2026 o Tony fez o raio-x das 19 janelas de bloco do construtor de automações e achou que pareciam outro app: a limpeza visual de 30/09 a 14/10 nunca chegou ao conteúdo dessas janelas (só à casca). Ele marcou cada bloco, e a Entrega 1 corrige direto o que foi marcado, sem mexer no que o bloco faz. Spec em `LM FLOW/specs/2026-10-22-construtor-janelas-e-numero-do-fluxo-design.md` (fora do git, na pasta do Tony).

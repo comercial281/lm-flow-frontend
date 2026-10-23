@@ -6,8 +6,10 @@ import {
   Badge, Button, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/ds';
 import { BaseHeader, Pagina } from '@/components/base';
+import Chave from '@/components/base/Chave';
 import CartoesDeEscolha from '@/components/base/CartoesDeEscolha';
 import EmptyState from '@/components/base/EmptyState';
+import { CartaoDeFluxo } from '@/components/flowAutomations/CartaoDeFluxo';
 import { LegacyFollowupStrip } from '@/components/flowAutomations/LegacyFollowupStrip';
 import NoAccessState from '@/components/permissions/NoAccessState';
 import { flowAutomationsService } from '@/services/flowAutomations/flowAutomationsService';
@@ -24,7 +26,7 @@ import { useConfirmacao } from '@/hooks/useConfirmacao';
 import { cn } from '@/lib/utils';
 
 // FOLLOW-UP POR USUÁRIO (Fase 3, 21/10/2026): a aba Follow-up de Funis de
-// mensagem. Uma lista só (sem abas internas), em seções:
+// mensagem. Mesmo título e mesmo cartão (CartaoDeFluxo) da aba Manual (22/10). Uma lista só (sem abas internas), em seções:
 //
 // - "Da equipe": os da imobiliária toda. Follow-up sem dono (todos os de antes
 //   da Fase 3) também é da equipe. Só o gestor edita.
@@ -225,6 +227,39 @@ export default function ListaDeFollowups() {
     }
   };
 
+  // "Da equipe" (gestor). Tirar muda de quem são os leads e por qual WhatsApp
+  // saem: pergunta antes. Sem dono, quem tira passa a ser o dono (o servidor faz;
+  // aqui só espelhamos até o servidor responder). Padrão da conta o servidor recusa
+  // (422) e a frase dele aparece como veio. Devolve boolean: a chave volta se não mudou.
+  const marcarEquipe = async (f: FlowAutomation, next: boolean): Promise<boolean> => {
+    if (!next) {
+      const semDono = f.owner_user_id == null || String(f.owner_user_id) === '';
+      const deOutro = !semDono && String(f.owner_user_id) !== meId;
+      const nomeDoDono = f.owner_name?.trim();
+      const deQuem = deOutro ? nomeDoDono || 'quem criou' : 'você';
+      const ok = await confirmar({
+        titulo: `Tirar "${f.name}" da equipe?`,
+        descricao: `Ele passa a ser só de ${deQuem}: a IA e as automações da equipe deixam de usar, e os leads que entrarem saem pelo WhatsApp do dono.`,
+        rotuloDaAcao: 'Tirar da equipe',
+      });
+      if (!ok) return false;
+    }
+    try {
+      const atualizado = await flowAutomationsService.update(f.id, { team: next });
+      const semDono = f.owner_user_id == null || String(f.owner_user_id) === '';
+      setFollowups(lista => lista.map(x => (
+        x.id === f.id
+          ? { ...x, team: next, ...(!next && semDono ? { owner_user_id: meId } : {}), ...(atualizado ?? {}) }
+          : x
+      )));
+      toast.success(next ? `"${f.name}" agora é da equipe.` : `"${f.name}" saiu da equipe.`);
+      return true;
+    } catch (e) {
+      toast.error(serverMessage(e, 'Não deu pra mudar agora. Tente de novo.'));
+      return false;
+    }
+  };
+
   const secoes = useMemo(() => {
     const daEquipe = followups.filter(followupDaEquipe);
     const pessoais = followups.filter(f => !followupDaEquipe(f));
@@ -243,26 +278,26 @@ export default function ListaDeFollowups() {
     // Só ligado (e não arquivado): o servidor recusa o resto.
     const podeTornarPadrao = ehGestor && secao === 'equipe' && f.is_enabled && !f.account_default && !f.archived_at;
     const estado = f.archived_at ? 'Arquivado' : f.is_enabled ? 'Ligado' : 'Desligado';
+    const estadoDoCartao = f.archived_at ? 'arquivado' : f.is_enabled ? 'ligado' : 'desligado';
+    const gatilho = triggerEvents(normalizeTrigger(f.trigger)).length ? flowTriggerSummary(normalizeTrigger(f.trigger)) : 'Sem gatilho definido';
     return (
-      <li key={f.id} className="rounded-lg border border-border overflow-hidden flex">
-        <div className="w-1.5 shrink-0" style={{ backgroundColor: f.archived_at ? '#94a3b8' : f.is_enabled ? '#059669' : '#dc2626' }} />
-        <div className="flex-1 p-3 min-w-0">
-          <div className="flex items-start justify-between gap-2 mb-1">
-            <button type="button" className="text-sm font-semibold truncate hover:underline text-left" onClick={() => openFlow(f)}>
-              {f.name}
-            </button>
-            <div className="flex shrink-0 flex-wrap items-center justify-end gap-1">
-              {f.account_default && <Badge variant="secondary" className="shrink-0 text-[10px]">Padrão da conta</Badge>}
-              {secao === 'corretores' && f.owner_name && <Badge variant="outline" className="shrink-0 text-[10px]">{`De ${f.owner_name}`}</Badge>}
-              <Badge variant={f.archived_at ? 'secondary' : f.is_enabled ? 'default' : 'outline'} className="shrink-0 text-[10px]">
-                {estado}
-              </Badge>
-            </div>
-          </div>
-          <div className="text-xs text-muted-foreground mb-3 truncate" title={flowTriggerSummary(normalizeTrigger(f.trigger))}>
-            {triggerEvents(normalizeTrigger(f.trigger)).length ? flowTriggerSummary(normalizeTrigger(f.trigger)) : 'Sem gatilho definido'}
-          </div>
-          <div className="flex flex-wrap items-center gap-1">
+      <CartaoDeFluxo
+        key={f.id}
+        titulo={f.name}
+        aoAbrir={() => openFlow(f)}
+        estado={estadoDoCartao}
+        selos={
+          <>
+            {f.account_default && <Badge variant="secondary" className="shrink-0 text-[10px]">Padrão da conta</Badge>}
+            {secao === 'corretores' && f.owner_name && <Badge variant="outline" className="shrink-0 text-[10px]">{`De ${f.owner_name}`}</Badge>}
+            <Badge variant={f.archived_at ? 'secondary' : f.is_enabled ? 'default' : 'outline'} className="shrink-0 text-[10px]">
+              {estado}
+            </Badge>
+          </>
+        }
+        linha={<span className="block truncate" title={gatilho}>{gatilho}</span>}
+        acoes={
+          <div className="flex w-full flex-wrap items-center gap-1">
             {comEstrela && (
               <Button
                 type="button"
@@ -303,14 +338,19 @@ export default function ListaDeFollowups() {
                 </Button>
               </>
             )}
+            {ehGestor && (
+              <div className="w-full">
+                <Chave rotulo="Da equipe" ligada={followupDaEquipe(f)} aoMudar={next => marcarEquipe(f, next)} semAviso />
+              </div>
+            )}
             {podeTornarPadrao && (
               <Button size="sm" variant="ghost" className="ml-auto" onClick={() => void tornarPadraoDaConta(f)}>
                 Tornar padrão da conta
               </Button>
             )}
           </div>
-        </div>
-      </li>
+        }
+      />
     );
   };
 

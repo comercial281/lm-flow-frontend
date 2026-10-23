@@ -87,6 +87,14 @@ describe('fluxo de follow-up na faixa', () => {
     expect(linhaDoFluxo(fluxo({ kind: undefined }), agora).tipo).toBe('fluxo');
   });
 
+  it('nome mascarado ("Follow-up de Ana") entra como veio, sem aspas nem outro rótulo', () => {
+    const mascarado = linhaDoFluxo(fluxo({ kind: 'followup', flow_name: 'Follow-up de Ana', flow_masked: true, phase: 'running' }), agora);
+    expect(mascarado.texto).toBe('Follow-up de Ana · em andamento');
+    // Sem máscara, a frase de sempre.
+    const normal = linhaDoFluxo(fluxo({ kind: 'followup', flow_name: 'Follow-up de Ana', flow_masked: false, phase: 'running' }), agora);
+    expect(normal.texto).toBe('Follow-up "Follow-up de Ana" · em andamento');
+  });
+
   it('o botão da pergunta fala de follow-up', async () => {
     const { rotuloDeParar } = await import('./automacaoRodando');
     expect(rotuloDeParar([linhaDoFluxo(fluxo({ kind: 'followup' }), agora)])).toBe('Enviar e parar o follow-up');

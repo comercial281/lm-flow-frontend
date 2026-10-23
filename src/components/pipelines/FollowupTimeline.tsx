@@ -87,6 +87,10 @@ interface Props extends LeadRef {
   aoColocar?: () => void;
 }
 
+/** "Parar o follow-up X"; nome mascarado ("Follow-up de Ana") entra como veio: "Parar Follow-up de Ana". */
+const rotuloDePararFollowup = (flow: RunningFlow): string =>
+  flow.flow_masked && flow.flow_name ? `Parar ${flow.flow_name}` : `Parar o follow-up ${flow.flow_name ?? ''}`.trim();
+
 /** A linha do follow-up: pausado e na fila falam por extenso; o resto é a frase da faixa da conversa. */
 const textoDoFluxo = (flow: RunningFlow): string => {
   if (flow.phase === 'paused') return flow.paused_reason ? `Pausado: ${flow.paused_reason}` : 'Pausado';
@@ -273,7 +277,7 @@ export default function FollowupTimeline({ contactId, conversationId, leadName, 
         retomar: () => resumeButton(flow),
         parar: () => stopButton(
           () => void act(() => flowAutomationInstancesService.stop(flow.id), 'Follow-up parado'),
-          `Parar o follow-up ${flow.flow_name ?? ''}`.trim(),
+          rotuloDePararFollowup(flow),
         ),
       })),
       ...(legacyLine ? [{
@@ -367,7 +371,7 @@ export default function FollowupTimeline({ contactId, conversationId, leadName, 
           {canAct && resumeButton(flow)}
           {canAct && stopButton(
             () => void act(() => flowAutomationInstancesService.stop(flow.id), 'Follow-up parado'),
-            `Parar o follow-up ${flow.flow_name ?? ''}`.trim(),
+            rotuloDePararFollowup(flow),
           )}
         </div>
       ))}

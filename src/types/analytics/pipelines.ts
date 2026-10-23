@@ -243,6 +243,8 @@ export type PipelineItemStatus = 'open' | 'won' | 'lost';
 export interface FollowupDoCard {
   state: 'active' | 'paused';
   flow_name: string;
+  /** `true` = o nome já veio mascarado ("Follow-up de Ana"): follow-up pessoal de outra pessoa. */
+  flow_masked?: boolean;
   reason: string | null;
 }
 
