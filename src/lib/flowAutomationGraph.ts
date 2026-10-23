@@ -126,6 +126,13 @@ export function buildEdges(nodes: FlowAutomationNode[], initialNodeId: string | 
   return edges;
 }
 
+/** Corta uma linha do canvas: a saída de origem fica vazia (volta a ser "+"). A linha do Início não se corta. */
+export function cutEdge(nodes: FlowAutomationNode[], edgeId: string): FlowAutomationNode[] {
+  const edge = buildEdges(nodes, null).find(e => e.id === edgeId);
+  if (!edge || !edge.deletable) return nodes;
+  return link(nodes, edge.source, edge.sourceHandle, null);
+}
+
 /** O bloco que uma saída aponta hoje (null = saída vazia). */
 function targetOf(node: FlowAutomationNode, handle: OutputHandle): string | null {
   if (handle === 'yes') return node.next_yes_node_id;

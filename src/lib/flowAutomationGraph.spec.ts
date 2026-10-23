@@ -6,6 +6,7 @@ import {
   buildEdges,
   buildSaveFlowPayload,
   calculateLayout,
+  cutEdge,
   handleLabel,
   link,
   looseOutputs,
@@ -183,5 +184,32 @@ describe('fluxo salvo antes da sprint 1', () => {
   it('não mexe nos outros blocos', () => {
     const original = node('s', 'send_whatsapp', { next_node_id: 'a' });
     expect(normalizeLoadedNodes([original])[0]).toBe(original);
+  });
+});
+
+describe('Cortar a linha entre dois blocos', () => {
+  it('esvazia só aquela saída; os dois blocos continuam', () => {
+    const nodes = [
+      node('c', 'condition', { next_yes_node_id: 'a', next_no_node_id: 'b' }),
+      node('a', 'send_whatsapp', { next_node_id: 'b' }),
+      node('b', 'add_label'),
+    ];
+    const [, yes, , out] = buildEdges(nodes, 'c');
+    const semSim = cutEdge(nodes, yes.id);
+    expect(semSim.map(n => n.id)).toEqual(['c', 'a', 'b']);
+    expect(semSim[0].next_yes_node_id).toBeNull();
+    expect(semSim[0].next_no_node_id).toBe('b');
+    expect(cutEdge(nodes, out.id)[1].next_node_id).toBeNull();
+  });
+
+  it('a linha do Início não se corta (e id desconhecido não mexe em nada)', () => {
+    const nodes = [node('a', 'send_whatsapp')];
+    expect(cutEdge(nodes, 'trigger:out')).toBe(nodes);
+    expect(cutEdge(nodes, 'x:out')).toBe(nodes);
+  });
+
+  it('a saída cortada volta a ser "+" no cartão', () => {
+    const nodes = [node('s', 'send_whatsapp', { next_node_id: 'b' }), node('b', 'wait')];
+    expect(looseOutputs(cutEdge(nodes, 's:out')[0])).toEqual(['out']);
   });
 });

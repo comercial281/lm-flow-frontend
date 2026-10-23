@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
   ReactFlow, ReactFlowProvider, Background, Controls, MiniMap,
-  type Node, type Edge, type NodeChange, type Connection, type ReactFlowInstance, BackgroundVariant,
+  type Node, type Edge, type EdgeChange, type NodeChange, type Connection, type ReactFlowInstance, BackgroundVariant,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { ArrowLeft, Save, Play, Loader2, Settings2, LayoutGrid, Copy, Users } from 'lucide-react';
@@ -16,10 +16,11 @@ import { toCondition, willConvert } from '@/features/flowAutomations/filterToCon
 import { flowAutomationsService } from '@/services/flowAutomations/flowAutomationsService';
 import type { FlowAutomation, FlowAutomationNode, TestRunResult } from '@/types/flowAutomations';
 import {
-  resolvedPositions, buildEdges, insertAt, link, removeNode, moveNode, newTempId, TRIGGER_NODE_ID,
+  resolvedPositions, buildEdges, cutEdge, insertAt, link, removeNode, moveNode, newTempId, TRIGGER_NODE_ID,
   normalizeLoadedNodes, buildSaveFlowPayload, handleLabel, NODE_WIDTH, type OutputHandle,
 } from '@/lib/flowAutomationGraph';
 import { flowNodeTypes, type FlowLookups, type FlowStartNodeData } from '@/components/flowAutomations/FlowNodeCard';
+import { flowEdgeTypes, type FlowEdgeData } from '@/components/flowAutomations/FlowEdge';
 import { BLOCK_DRAG_TYPE, FlowBlocksMenu } from '@/components/flowAutomations/FlowBlocksMenu';
 import { FlowNodePanel } from '@/components/flowAutomations/FlowNodePanel';
 import { FlowTriggerPanel } from '@/components/flowAutomations/FlowTriggerPanel';
@@ -617,14 +618,31 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
     return [startNode, ...rest];
   }, [nodes, positions, startPosition, startData, lookups, problems, openPanel, highlighted, steps, step, readOnly, guided, builderTools, openNode, handleDuplicate, handleRemove, handleRename, addFrom, peloMeuNumero, donoDoEnvio]);
 
+  // As linhas são derivadas de `nodes`: selecionar e cortar passam por aqui, senão
+  // o React Flow descarta o clique e o Delete (era só apagando o bloco).
+  const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
+  const handleCutEdge = useCallback((edgeId: string) => {
+    setNodes(prev => cutEdge(prev, edgeId));
+    setSelectedEdgeId(null);
+  }, []);
+  const onEdgesChange = useCallback((changes: EdgeChange[]) => {
+    if (!builderTools) return;
+    changes.forEach(c => {
+      if (c.type === 'select') setSelectedEdgeId(cur => (c.selected ? c.id : cur === c.id ? null : cur));
+      if (c.type === 'remove') handleCutEdge(c.id);
+    });
+  }, [builderTools, handleCutEdge]);
+
   const reactFlowEdges: Edge[] = useMemo(
     () => graphEdges.map(e => ({
-      id: e.id, source: e.source, target: e.target, sourceHandle: e.sourceHandle, deletable: e.deletable && builderTools,
+      id: e.id, type: 'flowEdge', source: e.source, target: e.target, sourceHandle: e.sourceHandle,
+      deletable: e.deletable && builderTools, selected: e.id === selectedEdgeId,
       label: e.label || undefined,
       labelStyle: { fontSize: 10, fill: e.color },
       style: { stroke: e.color },
+      data: { onCut: handleCutEdge } satisfies FlowEdgeData,
     })),
-    [graphEdges, builderTools]
+    [graphEdges, builderTools, selectedEdgeId, handleCutEdge]
   );
 
   const pendingLabel = useMemo(() => {
@@ -879,6 +897,7 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
                 nodes={reactFlowNodes}
                 edges={reactFlowEdges}
                 nodeTypes={flowNodeTypes}
+                edgeTypes={flowEdgeTypes}
                 onInit={instance => {
                   flowInstance.current = instance;
                 }}
@@ -887,6 +906,7 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
                   if (node.type === 'flowNode') openNode(node.id);
                 }}
                 onConnect={onConnect}
+                onEdgesChange={onEdgesChange}
                 nodesConnectable={builderTools}
                 edgesFocusable={builderTools}
                 minZoom={0.2}
