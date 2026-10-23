@@ -123,6 +123,15 @@ describe('Follow-up do card — fluxo de follow-up', () => {
     expect(screen.queryByText(/Boas-vindas/)).not.toBeInTheDocument();
   });
 
+  it('fluxo pausado por outro número (automação) continua fora da linha do tempo de follow-up', async () => {
+    running.mockResolvedValue([instance({ kind: 'automation', phase: 'paused', paused_code: 'other_number', flow_name: 'Boas-vindas' })]);
+
+    render(<FollowupTimeline contactId="c-1" />);
+
+    expect(await screen.findByText('Sem follow-up')).toBeInTheDocument();
+    expect(screen.queryByText(/pausado/i)).not.toBeInTheDocument();
+  });
+
   it('sem nada rodando, Iniciar abre a janela Colocar em follow-up e inicia o escolhido', async () => {
     startable = [flow(), flow({ id: 'f2', name: 'Follow-up curto' })];
     placePreview.mockResolvedValue(preview());
@@ -362,7 +371,7 @@ describe('Follow-up do card — compacto', () => {
   it('sem follow-up ligado, diz onde criar', async () => {
     render(<FollowupTimeline contactId="c-1" compacto />);
     expect(await screen.findByText(/Nenhum follow-up pra iniciar/)).toBeInTheDocument();
-    expect(screen.getByText(/Automações → Follow-up/)).toBeInTheDocument();
+    expect(screen.getByText(/Funis de mensagem → Follow-up/)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Iniciar follow-up/ })).not.toBeInTheDocument();
   });
 

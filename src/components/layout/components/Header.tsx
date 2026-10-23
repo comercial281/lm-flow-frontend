@@ -25,6 +25,7 @@ import ProfileMenu from './ProfileMenu';
 import MenuSecoes from './MenuSecoes';
 import { useGuardaDeSaida } from '@/hooks/useAlteracoesNaoSalvas';
 import { secoesDoCelular, type MenuItem as MenuItemType, type MenuSection } from '../config/menuItems';
+import { useCan } from '@/hooks/useCan';
 import RodapeDoMenu from './RodapeDoMenu';
 import AdminAreaButton from './AdminAreaButton';
 import { AppLogo } from '../../AppLogo';
@@ -70,6 +71,12 @@ export default function Header({
   const fetchAccount = useAppDataStore(state => state.fetchAccount);
   // Fase 3: menu mobile também pergunta antes de sair com alteração não salva.
   const { aoClicar: guardarSaida, dialogoDeConfirmacao } = useGuardaDeSaida();
+  // Gaveta do celular: aba com `celularPede` só pra quem tem a chave (suporte vê tudo, pelo useCan).
+  const pode = useCan();
+  const podeAlguma = (permissoes: string[]) => permissoes.some(p => {
+    const [recurso, acao] = p.split('.');
+    return pode(recurso, acao);
+  });
 
   // Garante que o nome da conta esteja disponível em qualquer rota
   // (o fetch é cacheado por 15min no appDataStore)
@@ -103,7 +110,7 @@ export default function Header({
                 <nav onClickCapture={guardarSaida} className="space-y-1">
                   {/* Mesmas seções do computador (uma aberta por vez), sem as
                       telas de montar/configurar (Raio-X do celular, 10/10/2026). */}
-                  <MenuSecoes secoes={secoesDoCelular(secoes)} mobile aoNavegar={() => setIsMobileMenuOpen(false)} />
+                  <MenuSecoes secoes={secoesDoCelular(secoes, podeAlguma)} mobile aoNavegar={() => setIsMobileMenuOpen(false)} />
                   {/* Mesma fileira de ícones do rodapé do computador. */}
                   <div className="mt-3 pt-3 border-t border-sidebar-border">
                     <RodapeDoMenu itens={rodape} aoNavegar={() => setIsMobileMenuOpen(false)} />

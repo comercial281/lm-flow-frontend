@@ -9,7 +9,7 @@ import {
   withLabel,
 } from './conditions';
 
-describe('critérios do Se / senão e do Só continuar se', () => {
+describe('critérios da Condição e do Só continuar se antigo', () => {
   it('só os que funcionam, sem "veio de" nem o formulário antigo', () => {
     expect(CONDITION_CRITERIA.map(c => c.value)).toEqual(['replied', 'has_label', 'at_stage', 'has_email', 'has_phone', 'form_answer']);
   });

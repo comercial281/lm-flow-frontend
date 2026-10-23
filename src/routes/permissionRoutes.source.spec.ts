@@ -55,14 +55,22 @@ describe('construtor de automações (Automações próprias, 15/10/2026)', () =
   });
 });
 
+describe('follow-up como aba de Funis de mensagem (Fase 3, 21/10/2026)', () => {
+  it.each(['follow-ups', 'follow-ups/:id'])('%s abre com message_funnels.read OU followup_sequences.read (o corretor entra)', path => {
+    expect(trecho(path)).toContain(`<PermissionRoute permissions={['message_funnels.read', 'followup_sequences.read']}>`);
+  });
+
+  it.each(['follow-up-auto', 'no-reply-robot'])('o endereço antigo %s continua levando pra lista de follow-ups', path => {
+    expect(trecho(path)).toContain('<Navigate to="/automations/follow-ups" replace />');
+  });
+});
+
 describe('toda rota do CRM confere o cargo', () => {
   it.each([
     ['/ia-vendedora', 'sales_agents', 'read'],
     ['/disparos', 'broadcasts', 'read'],
     // Monitoria de um disparo (16/10/2026): quem vê a lista vê a fila.
     ['/disparos/:id', 'broadcasts', 'read'],
-    ['follow-ups', 'followup_sequences', 'read'],
-    ['follow-ups/:id', 'followup_sequences', 'read'],
     ['/settings/site-builder', 'sites', 'read'],
     ['/settings/pixel-capi', 'capi_configs', 'read'],
     ['/properties', 'properties', 'read'],

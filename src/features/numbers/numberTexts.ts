@@ -174,3 +174,9 @@ export function lockedOwnerId(
   const efetivo = Boolean(card.owner && card.owner.active && !card.shared);
   return efetivo ? String(ownerUserId) : null;
 }
+
+/** Os dois últimos dígitos do telefone ("final 92"), pra o cliente reconhecer o número. Sem telefone legível, null. */
+export function finalDoNumero(phone: string | null): string | null {
+  const digitos = (phone ?? '').replace(/\D/g, '');
+  return digitos.length >= 2 ? digitos.slice(-2) : null;
+}

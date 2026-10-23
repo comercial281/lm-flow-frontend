@@ -73,6 +73,16 @@ describe('card do quadro mínimo (spec funil §4.4)', () => {
     expect(screen.getByText('Perdido')).toHaveAttribute('data-situacao', 'lost');
   });
 
+  it('selo "Pausado" quando o fluxo parou por outro número, e some sem a pausa', () => {
+    montar({ item: item({ number_pause: { instance_id: 'in1', flow_name: 'Boas-vindas' } }) });
+    expect(screen.getByText('Pausado')).toHaveAttribute('title', 'Já conversa em outro número: Boas-vindas');
+  });
+
+  it('sem pausa por número não tem selo "Pausado"', () => {
+    montar({ item: item({ number_pause: null }) });
+    expect(screen.queryByText('Pausado')).toBeNull();
+  });
+
   it('foto do lead ao lado do nome', () => {
     montar({ item: item({ contact: { id: 'c1', name: 'Maria Souza', avatar_url: 'https://exemplo.com.br/maria.jpg' } }) });
     expect(document.querySelector('img[src="https://exemplo.com.br/maria.jpg"]')).not.toBeNull();

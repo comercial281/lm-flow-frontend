@@ -300,7 +300,7 @@ export default function FollowupTimeline({ contactId, conversationId, leadName, 
           <EmptyState
             tamanho="compacto"
             title="Nenhum follow-up pra iniciar."
-            description={<>Crie e ligue um em <em>Automações → Follow-up</em>.</>}
+            description={<>Crie e ligue um em <em>Funis de mensagem → Follow-up</em>.</>}
             className="p-3 text-xs"
           />
         )}
@@ -403,7 +403,7 @@ export default function FollowupTimeline({ contactId, conversationId, leadName, 
           <EmptyState
             tamanho="compacto"
             title="Nenhum follow-up pra iniciar."
-            description={<>Crie e ligue um em <em>Automações → Follow-up</em>.</>}
+            description={<>Crie e ligue um em <em>Funis de mensagem → Follow-up</em>.</>}
             className="p-3 text-xs"
           />
         )

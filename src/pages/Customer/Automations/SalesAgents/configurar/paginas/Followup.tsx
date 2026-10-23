@@ -21,7 +21,7 @@ import type { SalesAgentFollowupChoice } from '@/services/salesAgents/salesAgent
 import type { FlowAutomation } from '@/types/flowAutomations';
 import { flowAutomationsService } from '@/services/flowAutomations/flowAutomationsService';
 import { pipelinesService } from '@/services/pipelines/pipelinesService';
-import { followupFlowOptions, followupPadraoId, legacySequenceNotice } from '@/features/flowAutomations/followupOptions';
+import { followupFlowOptions, followupPadraoId, legacySequenceNotice, soFollowupsDaEquipe } from '@/features/flowAutomations/followupOptions';
 import { janelaDoFollowup } from '@/features/salesAgents/followupHours';
 import { motivoSemEscolhaDoFollowup } from '@/features/salesAgents/pendencias';
 import {
@@ -57,7 +57,8 @@ export default function Followup({ agent, gravar, irPara }: PropsDaPagina) {
   // follow-up e a pendência "sem follow-up" aparecia (revisão final da onda 3, M4).
   const lendoFluxos = useRef<Promise<FlowAutomation[]>>(Promise.resolve([]));
   useEffect(() => {
-    lendoFluxos.current = flowAutomationsService.list({ kind: 'followup' }).catch(() => [] as FlowAutomation[]);
+    // Fase 3: a IA só entrega pra follow-up da equipe (o pessoal do corretor nem aparece).
+    lendoFluxos.current = flowAutomationsService.list({ kind: 'followup' }).then(soFollowupsDaEquipe).catch(() => [] as FlowAutomation[]);
     lendoFluxos.current.then(setFluxos);
     pipelinesService.getPipelines({ include_items: false }).then((r: unknown) => setFunis(lista<PipelineOpt>(r).map((p) => ({ id: String(p.id), name: p.name })))).catch(() => setFunis([]));
   }, []);

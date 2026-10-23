@@ -1,6 +1,8 @@
 // Types do FlowBuilder — motor de automação visual, mirror do editor de
 // fluxos do LM Hub. Backend: app/controllers/api/v1/flow_automations_controller.rb
 
+import type { SendFromMode } from '@/features/numbers/sendFrom';
+
 export type FlowNodeKind =
   | 'send_whatsapp' | 'send_email' | 'notify_group' | 'send_capi' | 'notify_bell'
   | 'sequence' | 'funnel' | 'call_flow'
@@ -131,6 +133,9 @@ export interface FlowAutomationTrigger {
   [key: string]: unknown;
 }
 
+/** O que fazer quando o lead já conversa em outro número (Entrega 4). */
+export type NumberConflictMode = 'pause' | 'follow_conversation' | 'force_flow_number';
+
 export interface FlowAutomation {
   id: string;
   name: string;
@@ -147,6 +152,12 @@ export interface FlowAutomation {
   once_per_lead?: boolean;
   /** "Só em horário comercial" (sprint 3): nenhuma mensagem do fluxo sai fora da janela. Também em `state`. */
   business_hours_only?: boolean;
+  /** Número do fluxo (Entrega 4): null/ausente = regra nunca salva (legado); '' = salvo como número da conversa do lead. */
+  send_from?: SendFromMode | null;
+  send_from_inbox_id?: string | null;
+  number_conflict?: NumberConflictMode | null;
+  /** Leads pausados hoje por conversar em outro número. */
+  paused_other_number_count?: number;
   state?: { once_per_lead?: boolean; business_hours_only?: boolean; kind?: FlowAutomationKind; [key: string]: unknown } | null;
   /** O modelo de onde o fluxo nasceu (`state.template_key` no servidor), ex.:
    *  'follow_up_padrao' = o Follow-up padrão de 30 dias que todo cliente ganha. */
@@ -157,6 +168,10 @@ export interface FlowAutomation {
   followup_padrao?: boolean;
   /** Fase 2 (follow-up): leads dentro agora, pausados incluídos. Só follow-up traz. */
   live_count?: number;
+  /** Fase 3 (follow-up): é o "Meu padrão" de quem pediu (já checado: ligado e dele ou da equipe). */
+  my_default?: boolean;
+  /** Fase 3 (follow-up): é o padrão EFETIVO da conta (o que a coluna usa sem escolha). */
+  account_default?: boolean;
   /** Fase 2: junto do `data` na resposta de ligar/desligar/arquivar follow-up (a service copia pro fluxo). */
   stopped_count?: number;
   remaining?: number;
@@ -236,12 +251,12 @@ export const FLOW_NODE_DEFS: FlowNodeDef[] = [
   { kind: 'wait', label: 'Esperar', group: 'control', canFail: false, defaultConfig: { mode: 'interval', minutes: 1440 } },
   { kind: 'filter_label', label: 'Só continuar se', group: 'control', canFail: false, defaultConfig: { criterion: 'has_label', label: '', labels: [], mode: 'all' } },
   { kind: 'wait_for_reply', label: 'Aguardar resposta', group: 'control', canFail: false, defaultConfig: { minutes: 1440, indefinite: false } },
-  { kind: 'condition', label: 'Se / senão', group: 'control', canFail: false, defaultConfig: { criterion: 'replied', window_hours: 24 } },
+  { kind: 'condition', label: 'Condição', group: 'control', canFail: false, defaultConfig: { criterion: 'replied', window_hours: 24 } },
   { kind: 'webhook', label: 'Avisar um sistema de fora', group: 'notify', canFail: true, defaultConfig: { event_name: '' } },
   { kind: 'http_call', label: 'Chamar uma API', group: 'notify', canFail: true, defaultConfig: { method: 'POST', url: '', headers: '', body: '' } },
   // Nome e grupo de cada ação vêm de features/flowAutomations/leadAction.ts.
   { kind: 'lead_action', label: 'Ação', group: 'contact', canFail: true, defaultConfig: { action_type: '', params: {} } },
-  { kind: 'followup_recovered', label: 'Marcar como recuperado pelo follow-up', group: 'contact', canFail: false, defaultConfig: {} },
+  { kind: 'followup_recovered', label: 'Lead recuperado', group: 'contact', canFail: false, defaultConfig: {} },
   { kind: 'hand_to_ai', label: 'Passar para a IA', group: 'ai', canFail: false, defaultConfig: {} },
   { kind: 'disable_ai', label: 'Desligar a IA', group: 'ai', canFail: false, defaultConfig: {} },
 ];

@@ -3,18 +3,21 @@ import { Button, Input, Label, Checkbox } from '@/components/ui/ds';
 import Aviso from '@/components/base/Aviso';
 import EmptyState from '@/components/base/EmptyState';
 import { Seletor } from '@/components/base/Seletor';
+import BotoesDeEscolha from '@/components/base/BotoesDeEscolha';
+import { SaidasDoBloco } from './SaidasDoBloco';
+import { EscolhaDeEtiqueta } from './EscolhaDeEtiqueta';
 import { applySendFrom } from '@/features/numbers/sendFrom';
 import type { FlowAutomationKind, FlowAutomationNode, FlowNodeConfig } from '@/types/flowAutomations';
 import { ActionEditor, type AutomationResources } from '@/features/flowAutomations/editores/LeadAutomationsEditors';
 import { HIDDEN_BLOCK_NOTICE, blockGroup, blockLabel, isVisibleNode } from '@/features/flowAutomations/palette';
 import { blockDescription, blockIcon } from '@/features/flowAutomations/blockInfo';
-import { nodeColor } from '@/lib/flowAutomationGraph';
+import { handleColor, nodeColor } from '@/lib/flowAutomationGraph';
 import { mesmoConteudo } from '@/hooks/useAlteracoesNaoSalvas';
 import { isFlowOnlyLeadAction, leadActionConfig, leadActionOf } from '@/features/flowAutomations/leadAction';
 import { nodeProblem } from '@/features/flowAutomations/readiness';
 import {
-  LEAD_WAIT_UNITS, SECONDS_UNITS, WAIT_FOR_REPLY_HELP, WAIT_UNITS, joinMinutes, joinSeconds, leadWaitSeconds,
-  splitMinutes, splitSeconds, waitTotalSeconds, type SecondsUnit, type WaitUnit,
+  LEAD_WAIT_UNITS, SECONDS_UNITS, WAIT_UNITS, joinMinutes, joinSeconds, leadWaitSeconds,
+  splitMinutes, splitSeconds, unitLabel, waitTotalSeconds, type SecondsUnit, type WaitUnit,
 } from '@/features/flowAutomations/waitTime';
 import { guideRequiredProblem, stepLabel } from '@/features/flowAutomations/guide';
 import {
@@ -33,13 +36,14 @@ import {
   waitUsesBusinessHours,
   withWaitBusinessHours,
 } from '@/features/flowAutomations/businessHours';
-import { RECOVERED_EFFECTS } from '@/features/flowAutomations/recovered';
 import { moveStageModeOf, stageNameOf, withMoveStageMode, withStageName } from '@/features/flowAutomations/moveStage';
+import { willConvert } from '@/features/flowAutomations/filterToCondition';
 import { FormAnswerPicker } from './FormAnswerPicker';
 import { FlowBlockDialog } from './FlowBlockDialog';
 import { NotificationFields } from './NotificationFields';
 import { isNotifyAction } from '@/features/flowAutomations/notification';
 import { LinhaDoEnvio, MessageBlockFields } from './MessageBlockFields';
+import { flowNumberAiLine, flowNumberMessageLine, type FlowNumberView } from '@/features/flowAutomations/flowNumber';
 
 interface Props {
   node: FlowAutomationNode | null;
@@ -68,6 +72,13 @@ interface Props {
    * A mensagem só avisa por qual WhatsApp sai (o servidor força o do dono).
    */
   donoDoEnvio?: string | null;
+  /**
+   * Entrega 4: fluxo da equipe com a regra de número (salva ou escolhida agora
+   * nas Configurações). A Mensagem só diz por onde sai; null = fluxo antigo.
+   */
+  numeroDoFluxo?: FlowNumberView | null;
+  /** Fluxo antigo da equipe cujas Mensagens saem por números diferentes. */
+  numerosDiferentes?: boolean;
 }
 
 // "Por um tempo, saindo só em horário comercial" (o modo `schedule`) virou a
@@ -109,7 +120,7 @@ function DurationField({ minutes, onChange, label }: { minutes: unknown; onChang
         aria-label="Unidade"
       >
         {WAIT_UNITS.map(u => (
-          <option key={u.value} value={u.value}>{u.label}</option>
+          <option key={u.value} value={u.value}>{unitLabel(u, amount)}</option>
         ))}
       </Seletor>
     </div>
@@ -136,7 +147,7 @@ function SecondsField({ config, onChange }: { config: FlowNodeConfig; onChange: 
         aria-label="Unidade"
       >
         {SECONDS_UNITS.map(u => (
-          <option key={u.value} value={u.value}>{u.label}</option>
+          <option key={u.value} value={u.value}>{unitLabel(u, amount)}</option>
         ))}
       </Seletor>
     </div>
@@ -163,7 +174,7 @@ function LeadWaitField({ config, onChange }: { config: FlowNodeConfig; onChange:
         aria-label="Unidade"
       >
         {LEAD_WAIT_UNITS.map(u => (
-          <option key={u.value} value={u.value}>{u.label}</option>
+          <option key={u.value} value={u.value}>{unitLabel(u, amount)}</option>
         ))}
       </Seletor>
     </div>
@@ -203,38 +214,26 @@ function StagePicker({ value, onPick, resources }: { value: string; onPick: (id:
   );
 }
 
-function LabelChecklist({ selected, onChange, resources }: { selected: string[]; onChange: (next: string[]) => void; resources: AutomationResources }) {
-  const missing = selected.filter(t => !resources.labels.some(l => l.title === t));
-  const toggle = (title: string) =>
-    onChange(selected.includes(title) ? selected.filter(t => t !== title) : [...selected, title]);
+// Catálogo ainda carregando ou que falhou: não dá pra dizer que uma etiqueta salva "não existe mais".
+function catalogoEmEspera(resources: AutomationResources) {
+  if (resources.labels.length > 0) return null;
+  if (resources.loading) return <p className="text-xs text-muted-foreground">Carregando as etiquetas…</p>;
+  if (resources.erros?.labels) return <EmptyState tipo="erro" tamanho="compacto" aoTentarDeNovo={resources.recarregar} className="p-3 text-xs" />;
+  return null;
+}
+
+function LabelChecklist({ selected, onChange, resources, ordem }: { selected: string[]; onChange: (next: string[]) => void; resources: AutomationResources; ordem: 'nome' | 'mais_leads' }) {
+  const espera = catalogoEmEspera(resources);
+  if (espera) return espera;
   return (
-    <div className="space-y-1">
-      <Label className="text-xs">Etiquetas</Label>
-      <div className="max-h-52 overflow-y-auto rounded-md border border-border divide-y divide-border">
-        {resources.labels.length === 0 && missing.length === 0 && (
-          resources.loading ? (
-            <p className="text-xs text-muted-foreground p-2">Carregando as etiquetas…</p>
-          ) : resources.erros?.labels ? (
-            <EmptyState tipo="erro" tamanho="compacto" aoTentarDeNovo={resources.recarregar} className="m-2 p-3 text-xs" />
-          ) : (
-            <EmptyState
-              tamanho="compacto"
-              title="Nenhuma etiqueta cadastrada. Crie em Configurações → Etiquetas."
-              className="m-2 p-3 text-xs"
-            />
-          )
-        )}
-        {[...resources.labels.map(l => l.title), ...missing].map(title => (
-          <label key={title} className="flex items-center gap-2 px-2.5 py-2 cursor-pointer hover:bg-muted/50 text-sm">
-            <Checkbox
-              checked={selected.includes(title)}
-              onCheckedChange={() => toggle(title)}
-            />
-            <span className="truncate">{title}</span>
-          </label>
-        ))}
-      </div>
-    </div>
+    <EscolhaDeEtiqueta
+      modo="varias"
+      escolhidas={selected}
+      aoMudar={onChange}
+      etiquetas={resources.labels}
+      ordem={ordem}
+      aoCriar={async () => resources.reloadLabels()}
+    />
   );
 }
 
@@ -247,6 +246,12 @@ const SENDING_LEAD_ACTIONS = new Set([
   'send_whatsapp_message', 'send_audio', 'send_image', 'send_video', 'send_document', 'send_sticker', 'send_quick_reply',
 ]);
 
+// Ações antigas que mantêm o número próprio. send_message_funnel e send_quick_reply
+// seguem o número do fluxo no servidor, então ficam de fora.
+const OWN_NUMBER_LEAD_ACTIONS = new Set([
+  'send_whatsapp_message', 'send_audio', 'send_image', 'send_video', 'send_document', 'send_sticker',
+]);
+
 /** Pessoal: o bloco que manda mensagem grava `send_from: 'owner'` (o servidor também força). */
 function withOwnerSendFrom(kind: string, config: FlowNodeConfig): FlowNodeConfig {
   if (kind === 'send_whatsapp') return applySendFrom(config, OWNER_SEND);
@@ -257,7 +262,7 @@ function withOwnerSendFrom(kind: string, config: FlowNodeConfig): FlowNodeConfig
   return config;
 }
 
-export function FlowNodePanel({ node, resources, onClose, onSave, onDirtyChange, flowKind = 'automation', guided = false, saving = false, pessoal = false, numeroPessoal = null, numeroPessoalCarregando = false, donoDoEnvio = null }: Props) {
+export function FlowNodePanel({ node, resources, onClose, onSave, onDirtyChange, flowKind = 'automation', guided = false, saving = false, pessoal = false, numeroPessoal = null, numeroPessoalCarregando = false, donoDoEnvio = null, numeroDoFluxo = null, numerosDiferentes = false }: Props) {
   // Pessoal (a minha ou a de outra pessoa): a mensagem sai pelo número do dono.
   const peloDono = pessoal || donoDoEnvio != null;
   const [config, setConfig] = useState<FlowNodeConfig>(node?.config || {});
@@ -280,10 +285,12 @@ export function FlowNodePanel({ node, resources, onClose, onSave, onDirtyChange,
   const hidden = !isVisibleNode(activeNode);
   // O nome que a pessoa deu ao bloco (renomeado no cartão) vira o título; o tipo
   // do bloco passa pra frente da descrição, pra não sumir ("Mensagem · …").
-  const typeName = blockLabel(activeNode);
+  // Só continuar se com critério vira Condição ao salvar: título e descrição já são os dela.
+  const shownNode = willConvert(activeNode, guided) ? { ...activeNode, kind: 'condition' as const } : activeNode;
+  const typeName = blockLabel(shownNode);
   const givenName = (activeNode.label ?? '').trim();
   const title = givenName || typeName;
-  const baseDescription = hidden ? '' : blockDescription(activeNode);
+  const baseDescription = hidden ? '' : blockDescription(shownNode);
   const description = givenName
     ? [typeName, baseDescription].filter(Boolean).join(' · ')
     : baseDescription || undefined;
@@ -299,7 +306,7 @@ export function FlowNodePanel({ node, resources, onClose, onSave, onDirtyChange,
     return (
       <>
         <div className="space-y-1">
-          <Label className="text-xs">{kind === 'condition' ? 'Se' : 'Só continua se'}</Label>
+          <Label className="text-xs">{kind === 'condition' ? 'Seguir pelo Sim quando' : 'Só continua se'}</Label>
           <Seletor
             value={criterion}
             onChange={e => setConfig(configForCriterion(kind, e.target.value))}
@@ -331,21 +338,15 @@ export function FlowNodePanel({ node, resources, onClose, onSave, onDirtyChange,
         )}
         {criterion === 'has_label' && (
           <div className="space-y-1">
-            <Label className="text-xs">Etiqueta</Label>
-            <Seletor
-              value={currentLabel}
-              onChange={e => setConfig(c => withLabel(kind, c, e.target.value))}
-              className={fieldClass}
-              aria-label="Etiqueta"
-            >
-              <option value="">Escolha a etiqueta</option>
-              {currentLabel && !resources.labels.some(l => l.title === currentLabel) && (
-                <option value={currentLabel}>{currentLabel}</option>
-              )}
-              {resources.labels.map(l => (
-                <option key={l.id} value={l.title}>{l.title}</option>
-              ))}
-            </Seletor>
+            {catalogoEmEspera(resources) ?? (
+              <EscolhaDeEtiqueta
+                modo="uma"
+                escolhidas={currentLabel ? [currentLabel] : []}
+                aoMudar={([titulo]) => setConfig(c => withLabel(kind, c, titulo ?? ''))}
+                etiquetas={resources.labels}
+                aoCriar={async () => resources.reloadLabels()}
+              />
+            )}
           </div>
         )}
         {criterion === 'at_stage' && (
@@ -359,6 +360,17 @@ export function FlowNodePanel({ node, resources, onClose, onSave, onDirtyChange,
         )}
         {kind === 'filter_label' && (
           <p className="text-xs text-muted-foreground">Se não passar, o fluxo para aqui pra esse lead.</p>
+        )}
+        {kind === 'condition' && (
+          <>
+            <SaidasDoBloco
+              saidas={[
+                { rotulo: 'Sim', cor: handleColor('condition', 'yes'), quando: 'Quando o lead passa na condição.' },
+                { rotulo: 'Não', cor: handleColor('condition', 'no'), quando: 'Quando o lead não passa.' },
+              ]}
+            />
+            <p className="text-xs text-muted-foreground">Sem nada ligado no Não, o fluxo para aqui pra esse lead.</p>
+          </>
         )}
       </>
     );
@@ -381,6 +393,8 @@ export function FlowNodePanel({ node, resources, onClose, onSave, onDirtyChange,
             numeroPessoal={numeroPessoal}
             numeroPessoalCarregando={numeroPessoalCarregando}
             donoDoEnvio={donoDoEnvio}
+            numeroDoFluxo={numeroDoFluxo ? flowNumberMessageLine(numeroDoFluxo) : null}
+            numerosDiferentes={numerosDiferentes}
           />
         );
       case 'add_label':
@@ -390,49 +404,40 @@ export function FlowNodePanel({ node, resources, onClose, onSave, onDirtyChange,
             selected={Array.isArray(config.labels) ? (config.labels as string[]) : []}
             onChange={next => set('labels', next)}
             resources={resources}
+            ordem={activeNode.kind === 'remove_label' ? 'mais_leads' : 'nome'}
           />
         );
       case 'move_stage': {
         const stageMode = moveStageModeOf(config);
+        // Bloco salvo por nome continua rodando (o motor lê stage_name); só não
+        // nasce mais. Fica o nome e um botão pra trocar por etapa específica.
+        if (stageMode === 'name') {
+          return (
+            <Aviso
+              tom="neutro"
+              acao={(
+                <Button variant="outline" size="sm" onClick={() => setConfig(c => withMoveStageMode(c, 'stage'))}>
+                  Trocar por uma etapa específica
+                </Button>
+              )}
+            >
+              Coluna “{stageNameOf(config)}” do funil do card
+            </Aviso>
+          );
+        }
+        const stageId = String(config.stage_id ?? '');
+        const picked = resources.pipelines
+          .map(p => ({ pipeline: p, stage: (resources.stagesByPipeline[p.id] ?? []).find(s => s.id === stageId) }))
+          .find(x => x.stage);
         return (
           <div className="space-y-2">
-            <label className="flex items-center gap-2 text-sm cursor-pointer">
-              <input
-                type="radio"
-                name="flow-move-stage-mode"
-                checked={stageMode === 'stage'}
-                onChange={() => setConfig(c => withMoveStageMode(c, 'stage'))}
-                className="h-4 w-4 accent-primary"
-              />
-              Uma etapa específica
-            </label>
-            {stageMode === 'stage' && (
-              <div className="pl-6">
-                <StagePicker value={String(config.stage_id ?? '')} onPick={id => set('stage_id', id)} resources={resources} />
-              </div>
-            )}
-            <label className="flex items-center gap-2 text-sm cursor-pointer">
-              <input
-                type="radio"
-                name="flow-move-stage-mode"
-                checked={stageMode === 'name'}
-                onChange={() => setConfig(c => withMoveStageMode(c, 'name'))}
-                className="h-4 w-4 accent-primary"
-              />
-              Coluna com este nome no funil do card
-            </label>
-            {stageMode === 'name' && (
-              <div className="pl-6 space-y-1">
-                <Input
-                  value={stageNameOf(config)}
-                  onChange={e => setConfig(c => withStageName(c, e.target.value))}
-                  placeholder="Em atendimento"
-                  aria-label="Nome da coluna"
-                />
-                <p className="text-xs text-muted-foreground">
-                  O card vai pra coluna com esse nome no funil em que ele está (sem ligar pra acento e maiúscula). Se o
-                  funil do card não tiver essa coluna, ele não sai do lugar.
-                </p>
+            <Label className="text-xs">Pra qual etapa</Label>
+            <StagePicker value={stageId} onPick={id => set('stage_id', id)} resources={resources} />
+            {picked?.stage && (
+              <div data-testid="chip-da-etapa" className="inline-flex items-center gap-2 rounded-full border border-border bg-muted/40 px-3 py-1 text-sm">
+                <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: picked.stage.color }} aria-hidden />
+                <span className="font-medium">{picked.stage.name}</span>
+                <span className="text-xs text-muted-foreground">{picked.pipeline.name}</span>
               </div>
             )}
           </div>
@@ -441,16 +446,19 @@ export function FlowNodePanel({ node, resources, onClose, onSave, onDirtyChange,
       case 'followup_recovered':
         return (
           <div className="space-y-2 text-sm">
-            <p>Faz o que o follow-up faz quando o lead responde:</p>
-            <ul className="list-disc pl-5 space-y-1 text-muted-foreground">
-              {RECOVERED_EFFECTS.map(effect => <li key={effect}>{effect}</li>)}
-            </ul>
+            <p>Faz o mesmo que o follow-up quando o lead responde: põe a etiqueta de recuperado, tira a de follow-up, conta no relatório, avisa a equipe e manda WhatsApp pro corretor.</p>
             <p className="text-xs text-muted-foreground">Use no caminho Respondeu do Aguardar resposta.</p>
           </div>
         );
       case 'hand_to_ai':
+        return (
+          <p className="text-sm">
+            {(numeroDoFluxo && flowNumberAiLine(numeroDoFluxo))
+              || 'Quem atende: a IA do número da conversa do lead. Se esse número não tiver IA ligada, nada acontece.'}
+          </p>
+        );
       case 'disable_ai':
-        return <p className="text-sm">{blockDescription(activeNode)}</p>;
+        return <p className="text-sm">Pra religar, use o bloco Passar para a IA ou o botão no card do lead.</p>;
       case 'wait': {
         const mode = waitModeOf(config);
         // Funil de conversa (sprint 4): só "por um tempo", em segundos (é conversa ao vivo).
@@ -468,12 +476,13 @@ export function FlowNodePanel({ node, resources, onClose, onSave, onDirtyChange,
         return (
           <>
             <div className="space-y-1">
-              <Label className="text-xs">Esperar</Label>
-              <Seletor value={mode} onChange={e => setConfig(c => ({ ...c, mode: e.target.value }))} className={fieldClass} aria-label="Como esperar">
-                {WAIT_MODES.map(m => (
-                  <option key={m.value} value={m.value}>{m.label}</option>
-                ))}
-              </Seletor>
+              <Label className="text-xs">Esperar como?</Label>
+              <BotoesDeEscolha
+                rotulo="Esperar como?"
+                valor={mode}
+                opcoes={WAIT_MODES.map(m => ({ valor: m.value, rotulo: m.label }))}
+                aoEscolher={v => setConfig(c => ({ ...c, mode: v }))}
+              />
             </div>
             {mode === 'date' ? (
               <div className="space-y-1">
@@ -506,18 +515,17 @@ export function FlowNodePanel({ node, resources, onClose, onSave, onDirtyChange,
         return (
           <>
             <div className="space-y-2">
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="radio"
-                  name="flow-wait-reply-mode"
-                  checked={!indefinite}
-                  onChange={() => setConfig(c => ({ ...c, indefinite: false, minutes: Number(c.minutes) > 0 ? c.minutes : 30 }))}
-                  className="h-4 w-4 accent-primary"
-                />
-                Esperar até
-              </label>
+              <Label className="text-xs">Até quando esperar?</Label>
+              <BotoesDeEscolha
+                rotulo="Até quando esperar?"
+                valor={indefinite ? 'sem_limite' : 'prazo'}
+                opcoes={[{ valor: 'prazo', rotulo: 'Por um prazo' }, { valor: 'sem_limite', rotulo: 'Sem limite' }]}
+                aoEscolher={v => (v === 'sem_limite'
+                  ? set('indefinite', true)
+                  : setConfig(c => ({ ...c, indefinite: false, minutes: Number(c.minutes) > 0 ? c.minutes : 30 })))}
+              />
               {!indefinite && (
-                <div className="pl-6 space-y-2">
+                <div className="space-y-2">
                   <DurationField minutes={config.minutes ?? 1440} onChange={m => set('minutes', m)} label="Prazo" />
                   <BusinessHoursCheck
                     checked={waitUsesBusinessHours(config)}
@@ -525,30 +533,22 @@ export function FlowNodePanel({ node, resources, onClose, onSave, onDirtyChange,
                   />
                 </div>
               )}
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="radio"
-                  name="flow-wait-reply-mode"
-                  checked={indefinite}
-                  onChange={() => set('indefinite', true)}
-                  className="h-4 w-4 accent-primary"
-                />
-                Sem limite (espera até o lead responder)
-              </label>
             </div>
-            <p className="text-xs text-muted-foreground">{WAIT_FOR_REPLY_HELP}</p>
-            <p className="text-xs text-muted-foreground">
-              {indefinite
-                ? 'Sem limite, o bloco só tem a saída Respondeu.'
-                : 'Duas saídas: Respondeu, assim que o lead responder (em até 1 minuto), e Não respondeu, quando o prazo acabar.'}
-            </p>
+            <SaidasDoBloco
+              saidas={[
+                { rotulo: 'Respondeu', cor: handleColor('wait_for_reply', 'yes'), quando: 'Assim que o lead mandar qualquer mensagem, em até 1 minuto.' },
+                ...(indefinite ? [] : [{ rotulo: 'Não respondeu', cor: handleColor('wait_for_reply', 'no'), quando: 'Quando o prazo acabar.' }]),
+              ]}
+            />
           </>
         );
       }
       case 'condition':
         return conditionFields('condition');
       case 'filter_label':
-        return conditionFields('filter_label');
+        // Com critério, abre como Condição (o canvas converte ao salvar);
+        // o legado, só com etiquetas, abre como sempre.
+        return conditionFields(willConvert(activeNode, guided) ? 'condition' : 'filter_label');
       // Ação das Automações: o MESMO editor da tela de regras, gravando
       // `{ action_type, params }` (leadAction.ts).
       case 'lead_action':
@@ -569,6 +569,11 @@ export function FlowNodePanel({ node, resources, onClose, onSave, onDirtyChange,
               resources={resources}
               pessoal={peloDono}
             />
+            {numeroDoFluxo && OWN_NUMBER_LEAD_ACTIONS.has(String(config.action_type)) && (
+              <Aviso tom="atencao" compacto>
+                Bloco antigo: sai pelo número dele. Troque por uma Mensagem pra seguir o número do fluxo.
+              </Aviso>
+            )}
             {peloDono && SENDING_LEAD_ACTIONS.has(String(config.action_type)) && (
               <LinhaDoEnvio
                 pessoal={pessoal}

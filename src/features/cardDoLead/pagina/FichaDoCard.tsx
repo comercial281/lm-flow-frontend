@@ -22,6 +22,7 @@ import type { CardDoLead } from '../useCardDoLead';
 import CaixaDoCard from '../blocos/CaixaDoCard';
 import { AvisosDaRoleta } from '../blocos/BlocoSituacao';
 import BlocoSobreONegocio, { type CamposDoNegocio } from '../blocos/BlocoSobreONegocio';
+import BlocoPausaDeNumero from '../blocos/BlocoPausaDeNumero';
 import BlocoEtiquetas from '../blocos/BlocoEtiquetas';
 import BlocoOQueAIAEntendeu from '../blocos/BlocoOQueAIAEntendeu';
 import BlocoImoveisDeInteresse from '../blocos/BlocoImoveisDeInteresse';
@@ -92,6 +93,12 @@ export default function FichaDoCard({
         <CaixaDoCard titulo="Etiquetas">
           <BlocoEtiquetas card={card} />
         </CaixaDoCard>
+
+        <BlocoPausaDeNumero
+          contactId={contato?.id != null ? String(contato.id) : null}
+          conversationId={conversaDoCard(item)}
+          aoResolver={card.historico.recarregar}
+        />
 
         <CaixaDoCard titulo="Follow-up">
           <FollowupTimeline

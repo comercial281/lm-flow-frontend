@@ -184,3 +184,17 @@ describe('linguagem da tela', () => {
     for (const texto of textos) expect(texto).not.toMatch(/instância|inbox|caixa de entrada/i);
   });
 });
+
+describe('finalDoNumero', () => {
+  it('pega os dois últimos dígitos do telefone', async () => {
+    const { finalDoNumero } = await import('./numberTexts');
+    expect(finalDoNumero('+55 (11) 91234-1292')).toBe('92');
+    expect(finalDoNumero('5511912341292')).toBe('92');
+  });
+  it('sem telefone legível não inventa final', async () => {
+    const { finalDoNumero } = await import('./numberTexts');
+    expect(finalDoNumero(null)).toBeNull();
+    expect(finalDoNumero('')).toBeNull();
+    expect(finalDoNumero('7')).toBeNull();
+  });
+});

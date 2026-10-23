@@ -88,4 +88,12 @@ describe('Marcar follow-up encerrado (followup_ended)', () => {
     expect(payload.nodes[0]).toMatchObject({ kind: 'lead_action', config: { action_type: 'followup_ended', params: {} } });
     expect(leadActionConfig(leadActionOf(fim().config))).toEqual({ action_type: 'followup_ended', params: {} });
   });
+
+  it('Criar tarefa pra uma pessoa da equipe sem escolher a pessoa não está pronto', () => {
+    const cfg = (params: Record<string, string | number>) => ({ action_type: 'create_task', params });
+    expect(leadActionProblem(cfg({ title: 'Ligar', assignee_mode: 'user' }))).toBe('Falta escolher a pessoa.');
+    expect(leadActionProblem(cfg({ title: 'Ligar', assignee_mode: 'user', assignee_id: 'ana' }))).toBeNull();
+    expect(leadActionProblem(cfg({ title: 'Ligar', assignee_mode: 'lead_owner' }))).toBeNull();
+    expect(leadActionProblem(cfg({ title: 'Ligar' }))).toBeNull();
+  });
 });

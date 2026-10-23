@@ -76,8 +76,10 @@ describe('aba Follow-up', () => {
     renderAt('followup');
 
     fireEvent.click((await screen.findAllByRole('button', { name: /Novo follow-up/ }))[0]);
+    // Sem provider de cargo a tela trata como gestor: escolhe de quem é (padrão Da equipe).
+    fireEvent.click(await screen.findByRole('button', { name: 'Criar' }));
 
-    await waitFor(() => expect(create).toHaveBeenCalledWith({ name: 'Novo follow-up', kind: 'followup' }));
+    await waitFor(() => expect(create).toHaveBeenCalledWith({ name: 'Novo follow-up', kind: 'followup', team: true }));
     expect(await screen.findByText('canvas do follow-up')).toBeTruthy();
   });
 

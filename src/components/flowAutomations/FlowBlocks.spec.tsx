@@ -72,14 +72,45 @@ const node = (patch: Partial<FlowAutomationNode>): FlowAutomationNode => ({
   ...patch,
 });
 
+describe('etiquetas com o catálogo fora do ar', () => {
+  const falhou = { ...resources, erros: { labels: true }, recarregar: () => {} };
+  it('Aplicar etiqueta: etiqueta salva não vira "não existe mais" e oferece Tentar de novo', () => {
+    render(<FlowNodePanel node={node({ kind: 'add_label', config: { labels: ['quente'] } })} resources={falhou} onClose={() => {}} onSave={() => {}} />);
+    expect(screen.queryByText('não existe mais')).toBeNull();
+    expect(screen.getByText('Tentar de novo')).toBeTruthy();
+  });
+  it('Condição Tem a etiqueta: mesmo cuidado', () => {
+    render(<FlowNodePanel node={node({ kind: 'condition', config: { criterion: 'has_label', label: 'quente' } })} resources={falhou} onClose={() => {}} onSave={() => {}} />);
+    expect(screen.queryByText('não existe mais')).toBeNull();
+    expect(screen.getByText('Tentar de novo')).toBeTruthy();
+  });
+  it('carregando: mostra o carregando, nunca "Nenhuma etiqueta ainda"', () => {
+    render(<FlowNodePanel node={node({ kind: 'condition', config: { criterion: 'has_label' } })} resources={{ ...resources, loading: true }} onClose={() => {}} onSave={() => {}} />);
+    expect(screen.getByText('Carregando as etiquetas…')).toBeTruthy();
+    expect(screen.queryByText(/Nenhuma etiqueta ainda/)).toBeNull();
+  });
+});
+
 describe('janela do bloco', () => {
   it('Aguardar resposta: "Sem limite" grava indefinite', async () => {
     const onSave = vi.fn();
     render(<FlowNodePanel node={node({ config: { minutes: 30, indefinite: false } })} resources={resources} onClose={() => {}} onSave={onSave} />);
-    expect(screen.getByText('Respondeu: o lead mandou qualquer mensagem depois da última que este fluxo enviou.')).toBeTruthy();
-    fireEvent.click(screen.getByLabelText('Sem limite (espera até o lead responder)'));
+    expect(screen.getByRole('radiogroup', { name: 'Até quando esperar?' })).toBeTruthy();
+    expect(screen.getByText('Respondeu')).toBeTruthy();
+    expect(screen.getByText('Não respondeu')).toBeTruthy();
+    fireEvent.click(screen.getByRole('radio', { name: 'Sem limite' }));
+    expect(screen.getByText('Respondeu')).toBeTruthy();
+    expect(screen.queryByText('Não respondeu')).toBeNull();
     fireEvent.click(screen.getByText('Salvar'));
     await waitFor(() => expect(onSave).toHaveBeenCalledWith('n1', expect.objectContaining({ config: expect.objectContaining({ indefinite: true }) })));
+  });
+
+  it('Esperar: escolha em botões e unidade no singular com 1', () => {
+    render(<FlowNodePanel node={node({ kind: 'wait', config: { mode: 'interval', minutes: 1440 } })} resources={resources} onClose={() => {}} onSave={() => {}} />);
+    expect(screen.getByRole('radiogroup', { name: 'Esperar como?' })).toBeTruthy();
+    expect(screen.getByRole('radio', { name: 'Por um tempo' })).toBeTruthy();
+    expect(screen.getByRole('radio', { name: 'Até uma data e hora' })).toBeTruthy();
+    expect(screen.getByRole('option', { name: 'dia' })).toBeTruthy();
   });
 
   it('Aguardar resposta: 2 horas vira 120 minutos', async () => {
@@ -89,6 +120,40 @@ describe('janela do bloco', () => {
     fireEvent.change(screen.getByLabelText('Prazo'), { target: { value: '2' } });
     fireEvent.click(screen.getByText('Salvar'));
     await waitFor(() => expect(onSave).toHaveBeenCalledWith('n1', expect.objectContaining({ config: expect.objectContaining({ minutes: 120 }) })));
+  });
+
+  it('Condição: rótulo, saídas Sim e Não e a frase do Não vazio', () => {
+    render(<FlowNodePanel node={node({ kind: 'condition', config: { criterion: 'has_email' } })} resources={resources} onClose={() => {}} onSave={() => {}} />);
+    expect(screen.getByText('Seguir pelo Sim quando')).toBeTruthy();
+    expect(screen.getByText('Sim')).toBeTruthy();
+    expect(screen.getByText('Não')).toBeTruthy();
+    expect(screen.getByText('Sem nada ligado no Não, o fluxo para aqui pra esse lead.')).toBeTruthy();
+  });
+
+  it('Só continuar se com critério abre com a janela da Condição', () => {
+    render(<FlowNodePanel node={node({ kind: 'filter_label', config: { criterion: 'has_email' } })} resources={resources} onClose={() => {}} onSave={() => {}} />);
+    expect(screen.getByText('Seguir pelo Sim quando')).toBeTruthy();
+    expect(screen.getByText('Sim')).toBeTruthy();
+  });
+
+  it('Só continuar se com critério: título e descrição já são os da Condição', () => {
+    render(<FlowNodePanel node={node({ kind: 'filter_label', config: { criterion: 'has_email' } })} resources={resources} onClose={() => {}} onSave={() => {}} />);
+    expect(screen.getByText('Condição')).toBeTruthy();
+    expect(screen.getByText('Confere algo do lead e segue pelo Sim ou pelo Não.')).toBeTruthy();
+    expect(screen.queryByText('Só continuar se')).toBeNull();
+  });
+
+  it('Só continuar se com critério no modo guiado abre como sempre', () => {
+    render(<FlowNodePanel guided node={node({ kind: 'filter_label', config: { criterion: 'has_email' } })} resources={resources} onClose={() => {}} onSave={() => {}} />);
+    expect(screen.getByText('Só continua se')).toBeTruthy();
+    expect(screen.queryByText('Sim')).toBeNull();
+    expect(screen.queryByText('Seguir pelo Sim quando')).toBeNull();
+  });
+
+  it('Só continuar se legado (só etiquetas) abre como sempre', () => {
+    render(<FlowNodePanel node={node({ kind: 'filter_label', config: { labels: ['x'], mode: 'any' } })} resources={resources} onClose={() => {}} onSave={() => {}} />);
+    expect(screen.getByText('Só continua se')).toBeTruthy();
+    expect(screen.queryByText('Sim')).toBeNull();
   });
 
   it('Mensagem tem "Enviar pelo número"', async () => {
