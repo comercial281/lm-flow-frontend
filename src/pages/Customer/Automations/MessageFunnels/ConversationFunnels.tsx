@@ -4,7 +4,6 @@ import { toast } from 'sonner';
 import { Copy, Plus, Rocket, Trash2, Users } from 'lucide-react';
 import { Badge, Button } from '@/components/ui/ds';
 import { BaseHeader, Pagina } from '@/components/base';
-import Abas from '@/components/base/Abas';
 import Chave from '@/components/base/Chave';
 import EmptyState from '@/components/base/EmptyState';
 import IconActionButton from '@/components/base/IconActionButton';
@@ -24,7 +23,10 @@ import { cn } from '@/lib/utils';
 // O funil é ferramenta INDIVIDUAL do corretor: uma sequência de mensagens que
 // ele dispara numa conversa. Cada funil é um fluxo do construtor (`kind =
 // conversation`) com gatilho fixo. A página não tem abas internas (Variáveis
-// e Atributos saíram): é a lista, separada em "Meus funis" e "Da equipe".
+// e Atributos saíram): são duas listas empilhadas, "Da equipe" e "Meus funis",
+// igual à aba Follow-up. ⚠️ Nada de fileira de abas aqui dentro: a moldura já
+// desenha "Manual | Follow-up" e aba dentro de aba foi recusada pelo dono
+// (20/10 e 22/10/2026).
 //
 // - O corretor cria SÓ a partir de modelo ("+ Novo funil"); o gestor (quem tem
 //   acesso às Automações) também começa do zero.
@@ -33,8 +35,6 @@ import { cn } from '@/lib/utils';
 //   também garante); a tela só esconde o que ele recusaria.
 
 const COPY = FLOW_KIND_COPY.conversation;
-
-type Aba = 'meus' | 'equipe';
 
 function statusOf(f: FlowAutomation): { text: string; tone: 'amber' | 'green' | 'muted' } {
   const pending = f.guide_pending ?? [];
@@ -55,7 +55,6 @@ export default function ConversationFunnels() {
   const [failed, setFailed] = useState(false);
   const [recusado, setRecusado] = useState(false);
   const [search, setSearch] = useState('');
-  const [aba, setAba] = useState<Aba>('meus');
   const [pickerOpen, setPickerOpen] = useState(false);
 
   // Gestor = quem tem acesso às Automações (mesma régua do servidor). Com algum
@@ -89,7 +88,6 @@ export default function ConversationFunnels() {
   }, [funnels, search]);
   const mine = visible.filter(f => !f.team);
   const team = visible.filter(f => f.team);
-  const shown = aba === 'meus' ? mine : team;
 
   const toggle = async (f: FlowAutomation): Promise<boolean> => {
     const pending = f.guide_pending?.[0];
@@ -145,6 +143,85 @@ export default function ConversationFunnels() {
     }
   };
 
+  const card = (f: FlowAutomation) => {
+    const status = statusOf(f);
+    const canEdit = f.permissions?.can_edit !== false;
+    const canMarkTeam = f.permissions?.can_mark_team ?? isManager;
+    return (
+      <li key={f.id} className="rounded-lg border border-border p-3 flex flex-col gap-2" data-testid="funil">
+        <div className="flex items-start justify-between gap-2">
+          <button type="button" className="min-w-0 text-left" onClick={() => open(f)}>
+            <span className="block truncate text-base font-semibold hover:underline">{f.name}</span>
+            {f.team && f.owner_name && <span className="block text-xs text-muted-foreground">Criado por {f.owner_name}</span>}
+          </button>
+          {f.team && (
+            <Badge variant="secondary" className="shrink-0 gap-1 text-[10px]">
+              <Users className="h-3 w-3" aria-hidden="true" /> Da equipe
+            </Badge>
+          )}
+        </div>
+        <p
+          className={cn(
+            'text-xs',
+            status.tone === 'amber' && 'text-amber-700 dark:text-amber-300',
+            status.tone === 'green' && 'text-emerald-700 dark:text-emerald-300',
+            status.tone === 'muted' && 'text-muted-foreground',
+          )}
+        >
+          {status.text}
+        </p>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+          {status.tone === 'amber' && canEdit && (
+            <Button size="sm" onClick={() => open(f)}>Continuar o passo a passo</Button>
+          )}
+          {status.tone !== 'amber' && canEdit && (
+            <Chave rotulo="Ligado" ligada={f.is_enabled} aoMudar={() => toggle(f)} />
+          )}
+          {canMarkTeam && (
+            <Chave rotulo="Da equipe" ligada={!!f.team} aoMudar={next => markTeam(f, next)} />
+          )}
+          <div className="ml-auto flex items-center gap-1">
+            {!canEdit && (
+              <Button size="sm" variant="outline" onClick={() => open(f)}>Ver</Button>
+            )}
+            <IconActionButton
+              label={canEdit ? 'Duplicar' : 'Duplicar pra ter a sua cópia'}
+              icon={<Copy className="h-3.5 w-3.5" />}
+              variant="ghost"
+              className="h-8 w-8"
+              onClick={() => void duplicate(f)}
+            />
+            {canEdit && (
+              <IconActionButton
+                label="Excluir"
+                icon={<Trash2 className="h-3.5 w-3.5" />}
+                variant="ghost"
+                className="h-8 w-8"
+                onClick={() => void destroy(f)}
+              />
+            )}
+          </div>
+        </div>
+      </li>
+    );
+  };
+
+  const secao = (titulo: string, lista: FlowAutomation[], vazio: string) => (
+    <section aria-label={titulo} className="mb-6">
+      <div className="mb-2 flex items-baseline gap-2">
+        <h2 className="text-sm font-semibold">{titulo}</h2>
+        <span className="text-xs text-muted-foreground">{lista.length}</span>
+      </div>
+      {lista.length === 0 ? (
+        <EmptyState tamanho="compacto" title={vazio} />
+      ) : (
+        <ul className="grid grid-cols-1 lg:grid-cols-2 gap-3" aria-label={titulo}>
+          {lista.map(card)}
+        </ul>
+      )}
+    </section>
+  );
+
   if (recusado) return <NoAccessState />;
 
   return (
@@ -161,22 +238,12 @@ export default function ConversationFunnels() {
         />
       }
     >
-      <Abas
-        rotulo="Funis"
-        ativa={aba}
-        aoTrocar={chave => setAba(chave as Aba)}
-        abas={[
-          { chave: 'meus', rotulo: `Meus funis (${mine.length})` },
-          { chave: 'equipe', rotulo: `Da equipe (${team.length})`, icone: Users },
-        ]}
-      />
-
       {failed && !loading && <EmptyState tipo="erro" aoTentarDeNovo={() => void load()} />}
 
-      {!failed && !loading && shown.length === 0 && search && (
+      {!failed && !loading && visible.length === 0 && search && (
         <EmptyState tipo="semResultado" aoLimparFiltros={() => setSearch('')} />
       )}
-      {!failed && !loading && shown.length === 0 && !search && aba === 'meus' && (
+      {!failed && !loading && visible.length === 0 && !search && (
         <EmptyState
           icon={Rocket}
           title={COPY.emptyTitle}
@@ -184,78 +251,13 @@ export default function ConversationFunnels() {
           action={{ label: COPY.newButton, onClick: () => setPickerOpen(true) }}
         />
       )}
-      {!failed && !loading && shown.length === 0 && !search && aba === 'equipe' && (
-        <EmptyState
-          icon={Users}
-          title="Nenhum funil da equipe"
-          description='O gestor marca um funil como "Da equipe" pra todo mundo poder disparar nas conversas.'
-        />
-      )}
 
-      <ul className="grid grid-cols-1 lg:grid-cols-2 gap-3 overflow-auto pb-4" aria-label={aba === 'meus' ? 'Meus funis' : 'Funis da equipe'}>
-        {shown.map(f => {
-          const status = statusOf(f);
-          const canEdit = f.permissions?.can_edit !== false;
-          const canMarkTeam = f.permissions?.can_mark_team ?? isManager;
-          return (
-            <li key={f.id} className="rounded-lg border border-border p-3 flex flex-col gap-2" data-testid="funil">
-              <div className="flex items-start justify-between gap-2">
-                <button type="button" className="min-w-0 text-left" onClick={() => open(f)}>
-                  <span className="block truncate text-base font-semibold hover:underline">{f.name}</span>
-                  {f.team && f.owner_name && <span className="block text-xs text-muted-foreground">Criado por {f.owner_name}</span>}
-                </button>
-                {f.team && (
-                  <Badge variant="secondary" className="shrink-0 gap-1 text-[10px]">
-                    <Users className="h-3 w-3" aria-hidden="true" /> Da equipe
-                  </Badge>
-                )}
-              </div>
-              <p
-                className={cn(
-                  'text-xs',
-                  status.tone === 'amber' && 'text-amber-700 dark:text-amber-300',
-                  status.tone === 'green' && 'text-emerald-700 dark:text-emerald-300',
-                  status.tone === 'muted' && 'text-muted-foreground',
-                )}
-              >
-                {status.text}
-              </p>
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-                {status.tone === 'amber' && canEdit && (
-                  <Button size="sm" onClick={() => open(f)}>Continuar o passo a passo</Button>
-                )}
-                {status.tone !== 'amber' && canEdit && (
-                  <Chave rotulo="Ligado" ligada={f.is_enabled} aoMudar={() => toggle(f)} />
-                )}
-                {canMarkTeam && (
-                  <Chave rotulo="Da equipe" ligada={!!f.team} aoMudar={next => markTeam(f, next)} />
-                )}
-                <div className="ml-auto flex items-center gap-1">
-                  {!canEdit && (
-                    <Button size="sm" variant="outline" onClick={() => open(f)}>Ver</Button>
-                  )}
-                  <IconActionButton
-                    label={canEdit ? 'Duplicar' : 'Duplicar pra ter a sua cópia'}
-                    icon={<Copy className="h-3.5 w-3.5" />}
-                    variant="ghost"
-                    className="h-8 w-8"
-                    onClick={() => void duplicate(f)}
-                  />
-                  {canEdit && (
-                    <IconActionButton
-                      label="Excluir"
-                      icon={<Trash2 className="h-3.5 w-3.5" />}
-                      variant="ghost"
-                      className="h-8 w-8"
-                      onClick={() => void destroy(f)}
-                    />
-                  )}
-                </div>
-              </div>
-            </li>
-          );
-        })}
-      </ul>
+      {!failed && visible.length > 0 && (
+        <div className="min-h-0 overflow-auto pb-4">
+          {secao('Da equipe', team, 'Nenhum funil da equipe. O gestor marca um funil como "Da equipe" pra todo mundo poder disparar.')}
+          {secao('Meus funis', mine, 'Você ainda não tem funil seu. Crie em "Novo funil" ou duplique um da equipe.')}
+        </div>
+      )}
 
       <FunnelTemplatePicker
         open={pickerOpen}

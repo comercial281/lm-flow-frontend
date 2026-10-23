@@ -124,7 +124,7 @@ export const ROTEIRO: Record<PassoId, Passo> = {
     busca: ['senha', 'entrar', 'login', 'acesso'],
     ...fim([
       'Na tela de entrar, toque em Esqueci minha senha e digite seu e-mail.',
-      'O link para criar uma senha nova chega no WhatsApp do seu cadastro.',
+      'O link para criar uma senha nova chega no seu e-mail de login. Se não achar, olhe o spam.',
     ]),
   },
   'mover-lead': {
