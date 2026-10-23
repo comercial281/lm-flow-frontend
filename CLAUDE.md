@@ -3559,7 +3559,8 @@ O que aparece na tela:
   primeiro": IA Vendedora, Disparos, Portais, Funis, Imóveis, Agenda de
   Visitas, Propostas, Contratos, Captação, Interesses, Lembretes WhatsApp,
   Follow-up e Regras de Lead.
-- **Esqueci minha senha** manda o link de criar senha no WhatsApp do cadastro,
+- **Esqueci minha senha** (até 22/10/2026; hoje vai só por e-mail, ver
+  "Esqueci minha senha só por e-mail") mandava o link no WhatsApp do cadastro,
   com a frase fixa "Se esse e-mail tiver conta aqui, mandamos um link pro
   WhatsApp cadastrado." — exista o e-mail ou não, e também no teto de pedidos.
 - **Copiar link de acesso** na *Equipe* e, no painel raiz, *Enviar/Copiar link
@@ -9538,3 +9539,22 @@ Armadilhas:
 5. **Textos literais** (sem chave nova de i18n), "Funis de mensagem → Follow-up" nas dicas.
 
 Código: `features/followup/JanelaColocarEmFollowup.tsx`, `features/flowAutomations/followupOptions.ts` (`soFollowupsDaEquipe`), `features/flowAutomations/editores/LeadAutomationsEditors.tsx` (`useAutomationResources`), `pages/Customer/Automations/FlowBuilder/ListaDeFollowups.tsx`, `FlowAutomationCanvas.tsx`, `pages/Customer/Automations/SalesAgents/configurar/paginas/Followup.tsx`, `components/layout/config/menuItems.ts`, `flowAutomationInstancesService.placePreview`, `flowAutomationsService.list({ startable, automationId })`. Testes: `JanelaColocarEmFollowup.spec.tsx`, `Followup.spec.tsx` (IA), `useAutomationResources.erroDeCarga.spec.tsx`, `FollowupPorUsuario.spec.tsx`, `FollowupCanvasCorretor.spec.tsx`, `menuItems.spec.ts`.
+
+## Esqueci minha senha só por e-mail (desde 2026-10-22)
+
+**Por quê:** o link ia pelo WhatsApp do cadastro, saindo do número da Sara. Quem
+não tinha número no cadastro (Renato, Thiago, a conta de marketing da Mais que
+Imóveis) não recebia nada, quem tinha número errado ou de outra pessoa recebia
+no lugar errado, e a tela dizia "mandamos" do mesmo jeito. O e-mail é o próprio
+login: toda conta tem. Decisão do Tony.
+
+- O link (o mesmo do *Enviar acesso*: uso único, 24h) chega **só no e-mail de
+  login**, como "LM Flow <noreply@lealmidia.com.br>", pelo Resend (domínio já
+  verificado). A chave é a `RESEND_API_SECRET` do painel de super-admin.
+- A frase fixa virou "Se esse e-mail tiver conta aqui, mandamos um link pra
+  ele. Confira também o spam." A dica de pedir ao gestor continua.
+- **O *Enviar acesso* do gestor continua pelo WhatsApp.** Só o esqueci mudou.
+- Sem chave do Resend o servidor NÃO emite link (não revoga o pendente) e loga
+  `desfecho=not_delivered motivo=envio de e-mail nao configurado`.
+- O roteiro de Suporte ("Esqueci minha senha") diz que o link chega no e-mail.
+
