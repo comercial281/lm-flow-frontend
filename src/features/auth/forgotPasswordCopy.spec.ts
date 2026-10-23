@@ -3,7 +3,7 @@ import { FORGOT_PASSWORD_SENT, FORGOT_PASSWORD_HINT, forgotPasswordOutcome } fro
 
 describe('Esqueci minha senha', () => {
   it('as frases são as da spec', () => {
-    expect(FORGOT_PASSWORD_SENT).toBe('Se esse e-mail tiver conta aqui, mandamos um link pro WhatsApp cadastrado.');
+    expect(FORGOT_PASSWORD_SENT).toBe('Se esse e-mail tiver conta aqui, mandamos um link pra ele. Confira também o spam.');
     expect(FORGOT_PASSWORD_HINT).toBe('Se não chegar em alguns minutos, peça um link novo ao gestor da sua imobiliária.');
   });
 
