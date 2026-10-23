@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import {
   Badge, Button, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from '@/components/ui/ds';
-import { Zap, Plus, Folder, FolderPlus, Pencil, Play, Pause, Copy, Archive, Trash2, LayoutTemplate, Repeat, Users } from 'lucide-react';
+import { Zap, Plus, Folder, FolderPlus, Pencil, Play, Pause, Copy, Archive, Trash2, LayoutTemplate, Users } from 'lucide-react';
 import { BaseHeader, Pagina } from '@/components/base';
 import EmptyState from '@/components/base/EmptyState';
 import Abas from '@/components/base/Abas';
@@ -15,16 +15,17 @@ import { flowAutomationsService, flowAutomationFoldersService } from '@/services
 import type { FlowAutomation, FlowAutomationFolder, FlowAutomationKind } from '@/types/flowAutomations';
 import { flowTriggerSummary, normalizeTrigger, triggerEvents } from '@/features/flowAutomations/trigger';
 import { FLOW_KIND_COPY } from '@/features/flowAutomations/kind';
-import { LegacyFollowupStrip } from '@/components/flowAutomations/LegacyFollowupStrip';
 import NoAccessState from '@/components/permissions/NoAccessState';
 import { isForbiddenError } from '@/services/core/forbidden';
 import { enableProblem } from '@/features/flowAutomations/readiness';
 import { serverMessage } from '@/features/flowAutomations/guide';
-import { avisoLeadsSaindo, leadsDentro, pedidoDesligarFollowup } from '@/features/flowAutomations/desligarFollowup';
 import { FlowTemplateList, FlowTemplatesDialog } from '@/components/flowAutomations/FlowTemplates';
+import ResolverPausasDialog from '@/components/flowAutomations/ResolverPausasDialog';
+import { textoDePausados } from '@/features/flowAutomations/pausas';
+import ListaDeFollowups from './ListaDeFollowups';
 
 import {
-  isPersonalFlow, NUMERO_FIXO_NA_EQUIPE, presaNaEquipe, tirarDaEquipe, useEhCorretorDeAutomacao,
+  isPersonalFlow, numeroFixoNaEquipe, presaNaEquipe, tirarDaEquipe, useEhCorretorDeAutomacao,
 } from '@/features/flowAutomations/personal';
 import { useAuthStore } from '@/store/authStore';
 import { useCan } from '@/hooks/useCan';
@@ -34,22 +35,25 @@ import { usePergunta } from '@/hooks/usePergunta';
 // Grade de cards com filete colorido, selo de estado e ações. Pasta é lugar
 // (entra), não filtro. Fluxo novo nasce em "Novo fluxo" ou num dos Modelos.
 //
-// Sprint 3: a aba Follow-up é ESTA lista com `kind="followup"`. O follow-up
-// novo nasce montado com o modelo "Follow-up padrão" (o servidor monta), então
-// lá não há "Modelos" nem pastas; no topo fica a faixa dos funis antigos que
-// ainda têm fila.
+// Sprint 3: a aba Follow-up era ESTA lista com `kind="followup"`; desde a
+// Fase 3 (21/10/2026) o follow-up tem a lista dele (ListaDeFollowups).
 type Aba = 'todas' | 'minhas' | 'equipe' | 'corretores';
 
+// Fase 3 do follow-up (21/10/2026): o follow-up tem lista própria, em seções
+// (Da equipe · Meus · Dos corretores), na aba Follow-up de Funis de mensagem.
 export default function FlowAutomationsList({ kind = 'automation' }: { kind?: FlowAutomationKind }) {
+  return kind === 'followup' ? <ListaDeFollowups /> : <ListaDeAutomacoes kind={kind} />;
+}
+
+function ListaDeAutomacoes({ kind }: { kind: FlowAutomationKind }) {
   const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
   const { perguntar, dialogoDePergunta } = usePergunta();
   const navigate = useNavigate();
   const copy = FLOW_KIND_COPY[kind];
-  const isFollowup = kind === 'followup';
-  // Dono e equipe (automações por cargo): só na lista de automações, não no follow-up.
+  // Dono e equipe (automações por cargo).
   const pode = useCan();
-  const ehCorretor = useEhCorretorDeAutomacao() && !isFollowup;
-  const ehGestor = !isFollowup && pode('flow_automations', 'update');
+  const ehCorretor = useEhCorretorDeAutomacao();
+  const ehGestor = pode('flow_automations', 'update');
   const meId = String(useAuthStore(s => s.currentUser?.id) ?? '');
   const [aba, setAba] = useState<Aba | null>(null);
   const abaAtiva: Aba = aba ?? (ehCorretor ? 'minhas' : 'todas');
@@ -59,24 +63,25 @@ export default function FlowAutomationsList({ kind = 'automation' }: { kind?: Fl
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(false);
   const [recusado, setRecusado] = useState(false);
+  const [resolvendo, setResolvendo] = useState<FlowAutomation | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
       const [list, fldrs] = await Promise.all([
-        flowAutomationsService.list({ search: search || undefined, folderId, ...(isFollowup ? { kind } : {}) }),
-        isFollowup || ehCorretor ? Promise.resolve([]) : flowAutomationFoldersService.list(),
+        flowAutomationsService.list({ search: search || undefined, folderId }),
+        ehCorretor ? Promise.resolve([]) : flowAutomationFoldersService.list(),
       ]);
       setAutomations(list);
       setFolders(fldrs);
       setRecusado(false);
     } catch (e) {
       if (isForbiddenError(e)) setRecusado(true);
-      else toast.error(isFollowup ? 'Erro ao carregar os follow-ups' : 'Erro ao carregar fluxos');
+      else toast.error('Erro ao carregar fluxos');
     } finally {
       setLoading(false);
     }
-  }, [search, folderId, isFollowup, ehCorretor, kind]);
+  }, [search, folderId, ehCorretor]);
 
   useEffect(() => {
     load();
@@ -89,13 +94,11 @@ export default function FlowAutomationsList({ kind = 'automation' }: { kind?: Fl
   const handleCreate = async (team?: boolean) => {
     try {
       const created = await flowAutomationsService.create(
-        isFollowup
-          ? { name: copy.newName, kind }
-          : { name: copy.newName, folder_id: folderId ?? null, ...(ehGestor && team !== undefined ? { team } : {}) },
+        { name: copy.newName, folder_id: folderId ?? null, ...(ehGestor && team !== undefined ? { team } : {}) },
       );
       openFlow(created);
     } catch {
-      toast.error(isFollowup ? 'Erro ao criar o follow-up' : 'Erro ao criar fluxo');
+      toast.error('Erro ao criar fluxo');
     }
   };
 
@@ -117,11 +120,7 @@ export default function FlowAutomationsList({ kind = 'automation' }: { kind?: Fl
           return;
         }
       }
-      // Follow-up desligado com lead dentro: pergunta antes, com a contagem.
-      if (isFollowup && a.is_enabled && leadsDentro(a) > 0 && !(await confirmar(pedidoDesligarFollowup(a.name, leadsDentro(a))))) return;
-      const atualizada = await flowAutomationsService.toggle(a.id);
-      const aviso = isFollowup && a.is_enabled ? avisoLeadsSaindo(atualizada.remaining) : null;
-      if (aviso) toast.success(aviso);
+      await flowAutomationsService.toggle(a.id);
       load();
     } catch (e) {
       // Sprint 4: com passo do guia pendente o servidor recusa e diz qual falta.
@@ -158,12 +157,7 @@ export default function FlowAutomationsList({ kind = 'automation' }: { kind?: Fl
 
   const archive = async (a: FlowAutomation) => {
     try {
-      // Arquivar um follow-up ligado também tira os leads de dentro.
-      const dentro = isFollowup && a.is_enabled ? leadsDentro(a) : 0;
-      if (dentro > 0 && !(await confirmar(pedidoDesligarFollowup(a.name, dentro, 'Arquivar')))) return;
-      const arquivada = await flowAutomationsService.archive(a.id);
-      const aviso = dentro > 0 ? avisoLeadsSaindo(arquivada.remaining) : null;
-      if (aviso) toast.success(aviso.replace('Desligado.', 'Arquivado.'));
+      await flowAutomationsService.archive(a.id);
       load();
     } catch (e) {
       toast.error(serverMessage(e, 'Erro ao arquivar'));
@@ -172,7 +166,7 @@ export default function FlowAutomationsList({ kind = 'automation' }: { kind?: Fl
 
   const destroy = async (a: FlowAutomation) => {
     if (!(await confirmar({
-      titulo: isFollowup ? 'Excluir follow-up' : 'Excluir automação',
+      titulo: 'Excluir automação',
       descricao: <>Excluir <strong>{a.name}</strong>? Essa ação não pode ser desfeita.</>,
       rotuloDaAcao: 'Excluir',
       destrutivo: true,
@@ -182,7 +176,6 @@ export default function FlowAutomationsList({ kind = 'automation' }: { kind?: Fl
       toast.success('Fluxo removido');
       load();
     } catch (e) {
-      // Follow-up com lead dentro: o servidor recusa e diz quantos ("Desligue antes de apagar").
       toast.error(serverMessage(e, 'Erro ao remover'));
     }
   };
@@ -270,7 +263,7 @@ export default function FlowAutomationsList({ kind = 'automation' }: { kind?: Fl
           searchValue={search}
           onSearchChange={setSearch}
           searchPlaceholder={copy.searchPlaceholder}
-          aDireita={!isFollowup && (
+          aDireita={(
             <>
               {ehGestor && (
                 <Button variant="outline" onClick={() => handleCreate(false)}><Plus className="h-4 w-4 mr-1" /> Nova pessoal</Button>
@@ -286,8 +279,6 @@ export default function FlowAutomationsList({ kind = 'automation' }: { kind?: Fl
         />
       }
     >
-      {isFollowup && <LegacyFollowupStrip />}
-
       {comAbas && (
         <Abas
           rotulo="Automações"
@@ -297,7 +288,7 @@ export default function FlowAutomationsList({ kind = 'automation' }: { kind?: Fl
         />
       )}
 
-      {!isFollowup && !ehCorretor && folderId === undefined && (
+      {!ehCorretor && folderId === undefined && (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 mb-4">
           {folders.map(f => (
             <div key={f.id} className="group relative flex items-center gap-2 rounded-lg border border-border p-3 hover:border-primary transition-colors">
@@ -342,7 +333,7 @@ export default function FlowAutomationsList({ kind = 'automation' }: { kind?: Fl
         </button>
       )}
 
-      {!loading && automations.length === 0 && !search && !isFollowup && (
+      {!loading && automations.length === 0 && !search && (
         <div className="flex flex-col items-center">
           <EmptyState
             icon={Zap}
@@ -352,14 +343,6 @@ export default function FlowAutomationsList({ kind = 'automation' }: { kind?: Fl
           />
           <FlowTemplateList onApplied={openFlow} team={teamDoModelo} className="w-full max-w-xl" />
         </div>
-      )}
-      {!loading && automations.length === 0 && !search && isFollowup && (
-        <EmptyState
-          icon={Repeat}
-          title={copy.emptyTitle}
-          description={copy.emptyDescription}
-          action={{ label: copy.newButton, onClick: () => handleCreate() }}
-        />
       )}
       {comAbas && !loading && automations.length > 0 && mostradas.length === 0 && !search && (
         <EmptyState
@@ -377,8 +360,8 @@ export default function FlowAutomationsList({ kind = 'automation' }: { kind?: Fl
       <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 overflow-auto" aria-label="Automações">
         {mostradas.map(a => {
           const canEdit = ehCorretor ? a.permissions?.can_edit === true : a.permissions?.can_edit !== false;
-          const canMarkTeam = !isFollowup && a.permissions?.can_mark_team === true;
-          const selo = isFollowup ? null : !isPersonalFlow(a) ? 'equipe' : dosCorretores(a) && a.owner_name ? `De ${a.owner_name}` : null;
+          const canMarkTeam = a.permissions?.can_mark_team === true;
+          const selo = !isPersonalFlow(a) ? 'equipe' : dosCorretores(a) && a.owner_name ? `De ${a.owner_name}` : null;
           return (
           <li key={a.id} className="rounded-lg border border-border overflow-hidden flex">
             <div className="w-1.5 shrink-0" style={{ backgroundColor: a.archived_at ? '#94a3b8' : a.is_enabled ? '#059669' : '#dc2626' }} />
@@ -404,6 +387,14 @@ export default function FlowAutomationsList({ kind = 'automation' }: { kind?: Fl
               <div className="text-xs text-muted-foreground mb-3 truncate" title={flowTriggerSummary(normalizeTrigger(a.trigger))}>
                 {triggerEvents(normalizeTrigger(a.trigger)).length ? flowTriggerSummary(normalizeTrigger(a.trigger)) : 'Sem gatilho definido'}
               </div>
+              {(a.paused_other_number_count ?? 0) > 0 && (
+                <div className="mb-2 flex flex-wrap items-center gap-2 text-xs text-amber-700 dark:text-amber-400" data-pausados>
+                  <span>{textoDePausados(a.paused_other_number_count ?? 0)}</span>
+                  {canEdit && (
+                    <Button size="sm" variant="outline" className="text-xs" onClick={() => setResolvendo(a)}>Resolver</Button>
+                  )}
+                </div>
+              )}
               <div className="flex flex-wrap items-center gap-1">
                 {canEdit ? (
                   <>
@@ -439,7 +430,7 @@ export default function FlowAutomationsList({ kind = 'automation' }: { kind?: Fl
                       ligada={!isPersonalFlow(a)}
                       aoMudar={next => markTeam(a, next)}
                       desabilitada={presaNaEquipe(a)}
-                      descricao={presaNaEquipe(a) ? NUMERO_FIXO_NA_EQUIPE : undefined}
+                      descricao={presaNaEquipe(a) ? numeroFixoNaEquipe(a) : undefined}
                     />
                   </div>
                 )}
@@ -450,7 +441,18 @@ export default function FlowAutomationsList({ kind = 'automation' }: { kind?: Fl
         })}
       </ul>
     </Pagina>
-      {!isFollowup && <FlowTemplatesDialog open={templatesOpen} onClose={() => setTemplatesOpen(false)} onApplied={openFlow} team={teamDoModelo} />}
+      {resolvendo && (
+        <ResolverPausasDialog
+          open
+          flowId={resolvendo.id}
+          flowName={resolvendo.name}
+          count={resolvendo.paused_other_number_count ?? 0}
+          canAlways
+          onClose={() => setResolvendo(null)}
+          onResolved={() => void load()}
+        />
+      )}
+      <FlowTemplatesDialog open={templatesOpen} onClose={() => setTemplatesOpen(false)} onApplied={openFlow} team={teamDoModelo} />
       {dialogoDeConfirmacao}
       {dialogoDePergunta}
     </>

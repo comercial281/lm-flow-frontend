@@ -26,6 +26,8 @@ import {
   missingActionParams,
 } from '@/services/leadAutomation/leadAutomationService';
 import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
+import numbersService from '@/services/numbers/numbersService';
+import { finalDoNumero } from '@/features/numbers/numberTexts';
 import SendFromField from '@/components/numbers/SendFromField';
 import { applySendFrom, sendFromOf, sendFromProblem } from '@/features/numbers/sendFrom';
 import { teamNameWarning } from '@/features/numbers/teamNameWarning';
@@ -37,6 +39,8 @@ import {
   toggleAcceptedBy,
 } from './acceptedByFilter';
 import { Seletor } from '@/components/base/Seletor';
+import BotoesDeEscolha from '@/components/base/BotoesDeEscolha';
+import { unitLabel } from '@/features/flowAutomations/waitTime';
 import Aviso from '@/components/base/Aviso';
 import {
   AVISO_TRAVADO, ROTULO_FORA_DA_LISTA, ROTULO_TRAVADO, destinoTravado, instanciaDoModo, modoDoNumero, type ModoDoNumero,
@@ -106,7 +110,12 @@ export interface AutomationResources {
   recarregar?: () => void;
 }
 
-export function useAutomationResources(enabled: boolean): AutomationResources {
+/**
+ * `automationId` (Fase 3): a automação que está sendo editada. A lista do bloco
+ * "Iniciar follow-up" vem do servidor pela regra dela: da equipe só lista
+ * follow-up da equipe; pessoal lista os do dono e os da equipe.
+ */
+export function useAutomationResources(enabled: boolean, automationId?: string | null): AutomationResources {
   const isSuperAdmin = useIsSuperAdmin();
   const [labels, setLabels] = useState<ContactLabel[]>([]);
   const [sequences, setSequences] = useState<FollowupSequence[]>([]);
@@ -138,7 +147,7 @@ export function useAutomationResources(enabled: boolean): AutomationResources {
 
   // Recarrega o catálogo de etiquetas (usado após criar uma etiqueta nova inline).
   const reloadLabels = () => {
-    labelsService.getLabels()
+    labelsService.getLabels({ withCounts: true })
       .then(res => {
         setLabels(res.data ?? []);
         setErros(e => ({ ...e, labels: false }));
@@ -156,7 +165,7 @@ export function useAutomationResources(enabled: boolean): AutomationResources {
 
     (async () => {
       const [labelsRes, seqRes, usersRes, pipelinesRes, qrRes, adRes, formRes, funnelsRes, evoRes, fuFlowsRes, convRes, roletasRes] = await Promise.allSettled([
-        labelsService.getLabels(),
+        labelsService.getLabels({ withCounts: true }),
         followupSequencesService.getAll(),
         usersService.getUsers(),
         pipelinesService.getPipelines({ include_items: false }),
@@ -165,7 +174,7 @@ export function useAutomationResources(enabled: boolean): AutomationResources {
         leadAutomationService.getFormOrigins(),
         messageFunnelsService.list({ activeOnly: false }),
         isSuperAdmin ? leadAutomationService.getEvolutionInstances() : Promise.resolve([]),
-        flowAutomationsService.list({ kind: 'followup' }),
+        flowAutomationsService.list({ kind: 'followup', startable: true, automationId }),
         flowAutomationsService.list({ kind: 'conversation' }),
         roletaConfigService.getAll(),
       ]);
@@ -208,7 +217,7 @@ export function useAutomationResources(enabled: boolean): AutomationResources {
 
       setLoading(false);
     })();
-  }, [enabled]); // eslint-disable-line react-hooks/exhaustive-deps -- isSuperAdmin só vale na primeira carga, como antes
+  }, [enabled, automationId]); // eslint-disable-line react-hooks/exhaustive-deps -- isSuperAdmin só vale na primeira carga, como antes
 
   useEffect(() => {
     carregar();
@@ -241,9 +250,9 @@ const baseSelectClass =
 // escolher uma desconectada é o caminho mais curto pro aviso não chegar.
 function instanceStatusLabel(status: string): string {
   switch (status) {
-    case 'open':       return 'conectada ✓';
+    case 'open':       return 'conectada';
     case 'connecting': return 'conectando…';
-    case 'close':      return 'desconectada ⚠️';
+    case 'close':      return 'desconectada';
     default:           return status || 'estado desconhecido';
   }
 }
@@ -695,14 +704,12 @@ export function PipelineFilterEditor({
         ))}
       </Seletor>
       <p className="text-xs text-muted-foreground mt-1">
-        Em branco = vale para todo lead do CRM. Escolhendo um funil, essa automação
-        só roda para o lead cujo card está nele — é assim que o mesmo CRM tem uma IA
-        no funil de lançamento e outra no de locação.
+        Em branco, vale pra todo lead do CRM. Escolhendo um funil, o fluxo só roda pro lead que está nele.
         {trigger === 'lead.created' && (
           <>
             {' '}O lead de anúncio e de landing entra no funil logo depois de nascer,
             então essa automação espera o card aparecer antes de disparar (cerca de
-            meio minuto). Sem funil escolhido, nada muda: dispara na hora.
+            meio minuto). Sem funil escolhido, nada muda e dispara na hora.
           </>
         )}
       </p>
@@ -769,6 +776,26 @@ export function ActionEditor({ action, onChange, resources, pessoal = false }: A
       .finally(() => { if (!cancelled) setLoadingGroups(false); });
     return () => { cancelled = true; };
   }, [action.type, instanceParam]);
+
+  // Rótulo da opção "WhatsApp deste CRM" (só a tela do cliente a mostra). A
+  // Notificação sai pelo número da conversa do lead: o final só aparece quando
+  // há exatamente 1 número conectado. Carregando ou falhando, fica o texto simples.
+  const [conectados, setConectados] = useState<string[] | null>(null);
+  useEffect(() => {
+    if (action.type !== 'notify_group' || isSuperAdmin) return;
+    let vivo = true;
+    numbersService
+      .sendNumbers('lead_automation_rules')
+      .then(r => { if (vivo) setConectados(r.numbers.filter(n => n.connection === 'connected').map(n => n.phone ?? '')); })
+      .catch(() => { if (vivo) setConectados(null); });
+    return () => { vivo = false; };
+  }, [action.type, isSuperAdmin]);
+  const finalUnico = conectados && conectados.length === 1 ? finalDoNumero(conectados[0]) : null;
+  const rotuloDoCrm = conectados === null
+    ? 'WhatsApp deste CRM'
+    : conectados.length > 1
+      ? 'WhatsApp deste CRM (o número da conversa do lead)'
+      : finalUnico ? `WhatsApp deste CRM (final ${finalUnico})` : 'WhatsApp deste CRM';
 
   // Usuários do sistema com WhatsApp cadastrado — pra mandar o lembrete no privado deles.
   const usersWithWhatsapp = resources.users.filter(
@@ -855,12 +882,12 @@ export function ActionEditor({ action, onChange, resources, pessoal = false }: A
     }
 
     // ----- start_followup_flow -----
-    // Sprint 3 (03/10/2026): o follow-up é um fluxo do construtor (aba Follow-up).
+    // Sprint 3 (03/10/2026): o follow-up é um fluxo do construtor (Funis de mensagem → Follow-up desde a Fase 3).
     case 'start_followup_flow': {
       const atual = String(params.flow_automation_id ?? '');
       const conhecido = resources.followupFlows.some(f => f.id === atual);
       return (
-        <Field label="Qual follow-up *" hint="Os follow-ups ficam em Automações → Follow-up. Desligado, ele não recebe o lead.">
+        <Field label="Qual follow-up *" hint="Os follow-ups ficam em Funis de mensagem → Follow-up. Só aparecem os ligados que esta automação pode usar.">
           <Seletor
             value={atual}
             onChange={e => setParam('flow_automation_id', e.target.value)}
@@ -868,11 +895,9 @@ export function ActionEditor({ action, onChange, resources, pessoal = false }: A
             aria-label="Qual follow-up"
           >
             <option value="">Escolha o follow-up</option>
-            {atual && !conhecido && <option value={atual}>{resources.loading ? 'Carregando…' : 'Follow-up que não existe mais'}</option>}
+            {atual && !conhecido && <option value={atual}>{resources.loading ? 'Carregando…' : 'Follow-up desligado ou indisponível pra esta automação'}</option>}
             {resources.followupFlows.map(f => (
-              <option key={f.id} value={f.id}>
-                {f.name}{!f.is_enabled ? ' (desligado)' : ''}
-              </option>
+              <option key={f.id} value={f.id}>{f.name}</option>
             ))}
           </Seletor>
         </Field>
@@ -945,13 +970,13 @@ export function ActionEditor({ action, onChange, resources, pessoal = false }: A
                 <option value="">— Padrão do cliente —</option>
                 {resources.evolutionInstances.map(inst => (
                   <option key={inst.name} value={inst.name}>
-                    {inst.name} {inst.status === 'open' ? '✓' : `(${inst.status})`}
+                    {inst.name} ({instanceStatusLabel(inst.status)})
                   </option>
                 ))}
               </Seletor>
               {params.sender_instance && (
                 <p className="text-xs text-amber-500 mt-1">
-                  ⚠️ Mensagem enviada pelo número selecionado, não pelo número do cliente.
+                  Mensagem enviada pelo número selecionado, não pelo número do cliente.
                 </p>
               )}
             </Field>
@@ -1074,23 +1099,12 @@ export function ActionEditor({ action, onChange, resources, pessoal = false }: A
     case 'create_task':
       return (
         <>
-          <Field label="Título da tarefa *">
-            <Input
-              value={String(params.title ?? '')}
-              onChange={e => setParam('title', e.target.value)}
-              placeholder="Ex: Ligar pro lead"
-              className="mt-1"
-            />
-          </Field>
-          <Field label="Prazo (em horas)">
-            <Input
-              type="number"
-              min={0}
-              value={Number(params.due_in_hours ?? 24)}
-              onChange={e => setParam('due_in_hours', parseInt(e.target.value) || 0)}
-              className="mt-1"
-            />
-          </Field>
+          <CreateTaskFields
+            params={params}
+            users={resources.users}
+            carregando={resources.loading}
+            onChange={patch => onChange({ ...action, params: patch(params) })}
+          />
         </>
       );
 
@@ -1114,7 +1128,7 @@ export function ActionEditor({ action, onChange, resources, pessoal = false }: A
           <Field
             label="Número"
             hint={isSuperAdmin
-              ? 'De qual WhatsApp sai o aviso — e de onde os grupos são listados. Para grupo de cliente use a central Operacional (LM01).'
+              ? 'De qual WhatsApp sai o aviso, e de onde os grupos são listados. Para grupo de cliente use a central da Leal Mídia.'
               : 'De qual WhatsApp sai o aviso. Na central da Leal Mídia aparecem só os grupos liberados pra este CRM.'}
           >
             {isSuperAdmin ? (resources.evolutionInstances.length > 0 ? (
@@ -1123,7 +1137,7 @@ export function ActionEditor({ action, onChange, resources, pessoal = false }: A
                 onChange={e => setParam('instance', e.target.value)}
                 className={baseSelectClass}
               >
-                <option value="">— WhatsApp do próprio cliente —</option>
+                <option value="">WhatsApp deste CRM</option>
                 {resources.evolutionInstances.map(inst => (
                   <option key={inst.name} value={inst.name}>
                     {inst.name} — {instanceStatusLabel(inst.status)}
@@ -1156,12 +1170,12 @@ export function ActionEditor({ action, onChange, resources, pessoal = false }: A
                 disabled={travado}
                 className={baseSelectClass}
               >
-                <option value="proprio">WhatsApp deste CRM</option>
+                <option value="proprio">{rotuloDoCrm}</option>
                 <option value="central">Central da Leal Mídia</option>
               </Seletor>
             )}
           </Field>
-          <Field label="Destino do lembrete *" hint={loadingGroups ? 'Carregando…' : 'O grupo do cliente, ou um usuário (vai no WhatsApp privado dele).'}>
+          <Field label="Quem recebe *" hint={loadingGroups ? 'Carregando…' : 'O grupo do cliente, ou um usuário (vai no WhatsApp privado dele).'}>
             <Seletor
               value={String(params.group_jid ?? '')}
               onChange={e => setParam('group_jid', e.target.value)}
@@ -1238,11 +1252,11 @@ export function ActionEditor({ action, onChange, resources, pessoal = false }: A
             </Seletor>
           </Field>
           {selected && !selectedWa && (
-            <p className="text-xs text-red-500 mt-1">
-              Esse usuário não tem WhatsApp cadastrado. Cadastre em Configurações &gt; Usuários pra ele receber o lembrete.
-            </p>
+            <Aviso tom="erro" compacto className="mt-1">
+              Esse usuário não tem WhatsApp cadastrado. Cadastre em Configurações &gt; Usuários pra ele receber o aviso.
+            </Aviso>
           )}
-          <Field label="Mensagem do lembrete *" hint="Enviada no WhatsApp do usuário escolhido. Toque numa variável pra inserir.">
+          <Field label="Mensagem *" hint="Enviada no WhatsApp do usuário escolhido. Toque numa variável pra inserir.">
             <Textarea
               value={String(params.message ?? '')}
               onChange={e => setParam('message', e.target.value)}
@@ -1391,7 +1405,7 @@ export function ActionEditor({ action, onChange, resources, pessoal = false }: A
         setUserIds(selectedIds.includes(id) ? selectedIds.filter(x => x !== id) : [...selectedIds, id]);
       return (
         <>
-          <Field label="Notificar quais usuários? *" hint="Recebe o push só quem ativou o Modo Plantão no app/celular.">
+          <Field label="Notificar quais usuários? *" hint="Recebe o aviso só quem ativou o Modo Plantão no app/celular.">
             <div className="mt-1 max-h-44 overflow-y-auto rounded-md border border-input bg-background divide-y divide-input">
               {resources.users.length === 0 && resources.loading && (
                 <Carregando linhas={2} rotulo="Carregando a equipe…" className="p-2" />
@@ -1413,7 +1427,7 @@ export function ActionEditor({ action, onChange, resources, pessoal = false }: A
               ))}
             </div>
           </Field>
-          <Field label="Título da notificação" hint="Aparece em negrito no push. Padrão: LM Flow.">
+          <Field label="Título da notificação" hint="Aparece em negrito no aviso. Padrão: LM Flow.">
             <Input
               value={String(params.title ?? '')}
               onChange={e => setParam('title', e.target.value)}
@@ -1421,7 +1435,7 @@ export function ActionEditor({ action, onChange, resources, pessoal = false }: A
               className="mt-1"
             />
           </Field>
-          <Field label="Mensagem do push *" hint="Texto do push. Toque numa variável pra inserir.">
+          <Field label="Mensagem *" hint="Texto do aviso. Toque numa variável pra inserir.">
             <Textarea
               value={String(params.message ?? '')}
               onChange={e => setParam('message', e.target.value)}
@@ -1438,6 +1452,134 @@ export function ActionEditor({ action, onChange, resources, pessoal = false }: A
     default:
       return null;
   }
+}
+
+// ----- Criar tarefa: título, pra quem e prazo (Entrega 3 do construtor) -----
+// Sem assignee_mode o bloco antigo abre em "Responsável pelo lead" com o prazo
+// em horas, como sempre rodou. Em "Responsável pelo lead" o assignee_id não é gravado.
+type QuemRecebe = 'lead_owner' | 'user';
+type PrazoUnidade = 'h' | 'd';
+
+function CreateTaskFields({
+  params, users, carregando, onChange,
+}: {
+  params: Record<string, string | number>;
+  users: User[];
+  carregando: boolean;
+  onChange: (patch: (atual: Record<string, string | number>) => Record<string, string | number>) => void;
+}) {
+  const quem: QuemRecebe = params.assignee_mode === 'user' ? 'user' : 'lead_owner';
+  const horas = Number(params.due_in_hours ?? 24);
+  // Como o Esperar: múltiplo de 24 abre em dias (24 vira "1 dia"), o resto em horas.
+  const [unidade, setUnidade] = useState<PrazoUnidade>(horas > 0 && horas % 24 === 0 ? 'd' : 'h');
+  const [vazio, setVazio] = useState(false);
+  const quantidade = unidade === 'd' ? Math.max(1, Math.round(horas / 24)) : horas;
+  const pessoas = users.filter(u => !u.deactivated);
+  const assigneeId = String(params.assignee_id ?? '');
+  const naLista = pessoas.some(u => u.id === assigneeId);
+  const rotuloUnidade = (u: PrazoUnidade) => {
+    const base = u === 'd' ? { value: 'd', label: 'dias' } : { value: 'h', label: 'horas' };
+    return unitLabel(base, quantidade);
+  };
+
+  const escolherQuem = (v: QuemRecebe) =>
+    onChange(atual => {
+      if (v === 'user') return { ...atual, assignee_mode: 'user' };
+      const novo: Record<string, string | number> = { ...atual, assignee_mode: 'lead_owner' };
+      delete novo.assignee_id;
+      return novo;
+    });
+  const gravarPrazo = (q: number, u: PrazoUnidade) =>
+    onChange(atual => ({ ...atual, due_in_hours: q * (u === 'd' ? 24 : 1) }));
+
+  return (
+    <>
+      <Field label="Título da tarefa *">
+        <Input
+          value={String(params.title ?? '')}
+          onChange={e => onChange(atual => ({ ...atual, title: e.target.value }))}
+          placeholder="Ex: Ligar pro lead"
+          className="mt-1"
+        />
+      </Field>
+      <div className="mt-2">
+        <UILabel>Pra quem</UILabel>
+        <div className="mt-1">
+          <BotoesDeEscolha<QuemRecebe>
+            rotulo="Pra quem"
+            valor={quem}
+            aoEscolher={escolherQuem}
+            opcoes={[
+              { valor: 'lead_owner', rotulo: 'Responsável pelo lead' },
+              { valor: 'user', rotulo: 'Uma pessoa da equipe' },
+            ]}
+          />
+        </div>
+        <p className="text-xs text-muted-foreground mt-1">
+          {quem === 'user'
+            ? 'Vai sempre pra mesma pessoa, seja quem for o responsável.'
+            : 'Vai pra quem estiver cuidando do lead na hora.'}
+        </p>
+        {quem === 'user' && (
+          <Seletor
+            aria-label="Pessoa da equipe"
+            value={assigneeId}
+            onChange={e => {
+              const v = e.target.value;
+              onChange(atual => {
+                if (v) return { ...atual, assignee_id: v };
+                const novo = { ...atual };
+                delete novo.assignee_id;
+                return novo;
+              });
+            }}
+            className="mt-2"
+          >
+            <option value="">Escolha a pessoa</option>
+            {assigneeId && !naLista && (
+              <option value={assigneeId}>{carregando ? 'Carregando…' : 'Pessoa que não está mais na equipe'}</option>
+            )}
+            {pessoas.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+          </Seletor>
+        )}
+        {quem === 'user' && !assigneeId && <p className="text-xs text-destructive mt-1">Escolha a pessoa.</p>}
+        {quem === 'user' && assigneeId && !naLista && !carregando && (
+          <p className="text-xs text-destructive mt-1">A pessoa escolhida não está mais na equipe.</p>
+        )}
+      </div>
+      <div className="mt-2">
+        <UILabel>Prazo</UILabel>
+        <div className="mt-1 flex flex-wrap items-center gap-2">
+          <Input
+            type="number"
+            min={1}
+            aria-label="Quanto tempo"
+            value={vazio ? '' : quantidade}
+            onChange={e => {
+              const n = parseInt(e.target.value);
+              if (!n || n < 1) { setVazio(true); return; }
+              setVazio(false);
+              gravarPrazo(n, unidade);
+            }}
+            onBlur={() => setVazio(false)}
+            className="w-24"
+          />
+          <BotoesDeEscolha<PrazoUnidade>
+            rotulo="Unidade do prazo"
+            valor={unidade}
+            aoEscolher={u => { setUnidade(u); gravarPrazo(quantidade, u); }}
+            opcoes={[
+              { valor: 'h', rotulo: rotuloUnidade('h') },
+              { valor: 'd', rotulo: rotuloUnidade('d') },
+            ]}
+          />
+        </div>
+        <p className="text-xs text-muted-foreground mt-1">
+          {`A tarefa vence ${quantidade} ${rotuloUnidade(unidade)} depois que o lead passar por este bloco.`}
+        </p>
+      </div>
+    </>
+  );
 }
 
 function Field({
@@ -1591,7 +1733,9 @@ export function formatActionSummary(
     }
     case 'start_followup_flow': {
       const flow = resources.followupFlows.find(f => f.id === p.flow_automation_id);
-      return flow ? `Follow-up: ${flow.name}` : 'Follow-up: (não definido)';
+      if (flow) return `Follow-up: ${flow.name}`;
+      // Salvo mas fora da lista do servidor (desligado, arquivado, de outro dono): não é "não definido".
+      return p.flow_automation_id && !resources.loading ? 'Follow-up: (desligado ou indisponível)' : 'Follow-up: (não definido)';
     }
     case 'send_whatsapp_message':
       return p.message ? `"${String(p.message).slice(0, 60)}…"` : '(mensagem vazia)';

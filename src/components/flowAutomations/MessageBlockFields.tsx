@@ -1,4 +1,5 @@
 import type React from 'react';
+import Aviso from '@/components/base/Aviso';
 import { Input, Label, Checkbox } from '@/components/ui/ds';
 import SendFromField from '@/components/numbers/SendFromField';
 import MessageSequenceEditor, {
@@ -10,6 +11,7 @@ import { draftsOf, withItems } from '@/features/flowAutomations/messageItems';
 import { applySendFrom, sendFromOf } from '@/features/numbers/sendFrom';
 import { cleanProgressPrefix, progressOf, progressTagName, withProgress } from '@/features/flowAutomations/progress';
 import { saiPeloWhatsAppDe } from '@/features/flowAutomations/personal';
+import { FLOW_NUMBER_DIVERGENT } from '@/features/flowAutomations/flowNumber';
 import type { FlowNodeConfig } from '@/types/flowAutomations';
 import type { TemplateVariable } from '@/types/messageFunnels';
 import { SaiPeloSeuWhatsApp } from './SaiPeloSeuWhatsApp';
@@ -32,7 +34,7 @@ const uploadMedia = (file: File) => flowAutomationsService.uploadMedia(file).the
 export function ProgressFields({ config, onChange }: { config: FlowNodeConfig; onChange: (next: FlowNodeConfig) => void }) {
   const mark = progressOf(config);
   return (
-    <div className="space-y-2 rounded-md border border-border p-3">
+    <div className="space-y-2">
       <label className="flex items-center gap-2 text-sm cursor-pointer">
         <Checkbox
           checked={mark.on}
@@ -100,13 +102,26 @@ interface Props extends EnvioPessoal {
   conversation?: boolean;
   /** Modo guiado: o corretor só ajusta o que o gestor montou. */
   guided?: boolean;
+  /**
+   * Entrega 4: fluxo da equipe com a regra de número (salva ou escolhida agora):
+   * a linha de por onde sai, no lugar do "Enviar pelo número". null = fluxo
+   * antigo, cada Mensagem escolhe o número como sempre.
+   */
+  numeroDoFluxo?: string | null;
+  /** Fluxo antigo cujas Mensagens saem por números diferentes: aponta pras Configurações. */
+  numerosDiferentes?: boolean;
 }
 
 export function MessageBlockFields({
   config, onChange, conversation = false, guided = false, pessoal = false, numeroPessoal = null,
-  numeroPessoalCarregando = false, donoDoEnvio = null,
+  numeroPessoalCarregando = false, donoDoEnvio = null, numeroDoFluxo = null,
+  numerosDiferentes = false,
 }: Props) {
   const peloDono = pessoal || donoDoEnvio != null;
+  // Follow-up guiado (Fase 3; automação nunca vem guiada e o funil é o ramo de
+  // conversa): o servidor manda sempre pelo número do responsável pelo lead e
+  // recusa mexer no progresso. A tela só diz por onde sai.
+  const doResponsavel = guided && !conversation;
   return (
     <>
       <div className="space-y-1">
@@ -127,21 +142,28 @@ export function MessageBlockFields({
         <p className="text-xs text-muted-foreground">Sai pelo número da conversa em que você disparar o funil.</p>
       ) : (
         <>
-          {peloDono ? (
+          {doResponsavel ? (
+            <p className="text-sm font-medium" data-testid="sai-pelo-responsavel">Sai pelo WhatsApp do responsável pelo lead.</p>
+          ) : peloDono ? (
             <LinhaDoEnvio
               pessoal={pessoal}
               numeroPessoal={numeroPessoal}
               numeroPessoalCarregando={numeroPessoalCarregando}
               donoDoEnvio={donoDoEnvio}
             />
+          ) : numeroDoFluxo ? (
+            <p className="text-sm font-medium" data-testid="sai-pelo-numero-do-fluxo">{numeroDoFluxo}</p>
           ) : (
-            <SendFromField
-              scope="lead_automation_rules"
-              value={sendFromOf(config)}
-              onChange={v => onChange(c => applySendFrom(c, v))}
-            />
+            <>
+              {numerosDiferentes && <Aviso tom="atencao" compacto>{FLOW_NUMBER_DIVERGENT}</Aviso>}
+              <SendFromField
+                scope="lead_automation_rules"
+                value={sendFromOf(config)}
+                onChange={v => onChange(c => applySendFrom(c, v))}
+              />
+            </>
           )}
-          <ProgressFields config={config} onChange={onChange} />
+          {!doResponsavel && <ProgressFields config={config} onChange={onChange} />}
           <p className="text-xs text-muted-foreground">A mensagem sai marcada como automática, igual o Follow-up.</p>
         </>
       )}

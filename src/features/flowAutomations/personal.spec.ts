@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { FLOW_TRIGGER_GROUPS } from './trigger';
 import type { PaletteItem } from './palette';
 import {
-  isPersonalFlow, modoPessoal, personalAvailabilityState, personalBlockState, personalTriggerGroups, presaNaEquipe,
+  isPersonalFlow, modoPessoal, numeroFixoNaEquipe, NUMERO_FIXO_NA_EQUIPE, personalAvailabilityState, personalBlockState, personalTriggerGroups, presaNaEquipe,
   saiPeloWhatsAppDe, tirarDaEquipe,
 } from './personal';
 
@@ -75,6 +75,13 @@ describe('tirarDaEquipe (revisão final)', () => {
     expect(personalAvailabilityState(item('lead_action:notify_group'), sem)).toBe('ok');
     expect(personalAvailabilityState(item('send_whatsapp'), com)).toBe('ok');
     expect(personalBlockState(item('notify_group'), com)).toBe('fora');
+  });
+
+  it('o texto da trava de "Da equipe" aponta pras Configurações quando o número é do fluxo', () => {
+    expect(numeroFixoNaEquipe({ send_from: 'number' } as never))
+      .toBe('Esta automação manda por um número específico. Pra virar pessoal, troque o número nas Configurações do fluxo.');
+    expect(numeroFixoNaEquipe({ send_from: null } as never)).toBe(NUMERO_FIXO_NA_EQUIPE);
+    expect(numeroFixoNaEquipe({} as never)).toBe(NUMERO_FIXO_NA_EQUIPE);
   });
 
   it('saiPeloWhatsAppDe e presaNaEquipe', () => {

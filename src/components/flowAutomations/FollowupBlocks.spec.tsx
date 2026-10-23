@@ -17,12 +17,11 @@ import { FlowNodePanel } from './FlowNodePanel';
 import { FlowSettingsDialog } from './FlowSettingsDialog';
 import { FlowTriggerPanel } from './FlowTriggerPanel';
 import { summaryLine } from './FlowNodeCard';
-import type { AutomationResources } from '@/features/flowAutomations/editores/LeadAutomationsEditors';
+import { formatActionSummary, type AutomationResources } from '@/features/flowAutomations/editores/LeadAutomationsEditors';
 import type { FlowAutomation, FlowAutomationNode } from '@/types/flowAutomations';
 import { paletteItems } from '@/features/flowAutomations/palette';
 import { nodeProblem } from '@/features/flowAutomations/readiness';
 import { progressLine } from '@/features/flowAutomations/progress';
-import { RECOVERED_EFFECTS } from '@/features/flowAutomations/recovered';
 
 const followupFlows = [
   { id: 'f1', name: 'Follow-up longo', is_enabled: true },
@@ -117,18 +116,17 @@ describe('"Só em horário comercial"', () => {
   });
 });
 
-describe('bloco "Marcar como recuperado pelo follow-up"', () => {
+describe('bloco "Lead recuperado"', () => {
   it('está na paleta, no grupo Lead, sem config', () => {
     const item = paletteItems().find(i => i.kind === 'followup_recovered');
-    expect(item).toMatchObject({ label: 'Marcar como recuperado pelo follow-up', group: 'contact', config: {} });
+    expect(item).toMatchObject({ label: 'Lead recuperado', group: 'contact', config: {} });
   });
 
-  it('a janela lista os cinco efeitos e salva sem pedir nada', async () => {
+  it('a janela explica o efeito e salva sem pedir nada', async () => {
     const onSave = vi.fn();
     render(<FlowNodePanel node={node({ kind: 'followup_recovered', config: {} })} resources={resources} onClose={() => {}} onSave={onSave} />);
-    expect(screen.getByRole('heading', { name: 'Marcar como recuperado pelo follow-up' })).toBeTruthy();
-    expect(RECOVERED_EFFECTS).toHaveLength(5);
-    RECOVERED_EFFECTS.forEach(effect => expect(screen.getByText(effect)).toBeTruthy());
+    expect(screen.getByRole('heading', { name: 'Lead recuperado' })).toBeTruthy();
+    expect(screen.getByText(/^Faz o mesmo que o follow-up quando o lead responde/)).toBeTruthy();
     fireEvent.click(screen.getByText('Salvar'));
     await waitFor(() => expect(onSave).toHaveBeenCalledWith('n1', { label: '', config: {} }));
   });
@@ -138,17 +136,40 @@ describe('bloco "Marcar como recuperado pelo follow-up"', () => {
   });
 });
 
-describe('"Mover de etapa" por nome de coluna', () => {
-  it('grava stage_name e tira stage_id', async () => {
+describe('"Mover de etapa" só com etapa específica', () => {
+  const comEtapas = {
+    ...resources,
+    pipelines: [{ id: 'p1', name: 'Funil de vendas' }],
+    stagesByPipeline: { p1: [{ id: 's1', name: 'Visita', color: '#22c55e', position: 1 }] },
+  } as unknown as AutomationResources;
+
+  it('bloco novo não oferece o modo por nome e mostra a etapa escolhida como chip', () => {
+    render(<FlowNodePanel node={node({ kind: 'move_stage', config: { stage_id: 's1' } })} resources={comEtapas} onClose={() => {}} onSave={() => {}} />);
+    expect(screen.queryByText('Coluna com este nome no funil do card')).toBeNull();
+    expect(screen.getByText('Pra qual etapa')).toBeTruthy();
+    expect(screen.getByTestId('chip-da-etapa').textContent).toContain('Visita');
+    expect(screen.getByTestId('chip-da-etapa').textContent).toContain('Funil de vendas');
+  });
+
+  it('bloco salvo por nome mostra o aviso e troca por etapa específica no botão', () => {
+    render(<FlowNodePanel node={node({ kind: 'move_stage', config: { stage_name: 'Em atendimento' } })} resources={comEtapas} onClose={() => {}} onSave={() => {}} />);
+    expect(screen.getByText('Coluna “Em atendimento” do funil do card')).toBeTruthy();
+    expect(screen.queryByLabelText('Etapa')).toBeNull();
+    fireEvent.click(screen.getByText('Trocar por uma etapa específica'));
+    expect(screen.getByLabelText('Etapa')).toBeTruthy();
+    expect(screen.queryByText('Coluna “Em atendimento” do funil do card')).toBeNull();
+  });
+
+  it('salvar o bloco antigo sem clicar mantém stage_name', async () => {
     const onSave = vi.fn();
-    render(<FlowNodePanel node={node({ kind: 'move_stage', config: { stage_id: '' } })} resources={resources} onClose={() => {}} onSave={onSave} />);
-    fireEvent.click(screen.getByLabelText('Coluna com este nome no funil do card'));
-    fireEvent.change(screen.getByLabelText('Nome da coluna'), { target: { value: 'Em atendimento' } });
+    render(<FlowNodePanel node={node({ kind: 'move_stage', config: { stage_name: 'Em atendimento' } })} resources={comEtapas} onClose={() => {}} onSave={onSave} />);
     fireEvent.click(screen.getByText('Salvar'));
     await waitFor(() => expect(onSave).toHaveBeenCalled());
     expect(savedConfig(onSave)).toEqual({ stage_name: 'Em atendimento' });
   });
+});
 
+describe('"Mover de etapa" por nome de coluna (blocos salvos)', () => {
   it('o slug dos modelos antigos aparece como nome, e o cartão fala do funil do card', () => {
     expect(summaryLine(node({ kind: 'move_stage', config: { stage_slug: 'em-atendimento' } }))).toBe('Para a coluna "em-atendimento" do funil do card');
     // O motor não lê `stage_slug`: o bloco pede pra abrir e salvar.
@@ -163,7 +184,7 @@ describe('"Mover de etapa" de modelo antigo (stage_slug)', () => {
   it('salvar a janela grava como stage_name', async () => {
     const onSave = vi.fn();
     render(<FlowNodePanel node={node({ kind: 'move_stage', config: { stage_slug: 'em-atendimento' } })} resources={resources} onClose={() => {}} onSave={onSave} />);
-    expect((screen.getByLabelText('Nome da coluna') as HTMLInputElement).value).toBe('em-atendimento');
+    expect(screen.getByText('Coluna “em-atendimento” do funil do card')).toBeTruthy();
     fireEvent.click(screen.getByText('Salvar'));
     await waitFor(() => expect(onSave).toHaveBeenCalled());
     expect(savedConfig(onSave)).toEqual({ stage_name: 'em-atendimento' });
@@ -175,7 +196,8 @@ describe('bloco "Iniciar follow-up"', () => {
     const onSave = vi.fn();
     render(<FlowNodePanel node={node({ kind: 'lead_action', config: { action_type: 'start_followup_flow', params: {} } })} resources={resources} onClose={() => {}} onSave={onSave} />);
     expect(screen.getByRole('heading', { name: 'Iniciar follow-up' })).toBeTruthy();
-    expect(screen.getByRole('option', { name: 'Follow-up curto (desligado)' })).toBeTruthy();
+    expect(screen.getByRole('option', { name: 'Follow-up longo' })).toBeTruthy();
+    expect(screen.getByText(/Os follow-ups ficam em Funis de mensagem → Follow-up\./)).toBeTruthy();
     fireEvent.click(screen.getByText('Salvar'));
     expect(screen.getByRole('alert').textContent).toBe('Falta preencher o follow-up.');
     fireEvent.change(screen.getByLabelText('Qual follow-up'), { target: { value: 'f1' } });
@@ -183,6 +205,24 @@ describe('bloco "Iniciar follow-up"', () => {
     await waitFor(() => expect(onSave).toHaveBeenCalledWith('n1', expect.objectContaining({
       config: { action_type: 'start_followup_flow', params: { flow_automation_id: 'f1' } },
     })));
+  });
+});
+
+describe('follow-up salvo que o servidor não lista', () => {
+  const salvo = { action_type: 'start_followup_flow', params: { flow_automation_id: 'sumiu' } };
+
+  it('o select diz que está desligado ou indisponível, não que não existe', () => {
+    render(<FlowNodePanel node={node({ kind: 'lead_action', config: salvo })} resources={resources} onClose={() => {}} onSave={() => {}} />);
+    expect(screen.getByRole('option', { name: 'Follow-up desligado ou indisponível pra esta automação' })).toBeTruthy();
+    expect(screen.queryByText(/não existe mais/)).toBeNull();
+  });
+
+  it('o resumo do nó diz "desligado ou indisponível"; sem escolha continua "não definido"', () => {
+    expect(formatActionSummary({ type: 'start_followup_flow', params: { flow_automation_id: 'sumiu' } }, resources))
+      .toBe('Follow-up: (desligado ou indisponível)');
+    expect(formatActionSummary({ type: 'start_followup_flow', params: {} }, resources)).toBe('Follow-up: (não definido)');
+    expect(formatActionSummary({ type: 'start_followup_flow', params: { flow_automation_id: 'f1' } }, resources))
+      .toBe('Follow-up: Follow-up longo');
   });
 });
 

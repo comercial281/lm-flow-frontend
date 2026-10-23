@@ -387,6 +387,9 @@ export type SalesAgentHandoffChoice = Exclude<SalesAgentHandoffTarget, 'inbox_ro
 /** Persona que se GRAVA. As três (o Dono saiu e voltou no mesmo dia, 06/10: tem voz própria). */
 export type PersonaGravavel = PersonaDaIa;
 
+/** Situações em que a IA passa o lead antes de terminar as perguntas obrigatórias (cenário checklist). */
+export type EarlyHandoffKey = 'recusou_documento' | 'pediu_ligacao' | 'nao_sei';
+
 export interface TransferConfig {
   mode?: HandoffMode;
   min_temperature?: 'hot' | 'warm';
@@ -414,6 +417,11 @@ export interface TransferConfig {
    * features/salesAgents/handoffVoice.ts.
    */
   voice?: 'first_person';
+  /**
+   * Chaves do "Passa direto, mesmo faltando pergunta" (cenário checklist).
+   * ⚠️ Lida com `!== false`: ausente ou sem a chave = LIGADA, inclusive nas IAs já no ar.
+   */
+  early_handoff?: Partial<Record<EarlyHandoffKey, boolean>>;
 }
 
 export interface VisitConfig {

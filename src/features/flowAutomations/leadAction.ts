@@ -103,7 +103,8 @@ export const LEAD_ACTION_GROUP: Record<string, FlowNodeGroup> = {
 export const PALETTE_LEAD_ACTIONS: string[] = [
   // Áudio, imagem, vídeo, documento e figurinha saíram (PR 8, 16/10/2026): são
   // itens do bloco Mensagem. Os blocos antigos continuam abrindo pelo ActionEditor.
-  'send_quick_reply', 'send_message_funnel',
+  // A resposta rápida saiu da lista (22/10/2026); o bloco salvo continua abrindo.
+  'send_message_funnel',
   'assign_broker', 'assign_via_roleta', 'create_task', 'start_followup_flow',
   // Os cinco avisos viraram o bloco Notificação (PR 9): um item só, que nasce como
   // notify_group. Os blocos antigos continuam abrindo pelo NotificationFields.
@@ -173,7 +174,13 @@ export function leadActionProblem(config: FlowNodeConfig | null | undefined): st
   const action = leadActionOf(config);
   if (!isLeadActionType(action.type)) return null;
   const missing = missingActionParams(action);
-  if (missing.length === 0) return null;
+  if (missing.length === 0) {
+    // Criar tarefa pra "Uma pessoa da equipe" sem escolher a pessoa: o servidor cairia no responsável pelo lead sem avisar.
+    if (action.type === 'create_task' && action.params?.assignee_mode === 'user' && !String(action.params.assignee_id ?? '').trim()) {
+      return 'Falta escolher a pessoa.';
+    }
+    return null;
+  }
   const names = missing.map(key => paramName(action.type, key));
   const list = names.length === 1 ? names[0] : `${names.slice(0, -1).join(', ')} e ${names[names.length - 1]}`;
   return `Falta preencher ${list}.`;

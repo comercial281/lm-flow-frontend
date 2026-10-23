@@ -246,6 +246,12 @@ export interface FollowupDoCard {
   reason: string | null;
 }
 
+/** Fluxo parado porque o lead já conversa em outro número (selo "Pausado" do card). */
+export interface PausaDeNumeroDoCard {
+  instance_id: string;
+  flow_name: string;
+}
+
 /** O que o quadro pede ao servidor por aba (`GET /pipelines/:id?status=`). */
 export type PipelineBoardStatus = PipelineItemStatus | 'all' | 'archived';
 
@@ -352,6 +358,8 @@ export interface PipelineItem {
    * `null` = sem follow-up. Ausente = payload guardado de antes: o selo não aparece.
    */
   followup?: FollowupDoCard | null;
+  /** Pausa por outro número (Entrega 4). Ausente = payload guardado de antes. */
+  number_pause?: PausaDeNumeroDoCard | null;
   status_changed_at?: string | null;
   won_at?: string | null;
   lost_at?: string | null;

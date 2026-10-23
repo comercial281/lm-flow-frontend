@@ -50,7 +50,7 @@ describe('o valor do seletor', () => {
 });
 
 describe('cada tela tem o seu padrão (E37)', () => {
-  it('automação: "Automático (como sempre foi)" e a opção do responsável à parte', () => {
+  it('automação: "Pelo número da conversa do lead" e a opção do responsável à parte', () => {
     expect(sendFromAutoLabel('lead_automation_rules')).toBe(SEND_FROM_AUTO);
     expect(showsOwnerOption('lead_automation_rules')).toBe(true);
   });
@@ -92,7 +92,7 @@ describe('applySendFrom — os params da ação', () => {
 describe('o que a tela diz', () => {
   it('rótulos e explicações da automação', () => {
     expect(SEND_FROM_LABEL).toBe('Enviar pelo número');
-    expect(SEND_FROM_AUTO).toBe('Automático (como sempre foi)');
+    expect(SEND_FROM_AUTO).toBe('Pelo número da conversa do lead');
     expect(SEND_FROM_OWNER).toBe('O número do responsável pelo lead');
     expect(SEND_FROM_SPECIFIC_GROUP).toBe('Um número específico');
     expect(sendFromHint('')).toBe('Sai pelo número da conversa do lead; lead sem conversa sai pelo número que o sistema escolher.');
@@ -111,7 +111,7 @@ describe('o que a tela diz', () => {
     expect(missingSelection({ send_from: 'number', send_from_inbox_id: 'apagado' }, [loja])).toBe(true);
     expect(missingSelection({ send_from: 'number', send_from_inbox_id: 'i1' }, [loja])).toBe(false);
     expect(missingSelection({ send_from: 'owner', send_from_inbox_id: '' }, [])).toBe(false);
-    expect(missingSelectionLabel('loaded')).toBe('Número que não existe mais — escolha outro');
+    expect(missingSelectionLabel('loaded')).toBe('Número que não existe mais. Escolha outro.');
     expect(missingSelectionLabel('failed')).toBe('O número escolhido antes (a lista não carregou)');
     expect(missingSelectionLabel('loading')).toBe('Carregando os números…');
   });

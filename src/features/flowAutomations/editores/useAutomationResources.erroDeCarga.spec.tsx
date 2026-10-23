@@ -11,7 +11,8 @@ vi.mock('@/services/pipelines/pipelinesService', () => ({
 vi.mock('@/services/users/usersService', () => ({ default: { getUsers: s.users } }));
 vi.mock('@/services/quickReplies/quickRepliesService', () => ({ quickRepliesService: { getQuickReplies: vi.fn().mockResolvedValue({ data: [] }) } }));
 vi.mock('@/services/followupSequences/followupSequencesService', () => ({ followupSequencesService: { getAll: vi.fn().mockResolvedValue([]) } }));
-vi.mock('@/services/flowAutomations/flowAutomationsService', () => ({ flowAutomationsService: { list: vi.fn().mockResolvedValue([]) } }));
+const listaDeFluxos = vi.hoisted(() => vi.fn());
+vi.mock('@/services/flowAutomations/flowAutomationsService', () => ({ flowAutomationsService: { list: listaDeFluxos } }));
 vi.mock('@/services/messageFunnels/messageFunnelsService', () => ({ messageFunnelsService: { list: vi.fn().mockResolvedValue([]) } }));
 vi.mock('@/services/roletaConfig/roletaConfigService', () => ({ roletaConfigService: { getAll: vi.fn().mockResolvedValue([]) } }));
 vi.mock('@/services/leadAutomation/leadAutomationService', async orig => {
@@ -32,6 +33,7 @@ import { FlowNodePanel } from '@/components/flowAutomations/FlowNodePanel';
 import type { FlowAutomationNode } from '@/types/flowAutomations';
 
 beforeEach(() => {
+  listaDeFluxos.mockReset().mockResolvedValue([]);
   s.labels.mockReset().mockResolvedValue({ data: [{ id: 1, title: 'quente' }] });
   s.pipelines.mockReset().mockResolvedValue({ data: [] });
   s.users.mockReset().mockResolvedValue({ data: [{ id: 'u1', name: 'Ana' }] });
@@ -104,5 +106,20 @@ describe('editores · erro de carga', () => {
     expect(screen.queryByText(/Nenhuma etiqueta/)).toBeNull();
     await userEvent.click(screen.getByRole('button', { name: 'Tentar de novo' }));
     expect(recarregar).toHaveBeenCalledTimes(1);
+  });
+});
+
+// Fase 3 (22/10/2026): o bloco "Iniciar follow-up" lista o que o servidor manda pra AQUELA automação.
+describe('useAutomationResources · follow-ups do bloco Iniciar follow-up', () => {
+  it('bloco da automação da equipe lista só equipe', async () => {
+    listaDeFluxos.mockImplementation(async (params: { kind?: string; startable?: boolean }) =>
+      params.kind === 'followup' && params.startable
+        ? [{ id: 'fu-equipe', name: 'Follow-up da casa', is_enabled: true, archived_at: null, team: true }]
+        : []);
+    const { result } = renderHook(() => useAutomationResources(true, 'auto-da-equipe'));
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    expect(listaDeFluxos).toHaveBeenCalledWith({ kind: 'followup', startable: true, automationId: 'auto-da-equipe' });
+    expect(result.current.followupFlows.map(f => f.id)).toEqual(['fu-equipe']);
   });
 });

@@ -11,6 +11,14 @@ export interface FollowupFlowOption {
   label: string;
 }
 
+/**
+ * Fase 3: a IA Vendedora e a automação da equipe só entregam pra follow-up da
+ * equipe (o servidor recusa o pessoal com 422). "Da equipe" = `team` ou sem dono.
+ */
+export function soFollowupsDaEquipe<T extends Pick<FlowAutomation, 'team' | 'owner_user_id'>>(list: T[]): T[] {
+  return list.filter(f => f.team === true || f.owner_user_id == null || f.owner_user_id === '');
+}
+
 export function followupFlowOptions(list: Array<Pick<FlowAutomation, 'id' | 'name' | 'is_enabled' | 'archived_at'>>): FollowupFlowOption[] {
   return list
     .filter(f => !f.archived_at)

@@ -19,6 +19,7 @@ import {
 import { useLanguage } from '@/hooks/useLanguage';
 import BotaoMaisAcoes from '@/components/base/BotaoMaisAcoes';
 import SeloSituacao from '@/features/pipelines/situacao/SeloSituacao';
+import SeloDePausaDeNumero from '@/features/followup/SeloDePausaDeNumero';
 import SeloDoFollowup from '@/features/followup/SeloDoFollowup';
 import { cardFechado, detalheDaSituacao, situacaoDe } from '@/features/pipelines/situacao/situacao';
 import { linkAbsolutoDoCard, linkDoCardCompleto } from '@/features/pipelines/linkDoCard';
@@ -135,10 +136,11 @@ function PipelineItemCardComponent({
           </span>
         </div>
         <div className="flex min-h-9 min-w-0 flex-1 flex-col justify-center space-y-1">
-          {item.followup || cardFechado(item) ? (
+          {item.followup || item.number_pause || cardFechado(item) ? (
             <div className="flex flex-wrap items-center gap-1">
               <SeloSituacao status={situacaoDe(item)} detalhe={detalheDaSituacao(item)} />
               <SeloDoFollowup followup={item.followup} />
+              <SeloDePausaDeNumero pausa={item.number_pause} />
             </div>
           ) : null}
           <div className="flex min-w-0 items-center gap-1">

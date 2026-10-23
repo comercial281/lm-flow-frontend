@@ -12,7 +12,7 @@ import BotoesDeEscolha from '@/components/base/BotoesDeEscolha';
 import CartoesDeEscolha from '@/components/base/CartoesDeEscolha';
 import LinhaComChave from '@/components/base/LinhaComChave';
 import type { OpcaoDeEscolha } from '@/components/base/escolha';
-import type { HandoffMode } from '@/services/salesAgents/salesAgentsService';
+import type { EarlyHandoffKey, HandoffMode } from '@/services/salesAgents/salesAgentsService';
 import { lerEscolhas } from '@/features/salesAgents/tresEscolhas';
 import { keepBriefing } from '@/features/salesAgents/handoffBriefing';
 import { perguntasDoAgente } from '@/features/salesAgents/perguntas';
@@ -36,6 +36,20 @@ export default function Criterio({ agent, gravar, irPara }: PropsDaPagina) {
     ...(quando === 'duvida' ? [{ valor: 'duvida' as Quando, rotulo: 'Ao menor sinal de dúvida (opção antiga)', descricao: 'Continua valendo até você escolher outra.' }] : []),
     ...(quando === 'sem_resposta' ? [{ valor: 'sem_resposta' as Quando, rotulo: 'Só quando ela não souber responder (opção antiga)', descricao: 'Continua valendo até você escolher outra.' }] : []),
   ];
+
+  // Só existem no cenário das perguntas obrigatórias: furam a ficha (22/10/2026, Nataly).
+  // "Pediu ligação" não tem linha própria: vai junto de "falar com uma pessoa" (abaixo).
+  const passaDireto: { chave: EarlyHandoffKey; rotulo: string; descricao: string }[] = [
+    { chave: 'recusou_documento', rotulo: 'Recusou mandar documento', descricao: 'Disse que não vai mandar RG ou comprovante por aqui.' },
+    { chave: 'nao_sei', rotulo: 'Perguntou o que ela não sabe', descricao: 'A resposta não está no que você deu pra ela, ou é uma das restrições (endereço, desconto, preço final, IPTU).' },
+  ];
+  const mudarPassaDireto = (chave: EarlyHandoffKey, v: boolean) =>
+    gravar({ transfer_config: { ...cfg, early_handoff: { ...cfg.early_handoff, [chave]: v } } }, ['transfer_config.early_handoff']);
+  // Quem pede ligação quase sempre cai em "pediu uma pessoa", que passa sempre: uma
+  // chave só pras duas, pra desligar não parecer que segura o que não segura.
+  const mudarPessoaOuLigacao = (v: boolean) =>
+    gravar({ escalate_on_human_request: v, transfer_config: { ...cfg, early_handoff: { ...cfg.early_handoff, pediu_ligacao: v } } },
+      ['transfer_config.early_handoff']);
 
   const escolherQuando = (v: Quando) =>
     gravar({ transfer_config: keepBriefing(cfg, { ...cfg, mode: v === 'julgar' ? undefined : v, min_temperature: v === 'temperatura' ? cfg.min_temperature ?? 'hot' : undefined }) }, ['transfer_config.mode', 'transfer_config.min_temperature']);
@@ -69,10 +83,14 @@ export default function Criterio({ agent, gravar, irPara }: PropsDaPagina) {
       <Secao titulo="Passagem imediata" descricao="Situações em que ela passa na hora, sem esperar o critério acima.">
         <LinhaComChave rotulo="Lead irritado" ligada={agent.escalate_on_frustration !== false}
           aoMudar={(v) => gravar({ escalate_on_frustration: v })} />
-        <LinhaComChave rotulo="Pediu pra falar com uma pessoa" ligada={agent.escalate_on_human_request !== false}
-          aoMudar={(v) => gravar({ escalate_on_human_request: v })} />
+        <LinhaComChave rotulo="Pediu pra falar com uma pessoa ou pediu ligação" ligada={agent.escalate_on_human_request !== false}
+          aoMudar={(v) => mudarPessoaOuLigacao(v)} />
         <LinhaComChave rotulo="Perguntou se é robô" ligada={agent.escalate_on_ai_detected !== false}
           aoMudar={(v) => gravar({ escalate_on_ai_detected: v })} />
+        {quando === 'checklist' && passaDireto.map((l) => (
+          <LinhaComChave key={l.chave} rotulo={l.rotulo} descricao={l.descricao} ligada={cfg.early_handoff?.[l.chave] !== false}
+            aoMudar={(v) => mudarPassaDireto(l.chave, v)} />
+        ))}
       </Secao>
     </Secoes>
   );

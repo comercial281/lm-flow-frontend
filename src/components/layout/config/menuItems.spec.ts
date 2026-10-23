@@ -244,9 +244,9 @@ describe('Automações · sprint 4 (04/10/2026)', () => {
 describe('Automações · sprint 2 (03/10/2026)', () => {
   const vendas = secoes.find(s => s.id === 'vendas')!;
 
-  it('Vendas e automação: Funis de mensagem, Disparos, IA Vendedora, Follow-up e Automações, sem abas', () => {
-    expect(vendas.itens.map(i => i.name)).toEqual(['Funis de mensagem', 'Disparos', 'IA Vendedora', 'Follow-up', 'Automações']);
-    vendas.itens.forEach(i => expect(i.abas ?? []).toEqual([]));
+  it('Vendas e automação: Funis de mensagem, Disparos, IA Vendedora e Automações; só Funis de mensagem tem abas', () => {
+    expect(vendas.itens.map(i => i.name)).toEqual(['Funis de mensagem', 'Disparos', 'IA Vendedora', 'Automações']);
+    vendas.itens.filter(i => i.name !== 'Funis de mensagem').forEach(i => expect(i.abas ?? []).toEqual([]));
   });
 
   it('Funis de mensagem abre o editor de funis', () => {
@@ -367,6 +367,27 @@ describe('gaveta do celular (Raio-X do celular, 10/10/2026)', () => {
     expect(secoesDoCelular(vistas).map(s => s.id)).toEqual(['principal', 'atividades', 'imoveis', 'leads']);
   });
 
+  // Follow-up (Fase 3): virou aba de Funis de mensagem, mas segue na gaveta como
+  // antes (decisão do dono, 10/10: "Follow-up e Automações ficam no menu do
+  // celular"), só pra quem tem a chave do follow-up. A aba Manual fica de fora.
+  const podeCom = (chaves: Set<string>) => (ps: string[]) => ps.some(p => chaves.has(p));
+  const GESTOR_FOLLOWUP = new Set(['followup_sequences.read', 'followup_sequences.update', 'message_funnels.read']);
+
+  it('o Follow-up continua na gaveta pro gestor, sem a aba Manual, com o nome e o endereço do follow-up', () => {
+    const vistas = comCargo(GESTOR_FOLLOWUP);
+    const vendas = secoesDoCelular(vistas, podeCom(GESTOR_FOLLOWUP)).find(s => s.id === 'vendas')!;
+    const followup = vendas.itens.find(i => i.href === '/automations/follow-ups')!;
+    expect(followup.name).toBe('Follow-up');
+    expect(followup.abas?.map(a => a.name)).toEqual(['Follow-up']);
+    expect(vendas.itens.map(i => i.name)).not.toContain('Funis de mensagem');
+    expect(itensDoMenu([vendas]).map(i => i.href)).not.toContain('/automations/message-funnels');
+  });
+
+  it('o corretor (só message_funnels.*) não ganha o Follow-up na gaveta e segue sem Vendas e automação', () => {
+    const vistas = comCargo(CORRETOR);
+    expect(secoesDoCelular(vistas, podeCom(CORRETOR)).map(s => s.id)).toEqual(['principal', 'atividades', 'imoveis', 'leads']);
+  });
+
   it('as telas continuam com dono no menu inteiro (abrem pelo endereço e a busca acha)', () => {
     expect(donoDoEndereco(secoes, '/settings/attributes')?.item.name).toBe('Campos personalizados');
     expect(itensDoMenu(secoes).map(i => i.name)).toContain('Disparos');
@@ -405,5 +426,56 @@ describe('Sala de demonstração (21/10/2026)', () => {
       .flatMap(s => s.itens.map(i => i.name));
     expect(nomes(true)).toContain('Sala de demonstração');
     expect(nomes(false)).not.toContain('Sala de demonstração');
+  });
+});
+
+describe('Follow-up por usuário (Fase 3, 21/10/2026)', () => {
+  const vendas = secoes.find(s => s.id === 'vendas')!;
+  const funis = vendas.itens.find(i => i.name === 'Funis de mensagem')!;
+
+  it('menu mostra Funis de mensagem com as abas Manual e Follow-up e sem o item Follow-up solto', () => {
+    expect(funis.abas?.map(a => [a.name, a.href])).toEqual([
+      ['Manual', '/automations/message-funnels'],
+      ['Follow-up', '/automations/follow-ups'],
+    ]);
+    expect(funis.href).toBe('/automations/message-funnels');
+    expect(vendas.itens.map(i => i.name)).not.toContain('Follow-up');
+    // O catálogo de Funções continua com as duas chaves (cada aba leva a dela).
+    expect(funis.abas?.find(a => a.name === 'Follow-up')?.featureKey).toBe('follow_ups');
+    expect(funis.abas?.find(a => a.name === 'Manual')?.featureKey).toBe('message_funnels');
+  });
+
+  it('a aba Follow-up abre com message_funnels.read OU followup_sequences.read', () => {
+    const aba = funis.abas!.find(a => a.name === 'Follow-up')!;
+    expect(aba.permissions).toEqual(['message_funnels.read', 'followup_sequences.read']);
+  });
+
+  it('o Corretor de fábrica (só message_funnels.*) vê as duas abas', () => {
+    const item = comCargo(CORRETOR).flatMap(s => s.itens).find(i => i.name === 'Funis de mensagem')!;
+    expect(item.abas?.map(a => a.name)).toEqual(['Manual', 'Follow-up']);
+  });
+
+  it('quem só tem followup_sequences.read vê o item, com a aba Follow-up só', () => {
+    const item = comCargo(new Set(['followup_sequences.read'])).flatMap(s => s.itens).find(i => i.name === 'Funis de mensagem')!;
+    expect(item.abas?.map(a => a.name)).toEqual(['Follow-up']);
+    expect(item.href).toBe('/automations/follow-ups');
+  });
+
+  it('com a função de follow-up desligada no cliente, some só a aba Follow-up', () => {
+    const can = (r: string, a: string) => CORRETOR.has(`${r}.${a}`);
+    const um = (ps: string[]) => ps.some(p => CORRETOR.has(p));
+    const todas = (ps: string[]) => ps.every(p => CORRETOR.has(p));
+    const item = filterMenuSections(secoes, can, um, todas, 'agent', 'c@x.com', { follow_ups: false }, [], false)
+      .flatMap(s => s.itens).find(i => i.name === 'Funis de mensagem')!;
+    expect(item.abas?.map(a => a.name)).toEqual(['Manual']);
+  });
+
+  it('a lista e o canvas do follow-up acendem a aba Follow-up de Funis de mensagem', () => {
+    for (const endereco of ['/automations/follow-ups', '/automations/follow-ups/abc']) {
+      const dono = donoDoEndereco(secoes, endereco);
+      expect(dono?.item.name, endereco).toBe('Funis de mensagem');
+      expect(dono?.aba?.name, endereco).toBe('Follow-up');
+    }
+    expect(donoDoEndereco(secoes, '/automations/message-funnels')?.aba?.name).toBe('Manual');
   });
 });
