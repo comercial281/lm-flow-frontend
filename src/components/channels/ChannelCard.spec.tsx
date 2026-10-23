@@ -69,4 +69,65 @@ describe('ChannelCard', () => {
     // A lixeira é o único botão sem rótulo de texto do card.
     expect(screen.getAllByRole('button')).toHaveLength(1);
   });
+
+  it('canal da API oficial mostra o selo, a situação e Gerenciar', async () => {
+    const gerenciar = vi.fn();
+    const oficial = {
+      ...canal(null),
+      provider: 'whatsapp_cloud',
+      whatsapp_cloud: { connected: true, mode: 'new_number' },
+    } as unknown as Inbox;
+    render(<ChannelCard inbox={oficial} onSettings={vi.fn()} onDelete={vi.fn()} onManage={gerenciar} />);
+
+    expect(screen.getByText('API oficial')).toBeInTheDocument();
+    expect(screen.getByText('Conectado')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /actions\.configure/ })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: /Gerenciar/ }));
+    expect(gerenciar).toHaveBeenCalledWith(expect.objectContaining({ id: '7' }));
+  });
+
+  // Formato real do servidor: o canal oficial caído vem com connection_status
+  // 'disconnected' E whatsapp_cloud.connected falso. Número oficial não tem QR:
+  // o Reconectar leva pra página dele, nunca pra Configuração.
+  it('oficial desconectado: Reconectar abre a página do número, não o QR', async () => {
+    const abrir = vi.fn();
+    const gerenciar = vi.fn();
+    const oficial = {
+      ...canal('disconnected'),
+      provider: 'whatsapp_cloud',
+      whatsapp_cloud: { connected: false, mode: 'new_number' },
+    } as unknown as Inbox;
+    render(<ChannelCard inbox={oficial} onSettings={abrir} onDelete={vi.fn()} onManage={gerenciar} />);
+
+    const reconectar = screen.getAllByRole('button', { name: /actions\.reconnect/ });
+    expect(reconectar).toHaveLength(1);
+    await userEvent.click(reconectar[0]);
+    expect(gerenciar).toHaveBeenCalledWith(expect.objectContaining({ id: '7' }));
+    expect(abrir).not.toHaveBeenCalledWith(expect.anything(), 'configuration');
+  });
+
+  it('oficial conectado não mostra Reconectar', () => {
+    const oficial = {
+      ...canal('connected'),
+      provider: 'whatsapp_cloud',
+      whatsapp_cloud: { connected: true, mode: 'new_number' },
+    } as unknown as Inbox;
+    render(<ChannelCard inbox={oficial} onSettings={vi.fn()} onDelete={vi.fn()} onManage={vi.fn()} />);
+    expect(screen.queryByRole('button', { name: /actions\.reconnect/ })).toBeNull();
+  });
+
+  it('canal da API oficial desconectado mostra Desconectado', () => {
+    const oficial = {
+      ...canal(null),
+      whatsapp_cloud: { connected: false, mode: 'new_number' },
+    } as unknown as Inbox;
+    render(<ChannelCard inbox={oficial} onSettings={vi.fn()} onDelete={vi.fn()} />);
+    expect(screen.getByText('Desconectado')).toBeInTheDocument();
+  });
+
+  it('canal por QR Code não mostra selo nem Gerenciar', () => {
+    render(<ChannelCard inbox={canal('connected')} onSettings={vi.fn()} onDelete={vi.fn()} />);
+    expect(screen.queryByText('API oficial')).toBeNull();
+    expect(screen.queryByRole('button', { name: /Gerenciar/ })).toBeNull();
+  });
 });

@@ -153,6 +153,8 @@ export default function Channels() {
     [navigate],
   );
 
+  const openOfficialNumber = useCallback((inbox: Inbox) => navigate(`/channels/${inbox.id}/oficial`), [navigate]);
+
   const handleNewChannel = useCallback(() => {
     // Aguardar até que as permissões estejam carregadas
     if (permissionsLoading || !permissionsReady) {
@@ -288,6 +290,7 @@ export default function Channels() {
                 inbox={inbox}
                 isDeleting={isDeleting}
                 onSettings={openChannelSettings}
+                onManage={openOfficialNumber}
                 onDelete={openDeleteModal}
                 canDelete={podeExcluir}
               />
@@ -298,6 +301,7 @@ export default function Channels() {
             channels={paginatedInboxes}
             loading={isInitialLoading}
             onSettings={openChannelSettings}
+            onManage={openOfficialNumber}
             onDelete={openDeleteModal}
             canDelete={podeExcluir}
           />

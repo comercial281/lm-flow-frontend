@@ -39,6 +39,7 @@ import {
   PortalsList,
   DashboardAppPage,
   Tutorials,
+  NumeroOficial,
 } from './lazyPages';
 import RedirecionaAssistente from '@/pages/Customer/Automations/SalesAgents/RedirecionaAssistente';
 import PrivateRoute from './PrivateRoute';
@@ -1118,6 +1119,15 @@ const AppRouter = () => {
               element={
                 <PermissionRoute resource="channels" action="read">
                   <ChannelSettings />
+                </PermissionRoute>
+              }
+            />
+            {/* Gestão do número da API oficial (mesmo guard da tela de configurações). */}
+            <Route
+              path="/channels/:id/oficial"
+              element={
+                <PermissionRoute resource="channels" action="read">
+                  <NumeroOficial />
                 </PermissionRoute>
               }
             />

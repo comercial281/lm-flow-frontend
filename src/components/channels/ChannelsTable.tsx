@@ -5,6 +5,7 @@ import { Inbox } from '@/types/channels/inbox';
 import { ChannelConnectionBadge, ChannelIcon } from '@/components/channels';
 import { getChannelDisplayName } from '@/utils/channelUtils';
 import { useLanguage } from '@/hooks/useLanguage';
+import { Badge } from '@/components/ui/ds';
 
 export default function ChannelsTable({
   channels,
@@ -12,6 +13,7 @@ export default function ChannelsTable({
   onSettings,
   onDelete,
   canDelete = true,
+  onManage,
 }: {
   channels: Inbox[];
   loading?: boolean;
@@ -19,6 +21,7 @@ export default function ChannelsTable({
   onDelete: (inbox: Inbox) => void;
   // Ver ChannelCard: excluir canal é do gestor.
   canDelete?: boolean;
+  onManage?: (inbox: Inbox) => void;
 }) {
   const { t } = useLanguage('channels');
 
@@ -38,7 +41,14 @@ export default function ChannelsTable({
             <ChannelIcon channelType={item.channel_type} provider={item.provider as string | undefined} size="md" />
           )}
           <div className="flex flex-col">
-            <span className="font-medium text-sidebar-foreground">{item.name}</span>
+            <span className="font-medium text-sidebar-foreground">
+              {item.name}
+              {item.whatsapp_cloud && (
+                <Badge variant="outline" className="ml-2 text-[10px] px-1.5 py-0 h-5">
+                  API oficial
+                </Badge>
+              )}
+            </span>
             <span className="text-xs text-sidebar-foreground/60">{item.channel_type ? getChannelDisplayName(item.channel_type, item.provider) : '—'}</span>
           </div>
         </div>
@@ -48,7 +58,11 @@ export default function ChannelsTable({
       key: 'connection_status',
       label: t('table.connection'),
       render: (item: Inbox) =>
-        item.connection_status ? (
+        item.whatsapp_cloud ? (
+          <span className="text-sidebar-foreground">
+            {item.whatsapp_cloud.connected ? 'Conectado' : 'Desconectado'}
+          </span>
+        ) : item.connection_status ? (
           <ChannelConnectionBadge
             status={item.connection_status}
             variant="compact"
@@ -76,7 +90,21 @@ export default function ChannelsTable({
   ];
 
   const actions: TableAction<Inbox>[] = [
-    ...(onSettings ? [{ label: t('actions.configure'), onClick: onSettings, icon: <Settings className="h-4 w-4" /> }] : []),
+    ...(onSettings
+      ? [
+          {
+            label: t('actions.configure'),
+            onClick: onSettings,
+            icon: <Settings className="h-4 w-4" />,
+          },
+          {
+            label: 'Gerenciar',
+            onClick: (item: Inbox) => onManage?.(item),
+            icon: <Settings className="h-4 w-4" />,
+            show: (item: Inbox) => !!item.whatsapp_cloud,
+          },
+        ]
+      : []),
     ...(canDelete
       ? [{ label: t('actions.delete'), onClick: onDelete, icon: <Trash2 className="h-4 w-4" />, variant: 'destructive' }]
       : []),

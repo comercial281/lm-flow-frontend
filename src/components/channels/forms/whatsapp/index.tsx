@@ -30,7 +30,7 @@ export const WhatsappForms = ({
   const { t } = useLanguage('whatsapp');
   switch (selectedProvider.id) {
     case 'whatsapp_cloud':
-      return <CloudWhatsappForm form={form} onFormChange={onFormChange} canFB={canFB} />;
+      return <CloudWhatsappForm canFB={canFB} />;
 
     case 'twilio':
       return <TwilioWhatsappForm form={form} onFormChange={onFormChange} />;

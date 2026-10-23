@@ -111,3 +111,27 @@ describe('os textos', () => {
     expect(enderecoConexao('9')).toBe('/channels/9/settings?tab=configuration');
   });
 });
+
+// Número da API oficial não tem QR code. O servidor manda o caído com
+// connection_status 'disconnected' (e whatsapp_cloud.connected falso): o aviso
+// manda reconectar pela página dele em Canais, nunca ler QR.
+describe('número da API oficial fora do ar', () => {
+  const oficialCaido = numero({ id: '9', name: 'Loja', connection_status: 'disconnected', oficial: true });
+
+  it('lista vazia: avisa o número oficial, marcado como oficial', () => {
+    expect(avisoListaVazia({ numeros: [oficialCaido], gestor: false, podeCriar: false })).toEqual({
+      tipo: 'foraDoAr', numeros: [{ id: '9', nome: 'Loja', oficial: true }],
+    });
+  });
+
+  it('a frase não pede QR code e manda pra página dele em Canais', () => {
+    const [n] = numerosParaReconectar({ numeros: [oficialCaido], gestor: false, meuId: '1' });
+    expect(fraseForaDoAr([n])).toBe('Reconecte este número pela página dele em Canais.');
+    expect(fraseForaDoAr([n, { ...n, id: '10' }])).not.toMatch(/QR/);
+    expect(fraseForaDoAr([n, { id: '2', nome: 'Ana' }])).toMatch(/página dele/);
+  });
+
+  it('o link vai pra página do número oficial', () => {
+    expect(enderecoConexao('9', true)).toBe('/channels/9/oficial');
+  });
+});

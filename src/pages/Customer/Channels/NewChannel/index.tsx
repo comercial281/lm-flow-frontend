@@ -289,6 +289,7 @@ export default function NewChannel() {
 
   const shouldShowFooter = () => {
     return (
+      !(selectedChannel?.type === 'whatsapp' && selectedProvider?.id === 'whatsapp_cloud') &&
       selectedChannel?.type !== 'facebook' &&
       selectedChannel?.type !== 'instagram' &&
       selectedChannel?.type !== 'email'
@@ -380,13 +381,6 @@ export default function NewChannel() {
               isDisabled={
                 (selectedChannel?.type === 'web_widget' &&
                   (!form.name || !form.website_url)) ||
-                (selectedProvider?.id === 'whatsapp_cloud' &&
-                  (!form.name ||
-                    !form.phone_number ||
-                    !form.api_key ||
-                    !form.phone_number_id ||
-                    !form.business_account_id ||
-                    !form.waba_id)) ||
                 // Desabilita salvar se for Evolution ou Evolution Go e o health check não passou
                 ((selectedProvider?.id === 'evolution' ||
                   selectedProvider?.id === 'evolution_go') &&

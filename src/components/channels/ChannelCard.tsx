@@ -19,10 +19,13 @@ type ChannelCardProps = {
   // estado e religar — mostrar a lixeira para ele seria um botão vermelho que
   // só sabe recusar.
   canDelete?: boolean;
+  // Canal da API oficial: "Gerenciar" abre a página própria do número.
+  onManage?: (inbox: Inbox) => void;
 };
 
-export default function ChannelCard({ inbox, isDeleting, onSettings, onDelete, canDelete = true }: ChannelCardProps) {
+export default function ChannelCard({ inbox, isDeleting, onSettings, onDelete, canDelete = true, onManage }: ChannelCardProps) {
   const { t } = useLanguage('channels');
+  const oficial = inbox.whatsapp_cloud ?? null;
   const typeName = inbox.channel_type
     ? getChannelDisplayName(inbox.channel_type, inbox.provider)
     : '—';
@@ -30,13 +33,15 @@ export default function ChannelCard({ inbox, isDeleting, onSettings, onDelete, c
   // Instância caída ganha a borda vermelha além do selo: num grid de doze
   // canais, o selo sozinho some no meio dos outros onze verdes — o card
   // inteiro precisa saltar pra que "qual caiu?" se responda de relance.
-  const isDown = inbox.connection_status === 'disconnected';
+  // Número oficial não tem QR Code: o caído é religado pela página dele.
+  const isDown = !oficial && inbox.connection_status === 'disconnected';
+  const oficialCaido = !!oficial && !oficial.connected;
 
   return (
     <Card
       className={cn(
         'group relative flex flex-col gap-3 p-5 bg-sidebar border-sidebar-border overflow-hidden transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lg hover:shadow-black/10',
-        isDown && 'border-red-500/40 hover:border-red-500/60',
+        (isDown || oficialCaido) && 'border-red-500/40 hover:border-red-500/60',
       )}
     >
       {/* Glow no hover */}
@@ -66,10 +71,16 @@ export default function ChannelCard({ inbox, isDeleting, onSettings, onDelete, c
           )}
         </div>
 
-        <ChannelConnectionBadge
-          status={inbox.connection_status}
-          disconnectedAt={inbox.disconnected_at}
-        />
+        {oficial ? (
+          <Badge variant={oficial.connected ? 'default' : 'outline'} className="text-[10px] px-1.5 py-0 h-5">
+            {oficial.connected ? 'Conectado' : 'Desconectado'}
+          </Badge>
+        ) : (
+          <ChannelConnectionBadge
+            status={inbox.connection_status}
+            disconnectedAt={inbox.disconnected_at}
+          />
+        )}
       </div>
 
       {/* Nome + tipo */}
@@ -88,6 +99,11 @@ export default function ChannelCard({ inbox, isDeleting, onSettings, onDelete, c
         <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 border-sidebar-border text-sidebar-foreground/70">
           {typeName}
         </Badge>
+        {oficial && (
+          <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5">
+            API oficial
+          </Badge>
+        )}
         <div className="flex items-center gap-1">
           {/* Com a instância caída entra o botão que diz o que a pessoa precisa
               fazer — ele abre direto o QR Code, porque "Configurar" não conta a
@@ -104,6 +120,12 @@ export default function ChannelCard({ inbox, isDeleting, onSettings, onDelete, c
               {t('actions.reconnect')}
             </Button>
           )}
+          {oficialCaido && onManage && (
+            <Button size="sm" className="h-8 text-xs" onClick={() => onManage(inbox)}>
+              <RefreshCw className="h-3.5 w-3.5 mr-1" />
+              {t('actions.reconnect')}
+            </Button>
+          )}
           <Button
             size="sm"
             variant="outline"
@@ -113,6 +135,16 @@ export default function ChannelCard({ inbox, isDeleting, onSettings, onDelete, c
             <Settings className="h-3.5 w-3.5 mr-1" />
             {t('actions.configure')}
           </Button>
+          {oficial && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8 text-xs bg-sidebar border-sidebar-border hover:bg-sidebar-accent"
+              onClick={() => onManage?.(inbox)}
+            >
+              Gerenciar
+            </Button>
+          )}
           {canDelete && (
             <Button
               size="sm"

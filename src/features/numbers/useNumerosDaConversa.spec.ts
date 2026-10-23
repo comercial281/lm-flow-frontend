@@ -41,7 +41,22 @@ describe('useNumerosDaConversa', () => {
     await waitFor(() => expect(result.current.numeros).not.toBeNull());
     expect(result.current.inboxes).toEqual([inbox]);
     expect(result.current.numeros).toEqual([
-      { id: '7', name: 'Número A', connection_status: 'connected', owner_user_id: 'u1' },
+      { id: '7', name: 'Número A', connection_status: 'connected', owner_user_id: 'u1', oficial: false },
+    ]);
+  });
+
+  it('número da API oficial sai marcado como oficial (formato real do servidor)', async () => {
+    mayRead.mockResolvedValue(true);
+    const oficial = {
+      id: 8, name: 'Loja', channel_type: 'Channel::Whatsapp', provider: 'whatsapp_cloud',
+      connection_status: 'disconnected', owner_user_id: null,
+      whatsapp_cloud: { connected: false, mode: 'new_number' },
+    };
+    estado = { inboxes: [oficial], lastFetchTimestamps: { inboxes: Date.now() }, fetchInboxes };
+    const { result } = renderHook(() => useNumerosDaConversa());
+    await waitFor(() => expect(result.current.numeros).not.toBeNull());
+    expect(result.current.numeros).toEqual([
+      { id: '8', name: 'Loja', connection_status: 'disconnected', owner_user_id: null, oficial: true },
     ]);
   });
 

@@ -11,7 +11,6 @@ import {
   SmsBandwidthPayload,
   TelegramChannelPayload,
   WebWidgetPayload,
-  WhatsappCloudPayload,
   WhatsappEvolutionGoPayload,
   WhatsappEvolutionPayload,
   WhatsappTwilioPayload,
@@ -266,7 +265,6 @@ export const useChannelSubmission = (form?: FormData) => {
         | EmailChannelPayload
         | TelegramChannelPayload
         | SmsChannelPayload
-        | WhatsappCloudPayload
         | WhatsappEvolutionPayload
         | WhatsappEvolutionGoPayload
         | WhatsappTwilioPayload
@@ -409,21 +407,9 @@ export const useChannelSubmission = (form?: FormData) => {
         case 'whatsapp': {
           if (!selectedProvider) throw new Error('Selecione um provedor');
           if (selectedProvider.id === 'whatsapp_cloud') {
-            payload = {
-              name: getStr(form, 'name') || 'WhatsApp Cloud',
-              display_name:
-                getStr(form, 'display_name') || getStr(form, 'name') || 'WhatsApp Cloud',
-              channel: {
-                type: 'whatsapp',
-                phone_number: getStr(form, 'phone_number'),
-                provider: 'whatsapp_cloud',
-                provider_config: {
-                  api_key: getStr(form, 'api_key'),
-                  phone_number_id: getStr(form, 'phone_number_id'),
-                  waba_id: getStr(form, 'waba_id'),
-                },
-              },
-            } as WhatsappCloudPayload;
+            // A API oficial é conectada pelo servidor (CloudWhatsappForm -> cloud_connections).
+            // O formulário não cria canal por aqui.
+            return;
           } else if (selectedProvider.id === 'twilio') {
             // verify connection first
             try {

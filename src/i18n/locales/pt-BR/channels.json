@@ -666,14 +666,14 @@
       "noTabsForRole": "Este canal não tem conexão para acompanhar aqui. Fale com o gestor se precisar mexer em alguma configuração dele."
     },
     "messageTemplates": {
-      "title": "Templates de Mensagem",
-      "description": "Gerencie templates de mensagens para este canal",
-      "searchPlaceholder": "Buscar templates...",
+      "title": "Modelos de mensagem",
+      "description": "Gerencie os modelos de mensagem deste canal",
+      "searchPlaceholder": "Buscar modelos...",
       "actions": {
         "sync": "Sincronizar",
-        "newTemplate": "Novo Template",
-        "createTemplate": "Criar Template",
-        "editTemplate": "Editar Template",
+        "newTemplate": "Novo modelo",
+        "createTemplate": "Criar modelo",
+        "editTemplate": "Editar modelo",
         "cancel": "Cancelar"
       },
       "table": {
@@ -685,9 +685,9 @@
         "actions": "Ações"
       },
       "noTemplatesFound": {
-        "_": "Nenhum template encontrado",
-        "create": "Crie seu primeiro template de mensagem",
-        "search": "Nenhum template encontrado para sua busca"
+        "_": "Nenhum modelo encontrado",
+        "create": "Crie seu primeiro modelo de mensagem",
+        "search": "Nenhum modelo encontrado para sua busca"
       },
       "form": {
         "createTitle": "Criar modelo de mensagem",
@@ -757,15 +757,15 @@
         "requiredFields": "Preencha todos os campos obrigatórios"
       },
       "tinymce": {
-        "insertTemplate": "Inserir Template",
+        "insertTemplate": "Inserir modelo",
         "templates": {
           "basic": {
-            "title": "Template Básico",
+            "title": "Modelo básico",
             "description": "Email básico com cabeçalho e rodapé",
             "content": "<h2>Título do Email</h2><p>Olá {{contact.name}},</p><p>Conteúdo do email aqui...</p><p>Atenciosamente,<br>Equipe</p>"
           },
           "withButton": {
-            "title": "Template com Botão",
+            "title": "Modelo com botão",
             "description": "Email com call-to-action",
             "content": "<h2>Título do Email</h2><p>Olá {{contact.name}},</p><p>Conteúdo do email aqui...</p><p style=\"text-align: center;\"><a href=\"#\" style=\"background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;\">Clique Aqui</a></p>"
           }
@@ -795,54 +795,54 @@
       },
       "preview": {
         "title": "Visualização",
-        "modalTitle": "Pré-visualização do Template",
+        "modalTitle": "Pré-visualização do modelo",
         "whatsappPreview": "Pré-visualização",
-        "apiDescription": "Templates de canal API usam formatação personalizada",
-        "liquidDescription": "Templates de email suportam sintaxe Liquid para conteúdo dinâmico",
+        "apiDescription": "Modelos de canal API usam formatação personalizada",
+        "liquidDescription": "Modelos de email suportam sintaxe Liquid para conteúdo dinâmico",
         "bodyPlaceholder": "Conteúdo da mensagem aparecerá aqui",
         "today": "Hoje",
-        "description": "Esta é uma visualização aproximada do template"
+        "description": "Esta é uma visualização aproximada do modelo"
       },
       "emptyState": {
-        "title": "Nenhum template encontrado",
-        "description": "Crie seu primeiro template de mensagem para começar",
-        "searchEmpty": "Nenhum template corresponde à sua busca"
+        "title": "Nenhum modelo encontrado",
+        "description": "Crie seu primeiro modelo de mensagem para começar",
+        "searchEmpty": "Nenhum modelo corresponde à sua busca"
       },
       "deleteDialog": {
-        "title": "Excluir Template",
-        "message": "Tem certeza que deseja excluir o template \"{{templateName}}\"?",
+        "title": "Excluir modelo",
+        "message": "Tem certeza que deseja excluir o modelo \"{{templateName}}\"?",
         "warning": "Esta ação não pode ser desfeita.",
         "cancel": "Cancelar",
         "confirm": "Excluir"
       },
       "errors": {
-        "loadError": "Erro ao carregar templates",
-        "syncError": "Erro ao sincronizar templates",
-        "createError": "Erro ao criar template",
-        "updateError": "Erro ao atualizar template",
-        "deleteError": "Erro ao excluir template",
+        "loadError": "Erro ao carregar modelos",
+        "syncError": "Erro ao sincronizar modelos",
+        "createError": "Erro ao criar modelo",
+        "updateError": "Erro ao atualizar modelo",
+        "deleteError": "Erro ao excluir modelo",
         "requiredFields": "Preencha todos os campos obrigatórios"
       },
       "success": {
-        "syncSuccess": "Templates sincronizados com sucesso!",
-        "createSuccess": "Template criado com sucesso!",
-        "updateSuccess": "Template atualizado com sucesso!",
-        "deleteSuccess": "Template excluído com sucesso!"
+        "syncSuccess": "Modelos sincronizados com sucesso!",
+        "createSuccess": "Modelo criado com sucesso!",
+        "updateSuccess": "Modelo atualizado com sucesso!",
+        "deleteSuccess": "Modelo excluído com sucesso!"
       },
       "editor": {
-        "subtitle": "Editor visual de templates de email",
-        "loadingTemplate": "Carregando template...",
+        "subtitle": "Editor visual de modelos de email",
+        "loadingTemplate": "Carregando modelo...",
         "loadingEditor": "Carregando editor...",
         "back": "Voltar",
-        "templateInfo": "Informações do Template",
+        "templateInfo": "Informações do modelo",
         "editorNotReady": "Editor ainda não está pronto. Aguarde alguns segundos.",
         "accountIdNotFound": "Account ID não encontrado",
-        "incompleteData": "Dados incompletos para atualizar template",
+        "incompleteData": "Dados incompletos para atualizar o modelo",
         "exportError": "Erro ao exportar HTML do editor",
-        "legacyHtmlWarning": "Este template foi criado com HTML. Você pode editá-lo visualmente agora.",
+        "legacyHtmlWarning": "Este modelo foi criado com HTML. Você pode editá-lo visualmente agora.",
         "invalidContentWarning": "Não foi possível carregar o conteúdo. Editor iniciado vazio.",
         "htmlPreview": "Visualização HTML",
-        "htmlPreviewDescription": "Este template foi criado com HTML. Você pode editá-lo visualmente no editor abaixo.",
+        "htmlPreviewDescription": "Este modelo foi criado com HTML. Você pode editá-lo visualmente no editor abaixo.",
         "startVisualEdit": "Começar Edição Visual"
       },
       "newTemplate": "Novo modelo de mensagem"
