@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 
 // Automações · sprint 3 (03/10/2026): a aba Follow-up é a lista do construtor
@@ -123,7 +124,7 @@ describe('desligar follow-up (Fase 2)', () => {
     toggle.mockResolvedValue(seguindo({ is_enabled: false, stopped_count: 3, remaining: 0 }));
     renderAt('followup');
 
-    fireEvent.click(await screen.findByTitle('Desligar'));
+    fireEvent.click(await screen.findByRole('button', { name: 'Desligar' }));
     expect(await screen.findByText('Desligar "Pós-visita"?')).toBeTruthy();
     expect(screen.getByText('3 leads vão sair do follow-up e os cards saem da coluna Follow-up.')).toBeTruthy();
     expect(toggle).not.toHaveBeenCalled();
@@ -136,7 +137,7 @@ describe('desligar follow-up (Fase 2)', () => {
   it('cancelar a confirmação não desliga', async () => {
     list.mockResolvedValue([seguindo()]);
     renderAt('followup');
-    fireEvent.click(await screen.findByTitle('Desligar'));
+    fireEvent.click(await screen.findByRole('button', { name: 'Desligar' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Cancelar' }));
     await waitFor(() => expect(screen.queryByText('Desligar "Pós-visita"?')).toBeNull());
     expect(toggle).not.toHaveBeenCalled();
@@ -146,7 +147,7 @@ describe('desligar follow-up (Fase 2)', () => {
     list.mockResolvedValue([seguindo({ live_count: 0 })]);
     toggle.mockResolvedValue(seguindo({ is_enabled: false, live_count: 0, stopped_count: 0, remaining: 0 }));
     renderAt('followup');
-    fireEvent.click(await screen.findByTitle('Desligar'));
+    fireEvent.click(await screen.findByRole('button', { name: 'Desligar' }));
     await waitFor(() => expect(toggle).toHaveBeenCalledWith('f1'));
     expect(screen.queryByText('Desligar "Pós-visita"?')).toBeNull();
   });
@@ -155,7 +156,7 @@ describe('desligar follow-up (Fase 2)', () => {
     list.mockResolvedValue([seguindo()]);
     toggle.mockResolvedValue(seguindo({ is_enabled: false, stopped_count: 1, remaining: 2 }));
     renderAt('followup');
-    fireEvent.click(await screen.findByTitle('Desligar'));
+    fireEvent.click(await screen.findByRole('button', { name: 'Desligar' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Desligar' }));
     await waitFor(() => expect(toastSuccess).toHaveBeenCalledWith('Desligado. 2 leads ainda saindo do follow-up; o sistema termina em seguida.'));
   });
@@ -167,7 +168,7 @@ describe('desligar follow-up (Fase 2)', () => {
     get.mockResolvedValue(seguindo({ is_enabled: false, nodes: [] }));
     toggle.mockResolvedValue(seguindo({ is_enabled: true }));
     renderAt('followup');
-    fireEvent.click(await screen.findByTitle('Ligar'));
+    fireEvent.click(await screen.findByRole('button', { name: 'Ligar' }));
     await waitFor(() => expect(toggle).toHaveBeenCalledWith('f1'));
     expect(screen.queryByText('Desligar "Pós-visita"?')).toBeNull();
   });
@@ -176,7 +177,9 @@ describe('desligar follow-up (Fase 2)', () => {
     list.mockResolvedValue([seguindo()]);
     destroy.mockRejectedValue({ response: { data: { errors: ['Este follow-up tem 3 lead(s) dentro. Desligue antes de apagar.'] } } });
     renderAt('followup');
-    fireEvent.click(await screen.findByTitle('Excluir'));
+    // Excluir mora no ⋮ do cartão (23/10/2026).
+    await userEvent.click(await screen.findByRole('button', { name: 'Mais ações de Pós-visita' }));
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Excluir' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Excluir' }));
     await waitFor(() => expect(toastError).toHaveBeenCalledWith('Este follow-up tem 3 lead(s) dentro. Desligue antes de apagar.'));
   });

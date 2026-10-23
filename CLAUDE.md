@@ -35,8 +35,9 @@ backend (ex.: deletar contato, endpoints, jobs) vai nesse outro repo, com base
     tempo das esperas; **não acrescenta mensagem nem troca a coluna de resposta**. O
     número é sempre o **do responsável pelo lead** (a tela diz "Sai pelo WhatsApp do
     responsável pelo lead."). O follow-up da equipe, pro corretor, abre só pra ver.
-  - **"Meu padrão" × "padrão da conta"**: cada pessoa marca o seu (estrela); o **padrão
-    da conta é sempre da equipe** e só o gestor troca ("Tornar padrão da conta").
+  - **"Meu padrão" × "padrão da conta"**: cada pessoa marca o seu (**alfinete**); o **padrão
+    da conta é sempre da equipe**, aparece como **estrela** ao lado do estado e só o
+    gestor troca (estrela vazia = "Tornar padrão da conta"). Desde 23/10/2026.
   - **Quem usa o quê:** a **janela** "Colocar em follow-up" lista os do responsável pelo
     lead + os da equipe e abre no padrão do responsável (lead sem responsável: padrão
     da conta, só da equipe); a **coluna Follow-up** e a **automação** sem escolha usam o
@@ -9577,6 +9578,16 @@ login: toda conta tem. Decisão do Tony.
 **Card criado direto na coluna Follow-up começa o padrão, por qualquer porta.** Criar o card já na coluna Follow-up pela API, por formulário, pelo MCP ou por qualquer outra entrada começa o follow-up padrão do responsável pelo lead (o da conta, sem responsável). Quem já tem follow-up vivo fica com o dele: não troca nem recomeça. O `move_lead` do MCP avisa quando isso aconteceu.
 
 **Nome do follow-up pessoal de outra pessoa não aparece.** No card do lead e no selo "Follow-up ativo" do quadro, quem não é o dono, nem gestor, e quando o follow-up também não é do responsável pelo lead, vê "Follow-up de {dono}" (ou "Follow-up pessoal" quando o dono não é achado), nunca o nome que o dono escolheu. A tela mostra esse nome como veio, sem aspas e sem repetir "follow-up". Automação, follow-up da equipe, o dono e o gestor veem o nome real. A lista de fluxos do card só abre pra quem vê o lead.
+
+## Follow-up: cartão com estrela, alfinete e ⋮ (2026-10-23)
+
+Pedido do dono: "Tornar padrão da conta" virar só uma estrelinha ao lado do Ligado, e o cartão organizado num menu de 3 pontinhos.
+
+- **Estrela ao lado do estado (Ligado/Desligado/Arquivado) = padrão da conta.** Cheia: é o padrão (todo mundo vê, ninguém clica; o padrão sai trocando por outro). Vazia: só pro gestor, só nos da equipe ligados e não arquivados, e o clique torna padrão da conta. O selo de texto "Padrão da conta" e o botão de texto saíram.
+- **"Meu padrão" virou alfinete** (cheio = o seu padrão). Duas marcas, dois símbolos: duas estrelas com sentidos diferentes no mesmo cartão confundiriam o corretor.
+- **À vista só três botões:** alfinete, ligar/desligar (pausar/play) e lápis (Editar). Quem não edita vê "Ver" no lugar do lápis e não vê ligar/desligar.
+- **⋮ (Mais ações):** Duplicar, Arquivar e, depois da linha, Excluir. Quem não edita só tem "Duplicar pra ter a sua cópia". A chave "Da equipe" do gestor continua embaixo, à vista.
+- Só a aba Follow-up mudou. A aba Manual segue com Duplicar e Excluir à vista.
 
 ## Construtor: janelas revisadas (desde 2026-10-22)
 
