@@ -9782,3 +9782,14 @@ Código: `pages/Customer/Automations/SalesAgents/configurar/paginas/Canal.tsx`, 
 Este PR **depende do backend da C na frente**: sem ele a IA não envia pela oficial e os motivos novos não existem.
 
 Não reabrir sem o dono pedir.
+
+## Construtor: cortar a linha entre dois blocos (desde 2026-10-23)
+
+Pedido do dono (Tony) em 23/10/2026: "não consigo cortar fios de conexão entre os nós; uma vez conectado, só apagando o nó". Só frontend.
+
+- **A causa.** As linhas do canvas são desenhadas a partir dos blocos (`buildEdges`) e já vinham marcadas como apagáveis, mas o `ReactFlow` do construtor não tinha `onEdgesChange`: o clique na linha (selecionar) e o Delete (remover) eram descartados. Nunca funcionou neste construtor.
+- **Como corta.** Clica na linha: ela engrossa e aparece um botão de tesoura ("Cortar conexão") no meio dela, um pouco abaixo do nome quando a linha tem nome ("Sim", "Não respondeu"). Delete ou Backspace com a linha selecionada também cortam. A saída de origem fica vazia e volta a ser "+" no cartão; os dois blocos continuam. Decisão do dono entre três opções: clicar + botão (escolhida), botão sempre visível (polui fluxo grande) ou só tecla (ninguém descobre, não existe no celular).
+- **O que não se corta.** A linha do Início pro primeiro bloco (é o começo do fluxo; troca-se arrastando do Início pra outro bloco). Fluxo só de leitura e modo guiado também não oferecem o corte.
+- O corte entra nas alterações não salvas como qualquer mudança no mapa: vale depois do Salvar.
+
+Código: `src/components/flowAutomations/FlowEdge.tsx` (linha com o botão), `cutEdge` em `src/lib/flowAutomationGraph.ts`, `onEdgesChange`/`selectedEdgeId` no `FlowAutomationCanvas.tsx`. Testes: `FlowEdge.spec.tsx` e o describe "Cortar a linha entre dois blocos" em `flowAutomationGraph.spec.ts`.
