@@ -1,4 +1,5 @@
 import type React from 'react';
+import Aviso from '@/components/base/Aviso';
 import { Input, Label, Checkbox } from '@/components/ui/ds';
 import SendFromField from '@/components/numbers/SendFromField';
 import MessageSequenceEditor, {
@@ -10,6 +11,7 @@ import { draftsOf, withItems } from '@/features/flowAutomations/messageItems';
 import { applySendFrom, sendFromOf } from '@/features/numbers/sendFrom';
 import { cleanProgressPrefix, progressOf, progressTagName, withProgress } from '@/features/flowAutomations/progress';
 import { saiPeloWhatsAppDe } from '@/features/flowAutomations/personal';
+import { FLOW_NUMBER_DIVERGENT } from '@/features/flowAutomations/flowNumber';
 import type { FlowNodeConfig } from '@/types/flowAutomations';
 import type { TemplateVariable } from '@/types/messageFunnels';
 import { SaiPeloSeuWhatsApp } from './SaiPeloSeuWhatsApp';
@@ -100,11 +102,20 @@ interface Props extends EnvioPessoal {
   conversation?: boolean;
   /** Modo guiado: o corretor só ajusta o que o gestor montou. */
   guided?: boolean;
+  /**
+   * Entrega 4: fluxo da equipe com a regra de número (salva ou escolhida agora):
+   * a linha de por onde sai, no lugar do "Enviar pelo número". null = fluxo
+   * antigo, cada Mensagem escolhe o número como sempre.
+   */
+  numeroDoFluxo?: string | null;
+  /** Fluxo antigo cujas Mensagens saem por números diferentes: aponta pras Configurações. */
+  numerosDiferentes?: boolean;
 }
 
 export function MessageBlockFields({
   config, onChange, conversation = false, guided = false, pessoal = false, numeroPessoal = null,
-  numeroPessoalCarregando = false, donoDoEnvio = null,
+  numeroPessoalCarregando = false, donoDoEnvio = null, numeroDoFluxo = null,
+  numerosDiferentes = false,
 }: Props) {
   const peloDono = pessoal || donoDoEnvio != null;
   // Follow-up guiado (Fase 3; automação nunca vem guiada e o funil é o ramo de
@@ -140,12 +151,17 @@ export function MessageBlockFields({
               numeroPessoalCarregando={numeroPessoalCarregando}
               donoDoEnvio={donoDoEnvio}
             />
+          ) : numeroDoFluxo ? (
+            <p className="text-sm font-medium" data-testid="sai-pelo-numero-do-fluxo">{numeroDoFluxo}</p>
           ) : (
-            <SendFromField
-              scope="lead_automation_rules"
-              value={sendFromOf(config)}
-              onChange={v => onChange(c => applySendFrom(c, v))}
-            />
+            <>
+              {numerosDiferentes && <Aviso tom="atencao" compacto>{FLOW_NUMBER_DIVERGENT}</Aviso>}
+              <SendFromField
+                scope="lead_automation_rules"
+                value={sendFromOf(config)}
+                onChange={v => onChange(c => applySendFrom(c, v))}
+              />
+            </>
           )}
           {!doResponsavel && <ProgressFields config={config} onChange={onChange} />}
           <p className="text-xs text-muted-foreground">A mensagem sai marcada como automática, igual o Follow-up.</p>

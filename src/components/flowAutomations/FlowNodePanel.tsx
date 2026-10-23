@@ -43,6 +43,7 @@ import { FlowBlockDialog } from './FlowBlockDialog';
 import { NotificationFields } from './NotificationFields';
 import { isNotifyAction } from '@/features/flowAutomations/notification';
 import { LinhaDoEnvio, MessageBlockFields } from './MessageBlockFields';
+import { flowNumberAiLine, flowNumberMessageLine, type FlowNumberView } from '@/features/flowAutomations/flowNumber';
 
 interface Props {
   node: FlowAutomationNode | null;
@@ -71,6 +72,13 @@ interface Props {
    * A mensagem só avisa por qual WhatsApp sai (o servidor força o do dono).
    */
   donoDoEnvio?: string | null;
+  /**
+   * Entrega 4: fluxo da equipe com a regra de número (salva ou escolhida agora
+   * nas Configurações). A Mensagem só diz por onde sai; null = fluxo antigo.
+   */
+  numeroDoFluxo?: FlowNumberView | null;
+  /** Fluxo antigo da equipe cujas Mensagens saem por números diferentes. */
+  numerosDiferentes?: boolean;
 }
 
 // "Por um tempo, saindo só em horário comercial" (o modo `schedule`) virou a
@@ -238,6 +246,12 @@ const SENDING_LEAD_ACTIONS = new Set([
   'send_whatsapp_message', 'send_audio', 'send_image', 'send_video', 'send_document', 'send_sticker', 'send_quick_reply',
 ]);
 
+// Ações antigas que mantêm o número próprio. send_message_funnel e send_quick_reply
+// seguem o número do fluxo no servidor, então ficam de fora.
+const OWN_NUMBER_LEAD_ACTIONS = new Set([
+  'send_whatsapp_message', 'send_audio', 'send_image', 'send_video', 'send_document', 'send_sticker',
+]);
+
 /** Pessoal: o bloco que manda mensagem grava `send_from: 'owner'` (o servidor também força). */
 function withOwnerSendFrom(kind: string, config: FlowNodeConfig): FlowNodeConfig {
   if (kind === 'send_whatsapp') return applySendFrom(config, OWNER_SEND);
@@ -248,7 +262,7 @@ function withOwnerSendFrom(kind: string, config: FlowNodeConfig): FlowNodeConfig
   return config;
 }
 
-export function FlowNodePanel({ node, resources, onClose, onSave, onDirtyChange, flowKind = 'automation', guided = false, saving = false, pessoal = false, numeroPessoal = null, numeroPessoalCarregando = false, donoDoEnvio = null }: Props) {
+export function FlowNodePanel({ node, resources, onClose, onSave, onDirtyChange, flowKind = 'automation', guided = false, saving = false, pessoal = false, numeroPessoal = null, numeroPessoalCarregando = false, donoDoEnvio = null, numeroDoFluxo = null, numerosDiferentes = false }: Props) {
   // Pessoal (a minha ou a de outra pessoa): a mensagem sai pelo número do dono.
   const peloDono = pessoal || donoDoEnvio != null;
   const [config, setConfig] = useState<FlowNodeConfig>(node?.config || {});
@@ -379,6 +393,8 @@ export function FlowNodePanel({ node, resources, onClose, onSave, onDirtyChange,
             numeroPessoal={numeroPessoal}
             numeroPessoalCarregando={numeroPessoalCarregando}
             donoDoEnvio={donoDoEnvio}
+            numeroDoFluxo={numeroDoFluxo ? flowNumberMessageLine(numeroDoFluxo) : null}
+            numerosDiferentes={numerosDiferentes}
           />
         );
       case 'add_label':
@@ -435,7 +451,12 @@ export function FlowNodePanel({ node, resources, onClose, onSave, onDirtyChange,
           </div>
         );
       case 'hand_to_ai':
-        return <p className="text-sm">Quem atende: a IA do número da conversa do lead. Se esse número não tiver IA ligada, nada acontece.</p>;
+        return (
+          <p className="text-sm">
+            {(numeroDoFluxo && flowNumberAiLine(numeroDoFluxo))
+              || 'Quem atende: a IA do número da conversa do lead. Se esse número não tiver IA ligada, nada acontece.'}
+          </p>
+        );
       case 'disable_ai':
         return <p className="text-sm">Pra religar, use o bloco Passar para a IA ou o botão no card do lead.</p>;
       case 'wait': {
@@ -458,7 +479,6 @@ export function FlowNodePanel({ node, resources, onClose, onSave, onDirtyChange,
               <Label className="text-xs">Esperar como?</Label>
               <BotoesDeEscolha
                 rotulo="Esperar como?"
-                semNome
                 valor={mode}
                 opcoes={WAIT_MODES.map(m => ({ valor: m.value, rotulo: m.label }))}
                 aoEscolher={v => setConfig(c => ({ ...c, mode: v }))}
@@ -498,7 +518,6 @@ export function FlowNodePanel({ node, resources, onClose, onSave, onDirtyChange,
               <Label className="text-xs">Até quando esperar?</Label>
               <BotoesDeEscolha
                 rotulo="Até quando esperar?"
-                semNome
                 valor={indefinite ? 'sem_limite' : 'prazo'}
                 opcoes={[{ valor: 'prazo', rotulo: 'Por um prazo' }, { valor: 'sem_limite', rotulo: 'Sem limite' }]}
                 aoEscolher={v => (v === 'sem_limite'
@@ -550,6 +569,11 @@ export function FlowNodePanel({ node, resources, onClose, onSave, onDirtyChange,
               resources={resources}
               pessoal={peloDono}
             />
+            {numeroDoFluxo && OWN_NUMBER_LEAD_ACTIONS.has(String(config.action_type)) && (
+              <Aviso tom="atencao" compacto>
+                Bloco antigo: sai pelo número dele. Troque por uma Mensagem pra seguir o número do fluxo.
+              </Aviso>
+            )}
             {peloDono && SENDING_LEAD_ACTIONS.has(String(config.action_type)) && (
               <LinhaDoEnvio
                 pessoal={pessoal}

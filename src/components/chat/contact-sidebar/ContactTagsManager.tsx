@@ -18,8 +18,6 @@ interface ContactTagsManagerProps {
   onUpdated?: () => void;
 }
 
-// Paleta da identidade (obsidiana/violeta) pra tags novas sem cor definida.
-
 // Quantas etiquetas do catálogo aparecem de uma vez (a busca filtra o resto).
 const MAX_SUGESTOES = 12;
 

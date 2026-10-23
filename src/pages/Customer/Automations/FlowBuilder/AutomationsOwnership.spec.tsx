@@ -272,3 +272,20 @@ describe('modelos: o gestor leva a aba pro servidor', () => {
     expect(modelosTeam.last).toBeUndefined();
   });
 });
+
+describe('leads pausados por outro número', () => {
+  it('todos veem o texto; só quem edita o fluxo vê Resolver', async () => {
+    can.manager = true;
+    list.mockResolvedValue([
+      flow('a1', 'Boas-vindas', { paused_other_number_count: 2 }),
+      teamFlow('a2', 'Lembrete de visita', { paused_other_number_count: 1 }),
+    ]);
+    renderPage();
+    const meu = (await screen.findByText('Boas-vindas')).closest('li')!;
+    expect(within(meu).getByText('2 leads pausados: já conversam em outro número')).toBeTruthy();
+    expect(within(meu).getByRole('button', { name: 'Resolver' })).toBeTruthy();
+    const dele = screen.getByText('Lembrete de visita').closest('li')!;
+    expect(within(dele).getByText('1 lead pausado: já conversa em outro número')).toBeTruthy();
+    expect(within(dele).queryByRole('button', { name: 'Resolver' })).toBeNull();
+  });
+});

@@ -19,6 +19,10 @@ export interface RunningFlow {
   until: number | null;
   /** Fase `paused`: por que o follow-up parou ("Número desconectado"…). */
   paused_reason?: string | null;
+  /** Código do motivo da pausa (ex.: 'other_number'). */
+  paused_code?: string | null;
+  /** Pausa por outro número: os finais e se dá pra seguir pela conversa. */
+  number_conflict?: { conversation_final: string | null; flow_final: string | null; conversation_sendable: boolean } | null;
   started_at: number | null;
   /** Sprint 3: `followup` = fluxo da aba Follow-up (a faixa e o card falam "Follow-up"). Ausente = automação. */
   kind?: FlowAutomationKind | null;
@@ -190,8 +194,8 @@ export const flowAutomationInstancesService = {
   },
 
   /** Retoma o follow-up pausado. A frase do servidor ("Follow-up retomado.") vai pro aviso. */
-  async resume(id: string): Promise<{ message?: string }> {
-    const { data } = await api.post(`${BASE}/${id}/resume`);
+  async resume(id: string, opts?: { choice: 'conversation' | 'flow'; always?: boolean }): Promise<{ message?: string }> {
+    const { data } = opts ? await api.post(`${BASE}/${id}/resume`, opts) : await api.post(`${BASE}/${id}/resume`);
     return { message: (data as { message?: string } | null)?.message };
   },
 };

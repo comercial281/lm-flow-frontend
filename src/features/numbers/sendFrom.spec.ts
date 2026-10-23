@@ -111,7 +111,7 @@ describe('o que a tela diz', () => {
     expect(missingSelection({ send_from: 'number', send_from_inbox_id: 'apagado' }, [loja])).toBe(true);
     expect(missingSelection({ send_from: 'number', send_from_inbox_id: 'i1' }, [loja])).toBe(false);
     expect(missingSelection({ send_from: 'owner', send_from_inbox_id: '' }, [])).toBe(false);
-    expect(missingSelectionLabel('loaded')).toBe('Número que não existe mais — escolha outro');
+    expect(missingSelectionLabel('loaded')).toBe('Número que não existe mais. Escolha outro.');
     expect(missingSelectionLabel('failed')).toBe('O número escolhido antes (a lista não carregou)');
     expect(missingSelectionLabel('loading')).toBe('Carregando os números…');
   });
