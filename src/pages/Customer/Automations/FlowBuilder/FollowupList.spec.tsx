@@ -63,7 +63,7 @@ describe('aba Follow-up', () => {
     renderAt('followup');
 
     expect(await screen.findByText('Follow-up longo')).toBeTruthy();
-    expect(screen.getByRole('heading', { name: 'Follow-up' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Funis de mensagem' })).toBeTruthy();
     expect(list).toHaveBeenCalledWith(expect.objectContaining({ kind: 'followup' }));
     expect(foldersList).not.toHaveBeenCalled();
     expect(screen.queryByText('Modelos')).toBeNull();

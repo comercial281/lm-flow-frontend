@@ -25,6 +25,12 @@ export interface FlowKindCopy {
   searchPlaceholder: string;
 }
 
+// Funis de mensagem tem UM título e UM subtítulo nas duas abas (Manual e
+// Follow-up), 22/10/2026. Quem troca de aba muda a lista, não a página.
+const FUNIS_DE_MENSAGEM_TITULO = 'Funis de mensagem';
+const FUNIS_DE_MENSAGEM_DESCRICAO =
+  'Sequências de mensagens prontas. As manuais você dispara numa conversa; o follow-up vai atrás do lead que parou de responder.';
+
 export const FLOW_KIND_COPY: Record<FlowAutomationKind, FlowKindCopy> = {
   automation: {
     listPath: '/automations/flow-builder',
@@ -43,9 +49,8 @@ export const FLOW_KIND_COPY: Record<FlowAutomationKind, FlowKindCopy> = {
   // endereço continua o mesmo: link salvo e redirecionamento antigo valem.
   followup: {
     listPath: '/automations/follow-ups',
-    title: 'Follow-up',
-    description:
-      'Mensagens que vão atrás do lead que parou de responder. Cada follow-up é um fluxo: começa pelo gatilho, manda as mensagens com o tempo entre elas e, quando o lead responde, faz o que você escolher.',
+    title: FUNIS_DE_MENSAGEM_TITULO,
+    description: FUNIS_DE_MENSAGEM_DESCRICAO,
     newButton: 'Novo follow-up',
     newName: 'Novo follow-up',
     emptyTitle: 'Nenhum follow-up ainda',
@@ -57,9 +62,8 @@ export const FLOW_KIND_COPY: Record<FlowAutomationKind, FlowKindCopy> = {
   // é própria (Meus funis / Da equipe); daqui sai o endereço e os nomes.
   conversation: {
     listPath: '/automations/message-funnels',
-    title: 'Funis de mensagem',
-    description:
-      'Sequências de mensagens que você dispara numa conversa, pelo botão de funil do campo de mensagem. As mensagens saem uma depois da outra, com o tempo de espera entre elas, mesmo com a tela fechada.',
+    title: FUNIS_DE_MENSAGEM_TITULO,
+    description: FUNIS_DE_MENSAGEM_DESCRICAO,
     newButton: 'Novo funil',
     newName: 'Novo funil',
     emptyTitle: 'Nenhum funil ainda',

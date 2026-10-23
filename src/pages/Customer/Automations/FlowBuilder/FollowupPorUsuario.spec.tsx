@@ -79,6 +79,36 @@ beforeEach(() => {
   can.manager = false;
 });
 
+describe('Um título, um cartão (22/10/2026)', () => {
+  it('título e subtítulo fixos de Funis de mensagem, botão e busca da aba Follow-up', async () => {
+    list.mockResolvedValue([fu('m1', 'Meu reaquecimento')]);
+    renderPage();
+    await screen.findByText('Meu reaquecimento');
+    expect(screen.getByRole('heading', { name: 'Funis de mensagem' })).toBeTruthy();
+    expect(screen.getByText(
+      'Sequências de mensagens prontas. As manuais você dispara numa conversa; o follow-up vai atrás do lead que parou de responder.',
+    )).toBeTruthy();
+    expect(screen.getAllByRole('button', { name: /Novo follow-up/ }).length).toBeGreaterThan(0);
+    expect(screen.getByPlaceholderText('Buscar follow-up...')).toBeTruthy();
+  });
+
+  it('mesma grade de 3 colunas e mesmo cartão, com o filete na cor do estado', async () => {
+    list.mockResolvedValue([
+      fu('m1', 'Ligado um'),
+      fu('m2', 'Desligado um', { is_enabled: false }),
+      fu('m3', 'Arquivado um', { archived_at: '2026-10-01T00:00:00Z', is_enabled: false }),
+    ]);
+    renderPage();
+    await screen.findByText('Ligado um');
+    expect(screen.getByRole('list', { name: 'Meus' }).className).toContain('grid-cols-1 sm:grid-cols-2 lg:grid-cols-3');
+    expect(screen.getAllByTestId('cartao-de-fluxo')).toHaveLength(3);
+    const estadoDe = (n: string) => screen.getByText(n).closest('[data-testid="cartao-de-fluxo"]')!.getAttribute('data-estado');
+    expect(estadoDe('Ligado um')).toBe('ligado');
+    expect(estadoDe('Desligado um')).toBe('desligado');
+    expect(estadoDe('Arquivado um')).toBe('arquivado');
+  });
+});
+
 describe('seções da lista', () => {
   it('corretor vê Da equipe e Meus; gestor vê também Dos corretores', async () => {
     list.mockResolvedValue([
