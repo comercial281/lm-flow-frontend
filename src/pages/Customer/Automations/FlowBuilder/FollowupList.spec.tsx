@@ -84,20 +84,17 @@ describe('aba Follow-up', () => {
     expect(await screen.findByText('canvas do follow-up')).toBeTruthy();
   });
 
-  it('faixa dos funis antigos com fila: só os que têm mensagem programada (queued_count)', async () => {
-    getAll.mockResolvedValue([
-      { id: 's1', name: 'Follow-up longo', queued_count: 87 },
-      { id: 's2', name: 'Follow-up automatico', queued_count: 0 },
-      { id: 's3', name: 'Apto', queued_count: 13 },
-    ]);
+  it('lista de follow-ups não chama /followup_sequences (sem faixa do formato antigo)', async () => {
+    list.mockResolvedValue([{
+      id: 'f1', name: 'Follow-up longo', kind: 'followup', is_enabled: true, archived_at: null,
+      trigger: { event: 'lead.stage_changed', conditions: [] },
+    }]);
     renderAt('followup');
 
-    expect(await screen.findByText(/Follow-up longo — 87 mensagens programadas/)).toBeTruthy();
-    expect(screen.getByText(/Apto — 13 mensagens programadas/)).toBeTruthy();
-    expect(screen.getAllByText('Terminando no formato antigo:')).toHaveLength(2);
-    expect(screen.queryByText(/Follow-up automatico/)).toBeNull();
-    // Uma leitura só: nada de histórico por funil.
+    expect(await screen.findByText('Follow-up longo')).toBeTruthy();
+    expect(getAll).not.toHaveBeenCalled();
     expect(getHistory).not.toHaveBeenCalled();
+    expect(screen.queryByText('Terminando no formato antigo:')).toBeNull();
   });
 
   it('a aba Automações continua igual: sem kind, com pastas e Modelos', async () => {

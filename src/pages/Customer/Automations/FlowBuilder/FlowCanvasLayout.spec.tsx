@@ -29,7 +29,7 @@ vi.mock('sonner', () => ({ toast: { error: vi.fn(), success: vi.fn() } }));
 vi.mock('@/features/flowAutomations/editores/LeadAutomationsEditors', async importOriginal => {
   const original = await importOriginal<typeof import('@/features/flowAutomations/editores/LeadAutomationsEditors')>();
   const resources = {
-    labels: [{ id: 'l1', title: 'follow-up' }], sequences: [], followupFlows: [], users: [], pipelines: [],
+    labels: [{ id: 'l1', title: 'follow-up' }], followupFlows: [], users: [], pipelines: [],
     stagesByPipeline: {}, quickReplies: [], adOrigins: [], formOrigins: [], messageFunnels: [], conversationFunnels: [], evolutionInstances: [],
     reloadFunnels: () => {}, reloadLabels: () => {}, loading: false,
   };

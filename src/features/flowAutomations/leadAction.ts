@@ -35,7 +35,7 @@ export const LEAD_ACTION_BLOCK_LABELS: Record<string, string> = {
   assign_broker: 'Definir corretor',
   assign_via_roleta: 'Distribuir pela roleta',
   create_task: 'Criar tarefa',
-  start_followup_sequence: 'Iniciar follow-up (formato antigo)',
+  start_followup_sequence: 'Follow-up antigo (inativo)',
   start_followup_flow: 'Iniciar follow-up',
   notify_group: 'Notificação',
   notify_user: 'Notificação',
@@ -97,8 +97,8 @@ export const LEAD_ACTION_GROUP: Record<string, FlowNodeGroup> = {
  * e edita normalmente, elas só não são oferecidas duas vezes na paleta.
  *
  * "Iniciar follow-up" é `start_followup_flow` (escolhe um fluxo de follow-up,
- * sprint 3). O `start_followup_sequence` (funil antigo) abre e edita, mas não
- * é mais oferecido.
+ * sprint 3). O `start_followup_sequence` (funil antigo, desligado na Fase 4)
+ * abre só pra avisar que não faz mais nada, e não é mais oferecido.
  */
 export const PALETTE_LEAD_ACTIONS: string[] = [
   // Áudio, imagem, vídeo, documento e figurinha saíram (PR 8, 16/10/2026): são

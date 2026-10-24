@@ -13,7 +13,6 @@ import CartoesDeEscolha from '@/components/base/CartoesDeEscolha';
 import EmptyState from '@/components/base/EmptyState';
 import IconActionButton from '@/components/base/IconActionButton';
 import { CartaoDeFluxo } from '@/components/flowAutomations/CartaoDeFluxo';
-import { LegacyFollowupStrip } from '@/components/flowAutomations/LegacyFollowupStrip';
 import NoAccessState from '@/components/permissions/NoAccessState';
 import { flowAutomationsService } from '@/services/flowAutomations/flowAutomationsService';
 import { isForbiddenError } from '@/services/core/forbidden';
@@ -418,8 +417,6 @@ export default function ListaDeFollowups() {
           />
         }
       >
-        <LegacyFollowupStrip />
-
         {!loading && followups.length === 0 && !search && (
           <EmptyState
             icon={Repeat}

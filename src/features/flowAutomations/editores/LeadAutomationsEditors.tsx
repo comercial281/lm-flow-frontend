@@ -8,7 +8,6 @@ import { labelsService } from '@/services/contacts/labelsService';
 import { pipelinesService } from '@/services/pipelines/pipelinesService';
 import usersService from '@/services/users/usersService';
 import { quickRepliesService } from '@/services/quickReplies/quickRepliesService';
-import { followupSequencesService, FollowupSequence } from '@/services/followupSequences/followupSequencesService';
 import { flowAutomationsService } from '@/services/flowAutomations/flowAutomationsService';
 import type { FlowAutomation } from '@/types/flowAutomations';
 import type { Label as ContactLabel } from '@/types/settings/labels';
@@ -83,7 +82,6 @@ export const triggerNeedsCondition = (trigger: string): boolean =>
 
 export interface AutomationResources {
   labels: ContactLabel[];
-  sequences: FollowupSequence[];
   /** Os fluxos de follow-up (sprint 3): a ação "Iniciar follow-up" escolhe um deles. */
   followupFlows: FlowAutomation[];
   users: User[];
@@ -118,7 +116,6 @@ export interface AutomationResources {
 export function useAutomationResources(enabled: boolean, automationId?: string | null): AutomationResources {
   const isSuperAdmin = useIsSuperAdmin();
   const [labels, setLabels] = useState<ContactLabel[]>([]);
-  const [sequences, setSequences] = useState<FollowupSequence[]>([]);
   const [followupFlows, setFollowupFlows] = useState<FlowAutomation[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [pipelines, setPipelines] = useState<Pipeline[]>([]);
@@ -164,9 +161,8 @@ export function useAutomationResources(enabled: boolean, automationId?: string |
     setErros({});
 
     (async () => {
-      const [labelsRes, seqRes, usersRes, pipelinesRes, qrRes, adRes, formRes, funnelsRes, evoRes, fuFlowsRes, convRes, roletasRes] = await Promise.allSettled([
+      const [labelsRes, usersRes, pipelinesRes, qrRes, adRes, formRes, funnelsRes, evoRes, fuFlowsRes, convRes, roletasRes] = await Promise.allSettled([
         labelsService.getLabels({ withCounts: true }),
-        followupSequencesService.getAll(),
         usersService.getUsers(),
         pipelinesService.getPipelines({ include_items: false }),
         quickRepliesService.getQuickReplies(),
@@ -182,7 +178,6 @@ export function useAutomationResources(enabled: boolean, automationId?: string |
       if (cancelled()) return;
 
       if (labelsRes.status === 'fulfilled') setLabels(labelsRes.value.data ?? []);
-      if (seqRes.status === 'fulfilled') setSequences(seqRes.value ?? []);
       if (usersRes.status === 'fulfilled') setUsers(usersRes.value.data ?? []);
       if (qrRes.status === 'fulfilled') setQuickReplies(qrRes.value.data ?? []);
       if (adRes.status === 'fulfilled') setAdOrigins(adRes.value ?? []);
@@ -227,7 +222,7 @@ export function useAutomationResources(enabled: boolean, automationId?: string |
 
   const erro = Object.values(erros).some(Boolean);
 
-  return { labels, sequences, followupFlows, users, pipelines, stagesByPipeline, quickReplies, adOrigins, formOrigins, messageFunnels, conversationFunnels, evolutionInstances, roletas, reloadFunnels, reloadLabels, loading, erros, erro, recarregar: carregar };
+  return { labels, followupFlows, users, pipelines, stagesByPipeline, quickReplies, adOrigins, formOrigins, messageFunnels, conversationFunnels, evolutionInstances, roletas, reloadFunnels, reloadLabels, loading, erros, erro, recarregar: carregar };
 }
 
 // ============================================================================
@@ -905,28 +900,16 @@ export function ActionEditor({ action, onChange, resources, pessoal = false }: A
     }
 
     // ----- start_followup_sequence -----
-    // Formato antigo (funil de follow-up). Não é mais oferecida pra regra nova;
-    // a que já existe continua editável, e o servidor manda o funil convertido
-    // pro fluxo novo. Backend lookup: FollowupSequence.active.find_by(slug: slug).
+    // Formato antigo (funil de follow-up), desligado na Fase 4: o servidor registra
+    // a ação como pulada e não começa nada. Não há mais o que escolher aqui. O
+    // bloco que ainda a tem salva continua abrindo, só pra quem montou ver o
+    // aviso e trocar pelo "Iniciar follow-up".
     case 'start_followup_sequence':
       return (
-        <Field
-          label="Sequência de follow-up *"
-          hint='Formato antigo. Pra escolher um dos follow-ups novos, troque a ação por "Iniciar follow-up".'
-        >
-          <Seletor
-            value={String(params.sequence_slug ?? '')}
-            onChange={e => setParam('sequence_slug', e.target.value)}
-            className={baseSelectClass}
-          >
-            <option value="">Selecione uma sequência</option>
-            {resources.sequences.map(s => (
-              <option key={s.id} value={s.slug}>
-                {s.name}{!s.is_active ? ' (inativa)' : ''}
-              </option>
-            ))}
-          </Seletor>
-        </Field>
+        <Aviso tom="atencao">
+          Esta ação é do follow-up do formato antigo e não faz mais nada: o lead não entra em follow-up por ela.
+          Troque este bloco por <strong>Iniciar follow-up</strong> pra escolher um dos follow-ups novos.
+        </Aviso>
       );
 
     // ----- send_whatsapp_message -----
@@ -1727,10 +1710,8 @@ export function formatActionSummary(
 ): string {
   const p = action.params ?? {};
   switch (action.type) {
-    case 'start_followup_sequence': {
-      const seq = resources.sequences.find(s => s.slug === p.sequence_slug);
-      return seq ? `Sequência: ${seq.name}` : 'Sequência: (não definida)';
-    }
+    case 'start_followup_sequence':
+      return 'Follow-up do formato antigo (não faz mais nada)';
     case 'start_followup_flow': {
       const flow = resources.followupFlows.find(f => f.id === p.flow_automation_id);
       if (flow) return `Follow-up: ${flow.name}`;

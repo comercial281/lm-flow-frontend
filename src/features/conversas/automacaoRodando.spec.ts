@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { linhasAutomaticas, linhaDoFluxo, linhaDoFollowup } from './automacaoRodando';
+import { linhasAutomaticas, linhaDoFluxo } from './automacaoRodando';
 import type { RunningFlow } from '@/services/flowAutomations/flowAutomationInstancesService';
-import { EMPTY_LEAD_FOLLOWUP_STATE } from '@/services/leadFollowup/leadFollowupService';
 
 const agora = new Date(2026, 9, 3, 10, 0);
 const epoch = (d: Date) => Math.floor(d.getTime() / 1000);
@@ -36,21 +35,12 @@ describe('faixa de automação rodando', () => {
     expect(linhaDoFluxo(fluxo({ phase: 'waiting_reply' }), agora).texto).toContain('aguardando resposta, sem limite');
   });
 
-  it('follow-up rodando e pausado; parado não aparece', () => {
-    const base = { ...EMPTY_LEAD_FOLLOWUP_STATE, sequence: { id: 's', slug: 's', name: 'Meta Ads' }, can_stop: true };
-    expect(linhaDoFollowup({ ...base, status: 'running', next_run_at: epoch(new Date(2026, 9, 3, 15, 0)) }, agora)?.texto)
-      .toBe('Follow-up "Meta Ads" · próxima mensagem às 15:00');
-    expect(linhaDoFollowup({ ...base, status: 'paused' }, agora)?.texto).toBe('Follow-up "Meta Ads" · pausado');
-    expect(linhaDoFollowup({ ...base, status: 'idle' }, agora)).toBeNull();
-    expect(linhaDoFollowup({ ...base, status: 'done' }, agora)).toBeNull();
-  });
-
-  it('junta fluxos ativos e follow-up', () => {
+  it('junta só os fluxos ativos (não existe mais linha do follow-up antigo)', () => {
     const linhas = linhasAutomaticas(
-      [fluxo(), fluxo({ id: 'i2', active: false })],
-      { ...EMPTY_LEAD_FOLLOWUP_STATE, status: 'running', can_stop: true },
+      [fluxo(), fluxo({ id: 'i2', active: false }), fluxo({ id: 'i3', kind: 'followup' })],
       agora,
     );
+    expect(linhas.map(l => l.id)).toEqual(['i1', 'i3']);
     expect(linhas.map(l => l.tipo)).toEqual(['fluxo', 'followup']);
   });
 });
