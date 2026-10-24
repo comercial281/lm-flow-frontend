@@ -9804,3 +9804,15 @@ Pedido do dono (Tony) em 23/10/2026: "não consigo cortar fios de conexão entre
 - O corte entra nas alterações não salvas como qualquer mudança no mapa: vale depois do Salvar.
 
 Código: `src/components/flowAutomations/FlowEdge.tsx` (linha com o botão), `cutEdge` em `src/lib/flowAutomationGraph.ts`, `onEdgesChange`/`selectedEdgeId` no `FlowAutomationCanvas.tsx`. Testes: `FlowEdge.spec.tsx` e o describe "Cortar a linha entre dois blocos" em `flowAutomationGraph.spec.ts`.
+
+## Follow-up, Fase 4 (Entrega B): fila antiga desligada (2026-10-23)
+
+O follow-up do formato antigo (a fila de sequências) não roda mais. Só existe o follow-up novo, o que se monta em Funis de mensagem e começa por "Iniciar follow-up" ou "Colocar em follow-up".
+
+- **A etiqueta "follow-up" não começa mais nada.** Colocar a etiqueta num lead só marca o lead; quem coloca em follow-up é a ação "Colocar em follow-up" (ou mover o card pra coluna Follow-up).
+- **IA com funil antigo gravado entrega pro Follow-up padrão da conta.** A IA que ainda tinha um funil do formato antigo escolhido passa a entregar o lead pro Follow-up padrão da conta, e a tela da IA avisa isso, pra ninguém achar que o funil antigo continua valendo.
+- **Bloco antigo salvo nas automações aparece como "Follow-up antigo (inativo)".** Ele não faz nada quando o fluxo passa por ele. Abre com um aviso pedindo pra trocar por "Iniciar follow-up". No histórico da automação a linha diz "follow-up antigo (inativo)", nunca "iniciou follow-up".
+- **Saíram do card e da conversa** a faixa "Terminando no formato antigo" e o botão Parar da fila antiga. Parar o follow-up passa a ser só o do follow-up novo.
+- **Disparos não pulam mais lead por causa da fila antiga.** Lead com linha velha na fila antiga volta a poder receber disparo; só o follow-up novo vivo segura o lead fora do disparo ("já está num follow-up"). Religar o número também não reabre mais linha da fila antiga.
+
+Não reabrir sem o dono pedir.
