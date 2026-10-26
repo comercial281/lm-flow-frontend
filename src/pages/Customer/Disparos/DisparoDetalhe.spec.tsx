@@ -121,6 +121,31 @@ describe('DisparoDetalhe', () => {
     expect(await screen.findByText('Entrou no funil em 16/10 às 14:32')).toBeInTheDocument();
   });
 
+  it('no modo automação, mostra "Automação X", "Entrou na automação às HH:MM" e o filtro certo', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-10-16T18:00:00Z'));
+    s.get.mockResolvedValue({ ...campanha, mode: 'automation', flow_name: 'Pós-visita' });
+    s.items.mockResolvedValue(fila([{ ...linhas[0], status: 'in_funnel' }]));
+    tela();
+    expect(await screen.findByText('Entrou na automação às 14:32')).toBeInTheDocument();
+    expect(screen.getByText('Automação Pós-visita')).toBeInTheDocument();
+    expect(within(screen.getByRole('list', { name: 'Números do disparo' })).getByText('Entraram na automação')).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: 'Entraram na automação' })).toBeInTheDocument();
+  });
+
+  it('no modo automação, entrada de outro dia mostra a data e o lead pausado diz por quê', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-10-17T13:00:00Z'));
+    s.get.mockResolvedValue({ ...campanha, mode: 'automation', flow_name: 'Pós-visita' });
+    s.items.mockResolvedValue(fila([
+      { ...linhas[0], status: 'in_funnel' },
+      { ...linhas[1], status: 'in_funnel', reason: null, sent_at: '2026-10-16T17:40:00Z', flow_paused: 'other_number' },
+    ]));
+    tela();
+    expect(await screen.findByText('Entrou na automação em 16/10 às 14:32')).toBeInTheDocument();
+    expect(screen.getByText('Entrou na automação, pausado: já conversa em outro número')).toBeInTheDocument();
+  });
+
   it('pausado porque o número de saída não existe mais mostra a frase do servidor', async () => {
     const aviso = 'O número de saída deste disparo não existe mais. Crie um novo disparo.';
     s.get.mockResolvedValue({ ...campanha, status: 'paused', pause_reason: 'number_removed', pause_message: aviso });

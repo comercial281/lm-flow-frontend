@@ -99,6 +99,8 @@ export interface BroadcastItemRow {
   reason: string | null;
   sent_at: string | null;
   conversation_id: string | null;
+  /** Disparo de automação: 'other_number' = entrou, mas pausado porque o lead já conversa em outro número. */
+  flow_paused?: 'other_number' | null;
 }
 
 export interface BroadcastAudience {

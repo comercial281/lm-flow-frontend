@@ -121,3 +121,27 @@ export function linhasDoResumo(
   }
   return linhas;
 }
+
+/**
+ * As frases do passo Revisar, dentro do resumo do disparo (não aviso solto).
+ * "Inclui N que já passaram por ela" só com a caixinha marcada; "Recomeça pra N
+ * que estavam com ela rodando" idem. Sem escolha ou com zero, não há frase.
+ */
+export function frasesDaRevisao(
+  s: FlowSummary | null,
+  escolhas: { incluirQuemPassou: boolean; recomecarRodando: boolean },
+): string[] {
+  if (!s) return [];
+  const frases: string[] = [];
+  if (escolhas.incluirQuemPassou && s.passed > 0) {
+    frases.push(s.passed === 1 ? `Inclui ${s.passed} que já passou por ela` : `Inclui ${s.passed} que já passaram por ela`);
+  }
+  if (escolhas.recomecarRodando && s.running > 0) {
+    frases.push(
+      s.running === 1
+        ? `Recomeça pra ${s.running} que estava com ela rodando`
+        : `Recomeça pra ${s.running} que estavam com ela rodando`,
+    );
+  }
+  return frases;
+}

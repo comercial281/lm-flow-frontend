@@ -56,12 +56,20 @@ function paramsDaFila(filtro: Filtro, page: number): { status?: BroadcastItemSta
 }
 
 /** O estado do lead na fila, em rótulo de tela. */
-function rotuloDoItem(item: Pick<BroadcastItemRow, 'status' | 'reason' | 'sent_at'>): string {
+function rotuloDoItem(
+  item: Pick<BroadcastItemRow, 'status' | 'reason' | 'sent_at' | 'flow_paused'>,
+  automacao = false,
+): string {
   switch (item.status) {
     case 'pending': return 'Na fila';
     case 'sending': return 'Enviando';
     case 'sent': return item.sent_at ? `Enviada ${diaEHoraEmSaoPaulo(item.sent_at)}` : 'Enviada';
-    case 'in_funnel': return item.sent_at ? `Entrou no funil ${diaEHoraEmSaoPaulo(item.sent_at)}` : 'Entrou no funil';
+    case 'in_funnel':
+      if (automacao) {
+        if (item.flow_paused === 'other_number') return 'Entrou na automação, pausado: já conversa em outro número';
+        return item.sent_at ? `Entrou na automação ${diaEHoraEmSaoPaulo(item.sent_at)}` : 'Entrou na automação';
+      }
+      return item.sent_at ? `Entrou no funil ${diaEHoraEmSaoPaulo(item.sent_at)}` : 'Entrou no funil';
     case 'failed': return item.reason ? `Falhou: ${item.reason}` : 'Falhou';
     case 'skipped': return item.reason ? `Ficou de fora: ${item.reason}` : 'Ficou de fora';
     case 'cancelled': return 'Cancelada';
@@ -253,9 +261,10 @@ export default function DisparoDetalhe() {
     );
   }
 
-  const funil = campanha.mode === 'flow';
+  const automacao = campanha.mode === 'automation';
+  const funil = campanha.mode === 'flow' || automacao;
   const oficial = campanha.mode === 'template' || campanha.channel_kind === 'whatsapp_cloud';
-  const rotuloEnviadas = funil ? 'Entraram no funil' : 'Enviadas';
+  const rotuloEnviadas = automacao ? 'Entraram na automação' : funil ? 'Entraram no funil' : 'Enviadas';
   const estado = STATUS_META[campanha.status] ?? STATUS_META.completed;
   const conta = (k: string) => contagem[k] ?? 0;
 
@@ -388,7 +397,7 @@ export default function DisparoDetalhe() {
                             )}
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap">{item.phone ? telefone(item.phone) : ''}</td>
-                          <td className={`px-4 py-3 ${COR_DO_ITEM[item.status] ?? ''}`}>{rotuloDoItem(item)}</td>
+                          <td className={`px-4 py-3 ${COR_DO_ITEM[item.status] ?? ''}`}>{rotuloDoItem(item, automacao)}</td>
                         </tr>
                       );
                     })}

@@ -51,7 +51,7 @@ import PassoQuemRecebe from './disparo/PassoQuemRecebe';
 import PassoMensagem, { type ModoDoEnvio } from './disparo/PassoMensagem';
 import PassoRitmo from './disparo/PassoRitmo';
 import { previsaoDoPacote, rotuloDoPacote } from './disparo/ritmo';
-import { motivoSemDisparo } from './disparo/automacao';
+import { frasesDaRevisao, motivoSemDisparo } from './disparo/automacao';
 
 interface BulkDispatchModalProps {
   open: boolean;
@@ -727,6 +727,15 @@ export default function BulkDispatchModal({
                     {cloudMode ? selectedCloudTemplate?.name : flowMode ? flowName : automationMode ? automacao?.name : items.length}
                   </strong>
                 </div>
+                {automationMode &&
+                  frasesDaRevisao(audiencePreview?.flow ?? null, {
+                    incluirQuemPassou,
+                    recomecarRodando,
+                  }).map(frase => (
+                    <div key={frase} className="py-2">
+                      <span>{frase}</span>
+                    </div>
+                  ))}
                 {cloudMode && (
                   <div className="flex justify-between gap-3 py-2">
                     <span className="text-muted-foreground">Teto de gasto</span>

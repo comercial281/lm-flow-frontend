@@ -86,7 +86,7 @@ export default function Disparos() {
       cabecalho={
         <BaseHeader
           title="Disparos"
-          subtitle="Disparo em massa pelo WhatsApp: escolha quem recebe, o número, a mensagem ou um funil, e acompanhe a fila."
+          subtitle="Disparo em massa pelo WhatsApp: escolha quem recebe, o número, a mensagem, um funil ou uma automação, e acompanhe a fila."
         />
       }
     >

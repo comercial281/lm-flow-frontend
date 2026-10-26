@@ -697,6 +697,28 @@ describe('BulkDispatchModal · passo 2, Automação', () => {
     expect(payload.funnel_items).toBeUndefined();
   });
 
+  it('na revisão, as frases moram dentro do resumo e seguem as caixinhas', async () => {
+    await escolher('a2');
+    const resumo = await screen.findByRole('list', { name: 'Quem recebe' });
+    await userEvent.click(within(resumo).getByRole('checkbox', { name: /Recomeçar pra eles/ }));
+    await userEvent.click(screen.getByRole('button', { name: 'Próximo' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Próximo' }));
+    expect(await screen.findByText('Inclui 12 que já passaram por ela')).toBeInTheDocument();
+    expect(screen.getByText('Recomeça pra 2 que estavam com ela rodando')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Teste|Mensagens/ })).toBeNull();
+  });
+
+  it('na revisão, sem "incluir quem já passou" não há frase', async () => {
+    await escolher('a2');
+    const resumo = await screen.findByRole('list', { name: 'Quem recebe' });
+    await userEvent.click(within(resumo).getByRole('checkbox', { name: /já passaram/ }));
+    await userEvent.click(screen.getByRole('button', { name: 'Próximo' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Próximo' }));
+    await screen.findByRole('button', { name: /Disparar pra/ });
+    expect(screen.queryByText(/Inclui \d+ que já/)).toBeNull();
+    expect(screen.queryByText(/Recomeça pra/)).toBeNull();
+  });
+
   it('sem número próprio o disparo vai pelo número do passo 1, com as escolhas padrão', async () => {
     await escolher('a2');
     await screen.findByText(/e mais 40 blocos/);
