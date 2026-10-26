@@ -38,8 +38,11 @@ export const TEXTOS_DOS_EVENTOS = {
     saiuDaEtapa: (etapa: string) => `saiu da etapa ${etapa}`,
   },
   pilulas: {
-    confirmouVisita: (data: string) => `confirmou a visita de ${data}`,
+    confirmouVisita: 'confirmou a visita',
+    confirmouVisitaDe: (data: string) => `confirmou a visita de ${data}`,
     deuRetorno: 'deu o retorno da visita',
     reabriuNegocio: 'reabriu o negócio',
   },
+  // leitor de tela: as estrelas são um desenho só
+  estrelas: (n: number) => `${n} de 5 estrelas`,
 };

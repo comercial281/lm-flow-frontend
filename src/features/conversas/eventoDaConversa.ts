@@ -21,6 +21,8 @@ export interface CartaoDoEvento {
   principal?: string;
   riscado?: boolean;
   detalhe?: string;
+  // ícone pequeno na frente do detalhe: alfinete pro imóvel, relógio pro prazo
+  detalheIcone?: 'local' | 'relogio';
   estrelas?: number;
   comentario?: string;
   rodape?: string;
@@ -39,17 +41,23 @@ type Evento = Record<string, unknown>;
 const texto = (v: unknown): string | undefined =>
   typeof v === 'string' && v.trim() !== '' ? v.trim() : undefined;
 
-// "Sábado, 25 out às 17h" / "Sábado, 25 out às 17h30" (fuso do navegador)
+// "Sábado, 25 out às 17h" / "Segunda, 26 out às 17h30" (fuso do navegador).
+// Dia da semana na forma curta, sem o "-feira", como no design.
 function formatarData(iso: unknown): string | undefined {
   const s = texto(iso);
   if (!s) return undefined;
   const d = new Date(s);
   if (Number.isNaN(d.getTime())) return undefined;
-  const base = format(d, "EEEE, d MMM 'às' H'h'", { locale: ptBR }).replace(/\./g, '');
+  const base = format(d, "EEEE, d MMM 'às' H'h'", { locale: ptBR })
+    .replace(/\./g, '')
+    .replace('-feira', '');
   const min = d.getMinutes();
   const out = min === 0 ? base : `${base}${String(min).padStart(2, '0')}`;
   return out.charAt(0).toUpperCase() + out.slice(1);
 }
+
+// No meio da frase o dia vai em minúscula: "Era sábado, 25 out às 17h".
+const minuscula = (s: string) => s.charAt(0).toLowerCase() + s.slice(1);
 
 const juntar = (...partes: (string | undefined)[]): string | undefined => {
   const ok = partes.filter((p): p is string => !!p);
@@ -89,6 +97,7 @@ function cartaoDeVisita(tipo: string, e: Evento): CartaoDoEvento | null {
         titulo: T.titulos.visitaAgendada,
         principal: data,
         detalhe: juntar(imovel, corretor && T.detalhes.com(corretor)),
+        detalheIcone: imovel ? 'local' : undefined,
         ...rodapeDe(e, R.agendadaPor, R.agendadaPelaIa),
       };
     case 'visit_rescheduled': {
@@ -98,7 +107,7 @@ function cartaoDeVisita(tipo: string, e: Evento): CartaoDoEvento | null {
         icone: 'remarcar',
         titulo: T.titulos.visitaRemarcada,
         principal: data,
-        detalhe: anterior && T.detalhes.era(anterior),
+        detalhe: anterior && T.detalhes.era(minuscula(anterior)),
         ...rodapeDe(e, R.remarcadaPor, R.remarcadaPelaIa),
       };
     }
@@ -111,6 +120,7 @@ function cartaoDeVisita(tipo: string, e: Evento): CartaoDoEvento | null {
         icone: 'calendario-ok',
         titulo: T.titulos.visitaRealizada,
         detalhe: imovel,
+        detalheIcone: imovel ? 'local' : undefined,
         estrelas: rating,
         comentario: feedback,
         ...rodapeDe(e, retorno ? R.retornoDe : R.registradaPor),
@@ -130,7 +140,7 @@ function cartaoDeVisita(tipo: string, e: Evento): CartaoDoEvento | null {
         familia: 'visita-encerrada',
         icone: 'calendario-x',
         titulo: T.titulos.visitaCancelada,
-        principal: data && T.detalhes.era(data),
+        principal: data && T.detalhes.era(minuscula(data)),
         detalhe: texto(e.reason),
         ...rodapeDe(e, R.canceladaPor),
       };
@@ -151,6 +161,7 @@ function cartaoDeTarefa(tipo: string, e: Evento): CartaoDoEvento | null {
       titulo: prazo ? T.titulos.tarefaAgendada : T.titulos.tarefaCriada,
       principal: titulo,
       detalhe: juntar(prazo, responsavel && T.detalhes.para(responsavel)),
+      detalheIcone: prazo ? 'relogio' : undefined,
       ...rodapeDe(e, R.criadaPor, undefined, R.criadaPelaAutomacao),
     };
   }
@@ -187,12 +198,14 @@ function cartaoDeNegocio(tipo: string, e: Evento): CartaoDoEvento | null {
   if (tipo === 'deal_lost') {
     const motivo = texto(e.reason);
     const etapa = texto(e.stage);
+    const saiu = etapa && T.detalhes.saiuDaEtapa(etapa);
+    // Sem motivo, o funil sobe pra linha principal e não se repete embaixo.
     return {
       familia: 'perdido',
       icone: 'x',
       titulo: T.titulos.negocioPerdido,
       principal: motivo ? T.detalhes.motivo(motivo) : funil,
-      detalhe: juntar(funil, etapa && T.detalhes.saiuDaEtapa(etapa)),
+      detalhe: motivo ? juntar(funil, saiu) : saiu,
       ...autoria,
     };
   }
@@ -217,7 +230,7 @@ export function lerEvento(message: Message): { cartao: CartaoDoEvento } | { pilu
       pilula: limpar({
         icone: 'check' as const,
         nome,
-        texto: data ? T.pilulas.confirmouVisita(data) : T.pilulas.confirmouVisita('').trim(),
+        texto: data ? T.pilulas.confirmouVisitaDe(minuscula(data)) : T.pilulas.confirmouVisita,
       }),
     };
   }

@@ -23,6 +23,7 @@ describe('lerEvento', () => {
     expect(c.titulo).toBe('Visita agendada');
     expect(c.principal).toBe('Domingo, 25 out às 17h');
     expect(c.detalhe).toBe('Apto 52 · com Cirlei');
+    expect(c.detalheIcone).toBe('local');
     expect(c.rodape).toBe('Agendada por Cirlei');
   });
   it('visit_scheduled pela IA, com minutos', () => {
@@ -34,14 +35,15 @@ describe('lerEvento', () => {
   it('visita sem imóvel: detalhe sem imóvel', () => {
     const c = cartao({ type: 'visit_scheduled', scheduled_at: '2026-10-25T20:00:00Z', realtor: 'Cirlei' });
     expect(c.detalhe).toBe('com Cirlei');
+    expect(c.detalheIcone).toBeUndefined();
     expect(c.rodape).toBeUndefined();
   });
   it('visit_rescheduled', () => {
     const c = cartao({ type: 'visit_rescheduled', by: 'Ana', scheduled_at: '2026-10-26T20:00:00Z', previous_scheduled_at: '2026-10-25T20:00:00Z' });
     expect(c.titulo).toBe('Visita remarcada');
     expect(c.icone).toBe('remarcar');
-    expect(c.principal).toBe('Segunda-feira, 26 out às 17h');
-    expect(c.detalhe).toBe('Era Domingo, 25 out às 17h');
+    expect(c.principal).toBe('Segunda, 26 out às 17h');
+    expect(c.detalhe).toBe('Era domingo, 25 out às 17h');
     expect(c.rodape).toBe('Remarcada por Ana');
   });
   it('visit_rescheduled pela IA', () => {
@@ -54,6 +56,7 @@ describe('lerEvento', () => {
     expect(c.titulo).toBe('Visita realizada');
     expect(c.principal).toBeUndefined();
     expect(c.detalhe).toBe('Apto 52');
+    expect(c.detalheIcone).toBe('local');
     expect(c.estrelas).toBe(4);
     expect(c.comentario).toBe('Gostou');
     expect(c.rodape).toBe('Retorno de Ana');
@@ -75,7 +78,7 @@ describe('lerEvento', () => {
     const c = cartao({ type: 'visit_cancelled', by: 'Ana', scheduled_at: '2026-10-25T20:00:00Z', reason: 'Lead desistiu' });
     expect(c.familia).toBe('visita-encerrada');
     expect(c.titulo).toBe('Visita cancelada');
-    expect(c.principal).toBe('Era Domingo, 25 out às 17h');
+    expect(c.principal).toBe('Era domingo, 25 out às 17h');
     expect(c.detalhe).toBe('Lead desistiu');
     expect(c.rodape).toBe('Cancelada por Ana');
   });
@@ -84,12 +87,18 @@ describe('lerEvento', () => {
     expect(c.titulo).toBe('Tarefa agendada');
     expect(c.principal).toBe('Ligar');
     expect(c.detalhe).toBe('Domingo, 25 out às 17h · para Bia');
+    expect(c.detalheIcone).toBe('relogio');
     expect(c.rodape).toBe('Criada por Ana');
+  });
+  it('dia da semana sem "-feira"', () => {
+    const c = cartao({ type: 'task_created', title: 'Ligar', due_at: '2026-10-23T13:00:00Z' });
+    expect(c.detalhe).toBe('Sexta, 23 out às 10h');
   });
   it('task_created sem prazo, pela automação', () => {
     const c = cartao({ type: 'task_created', by_automation: true, title: 'Ligar', assignee: 'Bia' });
     expect(c.titulo).toBe('Tarefa criada');
     expect(c.detalhe).toBe('para Bia');
+    expect(c.detalheIcone).toBeUndefined();
     expect(c.rodape).toBe('Criada pela automação');
   });
   it('task_completed', () => {
@@ -126,11 +135,15 @@ describe('lerEvento', () => {
   it('perdido sem motivo: principal com o funil', () => {
     const c = cartao({ type: 'deal_lost', by_automation: true, pipeline: 'Vendas', stage: 'Visita' });
     expect(c.principal).toBe('Vendas');
+    expect(c.detalhe).toBe('saiu da etapa Visita');
     expect(c.rodape).toBe('Pela automação');
   });
   it('visit_confirmed vira pílula', () => {
     const p = pilula({ type: 'visit_confirmed', by: 'Cirlei', scheduled_at: '2026-10-25T20:00:00Z' });
-    expect(p).toEqual({ icone: 'check', nome: 'Cirlei', texto: 'confirmou a visita de Domingo, 25 out às 17h' });
+    expect(p).toEqual({ icone: 'check', nome: 'Cirlei', texto: 'confirmou a visita de domingo, 25 out às 17h' });
+  });
+  it('visit_confirmed sem data: frase sem "de" pendurado', () => {
+    expect(pilula({ type: 'visit_confirmed', by: 'Cirlei' })).toEqual({ icone: 'check', nome: 'Cirlei', texto: 'confirmou a visita' });
   });
   it('visit_feedback vira pílula com estrelas', () => {
     expect(pilula({ type: 'visit_feedback', by: 'Cirlei', rating: 4 })).toEqual({

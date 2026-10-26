@@ -17,10 +17,16 @@ import {
   Calendar,
   FileText,
   Activity,
+  CheckCircle2,
+  RotateCw,
+  type LucideIcon,
 } from 'lucide-react';
 import { Message } from '@/types/chat/api';
 import { formatMessageTime } from '@/utils/time/timeHelpers';
 import { etiquetasNaMensagem } from '@/features/conversas/etiquetasNaMensagem';
+import { lerEvento, type PilulaDoEvento } from '@/features/conversas/eventoDaConversa';
+import CartaoDeEvento from './CartaoDeEvento';
+import PilulaDeSistema from './PilulaDeSistema';
 
 interface SystemMessageProps {
   message: Message;
@@ -28,7 +34,7 @@ interface SystemMessageProps {
 }
 
 // Mapeamento de ações do sistema para ícones
-const getSystemMessageIcon = (content: string) => {
+const getSystemMessageIcon = (content: string): LucideIcon => {
   const lowerContent = content.toLowerCase();
 
   // Prioridade
@@ -138,56 +144,44 @@ const getSystemMessageIcon = (content: string) => {
   return Activity;
 };
 
+// Linha de sistema da conversa. Evento conhecido (visita, tarefa, negócio) vira
+// cartão ou pílula própria; o resto (etiqueta, atribuição, Roleta, status) vira
+// pílula com o texto de sempre. Tipo de evento que a tela não conhece cai na
+// pílula com a frase completa do servidor.
+const ICONES_DA_PILULA: Record<PilulaDoEvento['icone'], LucideIcon> = {
+  check: CheckCircle2,
+  estrela: Star,
+  remarcar: RotateCw,
+};
+
+const NOME_E_VERBO = /^(.+) (adicionou|removeu)$/s;
+
 const SystemMessage: React.FC<SystemMessageProps> = ({ message, labels = [] }) => {
-  const IconComponent = getSystemMessageIcon(message.content);
+  const hora = formatMessageTime(message.created_at);
+  const evento = lerEvento(message);
 
-  // Formatação do timestamp - usando a mesma função das mensagens normais
-  const timestamp = formatMessageTime(message.created_at);
-
-  // Etiquetas citadas no texto (id ou título inteiro): viram etiqueta colorida
-  const { texto: cleanContent, etiquetas: mentionedLabels } = etiquetasNaMensagem(message.content, labels);
-
-  // Se tem labels, renderizar com badges
-  if (mentionedLabels.length > 0) {
+  if (evento && 'cartao' in evento) return <CartaoDeEvento cartao={evento.cartao} hora={hora} />;
+  if (evento) {
+    const p = evento.pilula;
     return (
-      <div className="text-center py-4">
-        <div className="inline-flex flex-col items-center gap-2 text-xs text-muted-foreground bg-muted/50 px-3 py-2 rounded-lg">
-          <div className="flex items-center gap-2">
-            <IconComponent
-              className="w-3 h-3 text-muted-foreground/70 flex-shrink-0"
-              aria-hidden="true"
-            />
-            <span className="font-medium">{cleanContent}</span>
-            <span className="text-muted-foreground/60 text-xs ml-1 hidden sm:inline">{timestamp}</span>
-          </div>
-          <div className="flex items-center gap-1.5 flex-wrap justify-center">
-            {mentionedLabels.map(label => (
-              <div
-                key={label.id}
-                className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full text-white"
-                style={{ backgroundColor: label.color }}
-              >
-                <Tag className="w-2.5 h-2.5" />
-                <span>{label.title}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
+      <PilulaDeSistema icone={ICONES_DA_PILULA[p.icone]} nome={p.nome} texto={p.texto} estrelas={p.estrelas} hora={hora} />
     );
   }
 
+  // Etiquetas citadas no texto (id ou título inteiro): viram etiqueta colorida.
+  // Linha de etiqueta leva sempre o ícone de etiqueta ("visita-agendada" puxava a agenda).
+  const { texto, etiquetas } = etiquetasNaMensagem(message.content, labels);
+  const nomeEVerbo = etiquetas.length ? NOME_E_VERBO.exec(texto) : null;
+
   return (
-    <div className="text-center py-4">
-      <div className="inline-flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 px-3 py-1.5 rounded-full">
-        <IconComponent
-          className="w-3 h-3 text-muted-foreground/70 flex-shrink-0"
-          aria-hidden="true"
-        />
-        <span className="font-medium">{message.content}</span>
-        <span className="text-muted-foreground/60 text-xs ml-1 hidden sm:inline">{timestamp}</span>
-      </div>
-    </div>
+    <PilulaDeSistema
+      icone={etiquetas.length ? Tag : getSystemMessageIcon(message.content)}
+      nome={nomeEVerbo?.[1]}
+      texto={nomeEVerbo ? nomeEVerbo[2] : texto}
+      etiquetas={etiquetas}
+      etiquetasRiscadas={nomeEVerbo?.[2] === 'removeu'}
+      hora={hora}
+    />
   );
 };
 
