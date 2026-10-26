@@ -24,18 +24,32 @@ vi.mock('@/services/contacts/labelsService', () => ({
     createLabel: (...a: unknown[]) => createLabel(...a),
   },
 }));
+// As etiquetas do lead e da conversa vêm do servidor ao abrir (24/10): a tela de
+// Conversas nunca recebia as do lead e o painel abria sempre vazio.
 const updateContact = vi.fn().mockResolvedValue({});
+const getContactLabels = vi.fn<(id: string) => Promise<string[]>>();
 vi.mock('@/services/contacts/contactsService', () => ({
-  contactsService: { updateContact: (...a: unknown[]) => updateContact(...a) },
+  contactsService: {
+    updateContact: (...a: unknown[]) => updateContact(...a),
+    getContactLabels: (id: string) => getContactLabels(id),
+  },
 }));
 const removeLabels = vi.fn().mockResolvedValue({});
 const addLabels = vi.fn().mockResolvedValue({});
+const getConversationLabels = vi.fn<(id: string) => Promise<string[]>>();
 vi.mock('@/services/chat/chatService', () => ({
   default: {
     addLabels: (...a: unknown[]) => addLabels(...a),
     removeLabels: (...a: unknown[]) => removeLabels(...a),
+    getConversationLabels: (id: string) => getConversationLabels(id),
   },
 }));
+
+// O que o servidor tem: etiquetas do lead e da conversa.
+const noServidor = (lead: string[], conversa: string[] = []) => {
+  getContactLabels.mockResolvedValue(lead);
+  getConversationLabels.mockResolvedValue(conversa);
+};
 
 describe('ContactTagsManager', () => {
   beforeEach(() => {
@@ -43,23 +57,98 @@ describe('ContactTagsManager', () => {
     removeLabels.mockClear();
     addLabels.mockClear();
     createLabel.mockClear();
+    getContactLabels.mockReset();
+    getConversationLabels.mockReset();
+    noServidor([]);
+  });
+
+  it('caso Deusa: mostra as do lead e as da conversa juntas, cada uma uma vez', async () => {
+    noServidor(
+      ['follow-up-padrao-msg-1', 'recuperado-pelo-follow-up'],
+      ['lead-morno', 'Recuperado-pelo-follow-up', 'follow-up-padrao-msg-1'],
+    );
+    render(<ContactTagsManager contactId="deusa" conversationId="conv-deusa" />);
+
+    expect(await screen.findByText('lead-morno')).toBeTruthy();
+    expect(screen.getAllByText(/recuperado-pelo-follow-up/i)).toHaveLength(1);
+    expect(screen.getAllByText('follow-up-padrao-msg-1')).toHaveLength(1);
+    expect(getContactLabels).toHaveBeenCalledWith('deusa');
+    expect(getConversationLabels).toHaveBeenCalledWith('conv-deusa');
+  });
+
+  it('enquanto não carregou, "+ Etiqueta" fica travado (adicionar apagava as outras)', async () => {
+    let entregar: (v: string[]) => void = () => {};
+    getContactLabels.mockImplementationOnce(() => new Promise(r => { entregar = r; }));
+    render(<ContactTagsManager contactId="lento" />);
+
+    const botao = screen.getByRole('button', { name: '+ Etiqueta' }) as HTMLButtonElement;
+    expect(botao.disabled).toBe(true);
+    entregar(['zona sul']);
+    await waitFor(() => expect(botao.disabled).toBe(false));
+    expect(screen.getByText('zona sul')).toBeTruthy();
+  });
+
+  it('adicionar relê o lead na hora e mantém as que ele já tem', async () => {
+    noServidor(['follow-up-padrao-msg-1'], ['lead-morno']);
+    render(<ContactTagsManager contactId="soma" conversationId="conv-soma" />);
+    await screen.findByText('lead-morno');
+    // Entre abrir e clicar, o follow-up trocou o marcador do lead.
+    getContactLabels.mockResolvedValueOnce(['follow-up-padrao-msg-2']);
+
+    fireEvent.click(screen.getByRole('button', { name: '+ Etiqueta' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'visita-agendada' }));
+
+    await waitFor(() =>
+      expect(updateContact).toHaveBeenCalledWith('soma', { labels: ['follow-up-padrao-msg-2', 'visita-agendada'] }),
+    );
+    expect(addLabels).toHaveBeenCalledWith('conv-soma', ['visita-agendada']);
+    // A da conversa (que não está no lead) não vai pro lead por tabela.
+    expect(screen.getByText('lead-morno')).toBeTruthy();
+  });
+
+  it('tirar uma que só está na conversa não mexe no lead', async () => {
+    noServidor(['zona sul'], ['lead-morno']);
+    render(<ContactTagsManager contactId="so-conversa" conversationId="conv-sc" />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Remover lead-morno' }));
+
+    await waitFor(() => expect(removeLabels).toHaveBeenCalledWith('conv-sc', ['lead-morno']));
+    expect(updateContact).not.toHaveBeenCalled();
+    await waitFor(() => expect(screen.queryByText('lead-morno')).toBeNull());
+    expect(screen.getByText('zona sul')).toBeTruthy();
+  });
+
+  it('tirar do lead relê a lista na hora e só tira aquela', async () => {
+    noServidor(['zona sul'], ['zona sul']);
+    render(<ContactTagsManager contactId="rele" conversationId="conv-rele" />);
+    await screen.findByText('zona sul');
+    // Entre abrir e clicar, o follow-up pôs outra etiqueta no lead.
+    getContactLabels.mockResolvedValueOnce(['zona sul', 'follow-up-padrao-msg-2']);
+    fireEvent.click(screen.getByRole('button', { name: 'Remover zona sul' }));
+
+    await waitFor(() =>
+      expect(updateContact).toHaveBeenCalledWith('rele', { labels: ['follow-up-padrao-msg-2'] }),
+    );
+    expect(removeLabels).toHaveBeenCalledWith('conv-rele', ['zona sul']);
   });
 
   it('busca o catálogo uma vez só, mesmo remontando por contato', async () => {
-    const { unmount } = render(<ContactTagsManager contactId="contato-1" initialLabels={[]} />);
+    const { unmount } = render(<ContactTagsManager contactId="contato-1" />);
     // O catálogo (do store) aparece ao abrir o "+ Etiqueta".
+    await waitFor(() => expect(screen.getByRole('button', { name: '+ Etiqueta' })).toHaveProperty('disabled', false));
     fireEvent.click(screen.getByRole('button', { name: '+ Etiqueta' }));
     expect(await screen.findByText('zona sul')).toBeTruthy();
     unmount();
 
-    render(<ContactTagsManager contactId="contato-2" initialLabels={['zona sul']} />);
+    noServidor(['zona sul']);
+    render(<ContactTagsManager contactId="contato-2" />);
     await waitFor(() => expect(screen.getByText('zona sul')).toBeTruthy());
     expect(getLabels).toHaveBeenCalledTimes(1);
   });
 
   it('mostra só as etiquetas do lead; o catálogo fica fechado', async () => {
-    render(<ContactTagsManager contactId="contato-3" initialLabels={[{ name: 'zona sul' }]} />);
-    expect(screen.getByText('zona sul')).toBeTruthy();
+    noServidor(['zona sul']);
+    render(<ContactTagsManager contactId="contato-3" />);
+    expect(await screen.findByText('zona sul')).toBeTruthy();
     // Etiqueta da conta que o lead não tem não aparece, nem o campo de busca.
     await waitFor(() => expect(getLabels).toHaveBeenCalledTimes(1));
     expect(screen.queryByText('visita-agendada')).toBeNull();
@@ -67,13 +156,15 @@ describe('ContactTagsManager', () => {
   });
 
   it('sem etiqueta: só o "+ Etiqueta", sem a frase "Nenhuma etiqueta"', () => {
-    render(<ContactTagsManager contactId="contato-4" initialLabels={[]} />);
+    render(<ContactTagsManager contactId="contato-4" />);
     expect(screen.queryByText('Nenhuma etiqueta')).toBeNull();
     expect(screen.getByRole('button', { name: '+ Etiqueta' })).toBeTruthy();
   });
 
   it('"+ Etiqueta" abre o catálogo sem as que o lead já tem; clicar aplica', async () => {
-    render(<ContactTagsManager contactId="contato-5" conversationId="conv-5" initialLabels={['zona sul']} />);
+    noServidor(['zona sul'], ['zona sul']);
+    render(<ContactTagsManager contactId="contato-5" conversationId="conv-5" />);
+    await screen.findByText('zona sul');
     fireEvent.click(screen.getByRole('button', { name: '+ Etiqueta' }));
 
     expect(screen.getByPlaceholderText('Buscar ou criar etiqueta...')).toBeTruthy();
@@ -89,7 +180,8 @@ describe('ContactTagsManager', () => {
   });
 
   it('a busca filtra o catálogo', async () => {
-    render(<ContactTagsManager contactId="contato-6" initialLabels={[]} />);
+    render(<ContactTagsManager contactId="contato-6" />);
+    await waitFor(() => expect(screen.getByRole('button', { name: '+ Etiqueta' })).toHaveProperty('disabled', false));
     fireEvent.click(screen.getByRole('button', { name: '+ Etiqueta' }));
     expect(await screen.findByRole('button', { name: 'zona sul' })).toBeTruthy();
 
@@ -99,8 +191,9 @@ describe('ContactTagsManager', () => {
   });
 
   it('o ✕ remove a etiqueta e chama o serviço (contato e conversa)', async () => {
-    render(<ContactTagsManager contactId="contato-7" conversationId="conv-7" initialLabels={['zona sul']} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Remover zona sul' }));
+    noServidor(['zona sul'], ['zona sul']);
+    render(<ContactTagsManager contactId="contato-7" conversationId="conv-7" />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Remover zona sul' }));
 
     await waitFor(() => expect(updateContact).toHaveBeenCalledWith('contato-7', { labels: [] }));
     expect(removeLabels).toHaveBeenCalledWith('conv-7', ['zona sul']);
@@ -109,7 +202,8 @@ describe('ContactTagsManager', () => {
   // Enter na busca (revisão de 02/10): "vis" + Enter não pode criar uma etiqueta
   // "vis" na conta inteira quando o catálogo já mostra "visita-agendada".
   const abrirEDigitar = async (contato: string, texto: string) => {
-    render(<ContactTagsManager contactId={contato} initialLabels={[]} />);
+    render(<ContactTagsManager contactId={contato} />);
+    await waitFor(() => expect(screen.getByRole('button', { name: '+ Etiqueta' })).toHaveProperty('disabled', false));
     fireEvent.click(screen.getByRole('button', { name: '+ Etiqueta' }));
     await screen.findByRole('button', { name: 'zona sul' });
     const campo = screen.getByPlaceholderText('Buscar ou criar etiqueta...');

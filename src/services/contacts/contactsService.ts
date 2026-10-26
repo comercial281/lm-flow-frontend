@@ -237,9 +237,11 @@ class ContactsService {
   }
 
   // Contact Labels
-  async getContactLabels(contactId: string): Promise<{ data: string[] }> {
+  // O servidor devolve a lista de nomes (label_list).
+  async getContactLabels(contactId: string): Promise<string[]> {
     const response = await api.get(`/contacts/${contactId}/labels`);
-    return extractData<{ data: string[] }>(response);
+    const lista = extractData<unknown>(response);
+    return Array.isArray(lista) ? lista.map(String) : [];
   }
 
   async updateContactLabels(contactId: string, labels: string[]): Promise<Contact> {

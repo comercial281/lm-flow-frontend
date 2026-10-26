@@ -197,6 +197,13 @@ class ChatService {
     return response.data;
   }
 
+  /** Etiquetas gravadas na conversa (nomes crus, como o servidor guarda). */
+  async getConversationLabels(conversationId: string): Promise<string[]> {
+    const response = await api.get(`/conversations/${conversationId}/labels`);
+    const lista = response.data?.data ?? response.data;
+    return Array.isArray(lista) ? lista.map(String) : [];
+  }
+
   async addLabels(conversationId: string, labels: string[]): Promise<ConversationResponse> {
     const response = await api.post(`/conversations/${conversationId}/labels`, { labels });
     return response.data;

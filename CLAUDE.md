@@ -9815,4 +9815,19 @@ O follow-up do formato antigo (a fila de sequências) não roda mais. Só existe
 - **Saíram do card e da conversa** a faixa "Terminando no formato antigo" e o botão Parar da fila antiga. Parar o follow-up passa a ser só o do follow-up novo.
 - **Disparos não pulam mais lead por causa da fila antiga.** Lead com linha velha na fila antiga volta a poder receber disparo; só o follow-up novo vivo segura o lead fora do disparo ("já está num follow-up"). Religar o número também não reabre mais linha da fila antiga.
 
+## Painel do lead: Etiquetas mostra as do lead e as da conversa (desde 2026-10-24)
+
+Pedido do dono (Tony) em 24/10/2026: "tag da IA aparece na conversa e não na direita" (Imobiliária Moeda Forte). Só frontend.
+
+- **A causa.** A seção Etiquetas do painel lia `contact.labels` da conversa selecionada, e a conversa que a tela de Conversas recebe nunca traz as etiquetas do contato (`ConversationSerializer` manda só id, nome, telefone, e-mail, foto). O painel abria **sempre vazio**, pra qualquer lead e qualquer etiqueta, desde a criação da seção (22/06). A lista da esquerda mostra as da conversa, por isso as duas divergiam.
+- **O estrago escondido.** Como o painel achava que o lead não tinha etiqueta, o "+ Etiqueta" salvava no contato a lista vazia + a nova, e o contato só salva a lista inteira: apagava todas as outras etiquetas do lead, inclusive o marcador do follow-up (`<prefixo>-msg-N`, o ponto de retomada) e a `recuperado-pelo-follow-up`.
+- **Regra nova.** O painel lê do servidor, ao abrir, as etiquetas do lead (`GET /contacts/:id/labels`) e as da conversa (`GET /conversations/:id/labels`) e mostra **uma lista só, sem repetir** (sem diferença de maiúscula; as do lead primeiro). Decisão do dono: "apenas as etiquetas únicas, tanto do lead como da conversa".
+- **Nada salva antes de carregar.** "+ Etiqueta" e o ✕ ficam travados até as duas leituras voltarem. Se falharem, aparece "Não deu pra carregar as etiquetas. Abra a conversa de novo." e continua travado.
+- **Adicionar** põe no lead e na conversa. **Tirar** tira de onde ela estiver: a que só está na conversa não mexe no lead. Antes de salvar no lead, relê a lista dele na hora, pra não apagar a que o follow-up ou uma automação pôs depois que o painel abriu.
+- **Por que não a porta que só soma** (`POST /contacts/:id/labels`): ela pede o cargo `contacts.create`, e corretor pode não ter. O salvar do contato (`contacts.update`) é o que já funcionava pra todo mundo.
+
+Ficou de fora: o painel não se atualiza sozinho se a etiqueta muda com ele aberto (vale ao reabrir a conversa), e a etiqueta que só está na conversa não é copiada pro lead.
+
+Código: `src/components/chat/contact-sidebar/ContactTagsManager.tsx` (`juntarEtiquetas`), `chatService.getConversationLabels`, `contactsService.getContactLabels`. Testes: `ContactTagsManager.spec.tsx` (caso Deusa, trava antes de carregar, releitura) e `ContactSidebar.spec.tsx`.
+
 Não reabrir sem o dono pedir.
