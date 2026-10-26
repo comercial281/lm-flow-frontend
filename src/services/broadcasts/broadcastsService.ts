@@ -261,6 +261,24 @@ export interface AudiencePreviewFull {
   forced_inbox?: { inbox_id: string; name: string } | null;
 }
 
+/** Lead da lista do painel "Escolher leads" (GET /broadcasts/lead_options). Só quem tem telefone. */
+export interface LeadOption {
+  contact_id: string;
+  name: string | null;
+  phone: string;
+  stage_name: string | null;
+  labels: string[];
+}
+
+/** Filtros da lista de leads: funil obrigatório; etapa por id, etiqueta pelo nome. */
+export interface LeadOptionsParams {
+  pipeline_id: string;
+  q?: string;
+  stage_id?: string;
+  label?: string;
+  page?: number;
+}
+
 class BroadcastsService {
   private base = '/broadcasts';
 
@@ -319,6 +337,21 @@ class BroadcastsService {
     const res = await api.get(`${this.base}/automation_options`);
     const list = extractData<AutomationOption[]>(res);
     return Array.isArray(list) ? list : [];
+  }
+
+  // Lista paginada (20 por página) pra marcar lead a lead. Corretor: o servidor recorta os dele.
+  async leadOptions(params: LeadOptionsParams): Promise<{
+    data: LeadOption[];
+    meta: { total: number; page: number; per_page: number };
+  }> {
+    const limpos = Object.fromEntries(
+      Object.entries(params).filter(([, v]) => v !== undefined && v !== ''),
+    ) as Partial<LeadOptionsParams>;
+    const body = (await api.get(`${this.base}/lead_options`, { params: limpos }))?.data ?? {};
+    return {
+      data: Array.isArray(body.data) ? (body.data as LeadOption[]) : [],
+      meta: body.meta ?? { total: 0, page: 1, per_page: 20 },
+    };
   }
 
   async items(

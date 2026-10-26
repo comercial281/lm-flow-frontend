@@ -13,7 +13,7 @@ import Carregando from '@/components/base/Carregando';
 import BotoesDeEscolha from '@/components/base/BotoesDeEscolha';
 import { Seletor } from '@/components/base/Seletor';
 import { CampoDaJanela, GrupoDaJanela } from '@/components/base/janela';
-import { plural, telefone } from '@/lib/formato';
+import { numero, plural, telefone } from '@/lib/formato';
 import { cn } from '@/lib/utils';
 import type { PipelineStage } from '@/types/analytics';
 import type { Label as LabelType } from '@/types/settings';
@@ -24,6 +24,7 @@ import type {
   SenderOption,
 } from '@/services/broadcasts/broadcastsService';
 import { linhaDeFora } from './automacao';
+import { ID_DO_CAMPO_DE_LEADS } from './PainelDeLeads';
 
 // PASSO 1 DO DISPARO (16/10/2026): por onde sai (canal + número de saída) e
 // quem recebe. O número vem antes do público porque "lead de outro corretor"
@@ -79,6 +80,9 @@ interface Props {
   aoTentarEtiquetas: () => void;
   etiquetasMarcadas: string[];
   aoMarcarEtiqueta: (titulo: string) => void;
+  /** "Lista de leads": quantos estão marcados no painel e como abrir o painel. */
+  leadsEscolhidos: number;
+  aoAbrirLeads: () => void;
 
   previa: AudiencePreviewFull | null;
   contando: boolean;
@@ -187,9 +191,47 @@ export default function PassoQuemRecebe(p: Props) {
               <SelectItem value="pipeline">Todos os leads do funil</SelectItem>
               <SelectItem value="stage">Uma etapa específica</SelectItem>
               <SelectItem value="tag">Por etiqueta</SelectItem>
+              <SelectItem value="manual">Lista de leads</SelectItem>
             </SelectContent>
           </Select>
         </CampoDaJanela>
+
+        {p.audienceMode === 'manual' && (
+          <CampoDaJanela rotulo="Leads" idDoRotulo="disparo-leads-rotulo">
+            {/* O "Mudar" mora dentro do próprio campo, nunca solto ao lado. */}
+            <div
+              role="group"
+              aria-labelledby="disparo-leads-rotulo"
+              className="flex h-9 items-center justify-between gap-2 rounded-md border border-input bg-background px-3 text-sm shadow-xs"
+            >
+              {p.leadsEscolhidos > 0 ? (
+                <>
+                  <span id="disparo-leads-quantos">
+                    <strong>{numero(p.leadsEscolhidos)}</strong> {p.leadsEscolhidos === 1 ? 'lead escolhido' : 'leads escolhidos'}
+                  </span>
+                  <button
+                    id={ID_DO_CAMPO_DE_LEADS}
+                    type="button"
+                    aria-describedby="disparo-leads-quantos"
+                    onClick={p.aoAbrirLeads}
+                    className="rounded-sm font-medium text-primary hover:underline focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
+                  >
+                    Mudar
+                  </button>
+                </>
+              ) : (
+                <button
+                  id={ID_DO_CAMPO_DE_LEADS}
+                  type="button"
+                  onClick={p.aoAbrirLeads}
+                  className="rounded-sm font-medium text-primary hover:underline focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
+                >
+                  Escolher leads
+                </button>
+              )}
+            </div>
+          </CampoDaJanela>
+        )}
 
         {p.audienceMode === 'tag' && (
           <CampoDaJanela rotulo="Etiquetas" ajuda="Recebe quem tem qualquer uma das etiquetas marcadas.">
@@ -252,6 +294,8 @@ export default function PassoQuemRecebe(p: Props) {
           <>Não deu pra contar os destinatários agora. Troque a escolha pra tentar de novo.</>
         ) : p.audienceMode === 'tag' ? (
           <>Marque ao menos uma etiqueta pra contar os destinatários.</>
+        ) : p.audienceMode === 'manual' ? (
+          <>Marque ao menos um lead pra contar os destinatários.</>
         ) : (
           <>Escolha a etapa pra contar os destinatários.</>
         )}
