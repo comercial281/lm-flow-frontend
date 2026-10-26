@@ -106,7 +106,7 @@ export default function Disparos() {
               ))}
             </Seletor>
           </div>
-          {pode('broadcasts', 'create') && (
+          {(pode('broadcasts', 'create') || pode('broadcasts', 'own')) && (
             <Button onClick={() => setJanelaAberta(true)} disabled={!funilDaJanela}>
               <Plus className="w-4 h-4 mr-1" /> Novo disparo
             </Button>

@@ -47,7 +47,9 @@ import { type SequenceDraftItem, newSequenceItem } from '@/components/messaging/
 
 import { PhoneInput } from '@/components/shared/PhoneInput';
 import { CaixaDaJanela, CampoDaJanela, GrupoDaJanela } from '@/components/base/janela';
+import { useCan } from '@/hooks/useCan';
 import PassoQuemRecebe from './disparo/PassoQuemRecebe';
+import PainelDeLeads from './disparo/PainelDeLeads';
 import PassoMensagem, { type ModoDoEnvio } from './disparo/PassoMensagem';
 import PassoRitmo from './disparo/PassoRitmo';
 import { previsaoDoPacote, rotuloDoPacote } from './disparo/ritmo';
@@ -123,6 +125,10 @@ export default function BulkDispatchModal({
   funis,
 }: BulkDispatchModalProps) {
   const [step, setStep] = useState<Step>('audience');
+  // Corretor (só "Disparos próprios"): o servidor recorta tudo; a tela esconde o canal oficial
+  // (as rotas dele dão 403) e trava o número no dele, que é o único que `sender_options` devolve.
+  const pode = useCan();
+  const modoCorretor = pode('broadcasts', 'own') && !pode('broadcasts', 'create');
 
   // Funil escolhido na janela (só quando `funis` vem). Troca recarrega as etapas e a contagem.
   const [funilId, setFunilId] = useState(pipelineIdProp);
@@ -143,6 +149,9 @@ export default function BulkDispatchModal({
   const [audienceMode, setAudienceMode] = useState<AudienceMode>('pipeline');
   const [stageId, setStageId] = useState('');
   const [selectedLabels, setSelectedLabels] = useState<string[]>([]);
+  // "Lista de leads": os marcados no painel à direita (valem entre páginas, buscas e fechar).
+  const [contactIds, setContactIds] = useState<string[]>([]);
+  const [painelDeLeads, setPainelDeLeads] = useState(false);
   const [availableLabels, setAvailableLabels] = useState<LabelType[]>([]);
   // Etiquetas e canais oficiais: falha ao carregar não vira "Nenhuma … cadastrada/conectada".
   const [erroEtiquetas, setErroEtiquetas] = useState(false);
@@ -200,6 +209,8 @@ export default function BulkDispatchModal({
     setAudienceMode('pipeline');
     setStageId('');
     setSelectedLabels([]);
+    setContactIds([]);
+    setPainelDeLeads(false);
     setAudiencePreview(null);
     setErroPrevia(false);
     setSendMode('message');
@@ -257,6 +268,11 @@ export default function BulkDispatchModal({
   }, []);
 
   const carregarCanais = useCallback(() => {
+    if (modoCorretor) {
+      setCloudOptions([]);
+      setCarregandoCanais(false);
+      return;
+    }
     const vez = ++ultimaCargaCanais.current;
     setErroCanais(false);
     setCarregandoCanais(true);
@@ -273,7 +289,7 @@ export default function BulkDispatchModal({
         setErroCanais(true);
         setCarregandoCanais(false);
       });
-  }, []);
+  }, [modoCorretor]);
 
   const ultimaCargaEtapas = useRef(0);
   const carregarEtapas = useCallback((id: string) => {
@@ -288,6 +304,7 @@ export default function BulkDispatchModal({
   const escolherFunil = useCallback((id: string) => {
     setFunilId(id);
     setStageId('');
+    setContactIds([]); // os leads marcados eram do outro funil
     setPostStageId('');
     carregarEtapas(id);
   }, [carregarEtapas]);
@@ -348,8 +365,9 @@ export default function BulkDispatchModal({
       mode: audienceMode,
       stage_id: audienceMode === 'stage' ? stageId : undefined,
       labels: audienceMode === 'tag' ? selectedLabels : undefined,
+      contact_ids: audienceMode === 'manual' ? contactIds : undefined,
     }),
-    [audienceMode, stageId, selectedLabels],
+    [audienceMode, stageId, selectedLabels, contactIds],
   );
   const previewInboxId = cloudMode ? selectedCloudInbox?.inbox_id : senderInboxId || undefined;
   // Automação escolhida: a contagem vem com o resumo dela e o número que ela impõe.
@@ -369,11 +387,22 @@ export default function BulkDispatchModal({
     setErroPrevia(false);
     // A contagem anterior foi descartada pela limpeza: não deixa o "Contando" preso.
     setCountingAudience(false);
-    if ((audienceMode === 'stage' && !stageId) || (audienceMode === 'tag' && selectedLabels.length === 0)) {
+    if (
+      (audienceMode === 'stage' && !stageId) ||
+      (audienceMode === 'tag' && selectedLabels.length === 0) ||
+      (audienceMode === 'manual' && contactIds.length === 0)
+    ) {
       setAudiencePreview(null);
       return;
     }
     if (esperandoNumeros) return;
+    // Corretor sem número próprio: o servidor responderia 422, o aviso do passo 1 já explica.
+    if (modoCorretor && senderOptions && senderOptions.length === 0) {
+      setAudiencePreview(null);
+      return;
+    }
+    // Com o painel de leads aberto não recontamos a cada clique: conta uma vez ao fechar.
+    if (painelDeLeads && audienceMode === 'manual') return;
     let alive = true;
     setCountingAudience(true);
     (flowOpts
@@ -389,7 +418,7 @@ export default function BulkDispatchModal({
     return () => {
       alive = false;
     };
-  }, [open, pipelineId, audienceMode, stageId, selectedLabels, audiencePayload, previewInboxId, esperandoNumeros, flowOpts]);
+  }, [open, pipelineId, audienceMode, stageId, selectedLabels, contactIds, audiencePayload, previewInboxId, esperandoNumeros, flowOpts, painelDeLeads, modoCorretor, senderOptions]);
   // O número que a automação impõe (null = vale o número do passo 1).
   const forcedInbox = automacaoId ? audiencePreview?.forced_inbox ?? null : null;
   // O número imposto também tem que estar conectado (mesma regra do passo 1).
@@ -431,6 +460,7 @@ export default function BulkDispatchModal({
   const step1Ok =
     !contando &&
     (recipientCount ?? 0) > 0 &&
+    (audienceMode !== 'manual' || contactIds.length > 0) &&
     (cloudMode ? cloudOptions.length > 0 : forcedInbox ? !forcedDesconectado : !!selectedSender?.sendable);
   // Teto de gasto (só oficial), lido no jeito brasileiro ("1.000,00", "12,5").
   // Vazio = sem teto; texto que não é valor trava o Próximo com o erro no campo.
@@ -561,6 +591,7 @@ export default function BulkDispatchModal({
           <PassoQuemRecebe
             channelKind={channelKind}
             aoEscolherCanal={setChannelKind}
+            modoCorretor={modoCorretor}
             temOficial={cloudOptions.length > 0}
             carregandoOficial={carregandoCanais}
             erroCanais={erroCanais}
@@ -572,7 +603,11 @@ export default function BulkDispatchModal({
             aoEscolherNumero={setSenderInboxId}
             numeroTravado={forcedInbox ? `${forcedInbox.name}${forcedDesconectado ? ' (desconectado)' : ''}` : null}
             audienceMode={audienceMode}
-            aoEscolherPublico={setAudienceMode}
+            aoEscolherPublico={modo => {
+              setAudienceMode(modo);
+              // Escolher "Lista de leads" já abre o painel pra marcar.
+              if (modo === 'manual') setPainelDeLeads(true);
+            }}
             funis={funis?.map(f => ({ id: f.id, name: f.name }))}
             funilId={funilId}
             aoEscolherFunil={escolherFunil}
@@ -586,9 +621,22 @@ export default function BulkDispatchModal({
             aoMarcarEtiqueta={titulo =>
               setSelectedLabels(prev => (prev.includes(titulo) ? prev.filter(t => t !== titulo) : [...prev, titulo]))
             }
+            leadsEscolhidos={contactIds.length}
+            aoAbrirLeads={() => setPainelDeLeads(true)}
             previa={audiencePreview}
             contando={contando}
             erroPrevia={erroPrevia}
+          />
+        )}
+        {step === 'audience' && audienceMode === 'manual' && (
+          <PainelDeLeads
+            aberto={painelDeLeads}
+            pipelineId={pipelineId}
+            marcados={contactIds}
+            aoMudar={setContactIds}
+            aoFechar={() => setPainelDeLeads(false)}
+            etapas={stages}
+            etiquetas={availableLabels}
           />
         )}
 

@@ -230,6 +230,14 @@ describe('DisparoDetalhe', () => {
     expect(screen.queryByRole('button', { name: 'Cancelar' })).toBeNull();
   });
 
+  it('corretor (só "own") vê Pausar e Cancelar no disparo dele', async () => {
+    s.pode.mockImplementation((_r: string, a: string) => a === 'own');
+    tela();
+    await screen.findByText('Maria');
+    expect(screen.getByRole('button', { name: 'Pausar' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Cancelar' })).toBeInTheDocument();
+  });
+
   it('disparo que não existe mostra "Disparo não encontrado."', async () => {
     s.get.mockRejectedValue({ response: { status: 404 } });
     s.items.mockRejectedValue({ response: { status: 404 } });

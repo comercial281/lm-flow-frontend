@@ -37,6 +37,8 @@ export interface RoutePermission {
 
 // Construtor de automações: o gestor entra pela leitura; o corretor, por "Automações próprias".
 const FLOW_BUILDER_PERMISSIONS = ['flow_automations.read', 'flow_automations.own'] as const;
+// Disparos: o gestor entra pela leitura; o corretor, por "Disparos próprios" (o servidor recorta o que ele vê).
+const BROADCASTS_PERMISSIONS = ['broadcasts.read', 'broadcasts.own'] as const;
 // Follow-up (Fase 3, 21/10/2026): aba de Funis de mensagem. O corretor entra pela
 // chave dos funis (o servidor deixa ele ver os dele + os da equipe); o gestor, pela do follow-up.
 const FOLLOWUP_PERMISSIONS = ['message_funnels.read', 'followup_sequences.read'] as const;
@@ -55,9 +57,9 @@ export const ROUTE_PERMISSIONS: readonly RoutePermission[] = [
   { path: '/ia-vendedora', resource: 'sales_agents', action: 'read' },
   // Sala de demonstração (21/10/2026): escondida; o servidor só atende administrador e a tela confere o cargo também.
   { path: '/sala-demonstracao', resource: 'sales_agents', action: 'update' },
-  { path: '/disparos', resource: 'broadcasts', action: 'read' },
+  { path: '/disparos', resource: 'broadcasts', action: 'read', permissions: BROADCASTS_PERMISSIONS },
   // Monitoria de um disparo: quem vê a lista vê a fila.
-  { path: '/disparos/:id', resource: 'broadcasts', action: 'read' },
+  { path: '/disparos/:id', resource: 'broadcasts', action: 'read', permissions: BROADCASTS_PERMISSIONS },
   { path: '/conversations', resource: 'conversations', action: 'read' },
   { path: '/conversations/:conversationId', resource: 'conversations', action: 'read' },
 

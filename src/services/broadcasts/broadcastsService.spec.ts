@@ -82,4 +82,22 @@ describe('broadcastsService (opção Automação)', () => {
     expect(res.flow).toBeUndefined();
     expect(res.forced_inbox).toBeNull();
   });
+
+  it('leadOptions chama GET /broadcasts/lead_options só com os filtros preenchidos', async () => {
+    const lead = { contact_id: 'c1', name: 'Lia Exemplo', phone: '5511900000001', stage_name: 'Novo', labels: [] };
+    vi.mocked(api.get).mockResolvedValue({ data: { data: [lead], meta: { total: 1, page: 2, per_page: 20 } } } as never);
+
+    const res = await broadcastsService.leadOptions({ pipeline_id: 'p1', q: 'lia', stage_id: '', label: undefined, page: 2 });
+
+    expect(api.get).toHaveBeenCalledWith('/broadcasts/lead_options', { params: { pipeline_id: 'p1', q: 'lia', page: 2 } });
+    expect(res).toEqual({ data: [lead], meta: { total: 1, page: 2, per_page: 20 } });
+  });
+
+  it('leadOptions sem dados devolve lista vazia', async () => {
+    vi.mocked(api.get).mockResolvedValue({ data: {} } as never);
+    expect(await broadcastsService.leadOptions({ pipeline_id: 'p1' })).toEqual({
+      data: [],
+      meta: { total: 0, page: 1, per_page: 20 },
+    });
+  });
 });

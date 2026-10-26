@@ -18,7 +18,11 @@ const s = vi.hoisted(() => ({
   navegar: vi.fn(),
   etapas: vi.fn(),
   automacoes: vi.fn(),
+  leads: vi.fn(),
+  fechar: vi.fn(),
+  pode: vi.fn(),
 }));
+vi.mock('@/hooks/useCan', () => ({ useCan: () => s.pode }));
 vi.mock('react-router-dom', async orig => ({
   ...(await orig<typeof import('react-router-dom')>()),
   useNavigate: () => s.navegar,
@@ -35,6 +39,7 @@ vi.mock('@/services/broadcasts/broadcastsService', async orig => {
       create: s.criar,
       testSendSequence: s.testar,
       automationOptions: s.automacoes,
+      leadOptions: s.leads,
       uploadMedia: vi.fn(),
     },
   };
@@ -151,6 +156,16 @@ beforeEach(() => {
   s.navegar.mockReset();
   s.etapas.mockReset().mockResolvedValue({ data: [] });
   s.automacoes.mockReset().mockResolvedValue([autoFixa, autoHerda, autoPorBloco]);
+  s.leads.mockReset().mockResolvedValue({
+    data: [
+      { contact_id: 'c1', name: 'Pessoa Exemplo Um', phone: '5511900000001', stage_name: 'Novo lead', labels: [] },
+      { contact_id: 'c2', name: 'Pessoa Exemplo Dois', phone: '5511900000002', stage_name: 'Novo lead', labels: [] },
+      { contact_id: 'c3', name: 'Pessoa Exemplo Três', phone: '5511900000003', stage_name: 'Visita marcada', labels: [] },
+    ],
+    meta: { total: 3, page: 1, per_page: 20 },
+  });
+  s.fechar.mockReset();
+  s.pode.mockReset().mockReturnValue(true);
 });
 
 describe('BulkDispatchModal · passo 1 (por onde sai e quem recebe)', () => {
@@ -824,5 +839,137 @@ describe('BulkDispatchModal · passo 2, Automação', () => {
     expect(await screen.findByText('Não deu pra carregar')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Tentar de novo' }));
     expect(await screen.findByLabelText('Automação')).toBeInTheDocument();
+  });
+});
+
+describe('BulkDispatchModal · passo 1, Lista de leads', () => {
+  const abrirComFechar = () =>
+    render(
+      <MemoryRouter>
+        <BulkDispatchModal open onOpenChange={s.fechar} pipelineId="p1" pipelineName="Leads" stages={[]} />
+      </MemoryRouter>,
+    );
+  const escolherLista = async () => {
+    abrirComFechar();
+    await screen.findByText('300 leads');
+    await userEvent.click(await screen.findByRole('combobox', { name: /Enviar para/ }));
+    await userEvent.click(await screen.findByRole('option', { name: 'Lista de leads' }));
+    return screen.findByRole('dialog', { name: 'Escolher leads' });
+  };
+  const marcarDois = async (painel: HTMLElement) => {
+    await userEvent.click(await within(painel).findByRole('checkbox', { name: /Pessoa Exemplo Um/ }));
+    await userEvent.click(within(painel).getByRole('checkbox', { name: /Pessoa Exemplo Dois/ }));
+  };
+  const campoLeads = () => screen.getByRole('group', { name: 'Leads' });
+
+  it('escolher "Lista de leads" abre o painel com os leads do funil', async () => {
+    const painel = await escolherLista();
+    expect(await within(painel).findByRole('checkbox', { name: /Pessoa Exemplo Um/ })).toBeInTheDocument();
+    expect(s.leads).toHaveBeenCalledWith(expect.objectContaining({ pipeline_id: 'p1', page: 1 }));
+  });
+
+  it('sem lead marcado: o campo convida a escolher e o Próximo trava', async () => {
+    await escolherLista();
+    await userEvent.click(screen.getByRole('button', { name: 'Pronto' }));
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Escolher leads' })).toBeNull());
+    expect(within(campoLeads()).getByRole('button', { name: 'Escolher leads' })).toBeInTheDocument();
+    expect(screen.getByText('Marque ao menos um lead pra contar os destinatários.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Próximo' })).toBeDisabled();
+  });
+
+  it('marcar 2 e fechar mantém "2 leads escolhidos" e conta com a lista', async () => {
+    s.previa.mockImplementation((_p: string, a: { mode: string; contact_ids?: string[] }) =>
+      Promise.resolve(previa(a.mode === 'manual' ? a.contact_ids?.length ?? 0 : 300)),
+    );
+    const painel = await escolherLista();
+    await marcarDois(painel);
+    expect(within(painel).getByText('marcados').parentElement).toHaveTextContent('2 marcados');
+    await userEvent.click(within(painel).getByRole('button', { name: 'Pronto' }));
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Escolher leads' })).toBeNull());
+    expect(campoLeads()).toHaveTextContent('2 leads escolhidos');
+    expect(within(campoLeads()).getByRole('button', { name: 'Mudar' })).toHaveFocus();
+    await waitFor(() =>
+      expect(s.previa).toHaveBeenLastCalledWith('p1', expect.objectContaining({ mode: 'manual', contact_ids: ['c1', 'c2'] }), 'in2'),
+    );
+    expect(await screen.findByText('2 leads')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Próximo' })).toBeEnabled();
+
+    // Mudar reabre o painel com os mesmos marcados.
+    await userEvent.click(within(campoLeads()).getByRole('button', { name: 'Mudar' }));
+    const deNovo = await screen.findByRole('dialog', { name: 'Escolher leads' });
+    expect(await within(deNovo).findByRole('checkbox', { name: /Pessoa Exemplo Um/ })).toHaveAttribute('data-state', 'checked');
+    expect(within(deNovo).getByRole('checkbox', { name: /Pessoa Exemplo Três/ })).toHaveAttribute('data-state', 'unchecked');
+  });
+
+  it('Esc fecha o painel e não fecha a janela do disparo', async () => {
+    const painel = await escolherLista();
+    await marcarDois(painel);
+    await userEvent.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Escolher leads' })).toBeNull());
+    expect(screen.getByRole('dialog', { name: /Disparo em massa/ })).toBeInTheDocument();
+    expect(s.fechar).not.toHaveBeenCalled();
+    expect(campoLeads()).toHaveTextContent('2 leads escolhidos');
+  });
+
+  it('com o painel aberto não recontamos a cada clique: conta uma vez ao fechar', async () => {
+    s.previa.mockImplementation((_p: string, a: { mode: string; contact_ids?: string[] }) =>
+      Promise.resolve(previa(a.mode === 'manual' ? a.contact_ids?.length ?? 0 : 300)),
+    );
+    const painel = await escolherLista();
+    await marcarDois(painel);
+    expect(s.previa.mock.calls.filter(c => c[1].mode === 'manual')).toHaveLength(0);
+    await userEvent.click(within(painel).getByRole('button', { name: 'Pronto' }));
+    await waitFor(() => expect(s.previa.mock.calls.filter(c => c[1].mode === 'manual')).toHaveLength(1));
+  });
+
+  it('o disparo manda mode manual com os ids marcados', async () => {
+    const painel = await escolherLista();
+    await marcarDois(painel);
+    await userEvent.click(within(painel).getByRole('button', { name: 'Pronto' }));
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Escolher leads' })).toBeNull());
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Próximo' })).toBeEnabled());
+    await userEvent.click(screen.getByRole('button', { name: 'Próximo' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Preencher mensagem' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Próximo' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Próximo' }));
+    await userEvent.click(await screen.findByRole('button', { name: /Disparar pra/ }));
+    await waitFor(() => expect(s.criar).toHaveBeenCalled());
+    expect(s.criar.mock.calls[0][0].audience).toEqual({ mode: 'manual', contact_ids: ['c1', 'c2'] });
+  });
+});
+
+describe('BulkDispatchModal · corretor (só broadcasts.own)', () => {
+  const comoCorretor = () =>
+    s.pode.mockImplementation((r: string, a: string) => r === 'broadcasts' && a === 'own');
+
+  it('o número aparece travado no dele e o canal oficial some, sem chamar as rotas do gestor', async () => {
+    comoCorretor();
+    s.numeros.mockResolvedValue({ data: [numeros.data[1]], default_inbox_id: 'in2' });
+    abrir();
+    const campo = await screen.findByLabelText('Número de saída');
+    await waitFor(() => expect(campo).toHaveValue('in2'));
+    expect(campo).toBeDisabled();
+    expect(screen.queryByRole('radio', { name: /WhatsApp oficial/ })).toBeNull();
+    expect(s.canais).not.toHaveBeenCalled();
+    await waitFor(() => expect(s.previa).toHaveBeenCalled());
+    expect(await screen.findByRole('button', { name: 'Próximo' })).toBeEnabled();
+  });
+
+  it('sem número próprio: aviso e Próximo travado', async () => {
+    comoCorretor();
+    s.numeros.mockResolvedValue({ data: [], default_inbox_id: null });
+    abrir();
+    expect(await screen.findByText('Você ainda não tem um número seu conectado. Fale com o gestor.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Próximo' })).toBeDisabled();
+    // Sem número próprio o servidor recusaria a prévia: nem chama.
+    await new Promise(r => setTimeout(r, 30));
+    expect(s.previa).not.toHaveBeenCalled();
+    expect(screen.queryByText(/Não deu pra contar/)).toBeNull();
+  });
+
+  it('gestor (create) segue vendo o canal oficial', async () => {
+    abrir();
+    expect(await screen.findByRole('radio', { name: /WhatsApp oficial/ })).toBeInTheDocument();
+    await waitFor(() => expect(s.canais).toHaveBeenCalled());
   });
 });

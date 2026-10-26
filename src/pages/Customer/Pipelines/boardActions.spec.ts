@@ -17,6 +17,10 @@ describe('ações do ⋯ do quadro do funil', () => {
     });
   });
 
+  it('o corretor com Disparos próprios vê Disparo em massa', () => {
+    expect(boardHeaderActions(ligado, cargo(['broadcasts.own']))).toEqual({ export: false, bulkDispatch: true });
+  });
+
   it('a função desligada no cliente continua escondendo, mesmo com o cargo', () => {
     expect(boardHeaderActions({ export: false, bulkDispatch: false }, () => true)).toEqual({
       export: false, bulkDispatch: false,

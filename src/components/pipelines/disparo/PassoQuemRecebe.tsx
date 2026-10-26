@@ -13,7 +13,7 @@ import Carregando from '@/components/base/Carregando';
 import BotoesDeEscolha from '@/components/base/BotoesDeEscolha';
 import { Seletor } from '@/components/base/Seletor';
 import { CampoDaJanela, GrupoDaJanela } from '@/components/base/janela';
-import { plural, telefone } from '@/lib/formato';
+import { numero, plural, telefone } from '@/lib/formato';
 import { cn } from '@/lib/utils';
 import type { PipelineStage } from '@/types/analytics';
 import type { Label as LabelType } from '@/types/settings';
@@ -24,6 +24,7 @@ import type {
   SenderOption,
 } from '@/services/broadcasts/broadcastsService';
 import { linhaDeFora } from './automacao';
+import { ID_DO_CAMPO_DE_LEADS } from './PainelDeLeads';
 
 // PASSO 1 DO DISPARO (16/10/2026): por onde sai (canal + número de saída) e
 // quem recebe. O número vem antes do público porque "lead de outro corretor"
@@ -46,6 +47,8 @@ function rotuloDoNumero(o: SenderOption): string {
 }
 
 interface Props {
+  /** Corretor: sem canal oficial, número travado no dele (ou aviso se não tiver). */
+  modoCorretor?: boolean;
   channelKind: BroadcastChannelKind;
   aoEscolherCanal: (canal: BroadcastChannelKind) => void;
   /** Tem número oficial conectado (o "WhatsApp oficial" só fica clicável assim). */
@@ -79,6 +82,9 @@ interface Props {
   aoTentarEtiquetas: () => void;
   etiquetasMarcadas: string[];
   aoMarcarEtiqueta: (titulo: string) => void;
+  /** "Lista de leads": quantos estão marcados no painel e como abrir o painel. */
+  leadsEscolhidos: number;
+  aoAbrirLeads: () => void;
 
   previa: AudiencePreviewFull | null;
   contando: boolean;
@@ -92,46 +98,60 @@ export default function PassoQuemRecebe(p: Props) {
   return (
     <div className="grid gap-5">
       <GrupoDaJanela titulo="Por onde sai">
-        <BotoesDeEscolha<BroadcastChannelKind>
-          rotulo="Por onde sai"
-          semNome
-          valor={p.channelKind}
-          aoEscolher={p.aoEscolherCanal}
-          opcoes={[
-            { valor: 'evolution', rotulo: 'Campanha direta' },
-            {
-              valor: 'whatsapp_cloud',
-              rotulo: 'WhatsApp oficial (modelo aprovado)',
-              desabilitada: !p.temOficial,
-              motivo: p.erroCanais
-                ? undefined
-                : p.carregandoOficial
-                  ? 'Carregando números oficiais…'
-                  : 'Conecte um número oficial em Integrações',
-            },
-          ]}
-        />
-        {p.erroCanais ? (
-          <EmptyState tipo="erro" tamanho="compacto" aoTentarDeNovo={p.aoTentarCanais} className="p-3" />
-        ) : p.carregandoOficial ? (
-          <p className="text-xs text-muted-foreground">Carregando números oficiais…</p>
-        ) : !p.temOficial ? (
-          <p className="text-xs text-muted-foreground">Conecte um número oficial em Integrações</p>
-        ) : null}
+        {!p.modoCorretor && (
+          <>
+            <BotoesDeEscolha<BroadcastChannelKind>
+              rotulo="Por onde sai"
+              semNome
+              valor={p.channelKind}
+              aoEscolher={p.aoEscolherCanal}
+              opcoes={[
+                { valor: 'evolution', rotulo: 'Campanha direta' },
+                {
+                  valor: 'whatsapp_cloud',
+                  rotulo: 'WhatsApp oficial (modelo aprovado)',
+                  desabilitada: !p.temOficial,
+                  motivo: p.erroCanais
+                    ? undefined
+                    : p.carregandoOficial
+                      ? 'Carregando números oficiais…'
+                      : 'Conecte um número oficial em Integrações',
+                },
+              ]}
+            />
+            {p.erroCanais ? (
+              <EmptyState tipo="erro" tamanho="compacto" aoTentarDeNovo={p.aoTentarCanais} className="p-3" />
+            ) : p.carregandoOficial ? (
+              <p className="text-xs text-muted-foreground">Carregando números oficiais…</p>
+            ) : !p.temOficial ? (
+              <p className="text-xs text-muted-foreground">Conecte um número oficial em Integrações</p>
+            ) : null}
 
-        {!cloudMode && (
+          </>
+        )}
+
+        {p.modoCorretor && !p.erroNumeros && p.numeros !== null && p.numeros.length === 0 ? (
+          <Aviso tom="atencao">Você ainda não tem um número seu conectado. Fale com o gestor.</Aviso>
+        ) : (
+          !cloudMode && (
           <CampoDaJanela
             rotulo="Número de saída"
             htmlFor="disparo-numero-saida"
             ajuda={
               p.numeroTravado
                 ? 'Pra escolher outro número, troque a automação no passo 2.'
-                : 'Lead de outro corretor fica de fora. O número da imobiliária manda pra todos.'
+                : p.modoCorretor
+                  ? 'Você dispara pelo seu número.'
+                  : 'Lead de outro corretor fica de fora. O número da imobiliária manda pra todos.'
             }
           >
             {p.numeroTravado ? (
               <Seletor id="disparo-numero-saida" className="w-full" value="travado" disabled onChange={() => {}}>
                 <option value="travado">Sai pelo número da automação: {p.numeroTravado}</option>
+              </Seletor>
+            ) : p.modoCorretor && p.numeros && p.numeros.length > 0 ? (
+              <Seletor id="disparo-numero-saida" className="w-full" value={p.numeros[0].inbox_id} disabled onChange={() => {}}>
+                <option value={p.numeros[0].inbox_id}>{rotuloDoNumero(p.numeros[0])}</option>
               </Seletor>
             ) : p.erroNumeros ? (
               <EmptyState tipo="erro" tamanho="compacto" aoTentarDeNovo={p.aoTentarNumeros} className="p-3" />
@@ -160,6 +180,7 @@ export default function PassoQuemRecebe(p: Props) {
               </Seletor>
             )}
           </CampoDaJanela>
+          )
         )}
       </GrupoDaJanela>
 
@@ -187,9 +208,47 @@ export default function PassoQuemRecebe(p: Props) {
               <SelectItem value="pipeline">Todos os leads do funil</SelectItem>
               <SelectItem value="stage">Uma etapa específica</SelectItem>
               <SelectItem value="tag">Por etiqueta</SelectItem>
+              <SelectItem value="manual">Lista de leads</SelectItem>
             </SelectContent>
           </Select>
         </CampoDaJanela>
+
+        {p.audienceMode === 'manual' && (
+          <CampoDaJanela rotulo="Leads" idDoRotulo="disparo-leads-rotulo">
+            {/* O "Mudar" mora dentro do próprio campo, nunca solto ao lado. */}
+            <div
+              role="group"
+              aria-labelledby="disparo-leads-rotulo"
+              className="flex h-9 items-center justify-between gap-2 rounded-md border border-input bg-background px-3 text-sm shadow-xs"
+            >
+              {p.leadsEscolhidos > 0 ? (
+                <>
+                  <span id="disparo-leads-quantos">
+                    <strong>{numero(p.leadsEscolhidos)}</strong> {p.leadsEscolhidos === 1 ? 'lead escolhido' : 'leads escolhidos'}
+                  </span>
+                  <button
+                    id={ID_DO_CAMPO_DE_LEADS}
+                    type="button"
+                    aria-describedby="disparo-leads-quantos"
+                    onClick={p.aoAbrirLeads}
+                    className="rounded-sm font-medium text-primary hover:underline focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
+                  >
+                    Mudar
+                  </button>
+                </>
+              ) : (
+                <button
+                  id={ID_DO_CAMPO_DE_LEADS}
+                  type="button"
+                  onClick={p.aoAbrirLeads}
+                  className="rounded-sm font-medium text-primary hover:underline focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
+                >
+                  Escolher leads
+                </button>
+              )}
+            </div>
+          </CampoDaJanela>
+        )}
 
         {p.audienceMode === 'tag' && (
           <CampoDaJanela rotulo="Etiquetas" ajuda="Recebe quem tem qualquer uma das etiquetas marcadas.">
@@ -252,6 +311,8 @@ export default function PassoQuemRecebe(p: Props) {
           <>Não deu pra contar os destinatários agora. Troque a escolha pra tentar de novo.</>
         ) : p.audienceMode === 'tag' ? (
           <>Marque ao menos uma etiqueta pra contar os destinatários.</>
+        ) : p.audienceMode === 'manual' ? (
+          <>Marque ao menos um lead pra contar os destinatários.</>
         ) : (
           <>Escolha a etapa pra contar os destinatários.</>
         )}
