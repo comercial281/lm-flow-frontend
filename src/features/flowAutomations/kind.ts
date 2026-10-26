@@ -37,7 +37,7 @@ export const FLOW_KIND_COPY: Record<FlowAutomationKind, FlowKindCopy> = {
     title: 'Automações',
     description:
       'Cada fluxo começa quando algo acontece com o lead e segue os blocos: manda mensagem, avisa a equipe, espera a resposta e decide o que fazer em cada caso.',
-    newButton: 'Novo fluxo',
+    newButton: 'Nova automação',
     newName: 'Novo fluxo',
     emptyTitle: 'Nenhum fluxo ainda',
     emptyDescription:
