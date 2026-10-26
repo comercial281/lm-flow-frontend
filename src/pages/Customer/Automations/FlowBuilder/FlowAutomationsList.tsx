@@ -4,11 +4,10 @@ import { toast } from 'sonner';
 import {
   Badge, Button, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from '@/components/ui/ds';
-import { Zap, Plus, Folder, FolderPlus, Pencil, Play, Pause, Copy, Archive, Trash2, LayoutTemplate, Users } from 'lucide-react';
+import { Zap, Plus, Folder, FolderPlus, Pencil, Play, Pause, Copy, Archive, Trash2, LayoutTemplate, Users, UserMinus } from 'lucide-react';
 import { BaseHeader, Pagina } from '@/components/base';
 import EmptyState from '@/components/base/EmptyState';
 import Abas from '@/components/base/Abas';
-import Chave from '@/components/base/Chave';
 import IconActionButton from '@/components/base/IconActionButton';
 import BotaoMaisAcoes from '@/components/base/BotaoMaisAcoes';
 import { flowAutomationsService, flowAutomationFoldersService } from '@/services/flowAutomations/flowAutomationsService';
@@ -21,6 +20,8 @@ import { enableProblem } from '@/features/flowAutomations/readiness';
 import { serverMessage } from '@/features/flowAutomations/guide';
 import { FlowTemplateList, FlowTemplatesDialog } from '@/components/flowAutomations/FlowTemplates';
 import ResolverPausasDialog from '@/components/flowAutomations/ResolverPausasDialog';
+import { CartaoDeFluxo } from '@/components/flowAutomations/CartaoDeFluxo';
+import { JanelaDeQuemE, type PedidoDeQuem } from '@/components/flowAutomations/JanelaDeQuemE';
 import { textoDePausados } from '@/features/flowAutomations/pausas';
 import ListaDeFollowups from './ListaDeFollowups';
 
@@ -100,6 +101,25 @@ function ListaDeAutomacoes({ kind }: { kind: FlowAutomationKind }) {
     } catch {
       toast.error('Erro ao criar fluxo');
     }
+  };
+
+  // Um botão só (23/10/2026): o gestor escolhe de quem é (padrão Da equipe),
+  // o corretor cria a dele direto.
+  const [pedido, setPedido] = useState<PedidoDeQuem | null>(null);
+  const nova = () => {
+    if (!ehGestor) {
+      void handleCreate();
+      return;
+    }
+    setPedido({
+      titulo: copy.newButton,
+      descricao: 'De quem é essa automação?',
+      acao: 'Criar',
+      inicial: 'equipe',
+      equipe: { rotulo: 'Da equipe', descricao: 'Vale pra imobiliária toda. Todo mundo vê, só o gestor edita.' },
+      meu: { rotulo: 'Só minha', descricao: 'Roda nos seus leads e sai pelo seu número.' },
+      aoConfirmar: team => handleCreate(team),
+    });
   };
 
   // Gestor aplicando modelo: "Da equipe" cria da equipe, "Minhas" cria pessoal;
@@ -264,17 +284,12 @@ function ListaDeAutomacoes({ kind }: { kind: FlowAutomationKind }) {
           onSearchChange={setSearch}
           searchPlaceholder={copy.searchPlaceholder}
           aDireita={(
-            <>
-              {ehGestor && (
-                <Button variant="outline" onClick={() => handleCreate(false)}><Plus className="h-4 w-4 mr-1" /> Nova pessoal</Button>
-              )}
-              <Button variant="outline" onClick={() => setTemplatesOpen(true)}><LayoutTemplate className="h-4 w-4 mr-1" /> Modelos</Button>
-            </>
+            <Button variant="outline" onClick={() => setTemplatesOpen(true)}><LayoutTemplate className="h-4 w-4 mr-1" /> Modelos</Button>
           )}
           primaryAction={{
-            label: ehGestor ? 'Nova da equipe' : copy.newButton,
+            label: copy.newButton,
             icon: <Plus className="h-4 w-4" />,
-            onClick: () => handleCreate(ehGestor ? true : undefined),
+            onClick: nova,
           }}
         />
       }
@@ -361,82 +376,98 @@ function ListaDeAutomacoes({ kind }: { kind: FlowAutomationKind }) {
         {mostradas.map(a => {
           const canEdit = ehCorretor ? a.permissions?.can_edit === true : a.permissions?.can_edit !== false;
           const canMarkTeam = a.permissions?.can_mark_team === true;
-          const selo = !isPersonalFlow(a) ? 'equipe' : dosCorretores(a) && a.owner_name ? `De ${a.owner_name}` : null;
+          const daEquipe = !isPersonalFlow(a);
+          const presa = presaNaEquipe(a);
+          const gatilho = triggerEvents(normalizeTrigger(a.trigger)).length ? flowTriggerSummary(normalizeTrigger(a.trigger)) : 'Sem gatilho definido';
+          // Cartão único (23/10/2026): "Da equipe" aparece uma vez, como selo; o
+          // estado é o filete e o ligar/desligar (sem selo ATIVO/DESLIGADO). À
+          // vista só ligar/desligar e Editar; o resto mora no ⋮.
           return (
-          <li key={a.id} className="rounded-lg border border-border overflow-hidden flex">
-            <div className="w-1.5 shrink-0" style={{ backgroundColor: a.archived_at ? '#94a3b8' : a.is_enabled ? '#059669' : '#dc2626' }} />
-            <div className="flex-1 p-3 min-w-0">
-              <div className="flex items-start justify-between gap-2 mb-1">
-                <button className="text-sm font-semibold truncate hover:underline text-left" onClick={() => openFlow(a)}>
-                  {a.name}
-                </button>
-                <div className="flex shrink-0 items-center gap-1">
-                  {selo === 'equipe' && (
-                    <Badge variant="secondary" className="shrink-0 gap-1 text-[10px]">
-                      <Users className="h-3 w-3" aria-hidden="true" /> Da equipe
-                    </Badge>
-                  )}
-                  {selo && selo !== 'equipe' && (
-                    <Badge variant="outline" className="shrink-0 text-[10px]">{selo}</Badge>
-                  )}
-                  <Badge variant={a.archived_at ? 'secondary' : a.is_enabled ? 'default' : 'outline'} className="shrink-0 text-[10px]">
-                    {a.archived_at ? 'ARQUIVADO' : a.is_enabled ? 'ATIVO' : 'DESLIGADO'}
+          <CartaoDeFluxo
+            key={a.id}
+            titulo={a.name}
+            aoAbrir={() => openFlow(a)}
+            estado={a.archived_at ? 'arquivado' : a.is_enabled ? 'ligado' : 'desligado'}
+            selos={
+              <>
+                {daEquipe && (
+                  <Badge variant="secondary" className="shrink-0 gap-1 text-[10px]">
+                    <Users className="h-3 w-3" aria-hidden="true" /> Da equipe
                   </Badge>
-                </div>
-              </div>
-              <div className="text-xs text-muted-foreground mb-3 truncate" title={flowTriggerSummary(normalizeTrigger(a.trigger))}>
-                {triggerEvents(normalizeTrigger(a.trigger)).length ? flowTriggerSummary(normalizeTrigger(a.trigger)) : 'Sem gatilho definido'}
-              </div>
-              {(a.paused_other_number_count ?? 0) > 0 && (
-                <div className="mb-2 flex flex-wrap items-center gap-2 text-xs text-amber-700 dark:text-amber-400" data-pausados>
-                  <span>{textoDePausados(a.paused_other_number_count ?? 0)}</span>
-                  {canEdit && (
-                    <Button size="sm" variant="outline" className="text-xs" onClick={() => setResolvendo(a)}>Resolver</Button>
-                  )}
-                </div>
-              )}
-              <div className="flex flex-wrap items-center gap-1">
+                )}
+                {dosCorretores(a) && a.owner_name && (
+                  <Badge variant="outline" className="shrink-0 text-[10px]">{`De ${a.owner_name}`}</Badge>
+                )}
+                {a.archived_at && <Badge variant="secondary" className="shrink-0 text-[10px]">Arquivada</Badge>}
+              </>
+            }
+            linha={<span className="block truncate" title={gatilho}>{gatilho}</span>}
+            acoes={
+              <div className="flex w-full items-center gap-1">
                 {canEdit ? (
                   <>
-                    <Button size="sm" variant="ghost" onClick={() => toggle(a)} title={a.is_enabled ? 'Desligar' : 'Ligar'}>
-                      {a.is_enabled ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
-                    </Button>
-                    <Button size="sm" variant="ghost" onClick={() => duplicate(a)} title="Duplicar">
-                      <Copy className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button size="sm" variant="ghost" onClick={() => archive(a)} title="Arquivar">
-                      <Archive className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button size="sm" variant="ghost" onClick={() => destroy(a)} title="Excluir">
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
-                  </>
-                ) : (
-                  <>
-                    <Button size="sm" variant="outline" onClick={() => openFlow(a)}>Ver</Button>
                     <IconActionButton
-                      label="Duplicar pra ter a sua cópia"
-                      icon={<Copy className="h-3.5 w-3.5" />}
+                      label={a.is_enabled ? 'Desligar' : 'Ligar'}
+                      icon={a.is_enabled ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
                       variant="ghost"
                       className="h-8 w-8"
-                      onClick={() => void duplicate(a)}
+                      onClick={() => void toggle(a)}
+                    />
+                    <IconActionButton
+                      label="Editar"
+                      icon={<Pencil className="h-4 w-4" />}
+                      variant="ghost"
+                      className="h-8 w-8"
+                      onClick={() => openFlow(a)}
                     />
                   </>
+                ) : (
+                  <Button size="sm" variant="outline" onClick={() => openFlow(a)}>Ver</Button>
                 )}
-                {canMarkTeam && (
-                  <div className={presaNaEquipe(a) ? 'ml-auto max-w-xs' : 'ml-auto'}>
-                    <Chave
-                      rotulo="Da equipe"
-                      ligada={!isPersonalFlow(a)}
-                      aoMudar={next => markTeam(a, next)}
-                      desabilitada={presaNaEquipe(a)}
-                      descricao={presaNaEquipe(a) ? numeroFixoNaEquipe(a) : undefined}
-                    />
-                  </div>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <BotaoMaisAcoes compacto className="ml-auto" aria-label={`Mais ações de ${a.name}`} />
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="max-w-72">
+                    <DropdownMenuItem onClick={() => void duplicate(a)}>
+                      <Copy className="h-4 w-4" /> {canEdit ? 'Duplicar' : 'Duplicar pra ter a sua cópia'}
+                    </DropdownMenuItem>
+                    {canEdit && (
+                      <DropdownMenuItem onClick={() => void archive(a)}>
+                        <Archive className="h-4 w-4" /> Arquivar
+                      </DropdownMenuItem>
+                    )}
+                    {canMarkTeam && (
+                      <DropdownMenuItem disabled={presa} onClick={() => { if (!presa) void markTeam(a, !daEquipe); }} className="items-start">
+                        {daEquipe ? <UserMinus className="h-4 w-4 mt-0.5" /> : <Users className="h-4 w-4 mt-0.5" />}
+                        <span>
+                          {daEquipe ? 'Tirar da equipe' : 'Passar pra equipe'}
+                          {presa && <span className="mt-0.5 block text-xs text-muted-foreground">{numeroFixoNaEquipe(a)}</span>}
+                        </span>
+                      </DropdownMenuItem>
+                    )}
+                    {canEdit && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem variant="destructive" onClick={() => void destroy(a)}>
+                          <Trash2 className="h-4 w-4" /> Excluir
+                        </DropdownMenuItem>
+                      </>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            }
+          >
+            {(a.paused_other_number_count ?? 0) > 0 && (
+              <div className="flex flex-wrap items-center gap-2 text-xs text-amber-700 dark:text-amber-400" data-pausados>
+                <span>{textoDePausados(a.paused_other_number_count ?? 0)}</span>
+                {canEdit && (
+                  <Button size="sm" variant="outline" className="text-xs" onClick={() => setResolvendo(a)}>Resolver</Button>
                 )}
               </div>
-            </div>
-          </li>
+            )}
+          </CartaoDeFluxo>
           );
         })}
       </ul>
@@ -452,6 +483,7 @@ function ListaDeAutomacoes({ kind }: { kind: FlowAutomationKind }) {
           onResolved={() => void load()}
         />
       )}
+      {pedido && <JanelaDeQuemE pedido={pedido} aoFechar={() => setPedido(null)} />}
       <FlowTemplatesDialog open={templatesOpen} onClose={() => setTemplatesOpen(false)} onApplied={openFlow} team={teamDoModelo} />
       {dialogoDeConfirmacao}
       {dialogoDePergunta}
