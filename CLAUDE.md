@@ -9924,3 +9924,19 @@ Armadilhas:
 Código: `src/components/pipelines/BulkDispatchModal.tsx` (`modoCorretor`, recontagem parada com painel aberto), `src/components/pipelines/disparo/PassoQuemRecebe.tsx` (campo travado e aviso) e `PainelDeLeads.tsx`, `src/pages/Customer/Disparos/Disparos.tsx`, `src/pages/Customer/Pipelines/boardActions.ts`, `src/routes/permissionRoutes.ts` + `index.tsx`, `src/components/layout/config/menuItems.ts`.
 
 Não reabrir sem o dono pedir.
+
+## Corretor agenda mensagem, só nos leads dele (26/10/2026)
+
+Até aqui o cargo Corretor não tinha as chaves de Ações agendadas: a janela **Agendar mensagem** (no "⋮" da conversa e no painel do lead) respondia "cargo sem permissão" e o quadro **Agendados** não carregava pra ele. O servidor (backend #535 e #536) passou a deixar, com recorte. Nenhuma tela mudou.
+
+**Regra de produto:**
+1. O corretor vê, agenda e cancela mensagem **só nos leads dele** (a mesma régua das Conversas: dono do lead, responsável pela conversa, oferta da roleta ou lead livre de verdade). Lead que muda de corretor muda junto.
+2. Ele vê os agendamentos dos leads dele, inclusive os que o gerente fez, mas **edita só os que ele mesmo agendou** (o do gerente ele só cancela).
+3. A mensagem agendada sai pelo **número da conversa do lead**; sem conversa, pelo número do próprio corretor. A do corretor nunca sai pelo número de outro corretor nem pelo da imobiliária; sem número dele, a recusa vem ao agendar.
+4. **Webhook agendado é só do gestor** (o corretor nem vê o conteúdo). Sequência do corretor: até 20 mensagens, 10 minutos de espera somada e 5 tentativas.
+5. Modelos de mensagem e sequências salvas continuam de todos; o corretor apaga só os que criou e não marca padrão nem público.
+6. Linha nova **Agendar mensagem** na tela de Permissões (tema Atendimento): o gestor tira de quem quiser, e quem tirou não ganha de volta.
+
+**Ainda na tela (não feito, backlog do LM Flow de 26/10):** o botão editar aparece no agendamento do gerente e dá "Falha ao agendar."; o tipo webhook aparece pro corretor; o campo do canal mostra o nome do primeiro número da lista.
+
+Não reabrir sem o dono pedir.
