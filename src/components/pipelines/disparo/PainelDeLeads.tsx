@@ -209,7 +209,7 @@ export default function PainelDeLeads({
                       <Checkbox checked={marcadosSet.has(l.contact_id)} onCheckedChange={() => alternar(l.contact_id)} />
                       <span className="min-w-0 flex-1">
                         <span className="block truncate">{l.name || telefone(l.phone)}</span>
-                        <span className="block text-xs text-muted-foreground">{telefone(l.phone)}</span>
+                        {l.name && <span className="block text-xs text-muted-foreground">{telefone(l.phone)}</span>}
                       </span>
                       {l.stage_name && (
                         <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">

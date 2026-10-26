@@ -961,6 +961,10 @@ describe('BulkDispatchModal · corretor (só broadcasts.own)', () => {
     abrir();
     expect(await screen.findByText('Você ainda não tem um número seu conectado. Fale com o gestor.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Próximo' })).toBeDisabled();
+    // Sem número próprio o servidor recusaria a prévia: nem chama.
+    await new Promise(r => setTimeout(r, 30));
+    expect(s.previa).not.toHaveBeenCalled();
+    expect(screen.queryByText(/Não deu pra contar/)).toBeNull();
   });
 
   it('gestor (create) segue vendo o canal oficial', async () => {

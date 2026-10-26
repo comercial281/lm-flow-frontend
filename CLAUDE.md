@@ -9872,11 +9872,11 @@ O que muda pra quem usa:
 
 Decisões (não reabrir sem o dono pedir):
 
-1. **Quem manda é o servidor, a tela só acompanha.** O recorte (só os dele) é do backend; a tela não filtra nada por conta própria. Modo corretor = `can('broadcasts','own')` e NÃO `can('broadcasts','create')`, o mesmo teste do `own_only?` do servidor.
+1. **Quem manda é o servidor, a tela só acompanha.** O recorte (só os dele) é do backend; a tela não filtra nada por conta própria. Modo corretor = `can('broadcasts','own')` e NÃO `can('broadcasts','create')`, o mesmo teste do `own_only?` do servidor. As listas de número e de automação e o fluxo de criar seguem a chave `broadcasts.create`; a lista de disparos segue `broadcasts.read`.
 2. **Uma fonte pro número do corretor:** `sender_options`, que o servidor já devolve só com o dele. A tela trava o campo nele (sem `usePersonalCapabilities`), e o `inbox_id` que ela manda é ignorado pelo servidor de qualquer jeito.
 3. **Canal oficial é do gestor:** no modo corretor a tela não chama `whatsapp_cloud_options` nem `whatsapp_cloud_metrics` nem `estimate_cost` (dão 403) e esconde a escolha. A rota `/settings/whatsapp-oficial` continua só com `broadcasts.read`.
 4. **Rotas, menu e botões abrem com `broadcasts.read` OU `broadcasts.own`** (`/disparos`, `/disparos/:id`, item do menu). "Novo disparo" e o ⋮ do funil abrem com `create` OU `own`. O `permissionRoutes.source.spec.ts` confere o mapa e o `index.tsx` nos dois sentidos.
-5. **Cargo personalizado com `broadcasts.read` + `broadcasts.own`** vê a lista toda, mas só cria disparo pelo número e pelos leads dele (`create` é que libera o gestor completo).
+5. **Cargo personalizado com `broadcasts.read` + `broadcasts.own`** vê a lista de disparos toda (segue `broadcasts.read`), mas sem `create` o servidor devolve só o número e as automações dele nas listas e só deixa criar pelo número e pelos leads dele (`create` é que libera o gestor completo). Backend corrigido em paralelo.
 6. **A contagem não refaz a cada clique no painel:** com o painel aberto a prévia fica parada e conta uma vez ao fechar (Pronto ou Esc).
 7. **Nota do backend:** gerente antigo sem cargo e os modelos novos de Diretor passam a valer como "só os meus" até ganharem `broadcasts.create`/`read`; avisar o dono se alguém reclamar que sumiu disparo.
 
@@ -9885,6 +9885,7 @@ Armadilhas:
 1. **Ordem pra voltar versão:** voltar o backend pra antes do B torna a chave do corretor inerte: a tela mostra Disparos e o servidor responde 403. Voltar a tela junto. Voltar a tela sozinha (antes do B) só some com o corretor e com a Lista de leads; nada quebra.
 2. **`useCan` sem provider libera tudo** (spec de tela isolada): por isso o teste do corretor precisa mockar `useCan`.
 3. **Repo público:** testes sem dado real de cliente.
+4. **Pausar, Retomar e Cancelar do corretor:** a tela mostra os botões com a chave da ação OU `broadcasts.own`. O JSON do disparo só traz `created_by_name` (sem id), então a tela não confere dono; quem recusa disparo alheio é o servidor (404).
 
 Código: `src/components/pipelines/BulkDispatchModal.tsx` (`modoCorretor`, recontagem parada com painel aberto), `src/components/pipelines/disparo/PassoQuemRecebe.tsx` (campo travado e aviso) e `PainelDeLeads.tsx`, `src/pages/Customer/Disparos/Disparos.tsx`, `src/pages/Customer/Pipelines/boardActions.ts`, `src/routes/permissionRoutes.ts` + `index.tsx`, `src/components/layout/config/menuItems.ts`.
 

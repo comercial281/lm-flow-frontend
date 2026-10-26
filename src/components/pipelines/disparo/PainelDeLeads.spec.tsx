@@ -48,6 +48,14 @@ beforeEach(() => {
 });
 
 describe('PainelDeLeads', () => {
+  it('lead sem nome mostra o telefone uma vez só', async () => {
+    s.leads.mockResolvedValue(pagina([{ ...lead(1), name: '' }]));
+    render(<Painel />);
+    const painel = await screen.findByRole('dialog', { name: 'Escolher leads' });
+    await within(painel).findByText('(11) 90000-0001');
+    expect(within(painel).getAllByText('(11) 90000-0001')).toHaveLength(1);
+  });
+
   it('lista os leads do funil com a etapa e marca um a um', async () => {
     render(<Painel />);
     const painel = await screen.findByRole('dialog', { name: 'Escolher leads' });

@@ -396,6 +396,11 @@ export default function BulkDispatchModal({
       return;
     }
     if (esperandoNumeros) return;
+    // Corretor sem número próprio: o servidor responderia 422, o aviso do passo 1 já explica.
+    if (modoCorretor && senderOptions && senderOptions.length === 0) {
+      setAudiencePreview(null);
+      return;
+    }
     // Com o painel de leads aberto não recontamos a cada clique: conta uma vez ao fechar.
     if (painelDeLeads && audienceMode === 'manual') return;
     let alive = true;
@@ -413,7 +418,7 @@ export default function BulkDispatchModal({
     return () => {
       alive = false;
     };
-  }, [open, pipelineId, audienceMode, stageId, selectedLabels, contactIds, audiencePayload, previewInboxId, esperandoNumeros, flowOpts, painelDeLeads]);
+  }, [open, pipelineId, audienceMode, stageId, selectedLabels, contactIds, audiencePayload, previewInboxId, esperandoNumeros, flowOpts, painelDeLeads, modoCorretor, senderOptions]);
   // O número que a automação impõe (null = vale o número do passo 1).
   const forcedInbox = automacaoId ? audiencePreview?.forced_inbox ?? null : null;
   // O número imposto também tem que estar conectado (mesma regra do passo 1).

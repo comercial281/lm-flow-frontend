@@ -291,15 +291,17 @@ export default function DisparoDetalhe() {
   ];
 
   const podeParar = campanha.status === 'running' || campanha.status === 'paused';
+  // Corretor (chave "own") controla o próprio disparo; o servidor já responde 404 pro de outro.
+  const podeAcao = (acao: 'pause' | 'resume' | 'cancel') => pode('broadcasts', acao) || pode('broadcasts', 'own');
   const botoes = (
     <div className="flex flex-wrap gap-2">
-      {campanha.status === 'running' && pode('broadcasts', 'pause') && (
+      {campanha.status === 'running' && podeAcao('pause') && (
         <Button variant="outline" onClick={() => void executar('pause')} disabled={acao !== null}>Pausar</Button>
       )}
-      {campanha.status === 'paused' && pode('broadcasts', 'resume') && (
+      {campanha.status === 'paused' && podeAcao('resume') && (
         <Button onClick={() => void executar('resume')} disabled={acao !== null}>Retomar</Button>
       )}
-      {podeParar && pode('broadcasts', 'cancel') && (
+      {podeParar && podeAcao('cancel') && (
         <Button variant="outline" onClick={() => void executar('cancel')} disabled={acao !== null}>Cancelar</Button>
       )}
     </div>
