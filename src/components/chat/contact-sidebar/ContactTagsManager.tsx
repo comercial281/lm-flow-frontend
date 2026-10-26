@@ -13,34 +13,43 @@ import { colorForName } from '@/components/labels/labelColors';
 interface ContactTagsManagerProps {
   contactId: string;
   conversationId?: string;
-  /** Labels atuais do contato (mesmas que aparecem no card do kanban). */
-  initialLabels?: Array<{ name?: string; title?: string; color?: string }> | string[];
   onUpdated?: () => void;
 }
 
 // Quantas etiquetas do catálogo aparecem de uma vez (a busca filtra o resto).
 const MAX_SUGESTOES = 12;
 
-const normalizeNames = (labels: ContactTagsManagerProps['initialLabels']): string[] => {
-  if (!Array.isArray(labels)) return [];
-  return labels
-    .map(l => (typeof l === 'string' ? l : l?.name || l?.title || ''))
-    .map(s => s.trim())
-    .filter(Boolean);
-};
+const mesmaEtiqueta = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
+
+/** Lista única, sem repetir (sem diferença de maiúscula): as do lead primeiro, depois as só da conversa. */
+function juntarEtiquetas(doLead: string[], daConversa: string[]): string[] {
+  const lista: string[] = [];
+  for (const nome of [...doLead, ...daConversa]) {
+    if (nome.trim() && !lista.some(n => mesmaEtiqueta(n, nome))) lista.push(nome);
+  }
+  return lista;
+}
 
 /**
- * Gerencia as tags do CONTATO (ver/adicionar/criar/remover) — as mesmas globais
- * que aparecem no card do kanban (contact.labels). Espelha na conversa quando há
- * uma, pra manter o chat em sincronia (igual a automação faz).
+ * Etiquetas do lead no painel da conversa (ver/adicionar/criar/remover). Mostra
+ * as do CONTATO (as do card do kanban) e as da CONVERSA (as da lista à esquerda)
+ * numa lista só. Lê as duas do servidor ao abrir: a conversa que a tela já tem
+ * não traz as do contato, e o painel abria sempre vazio (24/10).
+ *
+ * Adicionar põe nos dois lados. Tirar tira de onde ela estiver. Nada salva antes
+ * de carregar: salvar em cima da lista vazia apagava as outras etiquetas do lead
+ * (inclusive o marcador do follow-up).
  */
 export default function ContactTagsManager({
   contactId,
   conversationId,
-  initialLabels,
   onUpdated,
 }: ContactTagsManagerProps) {
-  const [tags, setTags] = useState<string[]>(normalizeNames(initialLabels));
+  const [doLead, setDoLead] = useState<string[]>([]);
+  const [daConversa, setDaConversa] = useState<string[]>([]);
+  const [carregou, setCarregou] = useState(false);
+  const [falhou, setFalhou] = useState(false);
+  const tags = useMemo(() => juntarEtiquetas(doLead, daConversa), [doLead, daConversa]);
   // Catálogo global de tags (nome + cor) pra sugerir e dar cor à tag. Vem do
   // store (cache + uma busca só): o painel do lead remonta a cada contato e não
   // pode pedir o catálogo de novo a cada troca de conversa.
@@ -63,6 +72,28 @@ export default function ContactTagsManager({
   const campo = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    let vivo = true;
+    setCarregou(false);
+    setFalhou(false);
+    Promise.all([
+      contactsService.getContactLabels(contactId),
+      conversationId ? chatService.getConversationLabels(conversationId) : Promise.resolve([] as string[]),
+    ])
+      .then(([lead, conversa]) => {
+        if (!vivo) return;
+        setDoLead(lead);
+        setDaConversa(conversa);
+        setCarregou(true);
+      })
+      .catch(() => {
+        if (vivo) setFalhou(true);
+      });
+    return () => {
+      vivo = false;
+    };
+  }, [contactId, conversationId]);
+
+  useEffect(() => {
     fetchLabels().catch(() => {
       /* catálogo é só enriquecimento (sugestões/cor) */
     });
@@ -77,26 +108,23 @@ export default function ContactTagsManager({
     return catalog.filter(
       l =>
         l.title &&
-        !tags.some(t => t.toLowerCase() === l.title.toLowerCase()) &&
+        !tags.some(t => mesmaEtiqueta(t, l.title)) &&
         (!busca || l.title.toLowerCase().includes(busca)),
     );
   }, [catalog, tags, input]);
 
-  const persist = async (next: string[], changed: string, action: 'add' | 'remove') => {
-    const prev = tags;
-    setTags(next);
+  // Mostra na hora; se o servidor recusar, volta como estava.
+  const salvar = async (otimista: { doLead: string[]; daConversa: string[] }, gravar: () => Promise<void>) => {
+    const antes = { doLead, daConversa };
+    setDoLead(otimista.doLead);
+    setDaConversa(otimista.daConversa);
     setSaving(true);
     try {
-      // Contato = o que o card lê (fonte de verdade do badge).
-      await contactsService.updateContact(contactId, { labels: next } as never);
-      // Espelha na conversa (chat) quando existir.
-      if (conversationId) {
-        if (action === 'add') await chatService.addLabels(conversationId, [changed]);
-        else await chatService.removeLabels(conversationId, [changed]);
-      }
+      await gravar();
       onUpdated?.();
     } catch (e) {
-      setTags(prev);
+      setDoLead(antes.doLead);
+      setDaConversa(antes.daConversa);
       if (serverRefusalMessageOf(e)) return; // o aviso global já mostrou a frase
       toast.error(apiErrorMessage(e, 'Erro ao salvar a etiqueta'));
     } finally {
@@ -106,7 +134,7 @@ export default function ContactTagsManager({
 
   const addTag = async (raw: string) => {
     const name = raw.trim();
-    if (!name || tags.some(t => t.toLowerCase() === name.toLowerCase())) {
+    if (!carregou || !name || tags.some(t => mesmaEtiqueta(t, name))) {
       setInput('');
       return;
     }
@@ -122,7 +150,22 @@ export default function ContactTagsManager({
         /* se já existir ou falhar o catálogo, segue aplicando a tag mesmo assim */
       }
     }
-    await persist([...tags, name], name, 'add');
+    await salvar(
+      {
+        doLead: juntarEtiquetas(doLead, [name]),
+        daConversa: conversationId ? juntarEtiquetas(daConversa, [name]) : daConversa,
+      },
+      async () => {
+        // Contato = o que o card lê, e ele só salva a lista inteira: relê na hora
+        // pra não apagar a que outra coisa (follow-up, automação) pôs depois que
+        // o painel abriu. (A porta que só soma pede o cargo de criar lead.)
+        const atual = await contactsService.getContactLabels(contactId);
+        const lista = juntarEtiquetas(atual, [name]);
+        await contactsService.updateContact(contactId, { labels: lista } as never);
+        setDoLead(lista);
+        if (conversationId) await chatService.addLabels(conversationId, [name]);
+      },
+    );
   };
 
   // Enter na busca: escolhe, não inventa. O nome exato do catálogo (sem diferença
@@ -139,10 +182,23 @@ export default function ContactTagsManager({
   };
 
   const removeTag = async (name: string) => {
-    await persist(
-      tags.filter(t => t !== name),
-      name,
-      'remove',
+    if (!carregou) return;
+    const naConversa = daConversa.filter(t => mesmaEtiqueta(t, name));
+    await salvar(
+      {
+        doLead: doLead.filter(t => !mesmaEtiqueta(t, name)),
+        daConversa: daConversa.filter(t => !mesmaEtiqueta(t, name)),
+      },
+      async () => {
+        if (doLead.some(t => mesmaEtiqueta(t, name))) {
+          // Mesma releitura do adicionar.
+          const atual = await contactsService.getContactLabels(contactId);
+          await contactsService.updateContact(contactId, {
+            labels: atual.filter(t => !mesmaEtiqueta(t, name)),
+          } as never);
+        }
+        if (conversationId && naConversa.length) await chatService.removeLabels(conversationId, naConversa);
+      },
     );
   };
 
@@ -166,7 +222,7 @@ export default function ContactTagsManager({
               <button
                 type="button"
                 onClick={() => removeTag(name)}
-                disabled={saving}
+                disabled={saving || !carregou}
                 className="hover:opacity-70 disabled:opacity-40"
                 aria-label={`Remover ${name}`}
               >
@@ -178,12 +234,14 @@ export default function ContactTagsManager({
         <button
           type="button"
           onClick={() => setCatalogoAberto(a => !a)}
+          disabled={!carregou}
           aria-expanded={catalogoAberto}
-          className="inline-flex items-center rounded-full border border-dashed border-border px-2 py-0.5 text-xs text-muted-foreground hover:bg-muted hover:text-foreground"
+          className="inline-flex items-center rounded-full border border-dashed border-border px-2 py-0.5 text-xs text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-50"
         >
           + Etiqueta
         </button>
       </div>
+      {falhou && <p className="text-xs text-muted-foreground">Não deu pra carregar as etiquetas. Abra a conversa de novo.</p>}
 
       {catalogoAberto && (
         <div className="space-y-2">

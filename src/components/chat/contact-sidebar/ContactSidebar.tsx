@@ -302,7 +302,6 @@ const ContactSidebar: React.FC<ContactSidebarProps> = ({
                   key={`etiquetas-${contact.id}`}
                   contactId={String(contact.id)}
                   conversationId={conversation ? String(conversation.id) : undefined}
-                  initialLabels={(contact as { labels?: Array<{ name?: string; title?: string; color?: string }> }).labels}
                   onUpdated={onFilterReload}
                 />
               )}

@@ -1,11 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 
 // Follow-up por usuário (Fase 3, 21/10/2026): a aba Follow-up de Funis de
 // mensagem. Uma lista só, em seções: "Da equipe", "Meus" e, pro gestor, "Dos
-// corretores". Estrela "Meu padrão", selo "Padrão da conta" e, só pro gestor e
-// só em follow-up da equipe, "Tornar padrão da conta".
+// corretores". Alfinete "Meu padrão"; estrela ao lado do estado = padrão da
+// conta (cheia pra todos; vazia, só pro gestor e só em follow-up da equipe
+// ligado, "Tornar padrão da conta"). Duplicar, Arquivar e Excluir no ⋮ (23/10/2026).
 
 const list = vi.hoisted(() => vi.fn());
 const create = vi.hoisted(() => vi.fn());
@@ -73,6 +75,12 @@ const renderPage = () =>
 
 const secao = (nome: string) => screen.getByRole('region', { name: nome });
 const itemDe = (nome: string) => screen.getByText(nome).closest('li')!;
+const estrelaCheia = (nome: string) => within(itemDe(nome)).queryByRole('img', { name: 'Padrão da conta' });
+/** Abre o ⋮ do cartão e devolve o menu. */
+async function menuDe(nome: string) {
+  await userEvent.click(within(itemDe(nome)).getByRole('button', { name: `Mais ações de ${nome}` }));
+  return screen.findByRole('menu');
+}
 
 beforeEach(() => {
   [list, create, duplicate, myDefault, accountDefault, getAll, update, toastError, toastSuccess].forEach(m => m.mockReset());
@@ -150,9 +158,12 @@ describe('seções da lista', () => {
 
     const daEquipeItem = itemDe('Follow-up padrão');
     expect(within(daEquipeItem).getByRole('button', { name: 'Ver' })).toBeTruthy();
-    expect(within(daEquipeItem).getByRole('button', { name: 'Duplicar pra ter a sua cópia' })).toBeTruthy();
-    expect(within(daEquipeItem).queryByTitle('Desligar')).toBeNull();
-    expect(within(daEquipeItem).queryByTitle('Excluir')).toBeNull();
+    expect(within(daEquipeItem).queryByRole('button', { name: 'Desligar' })).toBeNull();
+    const menu = await menuDe('Follow-up padrão');
+    expect(within(menu).getByRole('menuitem', { name: 'Duplicar pra ter a sua cópia' })).toBeTruthy();
+    expect(within(menu).queryByRole('menuitem', { name: 'Arquivar' })).toBeNull();
+    expect(within(menu).queryByRole('menuitem', { name: 'Excluir' })).toBeNull();
+    await userEvent.keyboard('{Escape}');
 
     const meu = itemDe('Meu reaquecimento');
     fireEvent.click(within(meu).getByRole('button', { name: 'Editar' }));
@@ -215,7 +226,7 @@ describe('Padrão da conta', () => {
     const { unmount } = renderPage();
     await screen.findByText('Pós-visita');
 
-    expect(within(itemDe('Follow-up padrão')).getByText('Padrão da conta')).toBeTruthy();
+    expect(estrelaCheia('Follow-up padrão')).toBeTruthy();
     expect(within(itemDe('Follow-up padrão')).queryByRole('button', { name: 'Tornar padrão da conta' })).toBeNull();
     expect(within(itemDe('Meu do gestor')).queryByRole('button', { name: 'Tornar padrão da conta' })).toBeNull();
     expect(within(itemDe('Do Bruno')).queryByRole('button', { name: 'Tornar padrão da conta' })).toBeNull();
@@ -225,8 +236,10 @@ describe('Padrão da conta', () => {
     fireEvent.click(within(itemDe('Pós-visita')).getByRole('button', { name: 'Tornar padrão da conta' }));
     await waitFor(() => expect(accountDefault).toHaveBeenCalledWith('t2'));
     // O selo muda de lugar: só um é o padrão da conta.
-    await waitFor(() => expect(within(itemDe('Pós-visita')).getByText('Padrão da conta')).toBeTruthy());
-    expect(within(itemDe('Follow-up padrão')).queryByText('Padrão da conta')).toBeNull();
+    await waitFor(() => expect(estrelaCheia('Pós-visita')).toBeTruthy());
+    expect(estrelaCheia('Follow-up padrão')).toBeNull();
+    // Agora o antigo padrão ganha a estrela vazia (é da equipe e está ligado).
+    expect(within(itemDe('Follow-up padrão')).getByRole('button', { name: 'Tornar padrão da conta' })).toBeTruthy();
     unmount();
 
     // Corretor: vê o selo, nunca a ação.
@@ -237,7 +250,7 @@ describe('Padrão da conta', () => {
     ]);
     renderPage();
     await screen.findByText('Pós-visita');
-    expect(within(itemDe('Follow-up padrão')).getByText('Padrão da conta')).toBeTruthy();
+    expect(estrelaCheia('Follow-up padrão')).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Tornar padrão da conta' })).toBeNull();
   });
 });
@@ -289,7 +302,7 @@ describe('Duplicar', () => {
     renderPage();
     await screen.findByText('Follow-up padrão');
 
-    fireEvent.click(within(itemDe('Follow-up padrão')).getByRole('button', { name: 'Duplicar pra ter a sua cópia' }));
+    await userEvent.click(within(await menuDe('Follow-up padrão')).getByRole('menuitem', { name: 'Duplicar pra ter a sua cópia' }));
     await waitFor(() => expect(duplicate).toHaveBeenCalledWith('t1'));
     expect(await screen.findByText('canvas do follow-up')).toBeTruthy();
     expect(toastSuccess).toHaveBeenCalledWith('Follow-up duplicado: a cópia é sua.');
@@ -302,7 +315,7 @@ describe('Duplicar', () => {
     renderPage();
     await screen.findByText('Follow-up padrão');
 
-    fireEvent.click(within(itemDe('Follow-up padrão')).getByRole('button', { name: 'Duplicar' }));
+    await userEvent.click(within(await menuDe('Follow-up padrão')).getByRole('menuitem', { name: 'Duplicar' }));
     const janela = await screen.findByRole('dialog');
     expect(within(janela).getByRole('radio', { name: /Da equipe/ }).getAttribute('aria-checked')).toBe('true');
     fireEvent.click(within(janela).getByRole('button', { name: 'Duplicar' }));

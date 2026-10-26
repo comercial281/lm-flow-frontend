@@ -12,12 +12,16 @@ import ContactSidebar from './ContactSidebar';
 const getContactConversations = vi.fn();
 // A janela da tarefa pergunta se quem usa é gestor; aqui não há AuthProvider.
 vi.mock('@/features/tarefas/useEhGestor', () => ({ useEhGestor: () => false }));
+// Etiquetas: o painel lê as do lead e as da conversa do servidor (24/10).
+const getContactLabels = vi.fn<(id: string) => Promise<string[]>>(() => Promise.resolve([]));
+const getConversationLabels = vi.fn<(id: string) => Promise<string[]>>(() => Promise.resolve([]));
 vi.mock('@/services/contacts/contactsService', () => ({
   contactsService: {
     getContactNotes: () => Promise.resolve({ data: [] }),
     createContactNote: vi.fn(),
     getContactConversations: (...a: unknown[]) => getContactConversations(...a),
     updateContact: vi.fn(),
+    getContactLabels: (id: string) => getContactLabels(id),
   },
 }));
 
@@ -43,6 +47,7 @@ vi.mock('@/services/chat/chatService', () => {
     getSalesAgentStatus: () => Promise.reject(new Error('sem IA')),
     addLabels: vi.fn(),
     removeLabels: vi.fn(),
+    getConversationLabels: (id: string) => getConversationLabels(id),
   };
   return { chatService: servico, default: servico };
 });
@@ -340,9 +345,10 @@ describe('ContactSidebar — painel do lead em seções', () => {
   });
 
   it('Etiquetas: só as do lead; o catálogo da conta só aparece no "+ Etiqueta"', async () => {
-    renderPainel(false, { ...(contact as object), labels: [{ name: 'zona sul', color: '#2563eb' }] });
+    getContactLabels.mockResolvedValueOnce(['zona sul']);
+    renderPainel();
     const etiquetas = screen.getByRole('region', { name: 'Etiquetas' });
-    expect(within(etiquetas).getByText('zona sul')).toBeTruthy();
+    expect(await within(etiquetas).findByText('zona sul')).toBeTruthy();
     expect(within(etiquetas).queryByText('visita-agendada')).toBeNull();
     expect(within(etiquetas).queryByText('Nenhuma etiqueta')).toBeNull();
 

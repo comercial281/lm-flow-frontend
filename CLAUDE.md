@@ -35,8 +35,9 @@ backend (ex.: deletar contato, endpoints, jobs) vai nesse outro repo, com base
     tempo das esperas; **não acrescenta mensagem nem troca a coluna de resposta**. O
     número é sempre o **do responsável pelo lead** (a tela diz "Sai pelo WhatsApp do
     responsável pelo lead."). O follow-up da equipe, pro corretor, abre só pra ver.
-  - **"Meu padrão" × "padrão da conta"**: cada pessoa marca o seu (estrela); o **padrão
-    da conta é sempre da equipe** e só o gestor troca ("Tornar padrão da conta").
+  - **"Meu padrão" × "padrão da conta"**: cada pessoa marca o seu (**alfinete**); o **padrão
+    da conta é sempre da equipe**, aparece como **estrela** ao lado do estado e só o
+    gestor troca (estrela vazia = "Tornar padrão da conta"). Desde 23/10/2026.
   - **Quem usa o quê:** a **janela** "Colocar em follow-up" lista os do responsável pelo
     lead + os da equipe e abre no padrão do responsável (lead sem responsável: padrão
     da conta, só da equipe); a **coluna Follow-up** e a **automação** sem escolha usam o
@@ -9578,6 +9579,16 @@ login: toda conta tem. Decisão do Tony.
 
 **Nome do follow-up pessoal de outra pessoa não aparece.** No card do lead e no selo "Follow-up ativo" do quadro, quem não é o dono, nem gestor, e quando o follow-up também não é do responsável pelo lead, vê "Follow-up de {dono}" (ou "Follow-up pessoal" quando o dono não é achado), nunca o nome que o dono escolheu. A tela mostra esse nome como veio, sem aspas e sem repetir "follow-up". Automação, follow-up da equipe, o dono e o gestor veem o nome real. A lista de fluxos do card só abre pra quem vê o lead.
 
+## Follow-up: cartão com estrela, alfinete e ⋮ (2026-10-23)
+
+Pedido do dono: "Tornar padrão da conta" virar só uma estrelinha ao lado do Ligado, e o cartão organizado num menu de 3 pontinhos.
+
+- **Estrela ao lado do estado (Ligado/Desligado/Arquivado) = padrão da conta.** Cheia: é o padrão (todo mundo vê, ninguém clica; o padrão sai trocando por outro). Vazia: só pro gestor, só nos da equipe ligados e não arquivados, e o clique torna padrão da conta. O selo de texto "Padrão da conta" e o botão de texto saíram.
+- **"Meu padrão" virou alfinete** (cheio = o seu padrão). Duas marcas, dois símbolos: duas estrelas com sentidos diferentes no mesmo cartão confundiriam o corretor.
+- **À vista só três botões:** alfinete, ligar/desligar (pausar/play) e lápis (Editar). Quem não edita vê "Ver" no lugar do lápis e não vê ligar/desligar.
+- **⋮ (Mais ações):** Duplicar, Arquivar e, depois da linha, Excluir. Quem não edita só tem "Duplicar pra ter a sua cópia". A chave "Da equipe" do gestor continua embaixo, à vista.
+- Só a aba Follow-up mudou. A aba Manual segue com Duplicar e Excluir à vista.
+
 ## Construtor: janelas revisadas (desde 2026-10-22)
 
 Em 21/10/2026 o Tony fez o raio-x das 19 janelas de bloco do construtor de automações e achou que pareciam outro app: a limpeza visual de 30/09 a 14/10 nunca chegou ao conteúdo dessas janelas (só à casca). Ele marcou cada bloco, e a Entrega 1 corrige direto o que foi marcado, sem mexer no que o bloco faz. Spec em `LM FLOW/specs/2026-10-22-construtor-janelas-e-numero-do-fluxo-design.md` (fora do git, na pasta do Tony).
@@ -9780,6 +9791,34 @@ Armadilhas:
 Código: `pages/Customer/Automations/SalesAgents/configurar/paginas/Canal.tsx`, `features/salesAgents/situacao.ts` (parâmetro `oficial`), `TelaVisaoGeral.tsx`, `DuplicateAgentDialog.tsx` (o seletor de número da cópia também marca "(API oficial)"), `SalesAgents.tsx`.
 
 Este PR **depende do backend da C na frente**: sem ele a IA não envia pela oficial e os motivos novos não existem.
+
+Não reabrir sem o dono pedir.
+
+## Construtor: cortar a linha entre dois blocos (desde 2026-10-23)
+
+Pedido do dono (Tony) em 23/10/2026: "não consigo cortar fios de conexão entre os nós; uma vez conectado, só apagando o nó". Só frontend.
+
+- **A causa.** As linhas do canvas são desenhadas a partir dos blocos (`buildEdges`) e já vinham marcadas como apagáveis, mas o `ReactFlow` do construtor não tinha `onEdgesChange`: o clique na linha (selecionar) e o Delete (remover) eram descartados. Nunca funcionou neste construtor.
+- **Como corta.** Clica na linha: ela engrossa e aparece um botão de tesoura ("Cortar conexão") no meio dela, um pouco abaixo do nome quando a linha tem nome ("Sim", "Não respondeu"). Delete ou Backspace com a linha selecionada também cortam. A saída de origem fica vazia e volta a ser "+" no cartão; os dois blocos continuam. Decisão do dono entre três opções: clicar + botão (escolhida), botão sempre visível (polui fluxo grande) ou só tecla (ninguém descobre, não existe no celular).
+- **O que não se corta.** A linha do Início pro primeiro bloco (é o começo do fluxo; troca-se arrastando do Início pra outro bloco). Fluxo só de leitura e modo guiado também não oferecem o corte.
+- O corte entra nas alterações não salvas como qualquer mudança no mapa: vale depois do Salvar.
+
+Código: `src/components/flowAutomations/FlowEdge.tsx` (linha com o botão), `cutEdge` em `src/lib/flowAutomationGraph.ts`, `onEdgesChange`/`selectedEdgeId` no `FlowAutomationCanvas.tsx`. Testes: `FlowEdge.spec.tsx` e o describe "Cortar a linha entre dois blocos" em `flowAutomationGraph.spec.ts`.
+
+## Painel do lead: Etiquetas mostra as do lead e as da conversa (desde 2026-10-24)
+
+Pedido do dono (Tony) em 24/10/2026: "tag da IA aparece na conversa e não na direita" (Imobiliária Moeda Forte). Só frontend.
+
+- **A causa.** A seção Etiquetas do painel lia `contact.labels` da conversa selecionada, e a conversa que a tela de Conversas recebe nunca traz as etiquetas do contato (`ConversationSerializer` manda só id, nome, telefone, e-mail, foto). O painel abria **sempre vazio**, pra qualquer lead e qualquer etiqueta, desde a criação da seção (22/06). A lista da esquerda mostra as da conversa, por isso as duas divergiam.
+- **O estrago escondido.** Como o painel achava que o lead não tinha etiqueta, o "+ Etiqueta" salvava no contato a lista vazia + a nova, e o contato só salva a lista inteira: apagava todas as outras etiquetas do lead, inclusive o marcador do follow-up (`<prefixo>-msg-N`, o ponto de retomada) e a `recuperado-pelo-follow-up`.
+- **Regra nova.** O painel lê do servidor, ao abrir, as etiquetas do lead (`GET /contacts/:id/labels`) e as da conversa (`GET /conversations/:id/labels`) e mostra **uma lista só, sem repetir** (sem diferença de maiúscula; as do lead primeiro). Decisão do dono: "apenas as etiquetas únicas, tanto do lead como da conversa".
+- **Nada salva antes de carregar.** "+ Etiqueta" e o ✕ ficam travados até as duas leituras voltarem. Se falharem, aparece "Não deu pra carregar as etiquetas. Abra a conversa de novo." e continua travado.
+- **Adicionar** põe no lead e na conversa. **Tirar** tira de onde ela estiver: a que só está na conversa não mexe no lead. Antes de salvar no lead, relê a lista dele na hora, pra não apagar a que o follow-up ou uma automação pôs depois que o painel abriu.
+- **Por que não a porta que só soma** (`POST /contacts/:id/labels`): ela pede o cargo `contacts.create`, e corretor pode não ter. O salvar do contato (`contacts.update`) é o que já funcionava pra todo mundo.
+
+Ficou de fora: o painel não se atualiza sozinho se a etiqueta muda com ele aberto (vale ao reabrir a conversa), e a etiqueta que só está na conversa não é copiada pro lead.
+
+Código: `src/components/chat/contact-sidebar/ContactTagsManager.tsx` (`juntarEtiquetas`), `chatService.getConversationLabels`, `contactsService.getContactLabels`. Testes: `ContactTagsManager.spec.tsx` (caso Deusa, trava antes de carregar, releitura) e `ContactSidebar.spec.tsx`.
 
 Não reabrir sem o dono pedir.
 
