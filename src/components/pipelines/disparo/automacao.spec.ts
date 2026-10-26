@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { AutomationOption } from '@/services/broadcasts/broadcastsService';
-import { avisoDoGatilho, inicioDaPrevia, linhaDaPrevia, linhasDoResumo, motivoSemDisparo, numeroProprio } from './automacao';
+import { avisoDoGatilho, inicioDaPrevia, linhaDaPrevia, linhaDeFora, linhasDoResumo, motivoSemDisparo, numeroProprio } from './automacao';
 
 // Textos do passo 2 do disparo quando o escolhido é "Automação" (spec 23/10/2026).
 
@@ -124,7 +124,7 @@ describe('avisoDoGatilho', () => {
 
 describe('numeroProprio', () => {
   it('número fixo ou do dono: o nome do número; herda ou por bloco: nada', () => {
-    expect(numeroProprio(opcao({ number_mode: 'fixed', inbox_id: 'in9', inbox_name: 'IA Júlia' }))).toBe('IA Júlia');
+    expect(numeroProprio(opcao({ number_mode: 'fixed', inbox_id: 'in9', inbox_name: 'IA Clara' }))).toBe('IA Clara');
     expect(numeroProprio(opcao({ number_mode: 'personal', inbox_id: 'in2', inbox_name: 'Corretor Ana' }))).toBe('Corretor Ana');
     expect(numeroProprio(opcao({ number_mode: 'inherit' }))).toBeNull();
     expect(numeroProprio(opcao({ number_mode: 'per_block' }))).toBeNull();
@@ -143,7 +143,48 @@ describe('motivoSemDisparo', () => {
     expect(motivoSemDisparo(opcao({ number_mode: 'personal', inbox_id: null }))).toBe(
       'O número da automação não envia disparo. Troque nas Configurações da automação.',
     );
-    expect(motivoSemDisparo(opcao({ number_mode: 'fixed', inbox_id: 'in9', inbox_name: 'IA Júlia' }))).toBeNull();
+    expect(motivoSemDisparo(opcao({ number_mode: 'fixed', inbox_id: 'in9', inbox_name: 'IA Clara' }))).toBeNull();
     expect(motivoSemDisparo(opcao({ number_mode: 'inherit' }))).toBeNull();
+  });
+});
+
+describe('linhaDeFora', () => {
+  const zero = { opt_out: 0, frequency: 0, other_owner: 0, busy: 0 };
+
+  it('some quando ninguém ficou de fora', () => {
+    expect(linhaDeFora(zero)).toBeNull();
+    expect(linhaDeFora({ ...zero, in_this_flow: 0, already_passed: 0 })).toBeNull();
+  });
+
+  it('junta só os motivos que não são zero', () => {
+    expect(linhaDeFora({ ...zero, opt_out: 2, other_owner: 40 })).toBe(
+      '42 ficaram de fora: 2 pediram pra parar, 40 são de outros corretores',
+    );
+  });
+
+  it('explica quem já está na automação e quem já passou por ela (passo 1)', () => {
+    expect(linhaDeFora({ ...zero, in_this_flow: 1, already_passed: 3 })).toBe(
+      '4 ficaram de fora: 1 já está nessa automação, 3 já passaram por essa automação',
+    );
+    expect(linhaDeFora({ ...zero, in_this_flow: 2, already_passed: 1 })).toBe(
+      '3 ficaram de fora: 2 já estão nessa automação, 1 já passou por essa automação',
+    );
+  });
+
+  it('no resumo da automação conta só os motivos de sempre', () => {
+    expect(linhaDeFora({ ...zero, busy: 1, in_this_flow: 5, already_passed: 9 }, false)).toBe(
+      '1 ficou de fora: 1 já está em outra régua',
+    );
+    expect(linhaDeFora({ ...zero, in_this_flow: 5, already_passed: 9 }, false)).toBeNull();
+  });
+});
+
+describe('linhasDoResumo · quem ficou de fora', () => {
+  it('entra como última linha, sem caixinha', () => {
+    const linhas = linhasDoResumo(
+      { passed: 0, passed_error: 0, running: 0, first_time: 5 },
+      { incluirQuemPassou: true, recomecarRodando: false, deFora: '2 ficaram de fora: 2 pediram pra parar' },
+    );
+    expect(linhas[linhas.length - 1]).toEqual({ chave: 'fora', texto: '2 ficaram de fora: 2 pediram pra parar' });
   });
 });

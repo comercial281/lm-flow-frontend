@@ -51,7 +51,7 @@ import PassoQuemRecebe from './disparo/PassoQuemRecebe';
 import PassoMensagem, { type ModoDoEnvio } from './disparo/PassoMensagem';
 import PassoRitmo from './disparo/PassoRitmo';
 import { previsaoDoPacote, rotuloDoPacote } from './disparo/ritmo';
-import { frasesDaRevisao, motivoSemDisparo } from './disparo/automacao';
+import { frasesDaRevisao, linhaDeFora, motivoSemDisparo, numeroProprio } from './disparo/automacao';
 
 interface BulkDispatchModalProps {
   open: boolean;
@@ -392,6 +392,10 @@ export default function BulkDispatchModal({
   }, [open, pipelineId, audienceMode, stageId, selectedLabels, audiencePayload, previewInboxId, esperandoNumeros, flowOpts]);
   // O número que a automação impõe (null = vale o número do passo 1).
   const forcedInbox = automacaoId ? audiencePreview?.forced_inbox ?? null : null;
+  // O número imposto também tem que estar conectado (mesma regra do passo 1).
+  const forcedInboxId = forcedInbox?.inbox_id ?? (automacao && numeroProprio(automacao) ? automacao.inbox_id : null);
+  const forcedSender = automacaoId && forcedInboxId ? senderOptions?.find(o => o.inbox_id === forcedInboxId) : undefined;
+  const forcedDesconectado = forcedSender?.sendable === false;
 
   const itemsValid = useMemo(() => items.length > 0 && items.every(itemIsValid), [items]);
 
@@ -427,7 +431,7 @@ export default function BulkDispatchModal({
   const step1Ok =
     !contando &&
     (recipientCount ?? 0) > 0 &&
-    (cloudMode ? cloudOptions.length > 0 : !!forcedInbox || !!selectedSender?.sendable);
+    (cloudMode ? cloudOptions.length > 0 : forcedInbox ? !forcedDesconectado : !!selectedSender?.sendable);
   // Teto de gasto (só oficial), lido no jeito brasileiro ("1.000,00", "12,5").
   // Vazio = sem teto; texto que não é valor trava o Próximo com o erro no campo.
   const tetoVazio = maxSpend.trim() === '';
@@ -439,7 +443,7 @@ export default function BulkDispatchModal({
     : flowMode
       ? !!flowId
       : automationMode
-        ? !!automacao && !motivoSemDisparo(automacao)
+        ? !!automacao && !motivoSemDisparo(automacao) && !forcedDesconectado && (recipientCount ?? 0) > 0
         : itemsValid;
 
   const eta = audiencePreview?.eta ?? {};
@@ -566,7 +570,7 @@ export default function BulkDispatchModal({
             aoTentarNumeros={carregarNumeros}
             senderInboxId={senderInboxId}
             aoEscolherNumero={setSenderInboxId}
-            numeroTravado={forcedInbox?.name ?? null}
+            numeroTravado={forcedInbox ? `${forcedInbox.name}${forcedDesconectado ? ' (desconectado)' : ''}` : null}
             audienceMode={audienceMode}
             aoEscolherPublico={setAudienceMode}
             funis={funis?.map(f => ({ id: f.id, name: f.name }))}
@@ -612,6 +616,10 @@ export default function BulkDispatchModal({
             resumoDaAutomacao={automacaoId ? audiencePreview?.flow ?? null : null}
             contando={contando}
             erroDaContagem={erroPrevia}
+            naoPronta={!!automacaoId && !contando && !erroPrevia && !!audiencePreview && !audiencePreview.flow}
+            quantos={recipientCount}
+            deFora={audiencePreview ? linhaDeFora(audiencePreview.excluded, false) : null}
+            numeroDesconectado={forcedDesconectado}
             incluirQuemPassou={incluirQuemPassou}
             aoMudarIncluirQuemPassou={setIncluirQuemPassou}
             recomecarRodando={recomecarRodando}
@@ -715,7 +723,7 @@ export default function BulkDispatchModal({
                     {cloudMode
                       ? 'WhatsApp oficial (modelo)'
                       : forcedInbox
-                        ? `Campanha direta · ${forcedInbox.name}`
+                        ? `Campanha direta · ${forcedInbox.name}${(forcedSender?.phone ?? '') ? ` ${telefone(forcedSender?.phone ?? '')}` : ''}`
                         : `Campanha direta${selectedSender ? ` · ${selectedSender.name}${selectedSender.phone ? ` ${telefone(selectedSender.phone)}` : ''}` : ''}`}
                   </strong>
                 </div>

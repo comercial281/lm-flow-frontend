@@ -93,9 +93,9 @@ const funilDaEquipe = {
 
 // Automações do passo 2 (23/10/2026). Nomes de exemplo, sem dado de cliente.
 const autoFixa = {
-  id: 'a1', name: 'Boas-vindas da Júlia', team: true, owner_name: null,
-  number_mode: 'fixed', inbox_id: 'in9', inbox_name: 'IA Júlia',
-  first_step: { kind: 'send_whatsapp', text: 'Oi {{nome}}, aqui é a Júlia', config: {} },
+  id: 'a1', name: 'Boas-vindas da Clara', team: true, owner_name: null,
+  number_mode: 'fixed', inbox_id: 'in9', inbox_name: 'IA Clara',
+  first_step: { kind: 'send_whatsapp', text: 'Oi {{nome}}, aqui é a Clara', config: {} },
   more_blocks: 8, trigger_data: [],
 };
 const autoHerda = {
@@ -125,7 +125,7 @@ const previaComAutomacao = (_p: string, _a: unknown, _i?: string, fluxo?: { flow
       ? {
           ...previa(300),
           flow: resumoDoFluxo,
-          forced_inbox: fluxo.flow_automation_id === 'a1' ? { inbox_id: 'in9', name: 'IA Júlia' } : null,
+          forced_inbox: fluxo.flow_automation_id === 'a1' ? { inbox_id: 'in9', name: 'IA Clara' } : null,
         }
       : previa(300),
   );
@@ -595,7 +595,7 @@ describe('BulkDispatchModal · passo 2, Automação', () => {
   it('automação com número próprio diz por qual número sai e reconta com ela', async () => {
     await escolher('a1');
     expect(
-      await screen.findByText('Sai pelo número da automação: IA Júlia. O número escolhido no passo 1 não vale pra ela.'),
+      await screen.findByText('Sai pelo número da automação: IA Clara. O número escolhido no passo 1 não vale pra ela.'),
     ).toBeInTheDocument();
     await waitFor(() =>
       expect(s.previa).toHaveBeenLastCalledWith('p1', expect.objectContaining({ mode: 'pipeline' }), 'in2', {
@@ -640,7 +640,7 @@ describe('BulkDispatchModal · passo 2, Automação', () => {
     expect(previaDaAutomacao).toHaveTextContent('Começa com: Esperar 10 minutos · e mais 40 blocos');
     expect(previaDaAutomacao.className).toContain('h-9');
     expect(within(previaDaAutomacao).getByText('Começa com: Esperar 10 minutos').className).toContain('truncate');
-    const link = within(previaDaAutomacao).getByRole('link', { name: 'e mais 40 blocos' });
+    const link = within(previaDaAutomacao).getByRole('link', { name: 'e mais 40 blocos (abre em nova aba)' });
     expect(link).toHaveAttribute('href', '/automations/flow-builder/a2');
     expect(link).toHaveAttribute('target', '_blank');
   });
@@ -735,9 +735,83 @@ describe('BulkDispatchModal · passo 2, Automação', () => {
     await escolher('a1');
     await screen.findByRole('list', { name: 'Quem recebe' });
     await userEvent.click(screen.getByRole('button', { name: /Voltar/ }));
-    expect(await screen.findByText('Sai pelo número da automação: IA Júlia')).toBeInTheDocument();
-    expect(screen.queryByRole('combobox', { name: 'Número de saída' })).toBeNull();
+    expect(await screen.findByText('Sai pelo número da automação: IA Clara')).toBeInTheDocument();
+    const campo = screen.getByLabelText('Número de saída');
+    expect(campo).toBeDisabled();
+    expect(screen.getByText('Pra escolher outro número, troque a automação no passo 2.')).toBeInTheDocument();
+    expect(screen.queryByText(/Lead de outro corretor fica de fora/)).toBeNull();
     expect(screen.getByRole('button', { name: 'Próximo' })).toBeEnabled();
+  });
+
+  const numeroDaAutomacao = (sendable: boolean) => ({
+    inbox_id: 'in9', name: 'IA Clara', phone: '5511999990009', connection: sendable ? 'open' : 'disconnected',
+    owner_name: null, provider: 'evolution', sendable, reason: sendable ? null : 'disconnected',
+  });
+
+  it('número da automação desconectado: avisa, marca a ajuda e trava o Próximo', async () => {
+    s.numeros.mockResolvedValue({ ...numeros, data: [...numeros.data, numeroDaAutomacao(false)] });
+    await escolher('a1');
+    expect(
+      await screen.findByText('Sai pelo número da automação: IA Clara (desconectado). O número escolhido no passo 1 não vale pra ela.'),
+    ).toBeInTheDocument();
+    expect(screen.getByText('O número da automação está desconectado. Reconecte em Canais pra disparar.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Próximo' })).toBeDisabled();
+  });
+
+  it('o resumo diz quem ficou de fora, sem caixinha, e some quando é zero', async () => {
+    s.previa.mockImplementation(async (_p, _a, _i, fluxo?: { flow_automation_id?: string }) => ({
+      ...previa(300, { opt_out: 2, other_owner: 3 }),
+      ...(fluxo?.flow_automation_id && { flow: resumoDoFluxo, forced_inbox: null }),
+    }));
+    abrir();
+    await screen.findByText('300 leads');
+    await userEvent.click(screen.getByRole('button', { name: 'Próximo' }));
+    await userEvent.click(await screen.findByRole('radio', { name: 'Automação' }));
+    await userEvent.selectOptions(await screen.findByLabelText('Automação'), 'a2');
+    const resumo = await screen.findByRole('list', { name: 'Quem recebe' });
+    const linha = await within(resumo).findByText('5 ficaram de fora: 2 pediram pra parar, 3 são de outros corretores');
+    expect(within(linha.closest('li') as HTMLElement).queryByRole('checkbox')).toBeNull();
+  });
+
+  it('prévia sem o resumo da automação: diz que ela não está pronta', async () => {
+    s.previa.mockResolvedValue(previa(300));
+    abrir();
+    await screen.findByText('300 leads');
+    await userEvent.click(screen.getByRole('button', { name: 'Próximo' }));
+    await userEvent.click(await screen.findByRole('radio', { name: 'Automação' }));
+    await userEvent.selectOptions(await screen.findByLabelText('Automação'), 'a2');
+    expect(await screen.findByText('Essa automação não está pronta pra disparar. Escolha outra.')).toBeInTheDocument();
+    expect(screen.queryByText('Contando destinatários...')).toBeNull();
+  });
+
+  it('automação sem ninguém pra receber: avisa e trava o Próximo', async () => {
+    s.previa.mockImplementation(async (_p, _a, _i, fluxo?: { flow_automation_id?: string }) =>
+      fluxo?.flow_automation_id
+        ? { ...previa(0), flow: { passed: 0, passed_error: 0, running: 0, first_time: 0 }, forced_inbox: null }
+        : previa(300),
+    );
+    abrir();
+    await screen.findByText('300 leads');
+    await userEvent.click(screen.getByRole('button', { name: 'Próximo' }));
+    await userEvent.click(await screen.findByRole('radio', { name: 'Automação' }));
+    await userEvent.selectOptions(await screen.findByLabelText('Automação'), 'a2');
+    expect(await screen.findByText('Ninguém recebe com essa escolha.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Próximo' })).toBeDisabled();
+  });
+
+  it('o link "e mais N blocos" avisa que abre em nova aba', async () => {
+    await escolher('a1');
+    const link = await screen.findByRole('link', { name: /e mais 8 blocos/ });
+    expect(link).toHaveAccessibleName('e mais 8 blocos (abre em nova aba)');
+  });
+
+  it('na revisão, o canal da automação mostra o nome e o telefone do número', async () => {
+    s.numeros.mockResolvedValue({ ...numeros, data: [...numeros.data, numeroDaAutomacao(true)] });
+    await escolher('a1');
+    await screen.findByRole('list', { name: 'Quem recebe' });
+    await userEvent.click(screen.getByRole('button', { name: 'Próximo' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Próximo' }));
+    expect(await screen.findByText(/Campanha direta · IA Clara .*99999-0009/)).toBeInTheDocument();
   });
 
   it('as automações que falham ao carregar mostram o erro e Tentar de novo recupera', async () => {

@@ -9824,7 +9824,7 @@ Não reabrir sem o dono pedir.
 
 ## Disparo em massa: opção Automação (desde 2026-10-26)
 
-Pedido do dono (Tony) e do Giovani: disparar uma automação pronta (as que já existem no construtor) pra uma lista de leads, em vez de montar a mensagem na hora. Funciona junto com o backend A (`/broadcasts/automation_options`, `flow_automation_id` no create).
+Pedido do dono (Tony): disparar uma automação pronta (as que já existem no construtor) pra uma lista de leads, em vez de montar a mensagem na hora. Funciona junto com o backend A (`/broadcasts/automation_options`, `flow_automation_id` no create).
 
 O que muda pra quem usa:
 
@@ -9843,6 +9843,9 @@ Decisões (não reabrir sem o dono pedir):
 7. **"Esperar 10 minutos" na prévia vem do formatador do construtor** (`blockLabel`, `describeSeconds`, `leadWaitSeconds`), pra o disparo falar como o canvas.
 8. **"Teste" fica escondido no modo Automação** (e "Mensagens" também): o teste manda uma sequência de mensagens e aqui não existe sequência, só a automação. Se um dia precisar testar, é outra entrega.
 9. **A pausa automática mostra só o `pause_message` do servidor**; o motivo novo `flow_number_changed` não pede texto na tela.
+10. **O número imposto pela automação tem que estar conectado**, como o do passo 1: desconectado, a ajuda do campo diz "(desconectado)", um aviso na própria automação manda reconectar em Canais e o Próximo do passo 2 trava.
+11. **O resumo "Quem recebe" também diz quem ficou de fora** ("N ficaram de fora: ..."), com os mesmos motivos do passo 1 (`linhaDeFora`), sem caixinha; some quando é zero.
+12. **Automação sem ninguém pra receber trava o Próximo** do passo 2, e o resumo diz "Ninguém recebe com essa escolha.". Prévia que volta sem o resumo da automação diz que ela não está pronta pra disparar.
 
 Armadilhas:
 

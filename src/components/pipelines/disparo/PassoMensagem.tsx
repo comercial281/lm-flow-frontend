@@ -42,6 +42,10 @@ interface Props {
   resumoDaAutomacao: FlowSummary | null;
   contando: boolean;
   erroDaContagem: boolean;
+  naoPronta: boolean;
+  quantos: number | null;
+  deFora: string | null;
+  numeroDesconectado: boolean;
   incluirQuemPassou: boolean;
   aoMudarIncluirQuemPassou: (v: boolean) => void;
   recomecarRodando: boolean;
@@ -90,12 +94,19 @@ export default function PassoMensagem(p: Props) {
         // Sem GrupoDaJanela "Automação": o campo já tem esse rótulo. O resumo
         // "Quem recebe" mora no mesmo bloco, logo abaixo da automação escolhida.
         <div className="grid gap-3">
-          <AutomacaoDoDisparo automacaoId={p.automacaoId} aoEscolher={p.aoEscolherAutomacao} />
+          <AutomacaoDoDisparo
+            automacaoId={p.automacaoId}
+            aoEscolher={p.aoEscolherAutomacao}
+            numeroDesconectado={p.numeroDesconectado}
+          />
           {p.automacaoId && (
             <ResumoDaAutomacao
               resumo={p.resumoDaAutomacao}
               contando={p.contando}
               erro={p.erroDaContagem}
+              naoPronta={p.naoPronta}
+              quantos={p.quantos}
+              deFora={p.deFora}
               incluirQuemPassou={p.incluirQuemPassou}
               aoMudarIncluirQuemPassou={p.aoMudarIncluirQuemPassou}
               recomecarRodando={p.recomecarRodando}

@@ -16,6 +16,8 @@ interface Props {
   /** A automação escolhida ('' = nenhuma). */
   automacaoId: string;
   aoEscolher: (automacao: AutomationOption | null) => void;
+  /** O número que a automação impõe está desconectado: não dá pra disparar. */
+  numeroDesconectado?: boolean;
 }
 
 function rotuloDaOpcao(o: AutomationOption): string {
@@ -24,7 +26,7 @@ function rotuloDaOpcao(o: AutomationOption): string {
   return motivo ? `${nome} · ${motivo}` : nome;
 }
 
-export default function AutomacaoDoDisparo({ automacaoId, aoEscolher }: Props) {
+export default function AutomacaoDoDisparo({ automacaoId, aoEscolher, numeroDesconectado = false }: Props) {
   const [opcoes, setOpcoes] = useState<AutomationOption[] | null>(null);
   const [erro, setErro] = useState(false);
   // "Tentar de novo" duas vezes: a resposta velha não sobrescreve a nova.
@@ -70,7 +72,7 @@ export default function AutomacaoDoDisparo({ automacaoId, aoEscolher }: Props) {
       <CampoDaJanela
         rotulo="Automação"
         htmlFor="disparo-automacao"
-        ajuda={numero ? `Sai pelo número da automação: ${numero}. O número escolhido no passo 1 não vale pra ela.` : undefined}
+        ajuda={numero ? `Sai pelo número da automação: ${numero}${numeroDesconectado ? ' (desconectado)' : ''}. O número escolhido no passo 1 não vale pra ela.` : undefined}
       >
         <Seletor
           id="disparo-automacao"
@@ -100,10 +102,15 @@ export default function AutomacaoDoDisparo({ automacaoId, aoEscolher }: Props) {
                 className="shrink-0 text-primary underline-offset-2 hover:underline"
               >
                 {mais}
+                <span className="sr-only"> (abre em nova aba)</span>
               </a>
             </>
           )}
         </p>
+      )}
+
+      {numero && numeroDesconectado && (
+        <Aviso tom="erro" compacto>O número da automação está desconectado. Reconecte em Canais pra disparar.</Aviso>
       )}
 
       {aviso && <Aviso tom="info" compacto>{aviso}</Aviso>}

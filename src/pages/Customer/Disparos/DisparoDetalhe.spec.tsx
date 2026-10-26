@@ -144,6 +144,8 @@ describe('DisparoDetalhe', () => {
     tela();
     expect(await screen.findByText('Entrou na automação em 16/10 às 14:32')).toBeInTheDocument();
     expect(screen.getByText('Entrou na automação, pausado: já conversa em outro número')).toBeInTheDocument();
+    expect(screen.getByText('Entrou na automação, pausado: já conversa em outro número')).toHaveClass('text-amber-600');
+    expect(screen.getByText('Entrou na automação em 16/10 às 14:32')).toHaveClass('text-blue-500');
   });
 
   it('pausado porque o número de saída não existe mais mostra a frase do servidor', async () => {

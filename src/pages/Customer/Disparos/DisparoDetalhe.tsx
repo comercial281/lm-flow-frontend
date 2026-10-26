@@ -397,7 +397,7 @@ export default function DisparoDetalhe() {
                             )}
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap">{item.phone ? telefone(item.phone) : ''}</td>
-                          <td className={`px-4 py-3 ${COR_DO_ITEM[item.status] ?? ''}`}>{rotuloDoItem(item, automacao)}</td>
+                          <td className={`px-4 py-3 ${item.flow_paused === 'other_number' ? COR_DO_ITEM.skipped : COR_DO_ITEM[item.status] ?? ''}`}>{rotuloDoItem(item, automacao)}</td>
                         </tr>
                       );
                     })}

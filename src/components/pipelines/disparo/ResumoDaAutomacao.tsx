@@ -1,5 +1,6 @@
 import { Checkbox } from '@/components/ui/ds';
 import Carregando from '@/components/base/Carregando';
+import { CaixaDaJanela } from '@/components/base/janela';
 import type { FlowSummary } from '@/services/broadcasts/broadcastsService';
 import { linhasDoResumo } from './automacao';
 
@@ -13,6 +14,12 @@ interface Props {
   resumo: FlowSummary | null;
   contando: boolean;
   erro: boolean;
+  /** A prévia voltou sem o resumo da automação (ela não está pronta pra disparar). */
+  naoPronta?: boolean;
+  /** Quantos recebem com as escolhas de agora. */
+  quantos?: number | null;
+  /** Frase "N ficaram de fora: ..." (null = ninguém ficou). */
+  deFora?: string | null;
   incluirQuemPassou: boolean;
   aoMudarIncluirQuemPassou: (v: boolean) => void;
   recomecarRodando: boolean;
@@ -25,14 +32,20 @@ export default function ResumoDaAutomacao(p: Props) {
       if (p.erro) {
         return <p className="text-sm text-muted-foreground">Não deu pra contar os destinatários agora. Troque a escolha pra tentar de novo.</p>;
       }
+      if (p.naoPronta) {
+        return <p className="text-sm text-muted-foreground">Essa automação não está pronta pra disparar. Escolha outra.</p>;
+      }
       return <Carregando variante="texto" linhas={2} rotulo="Contando destinatários..." />;
     }
     const linhas = linhasDoResumo(p.resumo, {
       incluirQuemPassou: p.incluirQuemPassou,
       recomecarRodando: p.recomecarRodando,
+      deFora: p.deFora,
     });
-    if (linhas.length === 0) return <p className="text-sm text-muted-foreground">Ninguém recebe com essa escolha.</p>;
+    const ninguem = p.quantos === 0 || linhas.length === 0;
     return (
+      <div className="grid gap-2.5">
+      {ninguem && <p className="text-sm text-muted-foreground">Ninguém recebe com essa escolha.</p>}
       <ul aria-label="Quem recebe" className="grid gap-2.5">
         {linhas.map(linha => {
           const id = `disparo-resumo-${linha.chave}`;
@@ -64,13 +77,13 @@ export default function ResumoDaAutomacao(p: Props) {
           );
         })}
       </ul>
+      </div>
     );
   };
 
   return (
-    <section className="grid gap-2.5 rounded-xl border border-border bg-background p-3.5" aria-busy={p.contando || undefined}>
-      <h4 className="text-sm font-semibold">Quem recebe</h4>
-      {corpo()}
-    </section>
+    <CaixaDaJanela titulo="Quem recebe">
+      <div aria-busy={p.contando || undefined}>{corpo()}</div>
+    </CaixaDaJanela>
   );
 }

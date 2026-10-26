@@ -2,14 +2,14 @@
 // linha, o aviso de dado que só o gatilho traz e as linhas do resumo "Quem
 // recebe". O nome do bloco e o tempo do Esperar vêm dos mesmos formatadores do
 // construtor (palette.ts, waitTime.ts), pra o disparo falar como o canvas.
-import type { AutomationOption, FlowSummary } from '@/services/broadcasts/broadcastsService';
+import type { AudiencePreviewFull, AutomationOption, FlowSummary } from '@/services/broadcasts/broadcastsService';
 import type { FlowAutomationNode } from '@/types/flowAutomations';
 import { blockLabel } from '@/features/flowAutomations/palette';
 import { describeSeconds, leadWaitSeconds } from '@/features/flowAutomations/waitTime';
 import { dataHora, plural } from '@/lib/formato';
 
 export interface LinhaDoResumo {
-  chave: 'primeira' | 'passou' | 'rodando';
+  chave: 'primeira' | 'passou' | 'rodando' | 'fora';
   texto: string;
   ajuda?: string;
   caixinha?: { marcada: boolean };
@@ -83,10 +83,35 @@ export function avisoDoGatilho(dados: AutomationOption['trigger_data']): string 
   return `Essa automação usa dados de ${juntar(nomes)}. No disparo eles vêm vazios.`;
 }
 
+/**
+ * "42 ficaram de fora: 2 pediram pra parar, 40 são de outros corretores" (só o
+ * que não é zero). Passo 1 conta também quem já está na automação ou já passou
+ * por ela; o resumo da automação (passo 2) já fala disso nas outras linhas e
+ * chama com `comAutomacao` falso.
+ */
+export function linhaDeFora(excluded: AudiencePreviewFull['excluded'], comAutomacao = true): string | null {
+  const partes: Array<readonly [number, string, string]> = [
+    [excluded.opt_out, 'pediu pra parar', 'pediram pra parar'],
+    [excluded.frequency, 'já recebeu nos últimos 7 dias', 'já receberam nos últimos 7 dias'],
+    [excluded.other_owner, 'é de outro corretor', 'são de outros corretores'],
+    [excluded.busy, 'já está em outra régua', 'já estão em outra régua'],
+  ];
+  if (comAutomacao) {
+    partes.push(
+      [excluded.in_this_flow ?? 0, 'já está nessa automação', 'já estão nessa automação'],
+      [excluded.already_passed ?? 0, 'já passou por essa automação', 'já passaram por essa automação'],
+    );
+  }
+  const total = partes.reduce((soma, [n]) => soma + n, 0);
+  if (total === 0) return null;
+  const motivos = partes.filter(([n]) => n > 0).map(([n, um, varios]) => plural(n, um, varios));
+  return `${plural(total, 'ficou de fora', 'ficaram de fora')}: ${motivos.join(', ')}`;
+}
+
 /** As linhas do resumo "Quem recebe" (linha com zero não aparece). */
 export function linhasDoResumo(
   s: FlowSummary,
-  escolhas: { incluirQuemPassou: boolean; recomecarRodando: boolean },
+  escolhas: { incluirQuemPassou: boolean; recomecarRodando: boolean; deFora?: string | null },
 ): LinhaDoResumo[] {
   const linhas: LinhaDoResumo[] = [];
   const um = (n: number) => n === 1;
@@ -119,6 +144,7 @@ export function linhasDoResumo(
       caixinha: { marcada: escolhas.recomecarRodando },
     });
   }
+  if (escolhas.deFora) linhas.push({ chave: 'fora', texto: escolhas.deFora });
   return linhas;
 }
 
