@@ -9859,3 +9859,33 @@ Código: `src/components/pipelines/BulkDispatchModal.tsx`, `src/components/pipel
 Ficou pra frente (PR B): lista de leads e disparo do corretor (`broadcasts.own`).
 
 Não reabrir sem o dono pedir.
+
+## Disparo em massa: corretor e lista de leads (desde 2026-10-26)
+
+Pedido do dono (Tony): o corretor também dispara, mas só pelo número dele e só pros leads dele; e o gestor escolhe lead a lead em vez de só por funil, etapa ou etiqueta. Funciona junto com o backend B (chave `broadcasts.own`, `GET /broadcasts/lead_options`, audiência `manual`).
+
+O que muda pra quem usa:
+
+- **Passo 1, "Enviar para":** nova opção "Lista de leads". Escolher abre à direita o painel "Escolher leads" (busca por nome ou telefone, filtro de etapa e etiqueta, 20 por página, caixinha por lead e "Marcar os N desta página", no singular `Marcar o lead desta página`). O campo "Leads" mostra `N leads escolhidos` com "Mudar" dentro dele. "Pronto" e Esc fecham só o painel.
+- **Corretor** (cargo com "Disparos próprios"): Disparos aparece no menu, a página abre, "Novo disparo" e o ⋮ "Disparo em massa" do funil funcionam. Ele só vê os disparos que criou, só os leads dele e o "Número de saída" vem travado no número dele. Sem número próprio conectado, o passo 1 mostra `Você ainda não tem um número seu conectado. Fale com o gestor.` e o Próximo fica travado. O canal "WhatsApp oficial" nem aparece.
+- **Gestor:** nada muda, escolhe qualquer número e vê todos os disparos.
+
+Decisões (não reabrir sem o dono pedir):
+
+1. **Quem manda é o servidor, a tela só acompanha.** O recorte (só os dele) é do backend; a tela não filtra nada por conta própria. Modo corretor = `can('broadcasts','own')` e NÃO `can('broadcasts','create')`, o mesmo teste do `own_only?` do servidor.
+2. **Uma fonte pro número do corretor:** `sender_options`, que o servidor já devolve só com o dele. A tela trava o campo nele (sem `usePersonalCapabilities`), e o `inbox_id` que ela manda é ignorado pelo servidor de qualquer jeito.
+3. **Canal oficial é do gestor:** no modo corretor a tela não chama `whatsapp_cloud_options` nem `whatsapp_cloud_metrics` nem `estimate_cost` (dão 403) e esconde a escolha. A rota `/settings/whatsapp-oficial` continua só com `broadcasts.read`.
+4. **Rotas, menu e botões abrem com `broadcasts.read` OU `broadcasts.own`** (`/disparos`, `/disparos/:id`, item do menu). "Novo disparo" e o ⋮ do funil abrem com `create` OU `own`. O `permissionRoutes.source.spec.ts` confere o mapa e o `index.tsx` nos dois sentidos.
+5. **Cargo personalizado com `broadcasts.read` + `broadcasts.own`** vê a lista toda, mas só cria disparo pelo número e pelos leads dele (`create` é que libera o gestor completo).
+6. **A contagem não refaz a cada clique no painel:** com o painel aberto a prévia fica parada e conta uma vez ao fechar (Pronto ou Esc).
+7. **Nota do backend:** gerente antigo sem cargo e os modelos novos de Diretor passam a valer como "só os meus" até ganharem `broadcasts.create`/`read`; avisar o dono se alguém reclamar que sumiu disparo.
+
+Armadilhas:
+
+1. **Ordem pra voltar versão:** voltar o backend pra antes do B torna a chave do corretor inerte: a tela mostra Disparos e o servidor responde 403. Voltar a tela junto. Voltar a tela sozinha (antes do B) só some com o corretor e com a Lista de leads; nada quebra.
+2. **`useCan` sem provider libera tudo** (spec de tela isolada): por isso o teste do corretor precisa mockar `useCan`.
+3. **Repo público:** testes sem dado real de cliente.
+
+Código: `src/components/pipelines/BulkDispatchModal.tsx` (`modoCorretor`, recontagem parada com painel aberto), `src/components/pipelines/disparo/PassoQuemRecebe.tsx` (campo travado e aviso) e `PainelDeLeads.tsx`, `src/pages/Customer/Disparos/Disparos.tsx`, `src/pages/Customer/Pipelines/boardActions.ts`, `src/routes/permissionRoutes.ts` + `index.tsx`, `src/components/layout/config/menuItems.ts`.
+
+Não reabrir sem o dono pedir.

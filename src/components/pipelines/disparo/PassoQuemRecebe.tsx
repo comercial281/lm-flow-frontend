@@ -47,6 +47,8 @@ function rotuloDoNumero(o: SenderOption): string {
 }
 
 interface Props {
+  /** Corretor: sem canal oficial, número travado no dele (ou aviso se não tiver). */
+  modoCorretor?: boolean;
   channelKind: BroadcastChannelKind;
   aoEscolherCanal: (canal: BroadcastChannelKind) => void;
   /** Tem número oficial conectado (o "WhatsApp oficial" só fica clicável assim). */
@@ -96,46 +98,60 @@ export default function PassoQuemRecebe(p: Props) {
   return (
     <div className="grid gap-5">
       <GrupoDaJanela titulo="Por onde sai">
-        <BotoesDeEscolha<BroadcastChannelKind>
-          rotulo="Por onde sai"
-          semNome
-          valor={p.channelKind}
-          aoEscolher={p.aoEscolherCanal}
-          opcoes={[
-            { valor: 'evolution', rotulo: 'Campanha direta' },
-            {
-              valor: 'whatsapp_cloud',
-              rotulo: 'WhatsApp oficial (modelo aprovado)',
-              desabilitada: !p.temOficial,
-              motivo: p.erroCanais
-                ? undefined
-                : p.carregandoOficial
-                  ? 'Carregando números oficiais…'
-                  : 'Conecte um número oficial em Integrações',
-            },
-          ]}
-        />
-        {p.erroCanais ? (
-          <EmptyState tipo="erro" tamanho="compacto" aoTentarDeNovo={p.aoTentarCanais} className="p-3" />
-        ) : p.carregandoOficial ? (
-          <p className="text-xs text-muted-foreground">Carregando números oficiais…</p>
-        ) : !p.temOficial ? (
-          <p className="text-xs text-muted-foreground">Conecte um número oficial em Integrações</p>
-        ) : null}
+        {!p.modoCorretor && (
+          <>
+            <BotoesDeEscolha<BroadcastChannelKind>
+              rotulo="Por onde sai"
+              semNome
+              valor={p.channelKind}
+              aoEscolher={p.aoEscolherCanal}
+              opcoes={[
+                { valor: 'evolution', rotulo: 'Campanha direta' },
+                {
+                  valor: 'whatsapp_cloud',
+                  rotulo: 'WhatsApp oficial (modelo aprovado)',
+                  desabilitada: !p.temOficial,
+                  motivo: p.erroCanais
+                    ? undefined
+                    : p.carregandoOficial
+                      ? 'Carregando números oficiais…'
+                      : 'Conecte um número oficial em Integrações',
+                },
+              ]}
+            />
+            {p.erroCanais ? (
+              <EmptyState tipo="erro" tamanho="compacto" aoTentarDeNovo={p.aoTentarCanais} className="p-3" />
+            ) : p.carregandoOficial ? (
+              <p className="text-xs text-muted-foreground">Carregando números oficiais…</p>
+            ) : !p.temOficial ? (
+              <p className="text-xs text-muted-foreground">Conecte um número oficial em Integrações</p>
+            ) : null}
 
-        {!cloudMode && (
+          </>
+        )}
+
+        {p.modoCorretor && !p.erroNumeros && p.numeros !== null && p.numeros.length === 0 ? (
+          <Aviso tom="atencao">Você ainda não tem um número seu conectado. Fale com o gestor.</Aviso>
+        ) : (
+          !cloudMode && (
           <CampoDaJanela
             rotulo="Número de saída"
             htmlFor="disparo-numero-saida"
             ajuda={
               p.numeroTravado
                 ? 'Pra escolher outro número, troque a automação no passo 2.'
-                : 'Lead de outro corretor fica de fora. O número da imobiliária manda pra todos.'
+                : p.modoCorretor
+                  ? 'Você dispara pelo seu número.'
+                  : 'Lead de outro corretor fica de fora. O número da imobiliária manda pra todos.'
             }
           >
             {p.numeroTravado ? (
               <Seletor id="disparo-numero-saida" className="w-full" value="travado" disabled onChange={() => {}}>
                 <option value="travado">Sai pelo número da automação: {p.numeroTravado}</option>
+              </Seletor>
+            ) : p.modoCorretor && p.numeros && p.numeros.length > 0 ? (
+              <Seletor id="disparo-numero-saida" className="w-full" value={p.numeros[0].inbox_id} disabled onChange={() => {}}>
+                <option value={p.numeros[0].inbox_id}>{rotuloDoNumero(p.numeros[0])}</option>
               </Seletor>
             ) : p.erroNumeros ? (
               <EmptyState tipo="erro" tamanho="compacto" aoTentarDeNovo={p.aoTentarNumeros} className="p-3" />
@@ -164,6 +180,7 @@ export default function PassoQuemRecebe(p: Props) {
               </Seletor>
             )}
           </CampoDaJanela>
+          )
         )}
       </GrupoDaJanela>
 

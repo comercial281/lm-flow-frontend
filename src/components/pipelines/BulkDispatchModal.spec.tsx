@@ -20,7 +20,9 @@ const s = vi.hoisted(() => ({
   automacoes: vi.fn(),
   leads: vi.fn(),
   fechar: vi.fn(),
+  pode: vi.fn(),
 }));
+vi.mock('@/hooks/useCan', () => ({ useCan: () => s.pode }));
 vi.mock('react-router-dom', async orig => ({
   ...(await orig<typeof import('react-router-dom')>()),
   useNavigate: () => s.navegar,
@@ -163,6 +165,7 @@ beforeEach(() => {
     meta: { total: 3, page: 1, per_page: 20 },
   });
   s.fechar.mockReset();
+  s.pode.mockReset().mockReturnValue(true);
 });
 
 describe('BulkDispatchModal · passo 1 (por onde sai e quem recebe)', () => {
@@ -908,6 +911,17 @@ describe('BulkDispatchModal · passo 1, Lista de leads', () => {
     expect(campoLeads()).toHaveTextContent('2 leads escolhidos');
   });
 
+  it('com o painel aberto não recontamos a cada clique: conta uma vez ao fechar', async () => {
+    s.previa.mockImplementation((_p: string, a: { mode: string; contact_ids?: string[] }) =>
+      Promise.resolve(previa(a.mode === 'manual' ? a.contact_ids?.length ?? 0 : 300)),
+    );
+    const painel = await escolherLista();
+    await marcarDois(painel);
+    expect(s.previa.mock.calls.filter(c => c[1].mode === 'manual')).toHaveLength(0);
+    await userEvent.click(within(painel).getByRole('button', { name: 'Pronto' }));
+    await waitFor(() => expect(s.previa.mock.calls.filter(c => c[1].mode === 'manual')).toHaveLength(1));
+  });
+
   it('o disparo manda mode manual com os ids marcados', async () => {
     const painel = await escolherLista();
     await marcarDois(painel);
@@ -921,5 +935,37 @@ describe('BulkDispatchModal · passo 1, Lista de leads', () => {
     await userEvent.click(await screen.findByRole('button', { name: /Disparar pra/ }));
     await waitFor(() => expect(s.criar).toHaveBeenCalled());
     expect(s.criar.mock.calls[0][0].audience).toEqual({ mode: 'manual', contact_ids: ['c1', 'c2'] });
+  });
+});
+
+describe('BulkDispatchModal · corretor (só broadcasts.own)', () => {
+  const comoCorretor = () =>
+    s.pode.mockImplementation((r: string, a: string) => r === 'broadcasts' && a === 'own');
+
+  it('o número aparece travado no dele e o canal oficial some, sem chamar as rotas do gestor', async () => {
+    comoCorretor();
+    s.numeros.mockResolvedValue({ data: [numeros.data[1]], default_inbox_id: 'in2' });
+    abrir();
+    const campo = await screen.findByLabelText('Número de saída');
+    await waitFor(() => expect(campo).toHaveValue('in2'));
+    expect(campo).toBeDisabled();
+    expect(screen.queryByRole('radio', { name: /WhatsApp oficial/ })).toBeNull();
+    expect(s.canais).not.toHaveBeenCalled();
+    await waitFor(() => expect(s.previa).toHaveBeenCalled());
+    expect(await screen.findByRole('button', { name: 'Próximo' })).toBeEnabled();
+  });
+
+  it('sem número próprio: aviso e Próximo travado', async () => {
+    comoCorretor();
+    s.numeros.mockResolvedValue({ data: [], default_inbox_id: null });
+    abrir();
+    expect(await screen.findByText('Você ainda não tem um número seu conectado. Fale com o gestor.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Próximo' })).toBeDisabled();
+  });
+
+  it('gestor (create) segue vendo o canal oficial', async () => {
+    abrir();
+    expect(await screen.findByRole('radio', { name: /WhatsApp oficial/ })).toBeInTheDocument();
+    await waitFor(() => expect(s.canais).toHaveBeenCalled());
   });
 });

@@ -4,7 +4,7 @@
 //
 // - Exportar: pela chave da tela de Contatos (`contacts.export`). Gera o CSV no
 //   navegador; sumir para o Corretor foi escolha do dono (26/09/2026).
-// - Disparo em massa: pela criação de disparo.
+// - Disparo em massa: pela criação de disparo; o corretor entra por "Disparos próprios".
 // - Importar saiu do funil em 07/10/2026 (spec funil §4.1). O Bolsão continua
 //   com o importador dele, preso às regras dele.
 export interface BoardActionFlags {
@@ -18,6 +18,6 @@ export function boardHeaderActions(
 ): BoardActionFlags {
   return {
     export: features.export && can('contacts', 'export'),
-    bulkDispatch: features.bulkDispatch && can('broadcasts', 'create'),
+    bulkDispatch: features.bulkDispatch && (can('broadcasts', 'create') || can('broadcasts', 'own')),
   };
 }

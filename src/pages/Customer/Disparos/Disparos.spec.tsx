@@ -116,6 +116,14 @@ describe('Disparos', () => {
     expect(screen.queryByRole('button', { name: /Novo disparo/ })).toBeNull();
   });
 
+  it('corretor (só broadcasts.own) vê Novo disparo', async () => {
+    s.pode.mockImplementation((r: string, a: string) => r === 'broadcasts' && a === 'own');
+    s.listAll.mockResolvedValue(resposta([c1]));
+    tela();
+    await screen.findByText('Oferta junho');
+    expect(screen.getByRole('button', { name: /Novo disparo/ })).toBeInTheDocument();
+  });
+
   it('erro ao carregar mostra o erro e Tentar de novo recarrega', async () => {
     s.listAll.mockRejectedValueOnce(new Error('rede'));
     tela();

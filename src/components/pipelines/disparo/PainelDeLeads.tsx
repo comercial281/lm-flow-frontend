@@ -200,7 +200,7 @@ export default function PainelDeLeads({
                   checked={paginaToda ? true : marcadosNaPagina > 0 ? 'indeterminate' : false}
                   onCheckedChange={alternarPagina}
                 />
-                Marcar os {idsDaPagina.length} desta página
+                {idsDaPagina.length === 1 ? 'Marcar o lead desta página' : `Marcar os ${idsDaPagina.length} desta página`}
               </label>
               <ul>
                 {leads.map(l => (

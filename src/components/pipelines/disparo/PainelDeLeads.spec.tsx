@@ -94,6 +94,12 @@ describe('PainelDeLeads', () => {
     expect(aoMudar).toHaveBeenLastCalledWith(['c9']);
   });
 
+  it('com 1 lead na página o alternador fala no singular', async () => {
+    s.leads.mockResolvedValue(pagina([lead(1)], 1, 1));
+    render(<Painel />);
+    expect(await screen.findByRole('checkbox', { name: 'Marcar o lead desta página' })).toBeInTheDocument();
+  });
+
   it('marcação continua ao trocar de página', async () => {
     s.leads.mockImplementation(({ page }: { page: number }) =>
       Promise.resolve(page === 2 ? pagina([lead(4)], 21, 2) : pagina([lead(1), lead(2)], 21, 1)),

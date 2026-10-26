@@ -47,6 +47,7 @@ import { type SequenceDraftItem, newSequenceItem } from '@/components/messaging/
 
 import { PhoneInput } from '@/components/shared/PhoneInput';
 import { CaixaDaJanela, CampoDaJanela, GrupoDaJanela } from '@/components/base/janela';
+import { useCan } from '@/hooks/useCan';
 import PassoQuemRecebe from './disparo/PassoQuemRecebe';
 import PainelDeLeads from './disparo/PainelDeLeads';
 import PassoMensagem, { type ModoDoEnvio } from './disparo/PassoMensagem';
@@ -124,6 +125,10 @@ export default function BulkDispatchModal({
   funis,
 }: BulkDispatchModalProps) {
   const [step, setStep] = useState<Step>('audience');
+  // Corretor (só "Disparos próprios"): o servidor recorta tudo; a tela esconde o canal oficial
+  // (as rotas dele dão 403) e trava o número no dele, que é o único que `sender_options` devolve.
+  const pode = useCan();
+  const modoCorretor = pode('broadcasts', 'own') && !pode('broadcasts', 'create');
 
   // Funil escolhido na janela (só quando `funis` vem). Troca recarrega as etapas e a contagem.
   const [funilId, setFunilId] = useState(pipelineIdProp);
@@ -263,6 +268,11 @@ export default function BulkDispatchModal({
   }, []);
 
   const carregarCanais = useCallback(() => {
+    if (modoCorretor) {
+      setCloudOptions([]);
+      setCarregandoCanais(false);
+      return;
+    }
     const vez = ++ultimaCargaCanais.current;
     setErroCanais(false);
     setCarregandoCanais(true);
@@ -279,7 +289,7 @@ export default function BulkDispatchModal({
         setErroCanais(true);
         setCarregandoCanais(false);
       });
-  }, []);
+  }, [modoCorretor]);
 
   const ultimaCargaEtapas = useRef(0);
   const carregarEtapas = useCallback((id: string) => {
@@ -386,6 +396,8 @@ export default function BulkDispatchModal({
       return;
     }
     if (esperandoNumeros) return;
+    // Com o painel de leads aberto não recontamos a cada clique: conta uma vez ao fechar.
+    if (painelDeLeads && audienceMode === 'manual') return;
     let alive = true;
     setCountingAudience(true);
     (flowOpts
@@ -401,7 +413,7 @@ export default function BulkDispatchModal({
     return () => {
       alive = false;
     };
-  }, [open, pipelineId, audienceMode, stageId, selectedLabels, contactIds, audiencePayload, previewInboxId, esperandoNumeros, flowOpts]);
+  }, [open, pipelineId, audienceMode, stageId, selectedLabels, contactIds, audiencePayload, previewInboxId, esperandoNumeros, flowOpts, painelDeLeads]);
   // O número que a automação impõe (null = vale o número do passo 1).
   const forcedInbox = automacaoId ? audiencePreview?.forced_inbox ?? null : null;
   // O número imposto também tem que estar conectado (mesma regra do passo 1).
@@ -574,6 +586,7 @@ export default function BulkDispatchModal({
           <PassoQuemRecebe
             channelKind={channelKind}
             aoEscolherCanal={setChannelKind}
+            modoCorretor={modoCorretor}
             temOficial={cloudOptions.length > 0}
             carregandoOficial={carregandoCanais}
             erroCanais={erroCanais}
