@@ -9835,6 +9835,7 @@ Os marcos do atendimento passam a aparecer no meio da conversa, na hora em que a
 - **Não sobe a conversa:** a linha de evento é de sistema, não muda a ordem da lista de Conversas.
 - **Só daqui pra frente:** visita, tarefa e negócio de antes desta entrega não ganham cartão.
 - Visual: cores do design no tema claro; no escuro, a mesma família mais apagada. Cartão com até 380 px, ocupa a coluna inteira no celular.
+- **O cartão não é o Card da casa, de propósito:** o anel violeta e a sombra da marca do Card brigam com a cor por família (azul da visita, âmbar da tarefa, verde do ganho, vermelho do perdido) do desenho aprovado. Fica como exceção declarada em `scripts/conferir-padrao.excecoes.json`.
 
 Código: `src/features/conversas/eventoDaConversa.ts` (lê o evento e monta os textos, `textosDosEventos.ts`), `src/components/chat/messages/CartaoDeEvento.tsx`, `PilulaDeSistema.tsx` e `SystemMessage.tsx` (só escolhe entre os dois). Testes: `eventoDaConversa.spec.ts` e `SystemMessage.spec.tsx`.
 

@@ -22,6 +22,8 @@ import { TEXTOS_DOS_EVENTOS } from '@/features/conversas/textosDosEventos';
 // Cartão de marco do atendimento no meio da conversa (visita, tarefa, negócio).
 // Desenho do Catálogo aprovado em 26/10/2026. Sem clique nesta entrega: não é
 // link nem botão. Cores do design no claro; no escuro, a mesma família mais apagada.
+// Não é o Card da casa de propósito: o anel violeta e a sombra da marca brigam com
+// o cartão tingido de ganho/perdido. Ganho e perdido trocam o bg-card pelo tom deles.
 
 const ICONES: Record<CartaoDoEvento['icone'], LucideIcon> = {
   calendario: Calendar,
@@ -44,7 +46,7 @@ interface Visual {
 
 const VISITA_ICONE = 'bg-[#E7EFFD] text-[#1F5FD0] dark:bg-[#1F5FD0]/20 dark:text-[#8FB4F5]';
 const TAREFA_ICONE = 'bg-[#FCEFD9] text-[#9A5200] dark:bg-[#9A5200]/25 dark:text-[#F2B866]';
-const CARTAO_PADRAO = 'bg-card border-border/70';
+const CARTAO_PADRAO = 'border-border/70';
 
 const VISUAL: Record<FamiliaDoEvento, Visual> = {
   visita: { cartao: CARTAO_PADRAO, icone: VISITA_ICONE, titulo: 'text-foreground', principal: 'text-foreground/90' },
@@ -100,11 +102,12 @@ const CartaoDeEvento: React.FC<CartaoDeEventoProps> = ({ cartao, hora }) => {
       <div
         data-cartao={cartao.familia}
         className={cn(
-          'flex w-full max-w-[380px] items-start gap-3 rounded-[14px] border px-3.5 py-3 text-left shadow-sm',
+          // desenho próprio, não o Card da casa (exceção em conferir-padrao.excecoes.json)
+          'flex w-full max-w-[380px] items-start gap-3 rounded-lg border bg-card px-3.5 py-3 text-left shadow-sm',
           v.cartao,
         )}
       >
-        <div className={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px]', v.icone)}>
+        <div className={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-sm', v.icone)}>
           <Icone aria-hidden="true" className="h-[19px] w-[19px]" />
         </div>
         <div className="flex min-w-0 flex-1 flex-col gap-[3px]">

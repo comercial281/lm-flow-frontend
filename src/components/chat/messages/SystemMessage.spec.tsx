@@ -58,6 +58,10 @@ describe('SystemMessage', () => {
     expect(screen.getByText('Motivo: Sem renda pra financiar')).toBeInTheDocument();
     expect(screen.getByText('Vendas · saiu da etapa Visita')).toBeInTheDocument();
     expect(screen.getByText('Marcado por Cirlei')).toBeInTheDocument();
+    // o tom do perdido substitui o fundo padrão do cartão
+    const cartao = document.querySelector('[data-cartao="perdido"]') as HTMLElement;
+    expect(cartao).not.toHaveClass('bg-card');
+    expect(cartao).toHaveClass('bg-[#FCEFEE]');
   });
 
   it('visit_completed mostra 4 estrelas', () => {
