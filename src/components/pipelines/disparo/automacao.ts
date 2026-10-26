@@ -18,6 +18,20 @@ export interface LinhaDoResumo {
 /** Modos em que a automação sai sempre pelo número dela (o do passo 1 não vale). */
 const COM_NUMERO_PROPRIO: ReadonlyArray<AutomationOption['number_mode']> = ['fixed', 'personal'];
 
+export const SEM_NUMERO_DO_FLUXO = 'Escolha o número nas Configurações da automação pra poder disparar.';
+export const NUMERO_NAO_DISPARA = 'O número da automação não envia disparo. Troque nas Configurações da automação.';
+
+/**
+ * Por que a automação não pode ser disparada (null = pode). Número por bloco
+ * (legado) e número próprio que não envia disparo: o servidor manda o
+ * `inbox_id` nulo e recusaria no Disparar, então a tela trava antes.
+ */
+export function motivoSemDisparo(opt: AutomationOption): string | null {
+  if (opt.number_mode === 'per_block') return SEM_NUMERO_DO_FLUXO;
+  if (COM_NUMERO_PROPRIO.includes(opt.number_mode) && !opt.inbox_id) return NUMERO_NAO_DISPARA;
+  return null;
+}
+
 /** O nome do número da automação, quando ela tem um; senão null (usa o do passo 1). */
 export function numeroProprio(opt: AutomationOption): string | null {
   if (!COM_NUMERO_PROPRIO.includes(opt.number_mode)) return null;

@@ -5,14 +5,12 @@ import Aviso from '@/components/base/Aviso';
 import { Seletor } from '@/components/base/Seletor';
 import { CampoDaJanela } from '@/components/base/janela';
 import { broadcastsService, type AutomationOption } from '@/services/broadcasts/broadcastsService';
-import { avisoDoGatilho, inicioDaPrevia, maisBlocos, numeroProprio } from './automacao';
+import { avisoDoGatilho, inicioDaPrevia, maisBlocos, motivoSemDisparo, numeroProprio } from './automacao';
 
 // AUTOMAÇÃO NO DISPARO EM MASSA (23/10/2026): as automações que dá pra disparar
 // (o servidor já recorta), a linha do número quando ela tem número próprio, a
 // prévia em UMA linha de altura fixa (fluxo grande não cresce a janela) e o
 // aviso de dado que só o gatilho traz. O lead entra na automação na vez dele.
-
-export const SEM_NUMERO_DO_FLUXO = 'Escolha o número nas Configurações da automação pra poder disparar.';
 
 interface Props {
   /** A automação escolhida ('' = nenhuma). */
@@ -22,7 +20,8 @@ interface Props {
 
 function rotuloDaOpcao(o: AutomationOption): string {
   const nome = !o.team && o.owner_name ? `${o.name} · ${o.owner_name}` : o.name;
-  return o.number_mode === 'per_block' ? `${nome} · ${SEM_NUMERO_DO_FLUXO}` : nome;
+  const motivo = motivoSemDisparo(o);
+  return motivo ? `${nome} · ${motivo}` : nome;
 }
 
 export default function AutomacaoDoDisparo({ automacaoId, aoEscolher }: Props) {
@@ -61,7 +60,7 @@ export default function AutomacaoDoDisparo({ automacaoId, aoEscolher }: Props) {
   const daEquipe = opcoes.filter(o => o.team);
   const pessoais = opcoes.filter(o => !o.team);
   const opcao = (o: AutomationOption) => (
-    <option key={o.id} value={o.id} disabled={o.number_mode === 'per_block'}>{rotuloDaOpcao(o)}</option>
+    <option key={o.id} value={o.id} disabled={!!motivoSemDisparo(o)}>{rotuloDaOpcao(o)}</option>
   );
   const mais = escolhida ? maisBlocos(escolhida) : null;
   const aviso = escolhida ? avisoDoGatilho(escolhida.trigger_data) : null;

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { AutomationOption } from '@/services/broadcasts/broadcastsService';
-import { avisoDoGatilho, inicioDaPrevia, linhaDaPrevia, linhasDoResumo, numeroProprio } from './automacao';
+import { avisoDoGatilho, inicioDaPrevia, linhaDaPrevia, linhasDoResumo, motivoSemDisparo, numeroProprio } from './automacao';
 
 // Textos do passo 2 do disparo quando o escolhido é "Automação" (spec 23/10/2026).
 
@@ -129,5 +129,21 @@ describe('numeroProprio', () => {
     expect(numeroProprio(opcao({ number_mode: 'inherit' }))).toBeNull();
     expect(numeroProprio(opcao({ number_mode: 'per_block' }))).toBeNull();
     expect(numeroProprio(opcao({ number_mode: 'fixed', inbox_id: null, inbox_name: null }))).toBeNull();
+  });
+});
+
+describe('motivoSemDisparo', () => {
+  it('número por bloco e número próprio que não envia disparo travam; os outros não', () => {
+    expect(motivoSemDisparo(opcao({ number_mode: 'per_block' }))).toBe(
+      'Escolha o número nas Configurações da automação pra poder disparar.',
+    );
+    expect(motivoSemDisparo(opcao({ number_mode: 'fixed', inbox_id: null }))).toBe(
+      'O número da automação não envia disparo. Troque nas Configurações da automação.',
+    );
+    expect(motivoSemDisparo(opcao({ number_mode: 'personal', inbox_id: null }))).toBe(
+      'O número da automação não envia disparo. Troque nas Configurações da automação.',
+    );
+    expect(motivoSemDisparo(opcao({ number_mode: 'fixed', inbox_id: 'in9', inbox_name: 'IA Júlia' }))).toBeNull();
+    expect(motivoSemDisparo(opcao({ number_mode: 'inherit' }))).toBeNull();
   });
 });

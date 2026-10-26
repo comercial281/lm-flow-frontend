@@ -110,6 +110,13 @@ const autoPorBloco = {
   first_step: { kind: 'send_whatsapp', text: 'Olá', config: {} },
   more_blocks: 2, trigger_data: [],
 };
+// Número próprio que não envia disparo: o servidor manda inbox_id/inbox_name nulos.
+const autoNumeroQueNaoDispara = {
+  id: 'a4', name: 'Boas-vindas do canal oficial', team: true, owner_name: null,
+  number_mode: 'fixed', inbox_id: null, inbox_name: null,
+  first_step: { kind: 'send_whatsapp', text: 'Oi', config: {} },
+  more_blocks: 1, trigger_data: [],
+};
 const resumoDoFluxo = { passed: 12, passed_error: 3, running: 2, first_time: 140 };
 // Com automação a prévia traz o resumo e, na de número próprio, o número imposto.
 const previaComAutomacao = (_p: string, _a: unknown, _i?: string, fluxo?: { flow_automation_id?: string }) =>
@@ -611,6 +618,20 @@ describe('BulkDispatchModal · passo 2, Automação', () => {
     expect(
       screen.getByRole('option', { name: /Antiga.*Escolha o número nas Configurações da automação pra poder disparar\./ }),
     ).toBeDisabled();
+  });
+
+  it('automação com número próprio que não envia disparo aparece desabilitada e não libera o Próximo', async () => {
+    s.automacoes.mockResolvedValue([autoFixa, autoNumeroQueNaoDispara]);
+    const campo = await irProAutomacao();
+    const opcao = screen.getByRole('option', {
+      name: 'Boas-vindas do canal oficial · O número da automação não envia disparo. Troque nas Configurações da automação.',
+    });
+    expect(opcao).toBeDisabled();
+    // Mesmo que chegue escolhida (lista do celular, valor antigo), o Próximo não libera.
+    await userEvent.selectOptions(campo, 'a4').catch(() => {});
+    expect(screen.queryByText(/Sai pelo número da automação/)).toBeNull();
+    expect(screen.getByRole('button', { name: 'Próximo' })).toBeDisabled();
+    expect(screen.getAllByRole('option', { name: /Escolha o número nas Configurações|não envia disparo/ })).toHaveLength(1);
   });
 
   it('a prévia é uma linha só, cortada, mesmo com 40 blocos, e "e mais 40 blocos" abre a automação em aba nova', async () => {

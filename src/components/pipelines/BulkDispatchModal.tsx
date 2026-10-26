@@ -51,6 +51,7 @@ import PassoQuemRecebe from './disparo/PassoQuemRecebe';
 import PassoMensagem, { type ModoDoEnvio } from './disparo/PassoMensagem';
 import PassoRitmo from './disparo/PassoRitmo';
 import { previsaoDoPacote, rotuloDoPacote } from './disparo/ritmo';
+import { motivoSemDisparo } from './disparo/automacao';
 
 interface BulkDispatchModalProps {
   open: boolean;
@@ -438,7 +439,7 @@ export default function BulkDispatchModal({
     : flowMode
       ? !!flowId
       : automationMode
-        ? !!automacao && automacao.number_mode !== 'per_block'
+        ? !!automacao && !motivoSemDisparo(automacao)
         : itemsValid;
 
   const eta = audiencePreview?.eta ?? {};
