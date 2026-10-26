@@ -23,6 +23,7 @@ import type {
   BroadcastChannelKind,
   SenderOption,
 } from '@/services/broadcasts/broadcastsService';
+import { linhaDeFora } from './automacao';
 
 // PASSO 1 DO DISPARO (16/10/2026): por onde sai (canal + número de saída) e
 // quem recebe. O número vem antes do público porque "lead de outro corretor"
@@ -44,20 +45,6 @@ function rotuloDoNumero(o: SenderOption): string {
   return `${nome} ${SEM_DISPARO[o.reason ?? 'disconnected']}`;
 }
 
-/** "42 ficaram de fora: 2 pediram pra parar, 40 são de outros corretores" (só o que não é zero). */
-function linhaDeFora(excluded: AudiencePreviewFull['excluded']): string | null {
-  const partes = [
-    [excluded.opt_out, 'pediu pra parar', 'pediram pra parar'],
-    [excluded.frequency, 'já recebeu nos últimos 7 dias', 'já receberam nos últimos 7 dias'],
-    [excluded.other_owner, 'é de outro corretor', 'são de outros corretores'],
-    [excluded.busy, 'já está em outra régua', 'já estão em outra régua'],
-  ] as const;
-  const total = partes.reduce((soma, [n]) => soma + n, 0);
-  if (total === 0) return null;
-  const motivos = partes.filter(([n]) => n > 0).map(([n, um, varios]) => plural(n, um, varios));
-  return `${plural(total, 'ficou de fora', 'ficaram de fora')}: ${motivos.join(', ')}`;
-}
-
 interface Props {
   channelKind: BroadcastChannelKind;
   aoEscolherCanal: (canal: BroadcastChannelKind) => void;
@@ -74,6 +61,8 @@ interface Props {
   aoTentarNumeros: () => void;
   senderInboxId: string;
   aoEscolherNumero: (inboxId: string) => void;
+  /** Nome do número que a automação do passo 2 impõe: o campo fica travado nele. */
+  numeroTravado?: string | null;
 
   /** Só na página Disparos: escolher o funil de onde sai o público. */
   funis?: { id: string; name: string }[];
@@ -134,9 +123,17 @@ export default function PassoQuemRecebe(p: Props) {
           <CampoDaJanela
             rotulo="Número de saída"
             htmlFor="disparo-numero-saida"
-            ajuda="Lead de outro corretor fica de fora. O número da imobiliária manda pra todos."
+            ajuda={
+              p.numeroTravado
+                ? 'Pra escolher outro número, troque a automação no passo 2.'
+                : 'Lead de outro corretor fica de fora. O número da imobiliária manda pra todos.'
+            }
           >
-            {p.erroNumeros ? (
+            {p.numeroTravado ? (
+              <Seletor id="disparo-numero-saida" className="w-full" value="travado" disabled onChange={() => {}}>
+                <option value="travado">Sai pelo número da automação: {p.numeroTravado}</option>
+              </Seletor>
+            ) : p.erroNumeros ? (
               <EmptyState tipo="erro" tamanho="compacto" aoTentarDeNovo={p.aoTentarNumeros} className="p-3" />
             ) : p.numeros === null ? (
               <Carregando variante="texto" linhas={1} rotulo="Carregando os números…" />

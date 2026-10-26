@@ -4,16 +4,26 @@ import Aviso from '@/components/base/Aviso';
 import BotoesDeEscolha from '@/components/base/BotoesDeEscolha';
 import { CampoDaJanela, GrupoDaJanela } from '@/components/base/janela';
 import MessageSequenceEditor, { type SequenceDraftItem } from '@/components/messaging/MessageSequenceEditor';
-import { broadcastsService, type CloudChannelOption, type CloudTemplateOption } from '@/services/broadcasts/broadcastsService';
+import {
+  broadcastsService,
+  type AutomationOption,
+  type CloudChannelOption,
+  type CloudTemplateOption,
+  type FlowSummary,
+} from '@/services/broadcasts/broadcastsService';
 import type { TemplateVariable } from '@/types/messageFunnels';
 import { dinheiro, telefone } from '@/lib/formato';
 import FunilDoDisparo from './FunilDoDisparo';
+import AutomacaoDoDisparo from './AutomacaoDoDisparo';
+import ResumoDaAutomacao from './ResumoDaAutomacao';
 
 // PASSO 2 DO DISPARO (16/10/2026): o que mandar. Na Campanha direta, uma
 // sequência de mensagens (o editor de sempre) ou um funil pronto, em que o
 // lead entra. No WhatsApp oficial, o modelo aprovado de hoje.
+// Desde 23/10/2026, a terceira opção "Automação" (só na Campanha direta): o lead
+// entra numa automação, com o resumo "Quem recebe" logo abaixo dela.
 
-export type ModoDoEnvio = 'message' | 'flow';
+export type ModoDoEnvio = 'message' | 'flow' | 'automation';
 
 interface Props {
   cloudMode: boolean;
@@ -25,6 +35,21 @@ interface Props {
   variables: TemplateVariable[];
   flowId: string;
   aoEscolherFunil: (id: string, nome: string) => void;
+
+  automacaoId: string;
+  aoEscolherAutomacao: (automacao: AutomationOption | null) => void;
+  /** Resumo da audiência diante da automação (null = contando ou falhou). */
+  resumoDaAutomacao: FlowSummary | null;
+  contando: boolean;
+  erroDaContagem: boolean;
+  naoPronta: boolean;
+  quantos: number | null;
+  deFora: string | null;
+  numeroDesconectado: boolean;
+  incluirQuemPassou: boolean;
+  aoMudarIncluirQuemPassou: (v: boolean) => void;
+  recomecarRodando: boolean;
+  aoMudarRecomecarRodando: (v: boolean) => void;
 
   cloudOptions: CloudChannelOption[];
   erroCanais: boolean;
@@ -60,11 +85,36 @@ export default function PassoMensagem(p: Props) {
           opcoes={[
             { valor: 'message', rotulo: 'Mensagem' },
             { valor: 'flow', rotulo: 'Funil pronto' },
+            { valor: 'automation', rotulo: 'Automação' },
           ]}
         />
       </GrupoDaJanela>
 
-      {p.sendMode === 'message' ? (
+      {p.sendMode === 'automation' ? (
+        // Sem GrupoDaJanela "Automação": o campo já tem esse rótulo. O resumo
+        // "Quem recebe" mora no mesmo bloco, logo abaixo da automação escolhida.
+        <div className="grid gap-3">
+          <AutomacaoDoDisparo
+            automacaoId={p.automacaoId}
+            aoEscolher={p.aoEscolherAutomacao}
+            numeroDesconectado={p.numeroDesconectado}
+          />
+          {p.automacaoId && (
+            <ResumoDaAutomacao
+              resumo={p.resumoDaAutomacao}
+              contando={p.contando}
+              erro={p.erroDaContagem}
+              naoPronta={p.naoPronta}
+              quantos={p.quantos}
+              deFora={p.deFora}
+              incluirQuemPassou={p.incluirQuemPassou}
+              aoMudarIncluirQuemPassou={p.aoMudarIncluirQuemPassou}
+              recomecarRodando={p.recomecarRodando}
+              aoMudarRecomecarRodando={p.aoMudarRecomecarRodando}
+            />
+          )}
+        </div>
+      ) : p.sendMode === 'message' ? (
         <GrupoDaJanela titulo="Sequência de mensagens">
           <MessageSequenceEditor
             items={p.items}

@@ -9845,3 +9845,41 @@ Armadilhas:
 2. **A aba Follow-up ainda mostra a chave "Da equipe" à vista** (PR #619). Se o dono quiser os dois iguais, o Follow-up passa a usar o ⋮ e a `JanelaDeQuemE` compartilhada.
 
 Código: `pages/Customer/Automations/FlowBuilder/FlowAutomationsList.tsx`, `components/flowAutomations/JanelaDeQuemE.tsx` (a escolha "de quem é", reaproveitável), `features/flowAutomations/kind.ts` (`newButton`). Testes: `AutomationsOwnership.spec.tsx`.
+
+## Disparo em massa: opção Automação (desde 2026-10-26)
+
+Pedido do dono (Tony): disparar uma automação pronta (as que já existem no construtor) pra uma lista de leads, em vez de montar a mensagem na hora. Funciona junto com o backend A (`/broadcasts/automation_options`, `flow_automation_id` no create).
+
+O que muda pra quem usa:
+
+- **Passo 2 (Mensagem):** aparece a opção "Automação" ao lado de Mensagens e Funil. Escolhe a automação num campo, vê uma linha de prévia (`Primeira mensagem: "..." · e mais 8 blocos`) e, logo abaixo, o resumo "Quem recebe" com as caixinhas.
+- **Passo 4 (Revisar):** o resumo do disparo mostra "Automação <nome>", o canal com o número da automação e, só quando valem, as frases `Inclui N que já passaram por ela` e `Recomeça pra N que estavam com ela rodando`.
+- **Disparos e tela do disparo:** `Automação <nome>` onde o funil mostra `Funil <nome>`; o lead que entrou aparece como `Entrou na automação às 14:32` (outro dia: `em 16/10 às 14:32`); o filtro e o número do topo chamam `Entraram na automação`. Lead que entrou mas ficou pausado por já conversar em outro número: `Entrou na automação, pausado: já conversa em outro número`.
+
+Decisões (não reabrir sem o dono pedir):
+
+1. **Nada de botão solto, a escolha mora dentro do bloco** (cobrança do dono, 23/10). "Recebe de novo" e "Recomeçar" são caixinhas dentro das linhas do resumo, nunca botão ao lado de texto ou aviso. As frases do passo Revisar também ficam dentro do resumo, não num aviso à parte.
+2. **A prévia é UMA linha de altura fixa** (`linhaDaPrevia`), não a lista de blocos do mockup. Correção do dono depois do mockup.
+3. **O resumo "Quem recebe" mora no passo 2**, junto da escolha da automação. A contagem vem do `audience_preview` com `flow` (`passed`, `passed_error`, `running`, `first_time`); linha com zero não aparece. Padrões: incluir quem já passou = sim, recomeçar quem está rodando = não.
+4. **Quem tem número manda, quem não tem herda.** Automação com número próprio (fixo ou do dono) trava o "Número de saída" do passo 1 e mostra "Sai pelo número da automação: X"; sem número próprio, vale o número escolhido no passo 1.
+5. **Automação com "Número do responsável"** usa o número do disparo; os leads de outros corretores ficam de fora (o servidor manda pronto em `excluded.other_owner`). Pra vários corretores, um disparo por número.
+6. **Automação com número por bloco (legado) e número fixo que não envia disparo** aparecem apagadas, com o motivo ("Escolha o número nas Configurações da automação pra poder disparar." / "O número da automação não envia disparo. Troque nas Configurações da automação."). Evita mostrar um número e o bloco sair por outro. A trava vem de `motivoSemDisparo`.
+7. **"Esperar 10 minutos" na prévia vem do formatador do construtor** (`blockLabel`, `describeSeconds`, `leadWaitSeconds`), pra o disparo falar como o canvas.
+8. **"Teste" fica escondido no modo Automação** (e "Mensagens" também): o teste manda uma sequência de mensagens e aqui não existe sequência, só a automação. Se um dia precisar testar, é outra entrega.
+9. **A pausa automática mostra só o `pause_message` do servidor**; o motivo novo `flow_number_changed` não pede texto na tela.
+10. **O número imposto pela automação tem que estar conectado**, como o do passo 1: desconectado, a ajuda do campo diz "(desconectado)", um aviso na própria automação manda reconectar em Canais e o Próximo do passo 2 trava.
+11. **O resumo "Quem recebe" também diz quem ficou de fora** ("N ficaram de fora: ..."), com os mesmos motivos do passo 1 (`linhaDeFora`), sem caixinha; some quando é zero.
+12. **Automação sem ninguém pra receber trava o Próximo** do passo 2, e o resumo diz "Ninguém recebe com essa escolha.". Prévia que volta sem o resumo da automação diz que ela não está pronta pra disparar.
+
+Armadilhas:
+
+1. **Voltar o backend com esta tela no ar quebra a opção Automação**: sem o backend A, `automation_options` dá 404 e o create é recusado. Voltar a tela junto. O resto do Disparo (mensagem, funil, oficial) segue funcionando.
+2. **O item `in_funnel` serve ao funil e à automação**: o texto muda pelo `mode` do disparo (`rotuloDoItem(item, automacao)`). Lead pausado por outro número vem em `flow_paused: 'other_number'`.
+3. **"Enviadas" da automação é `sent`**, que no servidor já inclui quem entrou; só o rótulo muda.
+4. **Repo público:** testes sem dado real de cliente.
+
+Código: `src/components/pipelines/BulkDispatchModal.tsx`, `src/components/pipelines/disparo/` (`AutomacaoDoDisparo.tsx`, `ResumoDaAutomacao.tsx`, `automacao.ts` com `linhaDaPrevia`, `linhasDoResumo`, `frasesDaRevisao`, `motivoSemDisparo`), `src/pages/Customer/Disparos/` (`rotulos.ts`, `DisparoDetalhe.tsx`), `src/services/broadcasts/broadcastsService.ts`. Testes: `BulkDispatchModal.spec.tsx`, `automacao.spec.ts`, `DisparoDetalhe.spec.tsx`, `Disparos.spec.tsx`.
+
+Ficou pra frente (PR B): lista de leads e disparo do corretor (`broadcasts.own`).
+
+Não reabrir sem o dono pedir.
