@@ -29,7 +29,7 @@ const followupFlows = [
 ] as unknown as FlowAutomation[];
 
 const resources: AutomationResources = {
-  labels: [], sequences: [], followupFlows, users: [], pipelines: [], stagesByPipeline: {}, quickReplies: [],
+  labels: [], followupFlows, users: [], pipelines: [], stagesByPipeline: {}, quickReplies: [],
   adOrigins: [], formOrigins: [], messageFunnels: [], conversationFunnels: [], evolutionInstances: [],
   reloadFunnels: () => {}, reloadLabels: () => {}, loading: false,
 };

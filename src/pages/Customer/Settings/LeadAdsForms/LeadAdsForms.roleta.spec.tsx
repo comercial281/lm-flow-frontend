@@ -23,7 +23,7 @@ vi.mock('@/services/roletaConfig/roletaConfigService', async (orig) => {
   return { ...real, roletaConfigService: { getAll: roletasMock } };
 });
 const recursos = vi.hoisted(() => ({
-  labels: [], sequences: [], followupFlows: [], quickReplies: [], adOrigins: [], formOrigins: [],
+  labels: [], followupFlows: [], quickReplies: [], adOrigins: [], formOrigins: [],
   messageFunnels: [], conversationFunnels: [], evolutionInstances: [], loading: false,
   users: [{ id: 'u1', name: 'Ana Corretora' }, { id: 'u9', name: 'Ex Corretor', deactivated: true }],
   pipelines: [{ id: 'p1', name: 'Vendas' }],

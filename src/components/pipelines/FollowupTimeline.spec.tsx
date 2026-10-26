@@ -3,8 +3,8 @@ import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import FollowupTimeline from './FollowupTimeline';
 
-const get = vi.fn();
-const legacyStop = vi.fn();
+const apiGet = vi.fn();
+const apiPost = vi.fn();
 const running = vi.fn();
 const instanceStart = vi.fn();
 const instanceStop = vi.fn();
@@ -14,18 +14,11 @@ const instancePlace = vi.fn();
 // Os follow-ups que dá pra iniciar vêm na mesma leitura (meta.startable_followups).
 let startable: Array<{ id: string; name: string }> = [];
 
-vi.mock('@/services/leadFollowup/leadFollowupService', async () => {
-  const actual = await vi.importActual<Record<string, unknown>>(
-    '@/services/leadFollowup/leadFollowupService',
-  );
-  return {
-    ...actual,
-    leadFollowupService: {
-      get: (...a: unknown[]) => get(...a),
-      stop: (...a: unknown[]) => legacyStop(...a),
-    },
-  };
-});
+// Fase 4 (Entrega B): o bloco não fala mais com /followup_jobs (a fila antiga saiu).
+// O cliente HTTP é espiado pra provar isso: qualquer chamada dele aqui é falha.
+vi.mock('@/services/core/api', () => ({
+  default: { get: (...a: unknown[]) => apiGet(...a), post: (...a: unknown[]) => apiPost(...a) },
+}));
 
 vi.mock('@/services/flowAutomations/flowAutomationInstancesService', () => ({
   flowAutomationInstancesService: {
@@ -41,32 +34,6 @@ vi.mock('@/services/flowAutomations/flowAutomationInstancesService', () => ({
 vi.mock('sonner', () => ({
   toast: { error: vi.fn(), success: vi.fn(), warning: vi.fn() },
 }));
-
-const state = (over: Record<string, unknown> = {}) => ({
-  status: 'idle',
-  sequence: null,
-  queued_count: 0,
-  sent_count: 0,
-  total_steps: null,
-  next_run_at: null,
-  last_sent_at: null,
-  can_pause: false,
-  can_resume: false,
-  can_stop: false,
-  sequences: [],
-  ...over,
-});
-
-const job = (over: Record<string, unknown> = {}) => ({
-  id: Math.random().toString(36).slice(2),
-  status: 'pending',
-  run_at: 1_756_000_000,
-  executed_at: null,
-  last_error: null,
-  step: { id: 's', position: 1, content: 'Oi {{nome}}, tudo bem?' },
-  sequence: { name: 'Pós-visita', slug: 'pos-visita' },
-  ...over,
-});
 
 const instance = (over: Record<string, unknown> = {}) => ({
   id: 'i1', flow_automation_id: 'f1', flow_name: 'Follow-up longo', state: 'waiting', active: true,
@@ -85,8 +52,9 @@ const preview = (over: Record<string, unknown> = {}) => ({
 });
 
 beforeEach(() => {
-  [get, legacyStop, running, instanceStart, instanceStop, instanceResume, placePreview, instancePlace].forEach(m => m.mockReset());
-  get.mockResolvedValue({ jobs: [], state: state() });
+  [apiGet, apiPost, running, instanceStart, instanceStop, instanceResume, placePreview, instancePlace].forEach(m => m.mockReset());
+  apiGet.mockResolvedValue({ data: { data: [], meta: {} } });
+  apiPost.mockResolvedValue({ data: {} });
   running.mockResolvedValue([]);
   startable = [];
 });
@@ -214,10 +182,6 @@ describe('Follow-up do card — fluxo de follow-up', () => {
   });
 });
 
-/**
- * Quem já estava na fila de um funil antigo termina nele. O card mostra essa
- * fila (formato antigo), com Parar e a linha do tempo, sem Pausar/Retomar.
- */
 describe('Follow-up do card — pausado e na fila', () => {
   it('pausado mostra o motivo e o botão Retomar chama o resume', async () => {
     running.mockResolvedValue([instance({ state: 'paused', phase: 'paused', paused_reason: 'Número desconectado' })]);
@@ -268,42 +232,27 @@ describe('Follow-up do card — pausado e na fila', () => {
   });
 });
 
-describe('Follow-up do card — formato antigo terminando', () => {
-  it('mostra a fila antiga só com Parar', async () => {
-    get.mockResolvedValue({
-      jobs: [job({ status: 'sent', executed_at: 1_755_000_000 }), job()],
-      state: state({
-        status: 'running', queued_count: 7, sent_count: 1, total_steps: 8,
-        sequence: { id: '1', slug: 'pos-visita', name: 'Pós-visita' },
-        can_pause: true, can_stop: true,
-      }),
-    });
-    legacyStop.mockResolvedValue({ state: state(), message: 'Follow-up parado' });
+describe('Follow-up do card — sem o formato antigo', () => {
+  it('bloco de follow-up do card não chama /followup_jobs', async () => {
+    running.mockResolvedValue([instance()]);
+    instanceStop.mockResolvedValue({ message: 'Fluxo parado' });
 
-    render(<FollowupTimeline contactId="c-1" />);
+    render(<FollowupTimeline contactId="c-1" conversationId="conv-1" />);
+    await screen.findByText('Rodando');
+    await userEvent.click(screen.getByRole('button', { name: /Parar o follow-up/ }));
+    await waitFor(() => expect(instanceStop).toHaveBeenCalledWith('i1'));
 
-    expect(await screen.findByText('Rodando')).toBeInTheDocument();
-    expect(screen.getByText(/Follow-up "Pós-visita"/)).toBeInTheDocument();
-    expect(screen.getByText(/formato antigo/)).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /Pausar/ })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /Retomar/ })).not.toBeInTheDocument();
-
-    await userEvent.click(screen.getByRole('button', { name: 'Parar o follow-up do formato antigo' }));
-    await waitFor(() => expect(legacyStop).toHaveBeenCalledWith({ contactId: 'c-1', conversationId: undefined }));
+    expect(apiGet).not.toHaveBeenCalled();
+    expect(apiPost).not.toHaveBeenCalled();
+    expect(screen.queryByText(/formato antigo/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Ver mensagens' })).not.toBeInTheDocument();
   });
 
-  it('"Ver mensagens" abre a linha do tempo antiga com o nome do lead', async () => {
-    get.mockResolvedValue({
-      jobs: [job(), job({ status: 'cancelled' })],
-      state: state({ status: 'running', queued_count: 1, can_stop: true }),
-    });
-
-    render(<FollowupTimeline contactId="c-1" leadName="Ana Souza" />);
-
-    await userEvent.click(await screen.findByRole('button', { name: 'Ver mensagens' }));
-    expect(await screen.findByText('Linha do tempo')).toBeInTheDocument();
-    expect(screen.getByText('Oi Ana, tudo bem?')).toBeInTheDocument();
-    expect(screen.getByText('1 cancelado')).toBeInTheDocument();
+  it('no compacto também: nem leitura nem Parar da fila antiga', async () => {
+    render(<FollowupTimeline contactId="c-1" compacto readOnly />);
+    await screen.findByText('Sem follow-up');
+    expect(apiGet).not.toHaveBeenCalled();
+    expect(screen.queryByRole('button', { name: 'Ver mensagens' })).not.toBeInTheDocument();
   });
 });
 
@@ -311,7 +260,6 @@ describe('Follow-up do card — acesso e lead sem referência', () => {
   // 403 é cargo sem permissão. Mostrar "Sem follow-up" no lugar foi o que fez a
   // linha do tempo parecer vazia pra corretor e gestor, com a fila cheia.
   it('diz que é falta de acesso quando o servidor recusa', async () => {
-    get.mockRejectedValue({ response: { status: 403 } });
     running.mockRejectedValue({ response: { status: 403 } });
 
     render(<FollowupTimeline contactId="c-1" />);
@@ -345,7 +293,7 @@ describe('Follow-up do card — acesso e lead sem referência', () => {
     render(<FollowupTimeline contactId={null} conversationId={null} />);
 
     await waitFor(() => expect(screen.getByText('Sem follow-up')).toBeInTheDocument());
-    expect(get).not.toHaveBeenCalled();
+    expect(apiGet).not.toHaveBeenCalled();
     expect(running).not.toHaveBeenCalled();
   });
 });

@@ -22,7 +22,7 @@ import { nodeProblem } from '@/features/flowAutomations/readiness';
 import { FLOW_TRIGGER_EVENTS, flowTriggerLabel } from '@/features/flowAutomations/trigger';
 
 const resources = {
-  labels: [], sequences: [], followupFlows: [], users: [], pipelines: [], stagesByPipeline: {}, quickReplies: [],
+  labels: [], followupFlows: [], users: [], pipelines: [], stagesByPipeline: {}, quickReplies: [],
   adOrigins: [], formOrigins: [], messageFunnels: [], conversationFunnels: [], evolutionInstances: [],
   reloadFunnels: () => {}, reloadLabels: () => {}, loading: false,
 } as unknown as AutomationResources;

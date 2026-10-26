@@ -35,7 +35,7 @@ vi.mock('@/store/authStore', () => ({
 vi.mock('@/features/flowAutomations/editores/LeadAutomationsEditors', async importOriginal => {
   const original = await importOriginal<typeof import('@/features/flowAutomations/editores/LeadAutomationsEditors')>();
   const resources = {
-    labels: [], sequences: [], followupFlows: [], users: [], pipelines: [],
+    labels: [], followupFlows: [], users: [], pipelines: [],
     stagesByPipeline: {}, quickReplies: [], adOrigins: [], formOrigins: [], messageFunnels: [], conversationFunnels: [], evolutionInstances: [],
     reloadFunnels: () => {}, reloadLabels: () => {}, loading: false,
   };

@@ -7,7 +7,7 @@ vi.mock('@/hooks/useIsSuperAdmin', () => ({ useIsSuperAdmin: () => false }));
 import { ActionEditor, type AutomationResources } from '@/features/flowAutomations/editores/LeadAutomationsEditors';
 
 const resources = {
-  labels: [], sequences: [], followupFlows: [], pipelines: [], stagesByPipeline: {}, quickReplies: [],
+  labels: [], followupFlows: [], pipelines: [], stagesByPipeline: {}, quickReplies: [],
   adOrigins: [], formOrigins: [], messageFunnels: [], conversationFunnels: [], evolutionInstances: [], roletas: [],
   users: [
     { id: 'ana', name: 'Ana Souza', email: 'ana@x.com' },

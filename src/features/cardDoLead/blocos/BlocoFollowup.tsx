@@ -13,7 +13,6 @@ export default function BlocoFollowup({ card }: { card: CardDoLead }) {
       <FollowupTimeline
         contactId={contato?.id != null ? String(contato.id) : null}
         conversationId={conversaDoCard(item)}
-        leadName={contato?.name ?? null}
         // Card sem funil tem id vazio: aí a janela vai só com o lead.
         pipelineItemId={item?.id ? String(item.id) : null}
         aoColocar={card.etapa.aoColocarEmFollowup}

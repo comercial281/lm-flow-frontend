@@ -21,7 +21,7 @@ import {
   type PlacePreview,
   type RefDoLead,
 } from '@/services/flowAutomations/flowAutomationInstancesService';
-import { httpStatusOf, serverErrorOf } from '@/services/leadFollowup/leadFollowupService';
+import { httpStatusOf, serverErrorOf } from '@/services/core/httpError';
 import { cn } from '@/lib/utils';
 
 export interface ResultadoDoFollowup {
