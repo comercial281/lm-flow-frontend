@@ -74,6 +74,8 @@ interface Props {
   aoTentarNumeros: () => void;
   senderInboxId: string;
   aoEscolherNumero: (inboxId: string) => void;
+  /** Nome do número que a automação do passo 2 impõe: o campo fica travado nele. */
+  numeroTravado?: string | null;
 
   /** Só na página Disparos: escolher o funil de onde sai o público. */
   funis?: { id: string; name: string }[];
@@ -136,7 +138,11 @@ export default function PassoQuemRecebe(p: Props) {
             htmlFor="disparo-numero-saida"
             ajuda="Lead de outro corretor fica de fora. O número da imobiliária manda pra todos."
           >
-            {p.erroNumeros ? (
+            {p.numeroTravado ? (
+              <p id="disparo-numero-saida" className="rounded-md border border-input bg-muted/40 px-3 py-2 text-sm">
+                Sai pelo número da automação: {p.numeroTravado}
+              </p>
+            ) : p.erroNumeros ? (
               <EmptyState tipo="erro" tamanho="compacto" aoTentarDeNovo={p.aoTentarNumeros} className="p-3" />
             ) : p.numeros === null ? (
               <Carregando variante="texto" linhas={1} rotulo="Carregando os números…" />
