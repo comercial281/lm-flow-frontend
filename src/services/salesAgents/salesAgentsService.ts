@@ -154,7 +154,7 @@ export interface SalesAgent {
   number_owner_id?: string | null;
   number_owner_name?: string | null;
   audio_enabled: boolean;
-  audio_mode: 'mirror' | 'always' | 'never';
+  audio_mode: 'mirror' | 'always' | 'never' | 'opening_mix';
   audio_voice_id: string | null;
   sales_method: SalesMethod;
   social_proof: string | null;
@@ -628,7 +628,7 @@ export interface SalesAgentPayload {
   tone?: TomDaIa | null;
   emoji_use?: EmojiDaIa | null;
   audio_enabled?: boolean;
-  audio_mode?: 'mirror' | 'always' | 'never';
+  audio_mode?: 'mirror' | 'always' | 'never' | 'opening_mix';
   audio_voice_id?: string | null;
   sales_method?: SalesMethod;
   social_proof?: string | null;

@@ -9952,3 +9952,13 @@ Não reabrir sem o dono pedir.
 - **Continua amarelo:** "Só follow-up" (não foi pedido mexer; reavaliar se incomodar).
 - **Risco aceito:** o gatilho de teste esquecido (a palavra "call" do checklist §6 de 05/10) volta a não acender nada; aparece só no title da bolinha e na página Canal.
 - Código: `situacaoDaIa` devolve `atendendo` com a frase do limite; `pendenciasDaIa` só empilha `triggers` quando `parada`. O parâmetro `ocultas` saiu de `situacaoDaIa`.
+
+## IA Vendedora: áudio na primeira resposta (desde 2026-10-27)
+
+Pedido do dono pra Sala de demonstração: abrir a conversa com áudio, imagem e texto juntos. Backend `claude/abertura-mista` (audio_mode `opening_mix`) entra antes.
+
+**O que aparece na tela:** em Configurar > Personalidade > Áudio, "Quando ela responde em áudio" ganhou a opção "Na primeira resposta", com a explicação embaixo quando marcada.
+
+**Regras:** na primeira resposta a 1ª parte sai em áudio (é onde a IA fala o nome do lead), depois a "Imagem de abertura" (Abertura) se tiver, e o resto em texto; nos turnos seguintes vale como "Quando o lead mandar áudio". Voz falhando, tudo em texto.
+
+Código: `configurar/paginas/Personalidade.tsx`, tipo em `salesAgentsService.ts`. Testes: `Personalidade.spec.tsx`.
