@@ -89,7 +89,7 @@ describe('Quando funciona', () => {
     expect(screen.getByText('Sem número e texto, a mensagem não sai.')).toBeInTheDocument();
     await userEvent.selectOptions(numero, 'i1');
     await userEvent.type(screen.getByLabelText('Mensagem'), 'Oi, ');
-    await userEvent.click(screen.getByRole('button', { name: '+ Nome do lead' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Nome {{nome}}' }));
     await userEvent.click(within(screen.getByRole('region', { name: 'Alterações não salvas' })).getByRole('button', { name: 'Salvar' }));
     await waitFor(() => expect(svc.update).toHaveBeenCalled());
     expect(svc.update.mock.calls[0][1]).toMatchObject({ after_hours_inbox_id: 'i1', after_hours_message: 'Oi, {{nome}}' });

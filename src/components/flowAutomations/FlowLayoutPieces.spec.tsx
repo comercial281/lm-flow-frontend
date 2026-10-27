@@ -11,7 +11,7 @@ vi.mock('@/services/messageFunnels/messageFunnelsService', () => ({
 
 import { BLOCK_DRAG_TYPE, FlowBlocksMenu } from './FlowBlocksMenu';
 import { FlowBlockDialog } from './FlowBlockDialog';
-import { RecolherVariaveisContext, VariableChipBar } from './VariableChipBar';
+import { VariableChipBar } from './VariableChipBar';
 import { PEDIDO_DESCARTAR_PAINEL, useSidePanel } from './useSidePanel';
 
 const menu = (props: Partial<ComponentProps<typeof FlowBlocksMenu>> = {}) => (
@@ -141,23 +141,22 @@ describe('variáveis em botõezinhos', () => {
     render(<MessageBox initial="Oi , tudo bem?" />);
     const box = screen.getByLabelText('Mensagem') as HTMLTextAreaElement;
     box.setSelectionRange(3, 3);
-    fireEvent.click(screen.getByRole('button', { name: 'Nome' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Nome {{nome}}' }));
     expect(box.value).toBe('Oi {{nome}}, tudo bem?');
-    fireEvent.click(screen.getByRole('button', { name: 'Corretor' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Corretor {{corretor}}' }));
     expect(box.value).toContain('{{corretor}}');
   });
 
   it('no modo "pôr no fim" (tela de regras) só avisa quem chama', () => {
     const onInsert = vi.fn();
     render(<VariableChipBar onInsert={onInsert} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Link do card' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Mais variáveis' }));
+    fireEvent.click(screen.getByRole('button', { name: /Link do card/ }));
     expect(onInsert).toHaveBeenCalledWith('{{link_do_card}}');
   });
-  it('recolhida: só Nome, Corretor e Imóvel; "Mais variáveis" mostra o resto em grupos', () => {
+  it('só Nome, Corretor e Imóvel; "Mais variáveis" mostra o resto em grupos', () => {
     render(
-      <RecolherVariaveisContext.Provider value>
-        <VariableChipBar onInsert={vi.fn()} />
-      </RecolherVariaveisContext.Provider>,
+      <VariableChipBar onInsert={vi.fn()} />,
     );
     expect(screen.getAllByRole('button').map(b => b.textContent)).toEqual([
       expect.stringContaining('Nome'),
@@ -175,18 +174,16 @@ describe('variáveis em botõezinhos', () => {
     expect(screen.getByRole('button', { name: /Campanha/ })).toBeInTheDocument();
   });
 
-  it('recolhida: variável da imobiliária fica em "Da imobiliária" e insere o código', () => {
+  it('variável da imobiliária fica em "Da imobiliária" e insere o código', () => {
     const onInsert = vi.fn();
     render(
-      <RecolherVariaveisContext.Provider value>
-        <VariableChipBar
-          onInsert={onInsert}
-          variables={[
-            { label: 'Nome', token: '{{nome}}', group: 'lead' },
-            { label: 'Empreendimento', token: '{{empreendimento}}', custom: true },
-          ]}
-        />
-      </RecolherVariaveisContext.Provider>,
+      <VariableChipBar
+        onInsert={onInsert}
+        variables={[
+          { label: 'Nome', token: '{{nome}}', group: 'lead' },
+          { label: 'Empreendimento', token: '{{empreendimento}}', custom: true },
+        ]}
+      />,
     );
     expect(screen.queryByRole('button', { name: /Empreendimento/ })).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Mais variáveis' }));
@@ -195,9 +192,24 @@ describe('variáveis em botõezinhos', () => {
     expect(onInsert).toHaveBeenCalledWith('{{empreendimento}}');
   });
 
-  it('fora do construtor (sem o contexto) mostra todas, como antes', () => {
-    render(<VariableChipBar onInsert={vi.fn()} />);
-    expect(screen.getByRole('button', { name: /Link do card/ })).toBeInTheDocument();
+  it('lista sem grupo (avisos da Roleta): o resto abre sem título', () => {
+    render(
+      <VariableChipBar
+        onInsert={vi.fn()}
+        variables={[
+          { label: 'Nome', token: '{{nome}}' },
+          { label: 'Prazo', token: '{{prazo}}' },
+        ]}
+      />,
+    );
+    expect(screen.queryByRole('button', { name: /Prazo/ })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Mais variáveis' }));
+    expect(screen.getByRole('button', { name: /Prazo/ })).toBeInTheDocument();
+    expect(screen.queryByText('Do lead')).toBeNull();
+  });
+
+  it('só uma lista curta, sem nada a esconder: sem "Mais variáveis"', () => {
+    render(<VariableChipBar onInsert={vi.fn()} variables={[{ label: 'Nome', token: '{{nome}}' }]} />);
     expect(screen.queryByRole('button', { name: 'Mais variáveis' })).toBeNull();
   });
 });

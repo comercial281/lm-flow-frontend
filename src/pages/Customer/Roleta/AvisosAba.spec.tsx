@@ -130,7 +130,7 @@ describe('Avisos da roleta', () => {
     await userEvent.click(botao);
     const campo = screen.getByLabelText('Gestor: corretor aceitou');
     await userEvent.type(campo, 'Aceito por ');
-    const barras = screen.getAllByRole('button', { name: '+ Corretor' });
+    const barras = screen.getAllByRole('button', { name: 'Corretor {{corretor}}' });
     await userEvent.click(barras[5]);
     expect(settings.update).not.toHaveBeenCalled();
     await userEvent.click(within(screen.getByRole('region', { name: 'Alterações não salvas' })).getByRole('button', { name: 'Salvar' }));

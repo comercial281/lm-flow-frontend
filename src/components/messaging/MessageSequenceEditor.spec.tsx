@@ -42,11 +42,28 @@ describe('MessageSequenceEditor', () => {
       expect(screen.getByRole('button', { name: label })).toBeInTheDocument();
     }
     expect(screen.queryByRole('button', { name: /Book do imóvel/ })).not.toBeInTheDocument();
-    expect(screen.getByText('Variáveis:')).toBeInTheDocument();
+    expect(screen.getByText('Inserir variável:')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Mover pra cima' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Duplicar' })).toBeInTheDocument();
     // O texto não tem troca de tipo (só a mídia tem, como sempre).
     expect(screen.queryByRole('combobox', { name: 'Tipo do item' })).not.toBeInTheDocument();
+  });
+
+  it('variáveis no padrão do construtor: Nome à vista, o resto em "Mais variáveis"', () => {
+    const vars: TemplateVariable[] = [
+      { token: 'nome', placeholder: '{{nome}}', label: 'Nome', builtin: true },
+      { token: 'telefone', placeholder: '{{telefone}}', label: 'Telefone', builtin: true },
+      { token: 'tem_creci', placeholder: '{{tem_creci}}', label: 'Tem Creci', builtin: false },
+    ];
+    const onItems = vi.fn();
+    render(<Harness initial={[item({ uiKey: 't', text_content: 'Oi ' })]} onItems={onItems} extra={{ variables: vars }} />);
+    expect(screen.getByRole('button', { name: 'Nome {{nome}}' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Telefone/ })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Mais variáveis' }));
+    expect(screen.getByText('Do lead')).toBeInTheDocument();
+    expect(screen.getByText('Da imobiliária')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Tem Creci/ }));
+    expect((onItems.mock.calls.at(-1)![0] as SequenceDraftItem[])[0].text_content).toContain('{{tem_creci}}');
   });
 
   it('com extraKinds mostra + Book do imóvel e o item só tem legenda', () => {
@@ -83,7 +100,7 @@ describe('MessageSequenceEditor', () => {
         extra={{ variableBar }}
       />,
     );
-    expect(screen.queryByText('Variáveis:')).not.toBeInTheDocument();
+    expect(screen.queryByText('Inserir variável:')).not.toBeInTheDocument();
     const barras = screen.getAllByRole('button', { name: 'barra de fora' });
     expect(barras).toHaveLength(2);
     const valores = variableBar.mock.calls.map(c => c[0].value);

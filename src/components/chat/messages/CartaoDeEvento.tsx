@@ -1,5 +1,6 @@
 import React from 'react';
 import {
+  Bot,
   Calendar,
   CalendarCheck,
   CalendarX,
@@ -8,7 +9,6 @@ import {
   Clock,
   MapPin,
   RotateCw,
-  Sparkles,
   Star,
   Trophy,
   UserX,
@@ -142,7 +142,7 @@ const CartaoDeEvento: React.FC<CartaoDeEventoProps> = ({ cartao, hora }) => {
               data-rodape-ia={cartao.rodapeIa ? '' : undefined}
               className="mt-[3px] flex items-center gap-[5px] text-xs text-muted-foreground"
             >
-              {cartao.rodapeIa && <Sparkles aria-hidden="true" className="h-[13px] w-[13px] shrink-0 text-primary" />}
+              {cartao.rodapeIa && <Bot aria-hidden="true" className="h-[13px] w-[13px] shrink-0 text-primary" />}
               <span>{cartao.rodape}</span>
             </span>
           )}

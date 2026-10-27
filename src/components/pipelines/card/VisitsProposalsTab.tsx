@@ -12,7 +12,8 @@ import EmptyState from '@/components/base/EmptyState';
 import { ScheduleVisitDialog } from '@/components/visits/ScheduleVisitDialog';
 import { AcoesDaVisita } from '@/features/visits/AcoesDaVisita';
 import ProposalFormDialog from '@/components/proposals/ProposalFormDialog';
-import { visitsService, VISIT_STATUS_COLORS, VISIT_STATUS_LABELS, type Visit } from '@/services/visits/visitsService';
+import { estiloDaSituacao } from '@/features/visits/situacaoDaVisita';
+import { visitsService, VISIT_STATUS_LABELS, type Visit } from '@/services/visits/visitsService';
 import {
   proposalsService,
   PROPOSAL_STATUS_COLORS,
@@ -133,7 +134,8 @@ export default function VisitsProposalsTab({ item, nomeExibido, versao = 0 }: Vi
               <li key={v.id} className="rounded-lg border border-border/60 p-3 space-y-1.5">
                 <div className="flex items-start justify-between gap-2">
                   <span className="text-sm font-medium">{dataHora(v.scheduled_at)}</span>
-                  <span className={`inline-flex items-center text-xs px-2 py-0.5 rounded font-medium ${VISIT_STATUS_COLORS[v.status] ?? ''}`}>
+                  <span className="inline-flex items-center gap-1.5 text-xs font-medium" style={estiloDaSituacao(v.status)}>
+                    <span aria-hidden className="h-2 w-2 rounded-full bg-[var(--st)]" />
                     {VISIT_STATUS_LABELS[v.status] ?? v.status}
                   </span>
                 </div>

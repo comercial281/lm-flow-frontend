@@ -41,13 +41,13 @@ import {
 const CENTRAL_DOS_GRUPOS = 'Operacional (LM01)';
 
 const VARIAVEIS_DOS_AVISOS = [
-  { token: '{{nome}}', label: '+ Nome do lead' },
-  { token: '{{corretor}}', label: '+ Corretor' },
-  { token: '{{prazo}}', label: '+ Prazo' },
-  { token: '{{link_aceite}}', label: '+ Link pra aceitar' },
-  { token: '{{origem}}', label: '+ Origem' },
-  { token: '{{roleta}}', label: '+ Roleta' },
-  { token: '{{tempo_aceite}}', label: '+ Tempo do aceite' },
+  { token: '{{nome}}', label: 'Nome' },
+  { token: '{{corretor}}', label: 'Corretor' },
+  { token: '{{prazo}}', label: 'Prazo' },
+  { token: '{{link_aceite}}', label: 'Link pra aceitar' },
+  { token: '{{origem}}', label: 'Origem' },
+  { token: '{{roleta}}', label: 'Roleta' },
+  { token: '{{tempo_aceite}}', label: 'Tempo do aceite' },
 ];
 
 const TEXTOS: { chave: RoletaTemplateKey; rotulo: string }[] = [
