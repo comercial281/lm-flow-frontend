@@ -9232,7 +9232,7 @@ PR 6 do redesenho do construtor. Spec: `LM FLOW/specs/2026-10-16-flow-builder-re
 
 - **Três à vista.** Dentro do construtor, os botõezinhos de variável embaixo de uma caixa de mensagem mostram só Nome, Corretor e Imóvel (nessa ordem, `FEATURED_VARIABLE_TOKENS`). Cada um mostra o nome e o código, por exemplo `Nome {{nome}}`.
 - **"Mais variáveis".** Um botão (abre e fecha, `aria-expanded`) mostra o resto em grupos: "Do lead", "Da visita (só nos gatilhos de visita)", "Do anúncio" e "Da imobiliária" (as que a imobiliária criou). Grupo vazio não aparece.
-- **Só no construtor.** As telas de regras de automação, Roleta e Book do site continuam com todas as variáveis à vista, sem mudança: o recolhimento é um contexto (`RecolherVariaveisContext`, padrão `false`) ligado só no `FlowAutomationCanvas`. Blocos de aviso dentro do construtor (editor de parâmetros) também recolhem, de propósito.
+- ~~**Só no construtor.**~~ Desde 27/10/2026 vale pra toda caixa de mensagem: ver "Variáveis: um padrão só em toda caixa de mensagem". O `RecolherVariaveisContext` saiu.
 - **Grupo de cada variável** mora em `messageVariables.ts` (`group`: lead, visita, anuncio). Variável nova pronta precisa de `group`; sem ele cai em "Do lead".
 
 Código: `VariableChipBar.tsx`, `messageVariables.ts`, `FlowAutomationCanvas.tsx`. Testes: "variáveis em botõezinhos" em `FlowLayoutPieces.spec.tsx` e o teste das variáveis da imobiliária em `FlowCanvasLayout.spec.tsx`.
@@ -9943,3 +9943,26 @@ Armadilhas:
 Código: `src/components/pipelines/BulkDispatchModal.tsx` (`modoCorretor`, recontagem parada com painel aberto), `src/components/pipelines/disparo/PassoQuemRecebe.tsx` (campo travado e aviso) e `PainelDeLeads.tsx`, `src/pages/Customer/Disparos/Disparos.tsx`, `src/pages/Customer/Pipelines/boardActions.ts`, `src/routes/permissionRoutes.ts` + `index.tsx`, `src/components/layout/config/menuItems.ts`.
 
 Não reabrir sem o dono pedir.
+
+## Variáveis: um padrão só em toda caixa de mensagem (desde 2026-10-27)
+
+Pedido do dono: no Disparo em massa e no Agendar mensagem (inclusive editando uma agendada) as variáveis despejavam a lista inteira, cada uma com o código, e a caixa virava um paredão. "Tornar padrão" = o mesmo jeito do construtor em TODA tela.
+
+- **Uma barra só** (`VariableChipBar`), sempre recolhida: Nome, Corretor e Imóvel à vista (só os que a tela tem; no Disparo só o Nome), o resto em "Mais variáveis" (abre e fecha). Cada botão mostra o nome e o código (`Nome {{nome}}`).
+- **Onde vale:** construtor, Disparo em massa, Agendar mensagem, Funis de mensagem (os três pelo `MessageSequenceEditor`), Avisos e Horário da Roleta, Book pelo site. A barra antiga de dentro do editor (`VariableChips`, "VARIÁVEIS:" com tudo à vista) virou um adaptador pra barra única.
+- **Cada tela segue com a SUA lista.** O Disparo, o Agendar e os Funis continuam com as variáveis do `/tenant_template_variables` (o servidor deles é que preenche); só a arrumação é a mesma. Nas listas dessas telas, as prontas caem em "Do lead" e as criadas pela imobiliária (`builtin: false`) em "Da imobiliária".
+- **Lista sem grupo** (os avisos da Roleta: prazo, link pra aceitar, tempo do aceite) abre "Mais variáveis" sem título, pra não chamar o prazo de "Do lead".
+- **Roleta sem "+ " no nome.** Os botões eram "+ Nome do lead", "+ Corretor"... Viraram "Nome", "Corretor", "Prazo", como no resto.
+- **Fora daqui:** Respostas prontas (4 variáveis `{{contact.name}}` em lista explicada) e a Mensagem de acesso do painel raiz têm formato próprio e não mudaram.
+
+Código: `src/components/flowAutomations/VariableChipBar.tsx`, `src/components/messaging/MessageSequenceEditor.tsx`. Testes: `FlowLayoutPieces.spec.tsx`, `MessageSequenceEditor.spec.tsx`, `AvisosAba.spec.tsx`, `HorarioBloco.spec.tsx`.
+
+## Caixa de escolha não estica a janela (desde 2026-10-27)
+
+Bug: no "Configurar destino" do formulário, escolher em "Imóvel vinculado" um imóvel de nome gigante alargava a janela, que passava a rolar pro lado.
+
+- **Causa:** o botão da caixa de escolha do design system (`SelectTrigger`) nasce `w-fit whitespace-nowrap` e não encolhe. Dentro das grades da janela (`CampoDaJanela`, `GrupoDaJanela`, o próprio `DialogContent`, todos `grid` de coluna automática), o nome inteiro vira a largura mínima de cada nível e empurra a janela. Reproduzido no navegador: conteúdo de 859 px numa janela de 510 px.
+- **Conserto na porta de entrada** (`src/components/ui/ds.tsx`, como já é com a janela): todo `SelectTrigger` ganha `min-w-0 max-w-full` e o texto escolhido corta com "…" (`block!` vence o `line-clamp-1` do pacote, que cortava sem reticências). A lista aberta (`SelectContent`) não passa da largura que cabe na tela; opção comprida quebra linha lá dentro. Vale pras 58 telas que usam o `Select` do design system direto e pro `Seletor` no computador.
+- **A lista do celular** (`<select>` do sistema, que o `Seletor` usa no toque) não tem o defeito: conferido no navegador.
+
+Teste: `src/components/ui/ds.select.spec.tsx`.

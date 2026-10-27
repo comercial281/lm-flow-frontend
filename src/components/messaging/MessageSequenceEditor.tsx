@@ -1,4 +1,4 @@
-import React, { useState, useRef, type ReactNode } from 'react';
+import React, { useMemo, useState, useRef, type ReactNode } from 'react';
 import { Button, Input, Textarea, Checkbox } from '@/components/ui/ds';
 import {
   X, Trash2, Type, Mic, Image as ImageIcon, Video, FileText,
@@ -9,6 +9,8 @@ import { toast } from 'sonner';
 import type { FunnelItemKind, TemplateVariable } from '@/types/messageFunnels';
 import { Seletor } from '@/components/base/Seletor';
 import { BOOK_HELP } from '@/features/flowAutomations/book';
+import { VariableChipBar } from '@/components/flowAutomations/VariableChipBar';
+import type { MessageVariable } from '@/features/flowAutomations/messageVariables';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Editor de SEQUÊNCIA de mensagens (itens text/audio/image/video/document).
@@ -729,7 +731,20 @@ function VariationField({ value, index, variables, variableBar, onChange, onRemo
   );
 }
 
-// ── Variable chips (insere {{token}} no cursor) ──────────────────────────────
+// ── Variáveis (a barra única do sistema, a mesma do construtor) ──────────────
+
+/** A lista desta tela vira a da barra única: as prontas no "Do lead", as que a
+ *  imobiliária criou no "Da imobiliária". Cada tela segue com a SUA lista (o
+ *  servidor dela é que sabe preencher), só a arrumação é a mesma. */
+function toMessageVariables(variables: TemplateVariable[]): MessageVariable[] {
+  return variables.map(v => ({
+    label: v.label,
+    token: v.placeholder,
+    description: v.description,
+    custom: v.builtin === false,
+    group: 'lead',
+  }));
+}
 
 interface VariableChipsProps {
   variables: TemplateVariable[];
@@ -739,41 +754,8 @@ interface VariableChipsProps {
 }
 
 function VariableChips({ variables, targetRef, currentValue, onChange }: VariableChipsProps) {
-  const handleInsert = (token: string) => {
-    const el = targetRef.current;
-    const start = el?.selectionStart ?? currentValue.length;
-    const end = el?.selectionEnd ?? currentValue.length;
-    const next = currentValue.slice(0, start) + token + currentValue.slice(end);
-    onChange(next);
-    requestAnimationFrame(() => {
-      if (!el) return;
-      el.focus();
-      const cursor = start + token.length;
-      el.setSelectionRange(cursor, cursor);
-    });
-  };
-
-  if (variables.length === 0) return null;
-  return (
-    <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
-      <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-        Variáveis:
-      </span>
-      {variables.map(v => (
-        <button
-          key={v.token}
-          type="button"
-          onMouseDown={e => e.preventDefault()}
-          onClick={() => handleInsert(v.placeholder)}
-          title={v.description ?? v.placeholder}
-          className="flex items-center gap-1 px-1.5 py-0.5 rounded text-xs bg-primary/10 border border-primary/30 text-primary hover:bg-primary/20 transition-colors"
-        >
-          <span className="font-semibold">{v.label}</span>
-          <span className="font-mono text-muted-foreground">{v.placeholder}</span>
-        </button>
-      ))}
-    </div>
-  );
+  const lista = useMemo(() => toMessageVariables(variables), [variables]);
+  return <VariableChipBar variables={lista} targetRef={targetRef} value={currentValue} onChange={onChange} />;
 }
 
 // ── Add item buttons ─────────────────────────────────────────────────────────

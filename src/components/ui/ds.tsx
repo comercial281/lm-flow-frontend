@@ -515,3 +515,25 @@ const PARCIAL =
 export function Checkbox({ className, ...props }: ComponentProps<typeof CheckboxDoPacote>) {
   return <CheckboxDoPacote className={`${PARCIAL} ${className ?? ''}`} {...props} />;
 }
+
+// ── Caixa de escolha (Select) que não estica a janela ────────────────────────
+// O botão do pacote nasce `w-fit whitespace-nowrap` e não encolhe. Opção de nome
+// comprido (o imóvel "Residencial Jardim das Palmeiras ... 2 vagas" no destino do
+// formulário, 27/10/2026) alargava o campo, a grade e a janela inteira, que
+// passava a rolar pro lado. Aqui ele pode encolher até a largura de quem o
+// contém e o texto escolhido corta com "…". O `!` no display vence o
+// `line-clamp-1` (display -webkit-box) do pacote, que cortava sem reticências.
+// A lista aberta não passa da largura que cabe na tela; a opção comprida quebra
+// linha lá dentro. Vale pra toda tela, inclusive o `Seletor`.
+import { SelectTrigger as SelectTriggerDoPacote, SelectContent as SelectContentDoPacote } from '@evoapi/design-system';
+
+const ENCOLHE =
+  'min-w-0 max-w-full *:data-[slot=select-value]:block! *:data-[slot=select-value]:min-w-0 *:data-[slot=select-value]:truncate';
+
+export function SelectTrigger({ className, ...props }: ComponentProps<typeof SelectTriggerDoPacote>) {
+  return <SelectTriggerDoPacote className={`${ENCOLHE} ${className ?? ''}`} {...props} />;
+}
+
+export function SelectContent({ className, ...props }: ComponentProps<typeof SelectContentDoPacote>) {
+  return <SelectContentDoPacote className={`max-w-(--radix-select-content-available-width) ${className ?? ''}`} {...props} />;
+}
