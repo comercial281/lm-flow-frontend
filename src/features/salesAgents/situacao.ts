@@ -1,5 +1,5 @@
-// O VEREDITO ÚNICO da IA Vendedora: atendendo, parada (com o motivo), atendendo
-// com restrição, desligada ou rascunho. Aparece no selo da barra, no seletor de
+// O VEREDITO ÚNICO da IA Vendedora: atendendo, parada (com o motivo), com
+// restrição (hoje só o "Só follow-up"), desligada ou rascunho. Aparece no selo da barra, no seletor de
 // IAs e na Visão geral, com o "Corrigir" de cada pendência.
 //
 // Por que existe: antes, o estado real (sem número, gatilho restringindo, canal
@@ -165,7 +165,7 @@ export function restricaoDosGatilhos(agent: AgenteLido): { frase: string; parada
   return { frase: `só ${juntar(restritivos.map(descricao), 'e')}`, parada: false };
 }
 
-export function situacaoDaIa(agent: AgenteLido, diagnostics?: HealthReport | null, ocultas: string[] = [], oficial = false): Situacao {
+export function situacaoDaIa(agent: AgenteLido, diagnostics?: HealthReport | null, oficial = false): Situacao {
   if (!agent.enabled && !agent.inbox_id) return { tipo: 'rascunho', frase: 'Rascunho: falta escolher o número', corrigir: PAGINA('canal') };
   // Desligada: sem botão, liga na chave da barra.
   if (!agent.enabled) return { tipo: 'desligada', frase: 'Desligada' };
@@ -184,8 +184,9 @@ export function situacaoDaIa(agent: AgenteLido, diagnostics?: HealthReport | nul
 
   const restricao = restricaoDosGatilhos(agent);
   if (restricao?.parada) return { tipo: 'parada', frase: `Parada: ${restricao.frase}`, corrigir: PAGINA('canal') };
-  // Restrição escolhida de propósito e ocultada no Painel não pinta a bolinha.
-  if (restricao && !ocultas.includes('triggers')) return { tipo: 'restricao', frase: `Atendendo com restrição: ${restricao.frase}`, corrigir: PAGINA('canal') };
+  // Limitar quem ela atende é o uso normal (27/10/2026): fica verde, e o limite só
+  // aparece ao passar o mouse na bolinha. Era "Atendendo com restrição", amarelo.
+  if (restricao) return { tipo: 'atendendo', frase: `Atendendo: ${restricao.frase}` };
 
   return { tipo: 'atendendo', frase: 'Atendendo' };
 }
@@ -213,7 +214,7 @@ function daItem(item: HealthItem, agent: Pick<AgenteLido, 'inbox_id'>, oficial: 
 
 /**
  * O que falta, na ordem de gravidade, pra Visão geral. Vem do Diagnóstico
- * (sem os itens em dia) mais o que a tela sabe sozinha: gatilho restringindo
+ * (sem os itens em dia) mais o que a tela sabe sozinha: gatilho em branco
  * (o servidor marca verde) e o follow-up sem saída válida (ainda na opção antiga
  * "A IA escreve", sem escolha, ou "Entregar pro follow-up" sem follow-up).
  */
@@ -257,13 +258,15 @@ export function pendenciasDaIa(agent: AgenteLido, diagnostics?: HealthReport | n
     lista.push({ chave: 'inbox', titulo: 'Número de WhatsApp', detalhe: 'Nenhum número escolhido. Sem ele a IA não recebe nem responde ninguém.', grave: true, corrigir: PAGINA('canal') });
   }
 
+  // Só o gatilho que não deixa ninguém passar vira pendência (vermelha). O limite
+  // escolhido não é aviso desde 27/10/2026.
   const restricao = restricaoDosGatilhos(agent);
-  if (restricao) {
+  if (restricao?.parada) {
     lista.push({
       chave: 'triggers',
       titulo: 'Quem ela atende',
       detalhe: `${restricao.frase.charAt(0).toUpperCase()}${restricao.frase.slice(1)}.`,
-      grave: restricao.parada,
+      grave: true,
       corrigir: PAGINA('canal'),
     });
   }
