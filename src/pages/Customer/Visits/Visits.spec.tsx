@@ -195,6 +195,51 @@ describe('Agenda de Visitas: calendário com a peça nova', () => {
     expect(within(previa).getByTestId('funil-do-lead')).toHaveTextContent('Vendas›Visita agendada');
   });
 
+  const RESUMO_MARIA = {
+    contact: { id: 'c1', name: 'Maria de Souza', phone_number: '11984123307' },
+    card: null, origin_label: null, owner: null, labels: [], last_message: null, conversation_id: null, ia: null,
+    previous_visits_count: 0, lead_created_at: null, card_entered_at: null,
+  };
+
+  it('clicar dentro da prévia aberta no Mês não abre o Agendar visita do dia', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(2026, 9, 10, 11, 0));
+    try {
+      daIA();
+      leadSummary.mockResolvedValue(RESUMO_MARIA);
+      abrir();
+      passarOMouse(await screen.findByRole('button', { name: /Maria de Souza/ }));
+      const previa = await screen.findByRole('region', { name: 'Resumo do lead' }, { timeout: 2000 });
+      const nome = await within(previa).findByText('(11) 98412-3307');
+      fireEvent.pointerDown(nome);
+      fireEvent.mouseDown(nome);
+      fireEvent.click(nome);
+      expect(screen.queryByTestId('janela')).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('clicar dentro da prévia aberta na Semana não abre o Agendar visita do horário', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(2026, 9, 10, 11, 0));
+    try {
+      daIA();
+      leadSummary.mockResolvedValue(RESUMO_MARIA);
+      const user = userEvent.setup();
+      abrir();
+      await user.click(await screen.findByRole('radio', { name: 'Semana' }));
+      passarOMouse(await screen.findByRole('button', { name: /15:00–16:00 · Maria de Souza/ }));
+      const previa = await screen.findByRole('region', { name: 'Resumo do lead' }, { timeout: 2000 });
+      const nome = await within(previa).findByText('(11) 98412-3307');
+      // 22h na grade: horário futuro, que abriria o Agendar visita se o clique vazasse.
+      fireEvent.click(nome, { clientY: 22 * 48 });
+      expect(screen.queryByTestId('janela')).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('o bloco da Semana também arma a prévia', async () => {
     daIA();
     const user = userEvent.setup();

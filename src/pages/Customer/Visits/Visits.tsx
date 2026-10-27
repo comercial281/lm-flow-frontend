@@ -194,7 +194,7 @@ function MonthGrid({ date, visits, onDayClick, onVisitClick, destacadaId }: {
                 {cell.date.getDate()}
               </span>
               {dayVisits.slice(0, 3).map(v => (
-                <PreviaDoLead key={v.id} visitaId={v.id}>
+                <PreviaDoLead key={v.id} visita={v}>
                   <PecaDaVisita visita={v} forma="pilula" destacada={destacadaId === v.id} onClick={onVisitClick} />
                 </PreviaDoLead>
               ))}
@@ -378,7 +378,7 @@ function GradeDeHoras({ visao, date, visits, carregadoPara, podeAgendar, ajustes
                 {blocosPorDia[i].map(b => {
                   const altura = Math.max((b.duracaoMin / 60) * ALTURA_HORA - 2, 20);
                   return (
-                    <PreviaDoLead key={b.visita.id} visitaId={b.visita.id}>
+                    <PreviaDoLead key={b.visita.id} visita={b.visita}>
                       <PecaDaVisita
                         visita={b.visita}
                         forma="bloco"

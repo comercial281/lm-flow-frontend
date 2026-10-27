@@ -8,7 +8,9 @@
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/ds';
 import { dataCurta, plural, telefone, tempoDesde, toDate } from '@/lib/formato';
-import type { LeadSummary } from '@/services/visits/visitsService';
+import type { LeadSummary, Visit } from '@/services/visits/visitsService';
+import { IconeDeQuemAgendou } from './PecaDaVisita';
+import { quemAgendou } from './quemAgendou';
 
 const SITUACAO_DO_CARD: Record<'open' | 'won' | 'lost', string> = {
   open: 'Em aberto',
@@ -44,7 +46,16 @@ function desde(iso: string | null): string | null {
   return `${dataCurta(iso)} (${tempoDesde(iso as string)})`;
 }
 
-export function ResumoDoLead({ resumo, completo = false }: { resumo: LeadSummary; completo?: boolean }) {
+export function ResumoDoLead({
+  resumo,
+  completo = false,
+  agendamento,
+}: {
+  resumo: LeadSummary;
+  completo?: boolean;
+  /** Quem marcou a visita: robô ou pessoa ao lado do nome. Sem autor conhecido, sem ícone. */
+  agendamento?: Pick<Visit, 'booked_by' | 'created_by'>;
+}) {
   const nome = resumo.contact?.name?.trim() || null;
   const fone = telefone(resumo.contact?.phone_number);
   const card = resumo.card;
@@ -77,7 +88,14 @@ export function ResumoDoLead({ resumo, completo = false }: { resumo: LeadSummary
           {iniciais(nome ?? '')}
         </span>
         <div className="min-w-0">
-          <p className="truncate text-sm font-semibold leading-tight lm-redact" title={nome ?? undefined}>{nome ?? 'Lead sem nome'}</p>
+          <div className="flex min-w-0 items-center gap-1.5">
+            <p className="truncate text-sm font-semibold leading-tight lm-redact" title={nome ?? undefined}>{nome ?? 'Lead sem nome'}</p>
+            {agendamento && quemAgendou(agendamento) && (
+              <span title={quemAgendou(agendamento)?.rotulo} className="inline-flex shrink-0">
+                <IconeDeQuemAgendou visita={agendamento} className="h-3.5 w-3.5 text-muted-foreground" />
+              </span>
+            )}
+          </div>
           {fone && <p className="text-xs tabular-nums text-muted-foreground lm-redact">{fone}</p>}
         </div>
       </div>

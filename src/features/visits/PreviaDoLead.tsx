@@ -9,13 +9,13 @@
 // a janela da visita. Só leitura: abrir conversa ou card é na janela do clique.
 import {
   Children, cloneElement, useEffect, useLayoutEffect, useRef, useState,
-  type CSSProperties, type ReactElement,
+  type CSSProperties, type ReactElement, type SyntheticEvent,
 } from 'react';
 import { createPortal } from 'react-dom';
 import Aviso from '@/components/base/Aviso';
 import { Skeleton } from '@/components/ui/ds';
 import { cn } from '@/lib/utils';
-import type { LeadSummary } from '@/services/visits/visitsService';
+import type { LeadSummary, Visit } from '@/services/visits/visitsService';
 import { MARGEM, posicaoDaPrevia } from './posicaoDaPrevia';
 import { ResumoDoLead } from './ResumoDoLead';
 import { lerResumoDoLead, resumoGuardado } from './guardaDoResumo';
@@ -34,7 +34,9 @@ const BARRA_DA_ESPERA =
 
 type PropsDaPeca = Partial<PropsDoAlvo> & { className?: string; style?: CSSProperties };
 
-export function PreviaDoLead({ visitaId, children }: { visitaId: string; children: ReactElement<PropsDaPeca> }) {
+type VisitaDaPrevia = Pick<Visit, 'id' | 'booked_by' | 'created_by'>;
+
+export function PreviaDoLead({ visita, children }: { visita: VisitaDaPrevia; children: ReactElement<PropsDaPeca> }) {
   const previa = usePreviaComAtraso({ atrasoMs: ATRASO_MS });
   const peca = Children.only(children);
   const deFora = peca.props;
@@ -56,16 +58,22 @@ export function PreviaDoLead({ visitaId, children }: { visitaId: string; childre
         style: { ...deFora.style, '--atraso': `${ATRASO_MS}ms` } as CSSProperties,
       })}
       {previa.aberta && previa.ancora && createPortal(
-        <CartaoDaPrevia key={visitaId} visitaId={visitaId} ancora={previa.ancora} {...previa.conteudoProps} />,
+        <CartaoDaPrevia key={visita.id} visita={visita} ancora={previa.ancora} {...previa.conteudoProps} />,
         document.body,
       )}
     </>
   );
 }
 
+// O cartão mora no body, mas o React continua subindo os eventos pela árvore
+// dele: sem isto, clicar no cartão chegava na célula do dia (Mês) ou na coluna
+// de horas (Semana/Dia) e abria o Agendar visita.
+const naoSobe = (e: SyntheticEvent) => e.stopPropagation();
+
 function CartaoDaPrevia({
-  visitaId, ancora, onPointerEnter, onPointerLeave,
-}: { visitaId: string; ancora: HTMLElement; onPointerEnter: () => void; onPointerLeave: () => void }) {
+  visita, ancora, onPointerEnter, onPointerLeave,
+}: { visita: VisitaDaPrevia; ancora: HTMLElement; onPointerEnter: () => void; onPointerLeave: () => void }) {
+  const visitaId = visita.id;
   // Resumo guardado abre direto; senão esqueleto até chegar.
   const [estado, setEstado] = useState<{ resumo?: LeadSummary; erro?: boolean }>(() => ({ resumo: resumoGuardado(visitaId) }));
   useEffect(() => {
@@ -98,12 +106,15 @@ function CartaoDaPrevia({
       aria-label="Resumo do lead"
       onPointerEnter={onPointerEnter}
       onPointerLeave={onPointerLeave}
+      onClick={naoSobe}
+      onPointerDown={naoSobe}
+      onMouseDown={naoSobe}
       style={{ width: LARGURA, maxWidth: `calc(100vw - ${2 * MARGEM}px)`, left: pos?.left ?? 0, top: pos?.top ?? 0, visibility: pos ? 'visible' : 'hidden' }}
       className="fixed z-[150] rounded-[14px] border border-border bg-popover p-3.5 text-popover-foreground shadow-lg animate-in fade-in-0 duration-150 motion-reduce:animate-none"
     >
       {estado.resumo ? (
         <>
-          <ResumoDoLead resumo={estado.resumo} />
+          <ResumoDoLead resumo={estado.resumo} agendamento={visita} />
           <p className="mt-2.5 text-center text-[11px] text-muted-foreground">Clique para abrir a visita</p>
         </>
       ) : estado.erro ? (

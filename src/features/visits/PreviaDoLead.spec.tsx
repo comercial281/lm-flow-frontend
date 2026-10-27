@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import type { LeadSummary } from '@/services/visits/visitsService';
+import type { LeadSummary, Visit } from '@/services/visits/visitsService';
 
 const leadSummary = vi.fn();
 vi.mock('@/services/visits/visitsService', async (orig) => {
@@ -25,10 +25,14 @@ const ponteiro = (el: Element, tipo: 'pointerover' | 'pointerout' | 'pointerdown
 const entrar = (el: Element, t = 'mouse') => ponteiro(el, 'pointerover', t);
 const sair = (el: Element) => ponteiro(el, 'pointerout');
 
-const montar = () =>
+const VISITA = { id: 'v1', booked_by: null, created_by: null } satisfies Pick<Visit, 'id' | 'booked_by' | 'created_by'>;
+
+const montar = (visita: Pick<Visit, 'id' | 'booked_by' | 'created_by'> = VISITA, pai?: { onClick?: () => void; onPointerDown?: () => void; onMouseDown?: () => void }) =>
   render(
     <MemoryRouter>
-      <PreviaDoLead visitaId="v1"><button type="button" className="peca">Peça</button></PreviaDoLead>
+      <div {...pai}>
+        <PreviaDoLead visita={visita}><button type="button" className="peca">Peça</button></PreviaDoLead>
+      </div>
     </MemoryRouter>,
   );
 
@@ -111,6 +115,49 @@ describe('PreviaDoLead', () => {
     await passar(450);
     expect(leadSummary).toHaveBeenCalledTimes(1);
     expect(screen.getByRole('region').querySelector('[data-esqueleto]')).toBeNull();
+  });
+});
+
+describe('PreviaDoLead: clique e quem agendou', () => {
+  it('clique, apertar e mousedown dentro do cartão não chegam no calendário por trás', async () => {
+    leadSummary.mockResolvedValue(RESUMO);
+    const pai = { onClick: vi.fn(), onPointerDown: vi.fn(), onMouseDown: vi.fn() };
+    montar(VISITA, pai);
+    entrar(screen.getByRole('button', { name: 'Peça' }));
+    await passar(450);
+    const nome = screen.getByText('Mariana Souza');
+    fireEvent.pointerDown(nome);
+    fireEvent.mouseDown(nome);
+    fireEvent.click(nome);
+    expect(pai.onClick).not.toHaveBeenCalled();
+    expect(pai.onPointerDown).not.toHaveBeenCalled();
+    expect(pai.onMouseDown).not.toHaveBeenCalled();
+    expect(screen.getByRole('region')).toBeInTheDocument();
+  });
+
+  it('mostra quem agendou ao lado do nome', async () => {
+    leadSummary.mockResolvedValue(RESUMO);
+    montar({ id: 'v1', booked_by: 'ia', created_by: null });
+    entrar(screen.getByRole('button', { name: 'Peça' }));
+    await passar(450);
+    const cartao = screen.getByRole('region', { name: 'Resumo do lead' });
+    expect(within(cartao).getByRole('img', { name: 'Agendada pela IA Vendedora' })).toBeInTheDocument();
+  });
+
+  it('pessoa do time aparece pelo nome', async () => {
+    leadSummary.mockResolvedValue(RESUMO);
+    montar({ id: 'v1', booked_by: 'pessoa', created_by: { id: 'u1', name: 'Cirlei' } });
+    entrar(screen.getByRole('button', { name: 'Peça' }));
+    await passar(450);
+    expect(within(screen.getByRole('region')).getByRole('img', { name: 'Agendada por Cirlei' })).toBeInTheDocument();
+  });
+
+  it('sem autor conhecido, sem ícone', async () => {
+    leadSummary.mockResolvedValue(RESUMO);
+    montar();
+    entrar(screen.getByRole('button', { name: 'Peça' }));
+    await passar(450);
+    expect(within(screen.getByRole('region')).queryByRole('img')).toBeNull();
   });
 });
 
