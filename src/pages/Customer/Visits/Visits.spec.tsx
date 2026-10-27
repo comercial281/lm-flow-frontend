@@ -503,3 +503,46 @@ describe('Agenda de Visitas: erro de carga no Calendário', () => {
     expect(screen.queryByRole('button', { name: 'Tentar de novo' })).toBeNull();
   });
 });
+
+describe('Agenda de Visitas: Lista no mesmo cartão', () => {
+  afterEach(() => { vi.useRealTimers(); });
+  beforeEach(() => {
+    pararRelogio();
+    try { localStorage.removeItem('lm-visitas-visao'); } catch { /* sem armazenamento */ }
+  });
+
+  const umaVisita = () => {
+    const hoje = new Date();
+    const as15 = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate(), 15, 0);
+    const visita = { id: 'v7', status: 'scheduled', booked_by: 'ia', scheduled_at: as15.toISOString(), duration_minutes: 60, contact: { id: 'c1', name: 'Maria de Souza' } };
+    list.mockResolvedValue({ data: [visita], meta: { total: 1, active_total: 1, only_mine: false } });
+  };
+
+  it('Lista e Calendário usam o mesmo cartão', async () => {
+    umaVisita();
+    const user = userEvent.setup();
+    abrir();
+    const doCalendario = await screen.findByTestId('agenda-cartao');
+    await user.click(screen.getByRole('button', { name: 'Ver em lista' }));
+    const daLista = await screen.findByTestId('agenda-cartao');
+    expect(daLista.className).toBe(doCalendario.className);
+    expect(daLista.className).not.toContain('max-w-3xl');
+    expect(await within(daLista).findByText('Maria de Souza')).toBeInTheDocument();
+  });
+
+  it('nome do lead na Lista abre a janela com o resumo', async () => {
+    umaVisita();
+    leadSummary.mockResolvedValue({
+      contact: { id: 'c1', name: 'Maria de Souza', phone_number: '11984123307' },
+      card: null, origin_label: null, owner: null, labels: [], last_message: null, conversation_id: 'conv7', ia: null,
+      previous_visits_count: 0, lead_created_at: null, card_entered_at: null,
+    });
+    const user = userEvent.setup();
+    abrir();
+    await user.click(await screen.findByRole('button', { name: 'Ver em lista' }));
+    await user.click(await screen.findByRole('button', { name: 'Maria de Souza' }));
+    const janela = await screen.findByRole('dialog');
+    const lead = await within(janela).findByRole('group', { name: 'Lead' });
+    expect(await within(lead).findByRole('link', { name: /Abrir conversa/ })).toHaveAttribute('href', '/conversations/conv7');
+  });
+});

@@ -83,7 +83,7 @@ export default function Pagina({
 
   return (
     <div className="flex h-full min-h-0 flex-col" data-tour={dataTour}>
-      <div ref={rolagemRef} className="flex-1 overflow-y-auto">
+      <div ref={rolagemRef} className="flex-1 overflow-y-auto [scrollbar-gutter:stable]">
         {barraDoTopo}
         <div className="px-4 py-6 sm:px-6">
           <div className={cn('mx-auto w-full max-w-[1400px] space-y-6', className)}>

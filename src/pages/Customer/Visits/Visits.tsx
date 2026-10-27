@@ -43,10 +43,9 @@ import {
   VISIT_STATUS_LABELS,
 } from '@/services/visits/visitsService';
 
-import { estiloDaSituacao, SITUACOES_DA_LEGENDA } from '@/features/visits/situacaoDaVisita';
-import { PecaDaVisita } from '@/features/visits/PecaDaVisita';
+import { ehAtrasada, estiloDaSituacao, SITUACOES_DA_LEGENDA } from '@/features/visits/situacaoDaVisita';
+import { PecaDaVisita, IconeDeQuemAgendou } from '@/features/visits/PecaDaVisita';
 import { PreviaDoLead } from '@/features/visits/PreviaDoLead';
-import { IconeDeQuemAgendou } from '@/features/visits/PecaDaVisita';
 import { ResumoDoLead } from '@/features/visits/ResumoDoLead';
 import { lerResumoDoLead, resumoGuardado } from '@/features/visits/guardaDoResumo';
 import Aviso from '@/components/base/Aviso';
@@ -59,7 +58,7 @@ import { useCelular } from '@/hooks/useCelular';
 import { useAgendaLigada } from '@/features/visits/useAgendaLigada';
 import NoAccessState from '@/components/permissions/NoAccessState';
 import { isForbiddenError } from '@/services/core/forbidden';
-import { telefone, capitalizar } from '@/lib/formato';
+import { telefone, capitalizar, hora } from '@/lib/formato';
 import { lerFiltroAgenda, type FiltroAgenda } from '@/features/dashboard/links';
 import { ChipDaDashboard } from '@/features/dashboard/ChipDaDashboard';
 import { intervaloDosDias, rotuloContador, lerContador } from '@/features/visits/contagem';
@@ -801,7 +800,7 @@ export default function Visits() {
         }
       >
         {viewMode === 'calendar' ? (
-          <Card className="gap-0 p-4">
+          <Card data-testid="agenda-cartao" className="gap-0 p-4">
             <BarraDoCalendario visao={visaoCal} date={calDate} onVisao={trocarVisao} onNavigate={setCalDate} />
             <LegendaDasSituacoes />
             {/* Falha na leitura não é agenda livre: sem isto o mês vazio deixava marcar em cima de horário ocupado. */}
@@ -831,45 +830,50 @@ export default function Visits() {
               />
             )}
           </Card>
-        ) : loading ? (
-          <Carregando linhas={6} rotulo="Carregando visitas..." className="max-w-3xl" />
-        ) : erro ? (
-          <EmptyState tipo="erro" aoTentarDeNovo={() => void load()} />
-        ) : visits.length === 0 ? (
-          <EmptyState
-            icon={CalendarClock}
-            title="Nenhuma visita encontrada"
-            action={canCreate ? { label: 'Agendar primeira visita', onClick: () => openScheduleModal() } : undefined}
-          />
         ) : (
-          <div className="space-y-6 max-w-3xl">
-            {Array.from(grouped.entries()).map(([date, dayVisits]) => (
-              <div key={date}>
-                <div className="flex items-center gap-3 mb-3">
-                  <div className={`text-sm font-semibold ${
-                    dayVisits.some(v => isToday(v.scheduled_at)) ? 'text-primary' : 'text-foreground'
-                  }`}>
-                    {capitalizar(date)}
-                  </div>
-                  {dayVisits.some(v => isToday(v.scheduled_at)) && (
-                    <Badge variant="secondary" className="text-xs bg-primary/10 text-primary border-0">Hoje</Badge>
-                  )}
-                  <div className="flex-1 h-px bg-border" />
-                </div>
+          <Card data-testid="agenda-cartao" className="gap-0 p-4">
+            {loading ? (
+              <Carregando linhas={6} rotulo="Carregando visitas..." />
+            ) : erro ? (
+              <EmptyState tipo="erro" tamanho="compacto" aoTentarDeNovo={() => void load()} />
+            ) : visits.length === 0 ? (
+              <EmptyState
+                icon={CalendarClock}
+                title="Nenhuma visita encontrada"
+                action={canCreate ? { label: 'Agendar primeira visita', onClick: () => openScheduleModal() } : undefined}
+              />
+            ) : (
+              <div className="space-y-6">
+                {Array.from(grouped.entries()).map(([date, dayVisits]) => (
+                  <div key={date}>
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className={`text-sm font-semibold ${
+                        dayVisits.some(v => isToday(v.scheduled_at)) ? 'text-primary' : 'text-foreground'
+                      }`}>
+                        {capitalizar(date)}
+                      </div>
+                      {dayVisits.some(v => isToday(v.scheduled_at)) && (
+                        <Badge variant="secondary" className="text-xs bg-primary/10 text-primary border-0">Hoje</Badge>
+                      )}
+                      <div className="flex-1 h-px bg-border" />
+                    </div>
 
-                <div className="space-y-3">
-                  {dayVisits.map(visit => (
-                    <VisitCard
-                      key={visit.id}
-                      visit={visit}
-                      destacada={visitaDestacada === visit.id}
-                      onAtualizada={aoAtualizar}
-                    />
-                  ))}
-                </div>
+                    <div className="flex flex-col gap-2">
+                      {dayVisits.map(visit => (
+                        <LinhaDaVisita
+                          key={visit.id}
+                          visit={visit}
+                          destacada={visitaDestacada === visit.id}
+                          onAbrir={() => setResumoId(visit.id)}
+                          onAtualizada={aoAtualizar}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+            )}
+          </Card>
         )}
       </Pagina>
 
@@ -901,7 +905,7 @@ export default function Visits() {
             </DialogTitle>
           </DialogHeader>
           {visitaDoResumo && (
-            <JanelaDaVisita visit={visitaDoResumo} onAtualizada={aoAtualizar} />
+            <JanelaDaVisita key={visitaDoResumo.id} visit={visitaDoResumo} onAtualizada={aoAtualizar} />
           )}
         </DialogContent>
       </Dialog>
@@ -983,6 +987,85 @@ function JanelaDaVisita({ visit, onAtualizada }: { visit: Visit; onAtualizada: (
         <VisitCard visit={visit} ancorada={false} semBotoes onAtualizada={onAtualizada} />
       </GrupoDaJanela>
       <div>
+        <AcoesDaVisita visita={visit} onAtualizada={onAtualizada} />
+      </div>
+    </div>
+  );
+}
+
+// Linha da Lista: o mesmo desenho da prévia aprovada. Faixa na cor da situação,
+// nome do lead como botão (prévia ao parar o mouse, janela ao clicar) e os
+// botões de sempre no pé.
+function LinhaDaVisita({
+  visit,
+  destacada,
+  onAbrir,
+  onAtualizada,
+}: {
+  visit: Visit;
+  destacada: boolean;
+  onAbrir: () => void;
+  onAtualizada: (v: Visit) => void;
+}) {
+  const atrasada = ehAtrasada(visit);
+  const bairro = visit.property?.address_neighborhood;
+  return (
+    <div
+      id={`visita-${visit.id}`}
+      style={estiloDaSituacao(visit.status)}
+      className={`grid grid-cols-[52px_minmax(0,1fr)] gap-x-3.5 gap-y-2 rounded-[10px] border border-l-[3px] border-border border-l-[var(--st)] bg-card px-3.5 py-3 sm:grid-cols-[64px_minmax(0,1fr)_auto] ${
+        destacada ? 'outline-2 outline-primary' : ''
+      }`}
+    >
+      <div className="text-center">
+        <div className="text-[17px] font-bold text-foreground">{hora(visit.scheduled_at)}</div>
+        {visit.duration_minutes && (
+          <div className="text-[11px] text-muted-foreground">{visit.duration_minutes}min</div>
+        )}
+      </div>
+
+      <div className="flex min-w-0 flex-col gap-[3px]">
+        <div>
+          <span className="inline-flex items-center gap-1.5 text-xs font-medium">
+            <span aria-hidden className="h-2 w-2 rounded-full bg-[var(--st)]" />
+            {VISIT_STATUS_LABELS[visit.status] ?? visit.status}
+          </span>
+          <IconeDeQuemAgendou visita={visit} className="ml-2 inline-block h-3.5 w-3.5 align-[-2px] text-muted-foreground" />
+          {atrasada && <span className="ml-2 text-xs font-medium text-orange-600 dark:text-orange-400">Atrasada</span>}
+        </div>
+        {visit.property && (
+          <div className="truncate font-semibold">
+            {visit.property.title}
+            <span className="ml-1.5 text-xs font-normal text-muted-foreground">· {visit.property.code}</span>
+          </div>
+        )}
+        <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-muted-foreground">
+          {visit.contact?.name && (
+            <PreviaDoLead visita={visit}>
+              <button
+                type="button"
+                onClick={onAbrir}
+                className="relative cursor-pointer border-0 bg-transparent p-0 text-xs font-semibold text-foreground underline decoration-border underline-offset-[3px]"
+              >
+                {visit.contact.name}
+              </button>
+            </PreviaDoLead>
+          )}
+          {visit.contact?.phone_number && <span>{telefone(visit.contact.phone_number)}</span>}
+          {bairro && <span>{bairro}</span>}
+          {visit.realtor && <span>Corretor: {visit.realtor.name}</span>}
+        </div>
+        {visit.realtor_notes && <p className="mt-1 text-xs italic text-muted-foreground">{visit.realtor_notes}</p>}
+      </div>
+
+      <div className="col-span-full flex flex-wrap justify-start gap-1.5 sm:col-span-1 sm:col-start-3 sm:row-start-1 sm:max-w-[300px] sm:justify-end">
+        {visit.rating != null && (
+          <div className="flex items-center gap-0.5">
+            {[1, 2, 3, 4, 5].map(n => (
+              <Star key={n} className={`h-3.5 w-3.5 ${n <= (visit.rating ?? 0) ? 'fill-amber-400 text-amber-400' : 'text-muted-foreground'}`} />
+            ))}
+          </div>
+        )}
         <AcoesDaVisita visita={visit} onAtualizada={onAtualizada} />
       </div>
     </div>
