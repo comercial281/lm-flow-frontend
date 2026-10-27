@@ -26,7 +26,7 @@ import { FlowNodePanel } from '@/components/flowAutomations/FlowNodePanel';
 import { FlowTriggerPanel } from '@/components/flowAutomations/FlowTriggerPanel';
 import { FlowSettingsDialog } from '@/components/flowAutomations/FlowSettingsDialog';
 import { MOBILE_QUERY } from '@/components/flowAutomations/FlowBlockDialog';
-import { MessageVariablesContext, RecolherVariaveisContext, useTenantMessageVariables } from '@/components/flowAutomations/VariableChipBar';
+import { MessageVariablesContext, useTenantMessageVariables } from '@/components/flowAutomations/VariableChipBar';
 import { useSidePanel } from '@/components/flowAutomations/useSidePanel';
 import { FlowGuideBanner, FlowGuideChecklist } from '@/components/flowAutomations/FlowGuide';
 import {
@@ -792,7 +792,6 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
 
   return (
     <MessageVariablesContext.Provider value={messageVariables}>
-    <RecolherVariaveisContext.Provider value>
       <div className="flex flex-col h-full">
         <div className="flex items-center gap-3 border-b border-border px-4 py-2 sm:px-6">
           <Button size="sm" variant="ghost" onClick={goBack} aria-label="Voltar" title="Voltar">
@@ -1064,7 +1063,6 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
         )}
         {dialogoDeConfirmacao}
       </div>
-    </RecolherVariaveisContext.Provider>
     </MessageVariablesContext.Provider>
   );
 }

@@ -30,7 +30,7 @@ import {
 const FUSO_PADRAO = 'America/Sao_Paulo';
 
 // Pro lead, só o nome dele faz sentido (corretor e prazo ainda não existem).
-const VARIAVEIS_DA_MENSAGEM = [{ token: '{{nome}}', label: '+ Nome do lead' }];
+const VARIAVEIS_DA_MENSAGEM = [{ token: '{{nome}}', label: 'Nome' }];
 
 interface Rascunho {
   sempre: boolean;
