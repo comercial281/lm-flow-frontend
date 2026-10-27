@@ -12,6 +12,12 @@ describe('Pagina (moldura única)', () => {
     expect(largura.parentElement!.parentElement!.className).toContain('overflow-y-auto');
   });
 
+  it('Pagina reserva o espaço da barra de rolagem (o título não anda)', () => {
+    render(<Pagina cabecalho={<h2>cab</h2>}><p>corpo</p></Pagina>);
+    const rolagem = document.querySelector('.overflow-y-auto')!;
+    expect(rolagem.className).toContain('[scrollbar-gutter:stable]');
+  });
+
   it('modo conteúdo: não rola a página; o conteúdo ocupa o resto da altura', () => {
     render(<Pagina rolagem="conteudo" cabecalho={<h2>cab</h2>}><div>lista</div></Pagina>);
     const largura = screen.getByText('cab').parentElement!;

@@ -10,6 +10,7 @@ import {
   Card,
   Button,
   Badge,
+  Skeleton,
   Dialog,
   DialogContent,
   DialogFooter,
@@ -38,10 +39,17 @@ import {
 import {
   visitsService,
   Visit,
+  type LeadSummary,
   VISIT_STATUS_LABELS,
-  VISIT_STATUS_COLORS,
 } from '@/services/visits/visitsService';
 
+import { ehAtrasada, estiloDaSituacao, SITUACOES_DA_LEGENDA } from '@/features/visits/situacaoDaVisita';
+import { PecaDaVisita, IconeDeQuemAgendou } from '@/features/visits/PecaDaVisita';
+import { PreviaDoLead } from '@/features/visits/PreviaDoLead';
+import { ResumoDoLead } from '@/features/visits/ResumoDoLead';
+import { lerResumoDoLead, resumoGuardado } from '@/features/visits/guardaDoResumo';
+import Aviso from '@/components/base/Aviso';
+import GrupoDaJanela from '@/components/base/janela/GrupoDaJanela';
 import { ScheduleVisitDialog } from '@/components/visits/ScheduleVisitDialog';
 import { HorarioVisitaDialog } from '@/components/visits/HorarioVisitaDialog';
 import { FolgasDialog } from '@/components/visits/FolgasDialog';
@@ -50,7 +58,7 @@ import { useCelular } from '@/hooks/useCelular';
 import { useAgendaLigada } from '@/features/visits/useAgendaLigada';
 import NoAccessState from '@/components/permissions/NoAccessState';
 import { isForbiddenError } from '@/services/core/forbidden';
-import { telefone, hora, capitalizar } from '@/lib/formato';
+import { telefone, capitalizar, hora } from '@/lib/formato';
 import { lerFiltroAgenda, type FiltroAgenda } from '@/features/dashboard/links';
 import { ChipDaDashboard } from '@/features/dashboard/ChipDaDashboard';
 import { intervaloDosDias, rotuloContador, lerContador } from '@/features/visits/contagem';
@@ -68,6 +76,8 @@ import {
   tituloDaVisao,
 } from '@/features/visits/gradeDoCalendario';
 import { AcoesDaVisita } from '@/features/visits/AcoesDaVisita';
+import { botoesDaVisita } from '@/features/visits/acaoDaVisita';
+import { useCan } from '@/hooks/useCan';
 import { MioloDoCancelamentoDaVisita, MioloDoRetornoDaVisita } from '@/features/visits/MioloDaAcaoDaVisita';
 import { acaoDaVisita, type AcaoDaVisita } from '@/features/visits/acaoDaVisita';
 
@@ -101,10 +111,6 @@ function isToday(iso: string) {
   return d.toDateString() === t.toDateString();
 }
 
-function isPast(iso: string) {
-  return new Date(iso) < new Date();
-}
-
 type ViewMode = 'calendar' | 'list';
 
 // Mês / Semana / Dia fica guardado no navegador (conveniência de quem usa).
@@ -118,16 +124,6 @@ function lerVisao(): VisaoCalendario {
   }
 }
 
-// Pill de evento por status — cores espelhando o protótipo (accent/info/warn/good).
-const PILL_STYLES: Record<string, string> = {
-  scheduled:   'text-violet-300 bg-violet-500/15 hover:bg-violet-500/25',
-  confirmed:   'text-blue-300 bg-blue-500/15 hover:bg-blue-500/25',
-  in_progress: 'text-orange-300 bg-orange-500/15 hover:bg-orange-500/25',
-  completed:   'text-emerald-300 bg-emerald-500/15 hover:bg-emerald-500/25',
-  rescheduled: 'text-amber-300 bg-amber-500/15 hover:bg-amber-500/25',
-  cancelled:   'text-red-300 bg-red-500/15 hover:bg-red-500/25',
-  no_show:     'text-gray-400 bg-gray-500/15 hover:bg-gray-500/25',
-};
 const DOW = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
 function dayKey(d: Date) {
@@ -191,26 +187,21 @@ function MonthGrid({ date, visits, onDayClick, onVisitClick, destacadaId }: {
               onClick={() => onDayClick(cell.date)}
               className={`min-h-[96px] rounded-[10px] border p-2 flex flex-col gap-1 cursor-pointer transition-colors ${
                 cell.out ? 'opacity-40 bg-muted/20 border-border/50' : 'bg-muted/30 border-border hover:border-primary/40'
-              } ${isTodayCell ? '!border-primary !bg-primary/10' : ''}`}
+              } ${isTodayCell ? '!border-primary shadow-[inset_0_2px_0_var(--primary)]' : ''}`}
             >
-              <span className={`text-[12.5px] font-semibold ${isTodayCell ? 'text-primary' : 'text-muted-foreground'}`}>
+              <span
+                data-testid={isTodayCell ? 'numero-de-hoje' : undefined}
+                className={isTodayCell
+                  ? 'inline-flex h-5 min-w-5 items-center justify-center self-start rounded-full bg-primary px-1 text-[11.5px] font-bold text-primary-foreground'
+                  : 'text-[12.5px] font-semibold text-muted-foreground'}
+              >
                 {cell.date.getDate()}
               </span>
-              {dayVisits.slice(0, 3).map(v => {
-                const time = new Date(v.scheduled_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-                const who = v.contact?.name || v.property?.title || 'Visita';
-                return (
-                  <button
-                    key={v.id}
-                    id={`visita-${v.id}`}
-                    onClick={e => { e.stopPropagation(); onVisitClick(v); }}
-                    className={`text-[10px] font-semibold px-1.5 py-[3px] rounded-md truncate text-left transition-colors ${PILL_STYLES[v.status] || PILL_STYLES.scheduled} ${destacadaId === v.id ? 'ring-2 ring-primary' : ''}`}
-                    title={`${time} · ${who}`}
-                  >
-                    {time} · {who}
-                  </button>
-                );
-              })}
+              {dayVisits.slice(0, 3).map(v => (
+                <PreviaDoLead key={v.id} visita={v}>
+                  <PecaDaVisita visita={v} forma="pilula" destacada={destacadaId === v.id} onClick={onVisitClick} />
+                </PreviaDoLead>
+              ))}
               {dayVisits.length > 3 && (
                 <span className="text-[10px] text-muted-foreground pl-1">+{dayVisits.length - 3} mais</span>
               )}
@@ -247,11 +238,28 @@ function BarraDoCalendario({ visao, date, onVisao, onNavigate }: {
         <Button variant="outline" size="sm" className="h-8 w-8 p-0" onClick={() => onNavigate(navegar(visao, date, 1))} aria-label={nomes[visao].proximo} title={nomes[visao].proximo}>
           <ChevronRight className="h-4 w-4" />
         </Button>
-        <div className="w-1 h-6 rounded-full shrink-0 ml-1" style={{ background: 'linear-gradient(to bottom, #7c3aed, #9333ea)' }} />
-        <h2 className="text-base font-bold truncate">{tituloDaVisao(visao, date)}</h2>
+        <h2 className="ml-1 text-base font-bold truncate">{tituloDaVisao(visao, date)}</h2>
       </div>
       <BotoesDeEscolha rotulo="Visão do calendário" valor={visao} opcoes={VISOES} aoEscolher={onVisao} />
     </div>
+  );
+}
+
+/** Legenda das situações: as 7 da visita + a que passou do horário sem registro. */
+function LegendaDasSituacoes() {
+  return (
+    <ul aria-label="Legenda das situações da visita" className="mb-3 flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-muted-foreground">
+      {SITUACOES_DA_LEGENDA.map(({ status, rotulo }) => (
+        <li key={status} className="inline-flex items-center gap-1.5" style={estiloDaSituacao(status)}>
+          <span aria-hidden className="h-2 w-2 rounded-full" style={{ background: 'var(--st)' }} />
+          {rotulo}
+        </li>
+      ))}
+      <li className="inline-flex items-center gap-1.5">
+        <span aria-hidden className="h-2 w-2 rounded-full" style={{ background: 'var(--visita-atrasada)' }} />
+        Passou e ninguém registrou
+      </li>
+    </ul>
   );
 }
 
@@ -372,43 +380,24 @@ function GradeDeHoras({ visao, date, visits, carregadoPara, podeAgendar, ajustes
                 ))}
 
                 {blocosPorDia[i].map(b => {
-                  const v = b.visita;
-                  const inicio = new Date(v.scheduled_at);
-                  const fim = new Date(inicio.getTime() + b.duracaoMin * 60000);
-                  const time = hora(inicio);
-                  const who = v.contact?.name || v.property?.title || 'Visita';
                   const altura = Math.max((b.duracaoMin / 60) * ALTURA_HORA - 2, 20);
-                  const detalhe = [
-                    `${time}–${hora(fim)}`,
-                    who,
-                    v.realtor?.name ? `Corretor: ${v.realtor.name}` : null,
-                    VISIT_STATUS_LABELS[v.status] ?? v.status,
-                  ].filter(Boolean).join(' · ');
                   return (
-                    <button
-                      key={v.id}
-                      id={`visita-${v.id}`}
-                      type="button"
-                      onClick={e => { e.stopPropagation(); onVisitClick(v); }}
-                      className={`absolute z-10 rounded-md px-1.5 py-1 text-left overflow-hidden border border-border/60 transition-colors ${PILL_STYLES[v.status] || PILL_STYLES.scheduled} ${destacadaId === v.id ? 'ring-2 ring-primary' : ''}`}
-                      style={{
-                        top: (b.inicioMin / 60) * ALTURA_HORA + 1,
-                        height: altura,
-                        left: `calc(${(b.coluna / b.colunas) * 100}% + 2px)`,
-                        width: `calc(${100 / b.colunas}% - 4px)`,
-                      }}
-                      title={detalhe}
-                      aria-label={detalhe}
-                    >
-                      {altura < 36 ? (
-                        <span className="block text-[10.5px] font-semibold truncate">{time} · {who}</span>
-                      ) : (
-                        <>
-                          <span className="block text-[10.5px] opacity-80 tabular-nums">{time}</span>
-                          <span className="block text-[11.5px] font-semibold truncate">{who}</span>
-                        </>
-                      )}
-                    </button>
+                    <PreviaDoLead key={b.visita.id} visita={b.visita}>
+                      <PecaDaVisita
+                        visita={b.visita}
+                        forma="bloco"
+                        altura={altura}
+                        duracaoMin={b.duracaoMin}
+                        destacada={destacadaId === b.visita.id}
+                        onClick={onVisitClick}
+                        style={{
+                          top: (b.inicioMin / 60) * ALTURA_HORA + 1,
+                          height: altura,
+                          left: `calc(${(b.coluna / b.colunas) * 100}% + 2px)`,
+                          width: `calc(${100 / b.colunas}% - 4px)`,
+                        }}
+                      />
+                    </PreviaDoLead>
                   );
                 })}
 
@@ -809,8 +798,9 @@ export default function Visits() {
         }
       >
         {viewMode === 'calendar' ? (
-          <Card className="gap-0 p-4">
+          <Card data-testid="agenda-cartao" className="gap-0 p-4">
             <BarraDoCalendario visao={visaoCal} date={calDate} onVisao={trocarVisao} onNavigate={setCalDate} />
+            <LegendaDasSituacoes />
             {/* Falha na leitura não é agenda livre: sem isto o mês vazio deixava marcar em cima de horário ocupado. */}
             {erro && (
               <EmptyState tipo="erro" tamanho="compacto" aoTentarDeNovo={() => void load()} className="mb-3" />
@@ -838,45 +828,50 @@ export default function Visits() {
               />
             )}
           </Card>
-        ) : loading ? (
-          <Carregando linhas={6} rotulo="Carregando visitas..." className="max-w-3xl" />
-        ) : erro ? (
-          <EmptyState tipo="erro" aoTentarDeNovo={() => void load()} />
-        ) : visits.length === 0 ? (
-          <EmptyState
-            icon={CalendarClock}
-            title="Nenhuma visita encontrada"
-            action={canCreate ? { label: 'Agendar primeira visita', onClick: () => openScheduleModal() } : undefined}
-          />
         ) : (
-          <div className="space-y-6 max-w-3xl">
-            {Array.from(grouped.entries()).map(([date, dayVisits]) => (
-              <div key={date}>
-                <div className="flex items-center gap-3 mb-3">
-                  <div className={`text-sm font-semibold ${
-                    dayVisits.some(v => isToday(v.scheduled_at)) ? 'text-primary' : 'text-foreground'
-                  }`}>
-                    {capitalizar(date)}
-                  </div>
-                  {dayVisits.some(v => isToday(v.scheduled_at)) && (
-                    <Badge variant="secondary" className="text-xs bg-primary/10 text-primary border-0">Hoje</Badge>
-                  )}
-                  <div className="flex-1 h-px bg-border" />
-                </div>
+          <Card data-testid="agenda-cartao" className="gap-0 p-4">
+            {loading ? (
+              <Carregando linhas={6} rotulo="Carregando visitas..." />
+            ) : erro ? (
+              <EmptyState tipo="erro" tamanho="compacto" aoTentarDeNovo={() => void load()} />
+            ) : visits.length === 0 ? (
+              <EmptyState
+                icon={CalendarClock}
+                title="Nenhuma visita encontrada"
+                action={canCreate ? { label: 'Agendar primeira visita', onClick: () => openScheduleModal() } : undefined}
+              />
+            ) : (
+              <div className="space-y-6">
+                {Array.from(grouped.entries()).map(([date, dayVisits]) => (
+                  <div key={date}>
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className={`text-sm font-semibold ${
+                        dayVisits.some(v => isToday(v.scheduled_at)) ? 'text-primary' : 'text-foreground'
+                      }`}>
+                        {capitalizar(date)}
+                      </div>
+                      {dayVisits.some(v => isToday(v.scheduled_at)) && (
+                        <Badge variant="secondary" className="text-xs bg-primary/10 text-primary border-0">Hoje</Badge>
+                      )}
+                      <div className="flex-1 h-px bg-border" />
+                    </div>
 
-                <div className="space-y-3">
-                  {dayVisits.map(visit => (
-                    <VisitCard
-                      key={visit.id}
-                      visit={visit}
-                      destacada={visitaDestacada === visit.id}
-                      onAtualizada={aoAtualizar}
-                    />
-                  ))}
-                </div>
+                    <div className="flex flex-col gap-2">
+                      {dayVisits.map(visit => (
+                        <LinhaDaVisita
+                          key={visit.id}
+                          visit={visit}
+                          destacada={visitaDestacada === visit.id}
+                          onAbrir={() => setResumoId(visit.id)}
+                          onAtualizada={aoAtualizar}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+            )}
+          </Card>
         )}
       </Pagina>
 
@@ -899,7 +894,7 @@ export default function Visits() {
 
       {/* Resumo da visita clicada no calendário: o mesmo card da Lista */}
       <Dialog open={!!visitaDoResumo} onOpenChange={aberto => { if (!aberto) setResumoId(null); }}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>
               {visitaDoResumo && capitalizar(new Date(visitaDoResumo.scheduled_at).toLocaleDateString('pt-BR', {
@@ -908,11 +903,7 @@ export default function Visits() {
             </DialogTitle>
           </DialogHeader>
           {visitaDoResumo && (
-            <VisitCard
-              visit={visitaDoResumo}
-              ancorada={false}
-              onAtualizada={aoAtualizar}
-            />
+            <JanelaDaVisita key={visitaDoResumo.id} visit={visitaDoResumo} onAtualizada={aoAtualizar} />
           )}
         </DialogContent>
       </Dialog>
@@ -952,10 +943,150 @@ export default function Visits() {
   );
 }
 
+// Seção "O que aconteceu": os botões da visita. Sem botão nenhum (visita
+// encerrada), nada de título solto; a peça segue montada por causa dos diálogos.
+function SecaoOQueAconteceu({ visit, onAtualizada }: { visit: Visit; onAtualizada: (v: Visit) => void }) {
+  const pode = useCan();
+  const botoes = botoesDaVisita(visit, {
+    confirmar: pode('visits', 'confirm'),
+    remarcar: pode('visits', 'reschedule'),
+    cancelar: pode('visits', 'cancel'),
+    concluir: pode('visits', 'complete'),
+  });
+  const acoes = <AcoesDaVisita visita={visit} onAtualizada={onAtualizada} />;
+  return botoes.length > 0 ? <GrupoDaJanela titulo="O que aconteceu">{acoes}</GrupoDaJanela> : acoes;
+}
+
+// Miolo da janela do clique: Lead em cima (resumo completo), Visita no meio e
+// os botões no pé. Resumo que não chega não tira a visita nem os botões.
+function JanelaDaVisita({ visit, onAtualizada }: { visit: Visit; onAtualizada: (v: Visit) => void }) {
+  const id = visit.id;
+  const [estado, setEstado] = useState<{ resumo?: LeadSummary; erro?: boolean }>(() => ({ resumo: resumoGuardado(id) }));
+  useEffect(() => {
+    if (estado.resumo) return;
+    let vivo = true;
+    lerResumoDoLead(id)
+      .then(resumo => { if (vivo) setEstado({ resumo }); })
+      .catch(() => { if (vivo) setEstado({ erro: true }); });
+    return () => { vivo = false; };
+    // Só ao abrir a visita: o resumo que chega não pede de novo.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
+
+  return (
+    <div className="grid gap-5">
+      <GrupoDaJanela titulo="Lead">
+        {estado.erro ? (
+          <Aviso tom="erro" compacto>Não deu para carregar o resumo do lead.</Aviso>
+        ) : estado.resumo ? (
+          <ResumoDoLead resumo={estado.resumo} completo agendamento={visit} />
+        ) : (
+          <div className="grid gap-2" aria-busy="true">
+            <div className="flex items-center gap-3">
+              <Skeleton className="h-[38px] w-[38px] rounded-full" />
+              <div className="grid gap-1.5">
+                <Skeleton className="h-3.5 w-36" />
+                <Skeleton className="h-3 w-24" />
+              </div>
+            </div>
+            <Skeleton className="h-3 w-full" />
+            <Skeleton className="h-3 w-4/5" />
+            <Skeleton className="h-12 w-full rounded-[10px]" />
+          </div>
+        )}
+      </GrupoDaJanela>
+      <GrupoDaJanela titulo="Visita">
+        <VisitCard visit={visit} ancorada={false} semBotoes onAtualizada={onAtualizada} />
+      </GrupoDaJanela>
+      <SecaoOQueAconteceu visit={visit} onAtualizada={onAtualizada} />
+    </div>
+  );
+}
+
+// Linha da Lista: o mesmo desenho da prévia aprovada. Faixa na cor da situação,
+// nome do lead como botão (prévia ao parar o mouse, janela ao clicar) e os
+// botões de sempre no pé.
+function LinhaDaVisita({
+  visit,
+  destacada,
+  onAbrir,
+  onAtualizada,
+}: {
+  visit: Visit;
+  destacada: boolean;
+  onAbrir: () => void;
+  onAtualizada: (v: Visit) => void;
+}) {
+  const atrasada = ehAtrasada(visit);
+  const bairro = visit.property?.address_neighborhood;
+  return (
+    <div
+      id={`visita-${visit.id}`}
+      style={estiloDaSituacao(visit.status)}
+      className={`grid grid-cols-[52px_minmax(0,1fr)] gap-x-3.5 gap-y-2 rounded-[10px] border border-l-[3px] border-border border-l-[var(--st)] bg-card px-3.5 py-3 sm:grid-cols-[64px_minmax(0,1fr)_auto] ${
+        destacada ? 'outline-2 outline-primary' : ''
+      }`}
+    >
+      <div className="text-center">
+        <div className="text-[17px] font-bold text-foreground">{hora(visit.scheduled_at)}</div>
+        {visit.duration_minutes && (
+          <div className="text-[11px] text-muted-foreground">{visit.duration_minutes}min</div>
+        )}
+      </div>
+
+      <div className="flex min-w-0 flex-col gap-[3px]">
+        <div>
+          <span className="inline-flex items-center gap-1.5 text-xs font-medium">
+            <span aria-hidden className="h-2 w-2 rounded-full bg-[var(--st)]" />
+            {VISIT_STATUS_LABELS[visit.status] ?? visit.status}
+          </span>
+          <IconeDeQuemAgendou visita={visit} className="ml-2 inline-block h-3.5 w-3.5 align-[-2px] text-muted-foreground" />
+          {atrasada && <span className="ml-2 text-xs font-medium text-orange-600 dark:text-orange-400">Atrasada</span>}
+        </div>
+        {visit.property && (
+          <div className="truncate font-semibold">
+            {visit.property.title}
+            <span className="ml-1.5 text-xs font-normal text-muted-foreground">· {visit.property.code}</span>
+          </div>
+        )}
+        <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-muted-foreground">
+          {visit.contact?.name && (
+            <PreviaDoLead visita={visit} dica="abrir">
+              <button
+                type="button"
+                onClick={onAbrir}
+                className="relative cursor-pointer overflow-hidden border-0 bg-transparent p-0 text-xs font-semibold text-foreground underline decoration-border underline-offset-[3px]"
+              >
+                {visit.contact.name}
+              </button>
+            </PreviaDoLead>
+          )}
+          {visit.contact?.phone_number && <span>{telefone(visit.contact.phone_number)}</span>}
+          {bairro && <span>{bairro}</span>}
+          {visit.realtor && <span>Corretor: {visit.realtor.name}</span>}
+        </div>
+        {visit.realtor_notes && <p className="mt-1 text-xs italic text-muted-foreground">{visit.realtor_notes}</p>}
+      </div>
+
+      <div className="col-span-full flex flex-wrap justify-start gap-1.5 sm:col-span-1 sm:col-start-3 sm:row-start-1 sm:max-w-[300px] sm:justify-end">
+        {visit.rating != null && (
+          <div className="flex items-center gap-0.5">
+            {[1, 2, 3, 4, 5].map(n => (
+              <Star key={n} className={`h-3.5 w-3.5 ${n <= (visit.rating ?? 0) ? 'fill-amber-400 text-amber-400' : 'text-muted-foreground'}`} />
+            ))}
+          </div>
+        )}
+        <AcoesDaVisita visita={visit} onAtualizada={onAtualizada} />
+      </div>
+    </div>
+  );
+}
+
 function VisitCard({
   visit,
   destacada = false,
   ancorada = true,
+  semBotoes = false,
   onAtualizada,
 }: {
   visit: Visit;
@@ -963,15 +1094,16 @@ function VisitCard({
   destacada?: boolean;
   /** Leva o id `visita-<id>` (alvo do destaque). O resumo do calendário não leva: a pílula já tem. */
   ancorada?: boolean;
+  /** Os botões moram em outro lugar (a janela do clique os põe numa seção própria). */
+  semBotoes?: boolean;
   /** Os botões são da peça única `AcoesDaVisita`; ela avisa com a visita alterada (ou nova). */
   onAtualizada: (v: Visit) => void;
 }) {
-  const isPastVisit = isPast(visit.scheduled_at);
-  const isActive = ['scheduled', 'confirmed', 'in_progress', 'rescheduled'].includes(visit.status);
+  const atrasada = ehAtrasada(visit);
 
   return (
     <Card id={ancorada ? `visita-${visit.id}` : undefined} className={`flex-row gap-4 p-4 transition-shadow ${
-      isPastVisit && isActive ? 'border-orange-300 dark:border-orange-700' : ''
+      atrasada ? 'border-orange-300 dark:border-orange-700' : ''
     } ${destacada ? 'outline-2 outline-primary' : ''}`}>
       {/* Time column */}
       <div className="flex-shrink-0 w-16 text-center">
@@ -990,17 +1122,19 @@ function VisitCard({
       <div className="flex-1 min-w-0">
         <div className="flex items-start justify-between gap-2 mb-2">
           <div>
-            <span className={`inline-flex items-center text-xs px-2 py-0.5 rounded font-medium ${VISIT_STATUS_COLORS[visit.status] ?? ''}`}>
+            <span className="inline-flex items-center gap-1.5 text-xs font-medium" style={estiloDaSituacao(visit.status)}>
+              <span aria-hidden className="h-2 w-2 rounded-full bg-[var(--st)]" />
               {VISIT_STATUS_LABELS[visit.status] ?? visit.status}
             </span>
-            {isPastVisit && isActive && (
+            <IconeDeQuemAgendou visita={visit} className="ml-2 inline-block h-3.5 w-3.5 align-[-2px] text-muted-foreground" />
+            {atrasada && (
               <span className="ml-2 text-xs text-orange-600 dark:text-orange-400 font-medium">Atrasada</span>
             )}
           </div>
           {visit.rating != null && (
             <div className="flex items-center gap-0.5">
               {[1,2,3,4,5].map(n => (
-                <Star key={n} className={`h-3.5 w-3.5 ${n <= (visit.rating ?? 0) ? 'text-violet-400 fill-violet-400' : 'text-muted-foreground'}`} />
+                <Star key={n} className={`h-3.5 w-3.5 ${n <= (visit.rating ?? 0) ? 'fill-amber-400 text-amber-400' : 'text-muted-foreground'}`} />
               ))}
             </div>
           )}
@@ -1043,9 +1177,11 @@ function VisitCard({
           <p className="text-xs text-muted-foreground mt-1 italic">{visit.realtor_notes}</p>
         )}
 
-        <div className="mt-3">
-          <AcoesDaVisita visita={visit} onAtualizada={onAtualizada} />
-        </div>
+        {!semBotoes && (
+          <div className="mt-3">
+            <AcoesDaVisita visita={visit} onAtualizada={onAtualizada} />
+          </div>
+        )}
       </div>
     </Card>
   );

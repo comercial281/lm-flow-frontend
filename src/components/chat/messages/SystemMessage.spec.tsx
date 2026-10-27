@@ -152,6 +152,17 @@ describe('SystemMessage', () => {
     expect(rodape.closest('[data-rodape-ia]')).not.toBeNull();
   });
 
+  it('rodapé da IA usa o robô', () => {
+    render(
+      <SystemMessage
+        message={msg('Visita agendada', { type: 'visit_scheduled', by_ai: true, scheduled_at: '2026-10-24T20:00:00Z' })}
+      />,
+    );
+    const rodape = screen.getByText('Agendada pela IA Vendedora').closest('[data-rodape-ia]') as HTMLElement;
+    expect(rodape.querySelector('svg.lucide-bot')).not.toBeNull();
+    expect(rodape.querySelector('svg.lucide-sparkles')).toBeNull();
+  });
+
   it('pílula de evento: retorno da visita com estrelas', () => {
     render(<SystemMessage message={msg('Retorno', { type: 'visit_feedback', by: 'Cirlei', rating: 3 })} />);
     const pilula = document.querySelector('[data-pilula]') as HTMLElement;

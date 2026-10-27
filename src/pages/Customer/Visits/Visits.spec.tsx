@@ -12,6 +12,7 @@ vi.mock('@/contexts/TenantFeaturesContext', async (orig) => {
 
 const list = vi.fn();
 const cancel = vi.fn();
+const leadSummary = vi.fn();
 vi.mock('@/services/visits/visitsService', async (orig) => {
   const real = await orig<typeof import('@/services/visits/visitsService')>();
   return {
@@ -22,6 +23,8 @@ vi.mock('@/services/visits/visitsService', async (orig) => {
       cancel: (...a: unknown[]) => cancel(...a),
       realtors: vi.fn().mockResolvedValue([]),
       leadPickerPage: vi.fn().mockResolvedValue({ data: [], meta: {} }),
+      // A prévia do hover pede o resumo depois de 450 ms parado em cima.
+      leadSummary: (...a: unknown[]) => leadSummary(...a),
     },
   };
 });
@@ -46,6 +49,7 @@ vi.mock('@/services/visits/agendaService', () => ({
 
 import Visits from './Visits';
 import { esquecerAgendaLigada } from '@/features/visits/useAgendaLigada';
+import { esquecerResumos } from '@/features/visits/guardaDoResumo';
 import { simularCelular } from '@/test/telaDeCelular';
 
 // A agenda ligada ou não é o que o servidor responde em `GET /visit_settings`.
@@ -56,6 +60,8 @@ const abrir = () => render(<MemoryRouter><Visits /></MemoryRouter>);
 beforeEach(() => {
   vi.clearAllMocks();
   esquecerAgendaLigada();
+  esquecerResumos();
+  leadSummary.mockRejectedValue(new Error('sem resumo no teste'));
   list.mockResolvedValue({ data: [], meta: { total: 0, only_mine: false } });
   getSettings.mockResolvedValue(LIGADA);
   listTimeOffs.mockResolvedValue([]);
@@ -144,6 +150,133 @@ describe('Agenda de Visitas: Semana e Dia', () => {
   });
 });
 
+describe('Agenda de Visitas: calendário com a peça nova', () => {
+  beforeEach(() => {
+    try { localStorage.removeItem('lm-visitas-visao'); } catch { /* sem armazenamento */ }
+  });
+  const daIA = () => {
+    const hoje = new Date();
+    const as15 = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate(), 15, 0);
+    list.mockResolvedValue({
+      data: [{ id: 'v9', status: 'scheduled', booked_by: 'ia', scheduled_at: as15.toISOString(), duration_minutes: 60, contact: { id: 'c1', name: 'Maria de Souza' } }],
+      meta: { total: 1, active_total: 1, only_mine: false },
+    });
+  };
+
+  it('o Mês desenha a visita da IA com o robô', async () => {
+    daIA();
+    abrir();
+    const peca = await screen.findByRole('button', { name: /Maria S\. ?|Maria de Souza.*Agendada pela IA Vendedora/ });
+    expect(peca.getAttribute('aria-label')).toContain('Agendada pela IA Vendedora');
+    expect(peca.id).toBe('visita-v9');
+    expect(peca.querySelector('svg[aria-hidden="true"]')).not.toBeNull();
+  });
+
+  // O jsdom não tem PointerEvent: o tipo do ponteiro vai pendurado num MouseEvent.
+  const passarOMouse = (el: Element) =>
+    fireEvent(el, Object.assign(new MouseEvent('pointerover', { bubbles: true }), { pointerType: 'mouse' }));
+
+  it('parar o mouse na visita do Mês mostra a prévia do lead', async () => {
+    daIA();
+    leadSummary.mockResolvedValue({
+      contact: { id: 'c1', name: 'Maria de Souza', phone_number: '11984123307' },
+      card: { pipeline_name: 'Vendas', stage_name: 'Visita agendada', status: 'open', other_cards_count: 0 },
+      origin_label: null, owner: null, labels: [], last_message: null, conversation_id: null, ia: null,
+      previous_visits_count: 0, lead_created_at: null, card_entered_at: null,
+    });
+    abrir();
+    const peca = await screen.findByRole('button', { name: /Maria de Souza/ });
+    passarOMouse(peca);
+    expect(peca).toHaveClass('armando');
+    expect(leadSummary).not.toHaveBeenCalled();
+    const previa = await screen.findByRole('region', { name: 'Resumo do lead' }, { timeout: 2000 });
+    expect(leadSummary).toHaveBeenCalledWith('v9');
+    expect(await within(previa).findByText('(11) 98412-3307')).toBeInTheDocument();
+    expect(within(previa).getByTestId('funil-do-lead')).toHaveTextContent('Vendas›Visita agendada');
+  });
+
+  const RESUMO_MARIA = {
+    contact: { id: 'c1', name: 'Maria de Souza', phone_number: '11984123307' },
+    card: null, origin_label: null, owner: null, labels: [], last_message: null, conversation_id: null, ia: null,
+    previous_visits_count: 0, lead_created_at: null, card_entered_at: null,
+  };
+
+  it('clicar dentro da prévia aberta no Mês não abre o Agendar visita do dia', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(2026, 9, 10, 11, 0));
+    try {
+      daIA();
+      leadSummary.mockResolvedValue(RESUMO_MARIA);
+      abrir();
+      passarOMouse(await screen.findByRole('button', { name: /Maria de Souza/ }));
+      const previa = await screen.findByRole('region', { name: 'Resumo do lead' }, { timeout: 2000 });
+      const nome = await within(previa).findByText('(11) 98412-3307');
+      fireEvent.pointerDown(nome);
+      fireEvent.mouseDown(nome);
+      fireEvent.click(nome);
+      expect(screen.queryByTestId('janela')).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('clicar dentro da prévia aberta na Semana não abre o Agendar visita do horário', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(2026, 9, 10, 11, 0));
+    try {
+      daIA();
+      leadSummary.mockResolvedValue(RESUMO_MARIA);
+      const user = userEvent.setup();
+      abrir();
+      await user.click(await screen.findByRole('radio', { name: 'Semana' }));
+      passarOMouse(await screen.findByRole('button', { name: /15:00–16:00 · Maria de Souza/ }));
+      const previa = await screen.findByRole('region', { name: 'Resumo do lead' }, { timeout: 2000 });
+      const nome = await within(previa).findByText('(11) 98412-3307');
+      // 22h na grade: horário futuro, que abriria o Agendar visita se o clique vazasse.
+      fireEvent.click(nome, { clientY: 22 * 48 });
+      expect(screen.queryByTestId('janela')).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('o bloco da Semana também arma a prévia', async () => {
+    daIA();
+    const user = userEvent.setup();
+    abrir();
+    await user.click(await screen.findByRole('radio', { name: 'Semana' }));
+    const bloco = await screen.findByRole('button', { name: /15:00–16:00 · Maria de Souza/ });
+    passarOMouse(bloco);
+    expect(bloco).toHaveClass('armando');
+    expect(bloco.style.top).not.toBe(''); // a posição do bloco continua
+  });
+
+  it('a Semana desenha o bloco com o nome e o robô', async () => {
+    daIA();
+    const user = userEvent.setup();
+    abrir();
+    await user.click(await screen.findByRole('radio', { name: 'Semana' }));
+    const bloco = await screen.findByRole('button', { name: /15:00–16:00 · Maria de Souza · Agendada · Agendada pela IA Vendedora/ });
+    expect(bloco.querySelector('svg[aria-hidden="true"]')).not.toBeNull();
+    expect(bloco.textContent).toContain('Maria de Souza');
+  });
+
+  it('a legenda mostra as 7 situações e a visita que passou sem registro', async () => {
+    abrir();
+    const legenda = await screen.findByRole('list', { name: 'Legenda das situações da visita' });
+    const itens = within(legenda).getAllByRole('listitem').map(li => li.textContent);
+    expect(itens).toEqual(['Agendada', 'Confirmada', 'Em andamento', 'Reagendada', 'Realizada', 'Não compareceu', 'Cancelada', 'Passou e ninguém registrou']);
+  });
+
+  it('o dia de hoje no Mês tem o número no círculo da marca e a célula sem fundo roxo', async () => {
+    abrir();
+    const n = await screen.findByTestId('numero-de-hoje');
+    expect(n.className).toContain('bg-primary');
+    expect(n.className).toContain('text-primary-foreground');
+    expect(n.parentElement!.className).not.toContain('bg-primary/');
+  });
+});
+
 // Relógio parado às 11h: as visitas de 15h do teste ainda não aconteceram,
 // senão o resultado dependeria da hora em que a suíte roda.
 const pararRelogio = () => {
@@ -181,6 +314,48 @@ describe('Agenda de Visitas: clique na visita do calendário', () => {
     expect(within(resumo).getByRole('button', { name: /^Remarcar$/, hidden: true })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Cancelar visita' }));
     expect(cancel).toHaveBeenCalledWith('v1', undefined);
+  });
+
+  it('clique na visita abre a janela com o resumo do lead em cima', async () => {
+    const hoje = new Date();
+    const as15 = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate(), 15, 0);
+    const visita = { id: 'v3', status: 'scheduled', booked_by: 'ia', scheduled_at: as15.toISOString(), duration_minutes: 60, contact: { id: 'c1', name: 'Maria de Souza' } };
+    list.mockResolvedValue({ data: [visita], meta: { total: 1, active_total: 1, only_mine: false } });
+    leadSummary.mockResolvedValue({
+      contact: { id: 'c1', name: 'Maria de Souza', phone_number: '11984123307' },
+      card: { pipeline_name: 'Vendas', stage_name: 'Visita agendada', status: 'open', other_cards_count: 0 },
+      origin_label: null, owner: null, labels: [], last_message: null, conversation_id: 'conv9', ia: null,
+      previous_visits_count: 0, lead_created_at: null, card_entered_at: null,
+    });
+    const user = userEvent.setup();
+    abrir();
+    await user.click(await screen.findByRole('radio', { name: 'Semana' }));
+    await user.click(await screen.findByRole('button', { name: /15:00–16:00 · Maria/ }));
+    const janela = await screen.findByRole('dialog');
+    const lead = await within(janela).findByRole('group', { name: 'Lead' });
+    expect(await within(lead).findByText('(11) 98412-3307')).toBeInTheDocument();
+    expect(within(lead).getByRole('link', { name: /Abrir conversa/ })).toHaveAttribute('href', '/conversations/conv9');
+    const visitaSecao = within(janela).getByRole('group', { name: 'Visita' });
+    expect(within(visitaSecao).getByRole('img', { name: /IA Vendedora/ })).toBeInTheDocument();
+    // Lead vem antes da visita na janela.
+    expect(lead.compareDocumentPosition(visitaSecao) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(within(janela).getByRole('button', { name: /^Remarcar$/ })).toBeInTheDocument();
+  });
+
+  it('resumo que falha não tira os botões', async () => {
+    const hoje = new Date();
+    const as15 = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate(), 15, 0);
+    const visita = { id: 'v4', status: 'scheduled', scheduled_at: as15.toISOString(), duration_minutes: 60, contact: { id: 'c1', name: 'Thyago' } };
+    list.mockResolvedValue({ data: [visita], meta: { total: 1, active_total: 1, only_mine: false } });
+    leadSummary.mockRejectedValue(new Error('falhou'));
+    const user = userEvent.setup();
+    abrir();
+    await user.click(await screen.findByRole('radio', { name: 'Semana' }));
+    await user.click(await screen.findByRole('button', { name: /15:00–16:00 · Thyago/ }));
+    const janela = await screen.findByRole('dialog');
+    expect(await within(janela).findByText('Não deu para carregar o resumo do lead.')).toBeInTheDocument();
+    expect(within(janela).getByRole('button', { name: /^Remarcar$/ })).toBeInTheDocument();
+    expect(within(janela).getByRole('button', { name: /Cancelar/ })).toBeInTheDocument();
   });
 
   it('visita Reagendada clicada no calendário abre o resumo', async () => {
@@ -326,5 +501,104 @@ describe('Agenda de Visitas: erro de carga no Calendário', () => {
     await user.click(botao);
     expect(await screen.findByRole('button', { name: /15:00 · Thyago/ })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Tentar de novo' })).toBeNull();
+  });
+});
+
+describe('Agenda de Visitas: Lista no mesmo cartão', () => {
+  afterEach(() => { vi.useRealTimers(); });
+  beforeEach(() => {
+    pararRelogio();
+    try { localStorage.removeItem('lm-visitas-visao'); } catch { /* sem armazenamento */ }
+  });
+
+  const umaVisita = () => {
+    const hoje = new Date();
+    const as15 = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate(), 15, 0);
+    const visita = { id: 'v7', status: 'scheduled', booked_by: 'ia', scheduled_at: as15.toISOString(), duration_minutes: 60, contact: { id: 'c1', name: 'Maria de Souza' } };
+    list.mockResolvedValue({ data: [visita], meta: { total: 1, active_total: 1, only_mine: false } });
+  };
+
+  it('Lista e Calendário usam o mesmo cartão', async () => {
+    umaVisita();
+    const user = userEvent.setup();
+    abrir();
+    const doCalendario = await screen.findByTestId('agenda-cartao');
+    await user.click(screen.getByRole('button', { name: 'Ver em lista' }));
+    const daLista = await screen.findByTestId('agenda-cartao');
+    expect(daLista.className).toBe(doCalendario.className);
+    expect(daLista.className).not.toContain('max-w-3xl');
+    expect(await within(daLista).findByText('Maria de Souza')).toBeInTheDocument();
+  });
+
+  it('nome do lead na Lista abre a janela com o resumo', async () => {
+    umaVisita();
+    leadSummary.mockResolvedValue({
+      contact: { id: 'c1', name: 'Maria de Souza', phone_number: '11984123307' },
+      card: null, origin_label: null, owner: null, labels: [], last_message: null, conversation_id: 'conv7', ia: null,
+      previous_visits_count: 0, lead_created_at: null, card_entered_at: null,
+    });
+    const user = userEvent.setup();
+    abrir();
+    await user.click(await screen.findByRole('button', { name: 'Ver em lista' }));
+    await user.click(await screen.findByRole('button', { name: 'Maria de Souza' }));
+    const janela = await screen.findByRole('dialog');
+    const lead = await within(janela).findByRole('group', { name: 'Lead' });
+    expect(await within(lead).findByRole('link', { name: /Abrir conversa/ })).toHaveAttribute('href', '/conversations/conv7');
+  });
+
+  it('estrelas da nota na janela e na Lista usam a mesma cor, sem roxo', async () => {
+    const hoje = new Date();
+    const as15 = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate(), 15, 0);
+    const visita = { id: 'v8', status: 'completed', rating: 4, scheduled_at: as15.toISOString(), duration_minutes: 60, contact: { id: 'c1', name: 'Maria de Souza' } };
+    list.mockResolvedValue({ data: [visita], meta: { total: 1, active_total: 1, only_mine: false } });
+    const user = userEvent.setup();
+    abrir();
+    await user.click(await screen.findByRole('button', { name: 'Ver em lista' }));
+    const linha = (await screen.findByText('Maria de Souza')).closest('[id^="visita-"]') as HTMLElement;
+    expect(linha.querySelector('svg.lucide-star.fill-amber-400')).not.toBeNull();
+    await user.click(within(linha).getByRole('button', { name: 'Maria de Souza' }));
+    const janela = await screen.findByRole('dialog');
+    const estrelas = janela.querySelectorAll('svg.lucide-star');
+    expect(estrelas.length).toBe(5);
+    expect(janela.querySelector('svg.lucide-star.fill-amber-400')).not.toBeNull();
+    expect(janela.innerHTML).not.toContain('violet');
+  });
+
+  it('Atrasada no cartão da janela só vale para Agendada/Confirmada, como na Lista', async () => {
+    const ontem = new Date(Date.now() - 26 * 3600 * 1000);
+    const visita = { id: 'v9', status: 'in_progress', scheduled_at: ontem.toISOString(), duration_minutes: 60, contact: { id: 'c1', name: 'Maria de Souza' } };
+    list.mockResolvedValue({ data: [visita], meta: { total: 1, active_total: 1, only_mine: false } });
+    const user = userEvent.setup();
+    abrir();
+    await user.click(await screen.findByRole('button', { name: 'Ver em lista' }));
+    const linha = (await screen.findByText('Maria de Souza')).closest('[id^="visita-"]') as HTMLElement;
+    expect(within(linha).queryByText('Atrasada')).toBeNull();
+    await user.click(within(linha).getByRole('button', { name: 'Maria de Souza' }));
+    const janela = await screen.findByRole('dialog');
+    expect(within(janela).queryByText('Atrasada')).toBeNull();
+  });
+
+  it('janela: botões da visita ficam na seção "O que aconteceu"; encerrada sem botão não mostra seção vazia', async () => {
+    const hoje = new Date();
+    const as15 = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate(), 15, 0);
+    const aberta = { id: 'v10', status: 'scheduled', scheduled_at: as15.toISOString(), duration_minutes: 60, contact: { id: 'c1', name: 'Maria de Souza' } };
+    list.mockResolvedValue({ data: [aberta], meta: { total: 1, active_total: 1, only_mine: false } });
+    const user = userEvent.setup();
+    const { unmount } = abrir();
+    await user.click(await screen.findByRole('button', { name: 'Ver em lista' }));
+    await user.click(await screen.findByRole('button', { name: 'Maria de Souza' }));
+    const janela = await screen.findByRole('dialog');
+    const secao = within(janela).getByRole('group', { name: 'O que aconteceu' });
+    expect(within(secao).getByRole('button', { name: /^Remarcar$/ })).toBeInTheDocument();
+    unmount();
+
+    const cancelada = { ...aberta, id: 'v11', status: 'cancelled' };
+    list.mockResolvedValue({ data: [cancelada], meta: { total: 1, active_total: 1, only_mine: false } });
+    abrir();
+    await user.click(await screen.findByRole('button', { name: 'Ver em lista' }));
+    await user.click(await screen.findByRole('button', { name: 'Maria de Souza' }));
+    const janela2 = await screen.findByRole('dialog');
+    expect(within(janela2).queryByRole('group', { name: 'O que aconteceu' })).toBeNull();
+    expect(within(janela2).queryByText('O que aconteceu')).toBeNull();
   });
 });
