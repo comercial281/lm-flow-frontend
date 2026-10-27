@@ -48,7 +48,7 @@ describe('situacaoDaIa', () => {
   });
 
   it('número oficial desconectado: corrigir leva à página do número', () => {
-    const s = situacaoDaIa(ia(), diag(['credentials', 'error']), [], true);
+    const s = situacaoDaIa(ia(), diag(['credentials', 'error']), true);
     expect(s.tipo).toBe('parada');
     expect(s.corrigir?.rota).toBe(`/channels/${ia().inbox_id}/oficial`);
   });
@@ -62,13 +62,14 @@ describe('situacaoDaIa', () => {
   });
 
   // Checklist §6: o gatilho de teste "call" esquecido, que o Diagnóstico mostrava verde.
-  it('gatilho de palavra: atendendo com restrição, com a palavra escrita', () => {
+  // 27/10/2026: limitar quem ela atende é o uso normal. Verde, com o limite na frase (title da bolinha).
+  it('gatilho de palavra: atendendo (verde), com a palavra escrita na frase', () => {
     const s = situacaoDaIa(ia({ triggers: [{ type: 'keyword', value: 'call', match_type: 'contains' }] }));
-    expect(s).toEqual({ tipo: 'restricao', frase: 'Atendendo com restrição: só quem escrever "call"', corrigir: { tela: 'configurar', pagina: 'canal' } });
+    expect(s).toEqual({ tipo: 'atendendo', frase: 'Atendendo: só quem escrever "call"' });
   });
 
-  it('a palavra-chave antiga também restringe', () => {
-    expect(situacaoDaIa(ia({ trigger_keyword: ' fluxoimob ' })).frase).toBe('Atendendo com restrição: só quem escrever "fluxoimob"');
+  it('a palavra-chave antiga também aparece na frase', () => {
+    expect(situacaoDaIa(ia({ trigger_keyword: ' fluxoimob ' })).frase).toBe('Atendendo: só quem escrever "fluxoimob"');
   });
 });
 
@@ -125,14 +126,18 @@ describe('pendenciasDaIa', () => {
     expect(pendenciasDaIa(ia({ enabled: false }), diag(['enabled', 'error'])).map((x) => x.chave)).toEqual([]);
   });
 
-  it('gatilho restringindo vira pendência laranja mesmo com o servidor dizendo ok', () => {
-    const p = pendenciasDaIa(ia({ triggers: [{ type: 'keyword', value: 'call' }] }), diag(['triggers', 'ok']));
-    expect(p).toEqual([{ chave: 'triggers', titulo: 'Quem ela atende', detalhe: 'Só quem escrever "call".', grave: false, corrigir: { tela: 'configurar', pagina: 'canal' } }]);
+  it('gatilho limitando quem ela atende não vira pendência', () => {
+    expect(pendenciasDaIa(ia({ triggers: [{ type: 'keyword', value: 'call' }] }), diag(['triggers', 'ok']))).toEqual([]);
   });
 
-  it('aviso do servidor sobre o gatilho não se repete', () => {
+  it('gatilho em branco vira pendência vermelha', () => {
+    const p = pendenciasDaIa(ia({ triggers: [{ type: 'form', form_ids: [] }] }), diag(['triggers', 'ok']));
+    expect(p).toEqual([{ chave: 'triggers', titulo: 'Quem ela atende', detalhe: 'Os gatilhos estão em branco e não deixam ninguém passar.', grave: true, corrigir: { tela: 'configurar', pagina: 'canal' } }]);
+  });
+
+  it('aviso do servidor sobre o gatilho não aparece', () => {
     const p = pendenciasDaIa(ia({ trigger_keyword: 'call' }), diag(['triggers', 'warning', 'A palavra-chave "call" está preenchida']));
-    expect(p.filter((x) => x.chave === 'triggers')).toHaveLength(1);
+    expect(p.filter((x) => x.chave === 'triggers')).toHaveLength(0);
   });
 
   // 06/10/2026: a IA não escreve mais o follow-up. A que ficou na opção antiga vira
@@ -224,11 +229,9 @@ describe('limpeza dos avisos (11/10/2026)', () => {
     expect(situacaoDaIa(ia(), diag(['mode', 'error'])).tipo).toBe('atendendo');
   });
 
-  it('o item "triggers" do servidor não entra no Painel: a tela diz quem ela atende', () => {
+  it('o item "triggers" do servidor não entra no Painel', () => {
     const lista = pendenciasDaIa(ia({ trigger_keyword: 'quero' }), diag(['triggers', 'warning', 'texto do servidor']));
-    expect(lista.filter((p) => p.chave === 'triggers')).toHaveLength(1);
-    expect(lista[0].titulo).toBe('Quem ela atende');
-    expect(lista[0].detalhe).toContain('quero');
+    expect(lista.filter((p) => p.chave === 'triggers')).toHaveLength(0);
   });
 
   it('client_system do servidor some quando a tela já mostra a pendência do destino', () => {
@@ -273,13 +276,8 @@ describe('ocultar avisos', () => {
     expect(separarOcultas([amarela], undefined)).toEqual({ visiveis: [amarela], ocultas: [] });
   });
 
-  it('restrição de gatilho oculta: a bolinha diz "Atendendo"', () => {
-    const agente = ia({ triggers: [{ type: 'form', form_ids: ['f1'] }] });
-    expect(situacaoDaIa(agente, null, ['triggers'])).toEqual({ tipo: 'atendendo', frase: 'Atendendo' });
-  });
-
-  it('gatilho em branco (parada) não oculta', () => {
+  it('gatilho em branco é parada', () => {
     const agente = ia({ triggers: [{ type: 'keyword', value: '' }] });
-    expect(situacaoDaIa(agente, null, ['triggers']).tipo).toBe('parada');
+    expect(situacaoDaIa(agente, null).tipo).toBe('parada');
   });
 });

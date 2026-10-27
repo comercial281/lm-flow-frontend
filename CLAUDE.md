@@ -9943,3 +9943,12 @@ Armadilhas:
 Código: `src/components/pipelines/BulkDispatchModal.tsx` (`modoCorretor`, recontagem parada com painel aberto), `src/components/pipelines/disparo/PassoQuemRecebe.tsx` (campo travado e aviso) e `PainelDeLeads.tsx`, `src/pages/Customer/Disparos/Disparos.tsx`, `src/pages/Customer/Pipelines/boardActions.ts`, `src/routes/permissionRoutes.ts` + `index.tsx`, `src/components/layout/config/menuItems.ts`.
 
 Não reabrir sem o dono pedir.
+
+## IA Vendedora: limitar quem ela atende não é alerta (desde 2026-10-27)
+
+- **O que muda pra quem usa:** IA com gatilho limitando quem ela atende (só lead de anúncio, de um formulário, de um imóvel, com uma palavra, etiqueta, funil...) fica com a bolinha **verde, "Atendendo"**. O limite aparece ao passar o mouse na bolinha ("Atendendo: só lead de anúncio"). O aviso amarelo "Quem ela atende" sai de "O que precisa de atenção".
+- **Por quê (Tony, 27/10/2026):** limitar a IA é o uso normal da casa; o amarelo acendia em quase toda IA e virava ruído. Revoga o item 10 da seção de 11/10 (ocultar `triggers` pra apagar a bolinha): `hidden_warnings` com `triggers` fica inerte.
+- **Continua vermelho:** gatilho em branco que não deixa ninguém passar ("Parada: os gatilhos estão em branco..."), com a pendência "Quem ela atende" em vermelho.
+- **Continua amarelo:** "Só follow-up" (não foi pedido mexer; reavaliar se incomodar).
+- **Risco aceito:** o gatilho de teste esquecido (a palavra "call" do checklist §6 de 05/10) volta a não acender nada; aparece só no title da bolinha e na página Canal.
+- Código: `situacaoDaIa` devolve `atendendo` com a frase do limite; `pendenciasDaIa` só empilha `triggers` quando `parada`. O parâmetro `ocultas` saiu de `situacaoDaIa`.
