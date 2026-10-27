@@ -43,6 +43,7 @@ import {
 
 import { estiloDaSituacao, SITUACOES_DA_LEGENDA } from '@/features/visits/situacaoDaVisita';
 import { PecaDaVisita } from '@/features/visits/PecaDaVisita';
+import { PreviaDoLead } from '@/features/visits/PreviaDoLead';
 import { ScheduleVisitDialog } from '@/components/visits/ScheduleVisitDialog';
 import { HorarioVisitaDialog } from '@/components/visits/HorarioVisitaDialog';
 import { FolgasDialog } from '@/components/visits/FolgasDialog';
@@ -193,7 +194,9 @@ function MonthGrid({ date, visits, onDayClick, onVisitClick, destacadaId }: {
                 {cell.date.getDate()}
               </span>
               {dayVisits.slice(0, 3).map(v => (
-                <PecaDaVisita key={v.id} visita={v} forma="pilula" destacada={destacadaId === v.id} onClick={onVisitClick} />
+                <PreviaDoLead key={v.id} visitaId={v.id}>
+                  <PecaDaVisita visita={v} forma="pilula" destacada={destacadaId === v.id} onClick={onVisitClick} />
+                </PreviaDoLead>
               ))}
               {dayVisits.length > 3 && (
                 <span className="text-[10px] text-muted-foreground pl-1">+{dayVisits.length - 3} mais</span>
@@ -375,21 +378,22 @@ function GradeDeHoras({ visao, date, visits, carregadoPara, podeAgendar, ajustes
                 {blocosPorDia[i].map(b => {
                   const altura = Math.max((b.duracaoMin / 60) * ALTURA_HORA - 2, 20);
                   return (
-                    <PecaDaVisita
-                      key={b.visita.id}
-                      visita={b.visita}
-                      forma="bloco"
-                      altura={altura}
-                      duracaoMin={b.duracaoMin}
-                      destacada={destacadaId === b.visita.id}
-                      onClick={onVisitClick}
-                      style={{
-                        top: (b.inicioMin / 60) * ALTURA_HORA + 1,
-                        height: altura,
-                        left: `calc(${(b.coluna / b.colunas) * 100}% + 2px)`,
-                        width: `calc(${100 / b.colunas}% - 4px)`,
-                      }}
-                    />
+                    <PreviaDoLead key={b.visita.id} visitaId={b.visita.id}>
+                      <PecaDaVisita
+                        visita={b.visita}
+                        forma="bloco"
+                        altura={altura}
+                        duracaoMin={b.duracaoMin}
+                        destacada={destacadaId === b.visita.id}
+                        onClick={onVisitClick}
+                        style={{
+                          top: (b.inicioMin / 60) * ALTURA_HORA + 1,
+                          height: altura,
+                          left: `calc(${(b.coluna / b.colunas) * 100}% + 2px)`,
+                          width: `calc(${100 / b.colunas}% - 4px)`,
+                        }}
+                      />
+                    </PreviaDoLead>
                   );
                 })}
 

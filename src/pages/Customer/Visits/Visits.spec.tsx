@@ -12,6 +12,7 @@ vi.mock('@/contexts/TenantFeaturesContext', async (orig) => {
 
 const list = vi.fn();
 const cancel = vi.fn();
+const leadSummary = vi.fn();
 vi.mock('@/services/visits/visitsService', async (orig) => {
   const real = await orig<typeof import('@/services/visits/visitsService')>();
   return {
@@ -22,6 +23,8 @@ vi.mock('@/services/visits/visitsService', async (orig) => {
       cancel: (...a: unknown[]) => cancel(...a),
       realtors: vi.fn().mockResolvedValue([]),
       leadPickerPage: vi.fn().mockResolvedValue({ data: [], meta: {} }),
+      // A prévia do hover pede o resumo depois de 450 ms parado em cima.
+      leadSummary: (...a: unknown[]) => leadSummary(...a),
     },
   };
 });
@@ -46,6 +49,7 @@ vi.mock('@/services/visits/agendaService', () => ({
 
 import Visits from './Visits';
 import { esquecerAgendaLigada } from '@/features/visits/useAgendaLigada';
+import { esquecerResumos } from '@/features/visits/guardaDoResumo';
 import { simularCelular } from '@/test/telaDeCelular';
 
 // A agenda ligada ou não é o que o servidor responde em `GET /visit_settings`.
@@ -56,6 +60,8 @@ const abrir = () => render(<MemoryRouter><Visits /></MemoryRouter>);
 beforeEach(() => {
   vi.clearAllMocks();
   esquecerAgendaLigada();
+  esquecerResumos();
+  leadSummary.mockRejectedValue(new Error('sem resumo no teste'));
   list.mockResolvedValue({ data: [], meta: { total: 0, only_mine: false } });
   getSettings.mockResolvedValue(LIGADA);
   listTimeOffs.mockResolvedValue([]);
@@ -164,6 +170,40 @@ describe('Agenda de Visitas: calendário com a peça nova', () => {
     expect(peca.getAttribute('aria-label')).toContain('Agendada pela IA Vendedora');
     expect(peca.id).toBe('visita-v9');
     expect(peca.querySelector('svg[aria-hidden="true"]')).not.toBeNull();
+  });
+
+  // O jsdom não tem PointerEvent: o tipo do ponteiro vai pendurado num MouseEvent.
+  const passarOMouse = (el: Element) =>
+    fireEvent(el, Object.assign(new MouseEvent('pointerover', { bubbles: true }), { pointerType: 'mouse' }));
+
+  it('parar o mouse na visita do Mês mostra a prévia do lead', async () => {
+    daIA();
+    leadSummary.mockResolvedValue({
+      contact: { id: 'c1', name: 'Maria de Souza', phone_number: '11984123307' },
+      card: { pipeline_name: 'Vendas', stage_name: 'Visita agendada', status: 'open', other_cards_count: 0 },
+      origin_label: null, owner: null, labels: [], last_message: null, conversation_id: null, ia: null,
+      previous_visits_count: 0, lead_created_at: null, card_entered_at: null,
+    });
+    abrir();
+    const peca = await screen.findByRole('button', { name: /Maria de Souza/ });
+    passarOMouse(peca);
+    expect(peca).toHaveClass('armando');
+    expect(leadSummary).not.toHaveBeenCalled();
+    const previa = await screen.findByRole('region', { name: 'Resumo do lead' }, { timeout: 2000 });
+    expect(leadSummary).toHaveBeenCalledWith('v9');
+    expect(await within(previa).findByText('(11) 98412-3307')).toBeInTheDocument();
+    expect(within(previa).getByTestId('funil-do-lead')).toHaveTextContent('Vendas›Visita agendada');
+  });
+
+  it('o bloco da Semana também arma a prévia', async () => {
+    daIA();
+    const user = userEvent.setup();
+    abrir();
+    await user.click(await screen.findByRole('radio', { name: 'Semana' }));
+    const bloco = await screen.findByRole('button', { name: /15:00–16:00 · Maria de Souza/ });
+    passarOMouse(bloco);
+    expect(bloco).toHaveClass('armando');
+    expect(bloco.style.top).not.toBe(''); // a posição do bloco continua
   });
 
   it('a Semana desenha o bloco com o nome e o robô', async () => {

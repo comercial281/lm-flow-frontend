@@ -133,11 +133,54 @@ export const visitsService = {
     return (res.data as { data?: PersonRef[] }).data ?? [];
   },
 
+  /**
+   * Resumo do lead da visita (prévia do hover e janela da Agenda). 404 pra quem
+   * não vê a visita, e também em servidor antigo sem a rota: a tela mostra o
+   * aviso e segue. Guardado por `lerResumoDoLead` (features/visits/guardaDoResumo).
+   */
+  async leadSummary(id: string): Promise<LeadSummary> {
+    const res = await api.get(`${BASE}/${id}/lead_summary`);
+    return (res.data as { data: LeadSummary }).data;
+  },
+
   async quickCreateContact(payload: { name: string; phone_number: string; email?: string }): Promise<LeadPickerItem> {
     const res = await api.post(`${BASE}/quick_create_contact`, payload);
     return (res.data as { data: LeadPickerItem }).data;
   },
 };
+
+/**
+ * Contrato do `GET /visits/:id/lead_summary` (spec da Agenda, 27/10/2026). Cada
+ * parte pode vir `null` quando falhou no servidor; `labels` vem `[]`.
+ */
+export interface LeadSummary {
+  contact: { id: string; name: string | null; phone_number: string | null } | null;
+  card: {
+    pipeline_name: string | null;
+    stage_name: string | null;
+    status: 'open' | 'won' | 'lost';
+    other_cards_count: number;
+  } | null;
+  origin_label: string | null;
+  owner: PersonRef | null;
+  labels: Array<{ title: string; color: string }>;
+  last_message: {
+    author_kind: 'lead' | 'ia' | 'automacao' | 'pessoa';
+    author_name: string | null;
+    content: string | null;
+    created_at: string | null;
+  } | null;
+  /** A conversa da última mensagem; sem mensagem, a mais recente do lead. */
+  conversation_id: string | null;
+  ia: {
+    summary: string | null;
+    fields: Array<{ label: string; value: string }>;
+    checklist: Array<{ question: string; answer: string; required: boolean }>;
+  } | null;
+  previous_visits_count: number | null;
+  lead_created_at: string | null;
+  card_entered_at: string | null;
+}
 
 export interface LeadPickerMeta {
   total?: number;
