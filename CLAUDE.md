@@ -9832,6 +9832,25 @@ Código: `src/components/chat/contact-sidebar/ContactTagsManager.tsx` (`juntarEt
 
 Não reabrir sem o dono pedir.
 
+## Eventos na conversa: visita, tarefa e negócio (desde 2026-10-26)
+
+Os marcos do atendimento passam a aparecer no meio da conversa, na hora em que acontecem, e as linhas de sistema de antes trocam o bloco cinza de duas linhas por uma pílula de uma linha. Design aprovado pelo dono (Tony) em 26/10/2026: https://claude.ai/artifact/Bng176oQj5SvJCWTxZSCs6 (telas "Na conversa" e "Catálogo"). Depende do PR do backend que grava o evento.
+
+- **Vira cartão** (marco): visita agendada, remarcada (com a data de antes), realizada (estrelas e o comentário do retorno), lead não compareceu e visita cancelada (essas duas em cinza), tarefa agendada ou criada, tarefa concluída (título riscado, "no prazo" ou "atrasada"), negócio ganho (cartão verde) e negócio perdido (cartão vermelho, com o motivo e a etapa de onde saiu).
+- **Vira pílula** (registro): visita confirmada, retorno da visita dado depois (com as estrelas), negócio reaberto e **todas as linhas de sistema de antes** (etiqueta, atribuição, Roleta, conversa resolvida, prioridade), com o mesmo texto; o ícone é o de antes, exceto troca de etiqueta, que agora sempre usa o ícone de etiqueta. Nome em negrito, hora no fim. A etiqueta aparece colorida dentro da linha (antes em cor cheia, agora em tom claro da cor: bolinha + nome) e sai riscada quando foi removida.
+- **Quem fez** vai no rodapé do cartão: a pessoa, "IA Vendedora" (com o brilho roxo), "automação" ou "proposta aceita".
+- **Datas** no fuso de quem olha: "Sábado, 24 out às 17h", sem o "-feira"; no meio da frase o dia vai em minúscula ("Era sábado, 24 out às 17h").
+- **Contrato:** `message.content_attributes.event` com `type`, `key`, `at`, `by`, `by_ai` / `by_automation` / `by_proposal`, `record_id`, as datas em ISO, os rótulos já resolvidos (imóvel, corretor, responsável, título, funil, etapa, motivo, comentário), `rating` e `on_time`. É uma fotografia do momento: remarcar a visita não muda o cartão antigo. O `content` continua sendo a frase completa, e é ela que aparece em tela velha, na exportação e quando o servidor manda um tipo que esta tela não conhece (cai na pílula com a frase).
+- **Sem clique por enquanto:** o cartão não é link nem botão. Abrir a tarefa, a visita ou o card pelo cartão é o próximo passo (backlog do LM Flow).
+- **Não sobe a conversa:** a linha de evento é de sistema, não muda a ordem da lista de Conversas.
+- **Só daqui pra frente:** visita, tarefa e negócio de antes desta entrega não ganham cartão.
+- Visual: cores do design no tema claro; no escuro, a mesma família mais apagada. Cartão com até 380 px, ocupa a coluna inteira no celular.
+- **O cartão não é o Card da casa, de propósito:** o anel violeta e a sombra da marca do Card brigam com a cor por família (azul da visita, âmbar da tarefa, verde do ganho, vermelho do perdido) do desenho aprovado. Fica como exceção declarada em `scripts/conferir-padrao.excecoes.json`.
+
+Código: `src/features/conversas/eventoDaConversa.ts` (lê o evento e monta os textos, `textosDosEventos.ts`), `src/components/chat/messages/CartaoDeEvento.tsx`, `PilulaDeSistema.tsx` e `SystemMessage.tsx` (só escolhe entre os dois). Testes: `eventoDaConversa.spec.ts` e `SystemMessage.spec.tsx`.
+
+Não reabrir sem o dono pedir.
+
 ## Automações: cartão único e um botão só de criar (desde 2026-10-23)
 
 Pedido do dono (23/10/2026): o cartão da lista de Automações estava "horrível". O "Da equipe" aparecia duas vezes (selo e chave, com um "Ligado" que parecia ser da automação e o textão do número fixo), os quatro ícones soltos e dois botões de criar. Agora o cartão é o mesmo dos Funis de mensagem e do Follow-up (`CartaoDeFluxo`).
