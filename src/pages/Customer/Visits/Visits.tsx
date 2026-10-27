@@ -10,6 +10,7 @@ import {
   Card,
   Button,
   Badge,
+  Skeleton,
   Dialog,
   DialogContent,
   DialogFooter,
@@ -38,12 +39,18 @@ import {
 import {
   visitsService,
   Visit,
+  type LeadSummary,
   VISIT_STATUS_LABELS,
 } from '@/services/visits/visitsService';
 
 import { estiloDaSituacao, SITUACOES_DA_LEGENDA } from '@/features/visits/situacaoDaVisita';
 import { PecaDaVisita } from '@/features/visits/PecaDaVisita';
 import { PreviaDoLead } from '@/features/visits/PreviaDoLead';
+import { IconeDeQuemAgendou } from '@/features/visits/PecaDaVisita';
+import { ResumoDoLead } from '@/features/visits/ResumoDoLead';
+import { lerResumoDoLead, resumoGuardado } from '@/features/visits/guardaDoResumo';
+import Aviso from '@/components/base/Aviso';
+import GrupoDaJanela from '@/components/base/janela/GrupoDaJanela';
 import { ScheduleVisitDialog } from '@/components/visits/ScheduleVisitDialog';
 import { HorarioVisitaDialog } from '@/components/visits/HorarioVisitaDialog';
 import { FolgasDialog } from '@/components/visits/FolgasDialog';
@@ -885,7 +892,7 @@ export default function Visits() {
 
       {/* Resumo da visita clicada no calendário: o mesmo card da Lista */}
       <Dialog open={!!visitaDoResumo} onOpenChange={aberto => { if (!aberto) setResumoId(null); }}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>
               {visitaDoResumo && capitalizar(new Date(visitaDoResumo.scheduled_at).toLocaleDateString('pt-BR', {
@@ -894,11 +901,7 @@ export default function Visits() {
             </DialogTitle>
           </DialogHeader>
           {visitaDoResumo && (
-            <VisitCard
-              visit={visitaDoResumo}
-              ancorada={false}
-              onAtualizada={aoAtualizar}
-            />
+            <JanelaDaVisita visit={visitaDoResumo} onAtualizada={aoAtualizar} />
           )}
         </DialogContent>
       </Dialog>
@@ -938,10 +941,59 @@ export default function Visits() {
   );
 }
 
+// Miolo da janela do clique: Lead em cima (resumo completo), Visita no meio e
+// os botões no pé. Resumo que não chega não tira a visita nem os botões.
+function JanelaDaVisita({ visit, onAtualizada }: { visit: Visit; onAtualizada: (v: Visit) => void }) {
+  const id = visit.id;
+  const [estado, setEstado] = useState<{ resumo?: LeadSummary; erro?: boolean }>(() => ({ resumo: resumoGuardado(id) }));
+  useEffect(() => {
+    if (estado.resumo) return;
+    let vivo = true;
+    lerResumoDoLead(id)
+      .then(resumo => { if (vivo) setEstado({ resumo }); })
+      .catch(() => { if (vivo) setEstado({ erro: true }); });
+    return () => { vivo = false; };
+    // Só ao abrir a visita: o resumo que chega não pede de novo.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
+
+  return (
+    <div className="grid gap-5">
+      <GrupoDaJanela titulo="Lead">
+        {estado.erro ? (
+          <Aviso tom="erro" compacto>Não deu para carregar o resumo do lead.</Aviso>
+        ) : estado.resumo ? (
+          <ResumoDoLead resumo={estado.resumo} completo agendamento={visit} />
+        ) : (
+          <div className="grid gap-2" aria-busy="true">
+            <div className="flex items-center gap-3">
+              <Skeleton className="h-[38px] w-[38px] rounded-full" />
+              <div className="grid gap-1.5">
+                <Skeleton className="h-3.5 w-36" />
+                <Skeleton className="h-3 w-24" />
+              </div>
+            </div>
+            <Skeleton className="h-3 w-full" />
+            <Skeleton className="h-3 w-4/5" />
+            <Skeleton className="h-12 w-full rounded-[10px]" />
+          </div>
+        )}
+      </GrupoDaJanela>
+      <GrupoDaJanela titulo="Visita">
+        <VisitCard visit={visit} ancorada={false} semBotoes onAtualizada={onAtualizada} />
+      </GrupoDaJanela>
+      <div>
+        <AcoesDaVisita visita={visit} onAtualizada={onAtualizada} />
+      </div>
+    </div>
+  );
+}
+
 function VisitCard({
   visit,
   destacada = false,
   ancorada = true,
+  semBotoes = false,
   onAtualizada,
 }: {
   visit: Visit;
@@ -949,6 +1001,8 @@ function VisitCard({
   destacada?: boolean;
   /** Leva o id `visita-<id>` (alvo do destaque). O resumo do calendário não leva: a pílula já tem. */
   ancorada?: boolean;
+  /** Os botões moram em outro lugar (a janela do clique os põe numa seção própria). */
+  semBotoes?: boolean;
   /** Os botões são da peça única `AcoesDaVisita`; ela avisa com a visita alterada (ou nova). */
   onAtualizada: (v: Visit) => void;
 }) {
@@ -980,6 +1034,7 @@ function VisitCard({
               <span aria-hidden className="h-2 w-2 rounded-full bg-[var(--st)]" />
               {VISIT_STATUS_LABELS[visit.status] ?? visit.status}
             </span>
+            <IconeDeQuemAgendou visita={visit} className="ml-2 inline-block h-3.5 w-3.5 align-[-2px] text-muted-foreground" />
             {isPastVisit && isActive && (
               <span className="ml-2 text-xs text-orange-600 dark:text-orange-400 font-medium">Atrasada</span>
             )}
@@ -1030,9 +1085,11 @@ function VisitCard({
           <p className="text-xs text-muted-foreground mt-1 italic">{visit.realtor_notes}</p>
         )}
 
-        <div className="mt-3">
-          <AcoesDaVisita visita={visit} onAtualizada={onAtualizada} />
-        </div>
+        {!semBotoes && (
+          <div className="mt-3">
+            <AcoesDaVisita visita={visit} onAtualizada={onAtualizada} />
+          </div>
+        )}
       </div>
     </Card>
   );

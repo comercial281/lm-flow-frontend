@@ -316,6 +316,48 @@ describe('Agenda de Visitas: clique na visita do calendário', () => {
     expect(cancel).toHaveBeenCalledWith('v1', undefined);
   });
 
+  it('clique na visita abre a janela com o resumo do lead em cima', async () => {
+    const hoje = new Date();
+    const as15 = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate(), 15, 0);
+    const visita = { id: 'v3', status: 'scheduled', booked_by: 'ia', scheduled_at: as15.toISOString(), duration_minutes: 60, contact: { id: 'c1', name: 'Maria de Souza' } };
+    list.mockResolvedValue({ data: [visita], meta: { total: 1, active_total: 1, only_mine: false } });
+    leadSummary.mockResolvedValue({
+      contact: { id: 'c1', name: 'Maria de Souza', phone_number: '11984123307' },
+      card: { pipeline_name: 'Vendas', stage_name: 'Visita agendada', status: 'open', other_cards_count: 0 },
+      origin_label: null, owner: null, labels: [], last_message: null, conversation_id: 'conv9', ia: null,
+      previous_visits_count: 0, lead_created_at: null, card_entered_at: null,
+    });
+    const user = userEvent.setup();
+    abrir();
+    await user.click(await screen.findByRole('radio', { name: 'Semana' }));
+    await user.click(await screen.findByRole('button', { name: /15:00–16:00 · Maria/ }));
+    const janela = await screen.findByRole('dialog');
+    const lead = await within(janela).findByRole('group', { name: 'Lead' });
+    expect(await within(lead).findByText('(11) 98412-3307')).toBeInTheDocument();
+    expect(within(lead).getByRole('link', { name: /Abrir conversa/ })).toHaveAttribute('href', '/conversations/conv9');
+    const visitaSecao = within(janela).getByRole('group', { name: 'Visita' });
+    expect(within(visitaSecao).getByRole('img', { name: /IA Vendedora/ })).toBeInTheDocument();
+    // Lead vem antes da visita na janela.
+    expect(lead.compareDocumentPosition(visitaSecao) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(within(janela).getByRole('button', { name: /^Remarcar$/ })).toBeInTheDocument();
+  });
+
+  it('resumo que falha não tira os botões', async () => {
+    const hoje = new Date();
+    const as15 = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate(), 15, 0);
+    const visita = { id: 'v4', status: 'scheduled', scheduled_at: as15.toISOString(), duration_minutes: 60, contact: { id: 'c1', name: 'Thyago' } };
+    list.mockResolvedValue({ data: [visita], meta: { total: 1, active_total: 1, only_mine: false } });
+    leadSummary.mockRejectedValue(new Error('falhou'));
+    const user = userEvent.setup();
+    abrir();
+    await user.click(await screen.findByRole('radio', { name: 'Semana' }));
+    await user.click(await screen.findByRole('button', { name: /15:00–16:00 · Thyago/ }));
+    const janela = await screen.findByRole('dialog');
+    expect(await within(janela).findByText('Não deu para carregar o resumo do lead.')).toBeInTheDocument();
+    expect(within(janela).getByRole('button', { name: /^Remarcar$/ })).toBeInTheDocument();
+    expect(within(janela).getByRole('button', { name: /Cancelar/ })).toBeInTheDocument();
+  });
+
   it('visita Reagendada clicada no calendário abre o resumo', async () => {
     const hoje = new Date();
     const as15 = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate(), 15, 0);
