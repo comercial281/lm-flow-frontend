@@ -144,6 +144,54 @@ describe('Agenda de Visitas: Semana e Dia', () => {
   });
 });
 
+describe('Agenda de Visitas: calendário com a peça nova', () => {
+  beforeEach(() => {
+    try { localStorage.removeItem('lm-visitas-visao'); } catch { /* sem armazenamento */ }
+  });
+  const daIA = () => {
+    const hoje = new Date();
+    const as15 = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate(), 15, 0);
+    list.mockResolvedValue({
+      data: [{ id: 'v9', status: 'scheduled', booked_by: 'ia', scheduled_at: as15.toISOString(), duration_minutes: 60, contact: { id: 'c1', name: 'Maria de Souza' } }],
+      meta: { total: 1, active_total: 1, only_mine: false },
+    });
+  };
+
+  it('o Mês desenha a visita da IA com o robô', async () => {
+    daIA();
+    abrir();
+    const peca = await screen.findByRole('button', { name: /Maria S\. ?|Maria de Souza.*Agendada pela IA Vendedora/ });
+    expect(peca.getAttribute('aria-label')).toContain('Agendada pela IA Vendedora');
+    expect(peca.id).toBe('visita-v9');
+    expect(peca.querySelector('svg[aria-hidden="true"]')).not.toBeNull();
+  });
+
+  it('a Semana desenha o bloco com o nome e o robô', async () => {
+    daIA();
+    const user = userEvent.setup();
+    abrir();
+    await user.click(await screen.findByRole('radio', { name: 'Semana' }));
+    const bloco = await screen.findByRole('button', { name: /15:00–16:00 · Maria de Souza · Agendada · Agendada pela IA Vendedora/ });
+    expect(bloco.querySelector('svg[aria-hidden="true"]')).not.toBeNull();
+    expect(bloco.textContent).toContain('Maria de Souza');
+  });
+
+  it('a legenda mostra as 7 situações e a visita que passou sem registro', async () => {
+    abrir();
+    const legenda = await screen.findByRole('list', { name: 'Legenda das situações da visita' });
+    const itens = within(legenda).getAllByRole('listitem').map(li => li.textContent);
+    expect(itens).toEqual(['Agendada', 'Confirmada', 'Em andamento', 'Reagendada', 'Realizada', 'Não compareceu', 'Cancelada', 'Passou e ninguém registrou']);
+  });
+
+  it('o dia de hoje no Mês tem o número no círculo da marca e a célula sem fundo roxo', async () => {
+    abrir();
+    const n = await screen.findByTestId('numero-de-hoje');
+    expect(n.className).toContain('bg-primary');
+    expect(n.className).toContain('text-primary-foreground');
+    expect(n.parentElement!.className).not.toContain('bg-primary/');
+  });
+});
+
 // Relógio parado às 11h: as visitas de 15h do teste ainda não aconteceram,
 // senão o resultado dependeria da hora em que a suíte roda.
 const pararRelogio = () => {

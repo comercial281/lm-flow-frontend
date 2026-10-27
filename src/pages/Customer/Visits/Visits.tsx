@@ -41,7 +41,8 @@ import {
   VISIT_STATUS_LABELS,
 } from '@/services/visits/visitsService';
 
-import { estiloDaSituacao } from '@/features/visits/situacaoDaVisita';
+import { estiloDaSituacao, SITUACOES_DA_LEGENDA } from '@/features/visits/situacaoDaVisita';
+import { PecaDaVisita } from '@/features/visits/PecaDaVisita';
 import { ScheduleVisitDialog } from '@/components/visits/ScheduleVisitDialog';
 import { HorarioVisitaDialog } from '@/components/visits/HorarioVisitaDialog';
 import { FolgasDialog } from '@/components/visits/FolgasDialog';
@@ -50,7 +51,7 @@ import { useCelular } from '@/hooks/useCelular';
 import { useAgendaLigada } from '@/features/visits/useAgendaLigada';
 import NoAccessState from '@/components/permissions/NoAccessState';
 import { isForbiddenError } from '@/services/core/forbidden';
-import { telefone, hora, capitalizar } from '@/lib/formato';
+import { telefone, capitalizar } from '@/lib/formato';
 import { lerFiltroAgenda, type FiltroAgenda } from '@/features/dashboard/links';
 import { ChipDaDashboard } from '@/features/dashboard/ChipDaDashboard';
 import { intervaloDosDias, rotuloContador, lerContador } from '@/features/visits/contagem';
@@ -118,16 +119,6 @@ function lerVisao(): VisaoCalendario {
   }
 }
 
-// Pill de evento por status — cores espelhando o protótipo (accent/info/warn/good).
-const PILL_STYLES: Record<string, string> = {
-  scheduled:   'text-violet-300 bg-violet-500/15 hover:bg-violet-500/25',
-  confirmed:   'text-blue-300 bg-blue-500/15 hover:bg-blue-500/25',
-  in_progress: 'text-orange-300 bg-orange-500/15 hover:bg-orange-500/25',
-  completed:   'text-emerald-300 bg-emerald-500/15 hover:bg-emerald-500/25',
-  rescheduled: 'text-amber-300 bg-amber-500/15 hover:bg-amber-500/25',
-  cancelled:   'text-red-300 bg-red-500/15 hover:bg-red-500/25',
-  no_show:     'text-gray-400 bg-gray-500/15 hover:bg-gray-500/25',
-};
 const DOW = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
 function dayKey(d: Date) {
@@ -191,26 +182,19 @@ function MonthGrid({ date, visits, onDayClick, onVisitClick, destacadaId }: {
               onClick={() => onDayClick(cell.date)}
               className={`min-h-[96px] rounded-[10px] border p-2 flex flex-col gap-1 cursor-pointer transition-colors ${
                 cell.out ? 'opacity-40 bg-muted/20 border-border/50' : 'bg-muted/30 border-border hover:border-primary/40'
-              } ${isTodayCell ? '!border-primary !bg-primary/10' : ''}`}
+              } ${isTodayCell ? '!border-primary shadow-[inset_0_2px_0_var(--primary)]' : ''}`}
             >
-              <span className={`text-[12.5px] font-semibold ${isTodayCell ? 'text-primary' : 'text-muted-foreground'}`}>
+              <span
+                data-testid={isTodayCell ? 'numero-de-hoje' : undefined}
+                className={isTodayCell
+                  ? 'inline-flex h-5 min-w-5 items-center justify-center self-start rounded-full bg-primary px-1 text-[11.5px] font-bold text-primary-foreground'
+                  : 'text-[12.5px] font-semibold text-muted-foreground'}
+              >
                 {cell.date.getDate()}
               </span>
-              {dayVisits.slice(0, 3).map(v => {
-                const time = new Date(v.scheduled_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-                const who = v.contact?.name || v.property?.title || 'Visita';
-                return (
-                  <button
-                    key={v.id}
-                    id={`visita-${v.id}`}
-                    onClick={e => { e.stopPropagation(); onVisitClick(v); }}
-                    className={`text-[10px] font-semibold px-1.5 py-[3px] rounded-md truncate text-left transition-colors ${PILL_STYLES[v.status] || PILL_STYLES.scheduled} ${destacadaId === v.id ? 'ring-2 ring-primary' : ''}`}
-                    title={`${time} · ${who}`}
-                  >
-                    {time} · {who}
-                  </button>
-                );
-              })}
+              {dayVisits.slice(0, 3).map(v => (
+                <PecaDaVisita key={v.id} visita={v} forma="pilula" destacada={destacadaId === v.id} onClick={onVisitClick} />
+              ))}
               {dayVisits.length > 3 && (
                 <span className="text-[10px] text-muted-foreground pl-1">+{dayVisits.length - 3} mais</span>
               )}
@@ -247,11 +231,28 @@ function BarraDoCalendario({ visao, date, onVisao, onNavigate }: {
         <Button variant="outline" size="sm" className="h-8 w-8 p-0" onClick={() => onNavigate(navegar(visao, date, 1))} aria-label={nomes[visao].proximo} title={nomes[visao].proximo}>
           <ChevronRight className="h-4 w-4" />
         </Button>
-        <div className="w-1 h-6 rounded-full shrink-0 ml-1" style={{ background: 'linear-gradient(to bottom, #7c3aed, #9333ea)' }} />
-        <h2 className="text-base font-bold truncate">{tituloDaVisao(visao, date)}</h2>
+        <h2 className="ml-1 text-base font-bold truncate">{tituloDaVisao(visao, date)}</h2>
       </div>
       <BotoesDeEscolha rotulo="Visão do calendário" valor={visao} opcoes={VISOES} aoEscolher={onVisao} />
     </div>
+  );
+}
+
+/** Legenda das situações: as 7 da visita + a que passou do horário sem registro. */
+function LegendaDasSituacoes() {
+  return (
+    <ul aria-label="Legenda das situações da visita" className="mb-3 flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-muted-foreground">
+      {SITUACOES_DA_LEGENDA.map(({ status, rotulo }) => (
+        <li key={status} className="inline-flex items-center gap-1.5" style={estiloDaSituacao(status)}>
+          <span aria-hidden className="h-2 w-2 rounded-full" style={{ background: 'var(--st)' }} />
+          {rotulo}
+        </li>
+      ))}
+      <li className="inline-flex items-center gap-1.5">
+        <span aria-hidden className="h-2 w-2 rounded-full" style={{ background: 'var(--visita-atrasada)' }} />
+        Passou e ninguém registrou
+      </li>
+    </ul>
   );
 }
 
@@ -372,43 +373,23 @@ function GradeDeHoras({ visao, date, visits, carregadoPara, podeAgendar, ajustes
                 ))}
 
                 {blocosPorDia[i].map(b => {
-                  const v = b.visita;
-                  const inicio = new Date(v.scheduled_at);
-                  const fim = new Date(inicio.getTime() + b.duracaoMin * 60000);
-                  const time = hora(inicio);
-                  const who = v.contact?.name || v.property?.title || 'Visita';
                   const altura = Math.max((b.duracaoMin / 60) * ALTURA_HORA - 2, 20);
-                  const detalhe = [
-                    `${time}–${hora(fim)}`,
-                    who,
-                    v.realtor?.name ? `Corretor: ${v.realtor.name}` : null,
-                    VISIT_STATUS_LABELS[v.status] ?? v.status,
-                  ].filter(Boolean).join(' · ');
                   return (
-                    <button
-                      key={v.id}
-                      id={`visita-${v.id}`}
-                      type="button"
-                      onClick={e => { e.stopPropagation(); onVisitClick(v); }}
-                      className={`absolute z-10 rounded-md px-1.5 py-1 text-left overflow-hidden border border-border/60 transition-colors ${PILL_STYLES[v.status] || PILL_STYLES.scheduled} ${destacadaId === v.id ? 'ring-2 ring-primary' : ''}`}
+                    <PecaDaVisita
+                      key={b.visita.id}
+                      visita={b.visita}
+                      forma="bloco"
+                      altura={altura}
+                      duracaoMin={b.duracaoMin}
+                      destacada={destacadaId === b.visita.id}
+                      onClick={onVisitClick}
                       style={{
                         top: (b.inicioMin / 60) * ALTURA_HORA + 1,
                         height: altura,
                         left: `calc(${(b.coluna / b.colunas) * 100}% + 2px)`,
                         width: `calc(${100 / b.colunas}% - 4px)`,
                       }}
-                      title={detalhe}
-                      aria-label={detalhe}
-                    >
-                      {altura < 36 ? (
-                        <span className="block text-[10.5px] font-semibold truncate">{time} · {who}</span>
-                      ) : (
-                        <>
-                          <span className="block text-[10.5px] opacity-80 tabular-nums">{time}</span>
-                          <span className="block text-[11.5px] font-semibold truncate">{who}</span>
-                        </>
-                      )}
-                    </button>
+                    />
                   );
                 })}
 
@@ -811,6 +792,7 @@ export default function Visits() {
         {viewMode === 'calendar' ? (
           <Card className="gap-0 p-4">
             <BarraDoCalendario visao={visaoCal} date={calDate} onVisao={trocarVisao} onNavigate={setCalDate} />
+            <LegendaDasSituacoes />
             {/* Falha na leitura não é agenda livre: sem isto o mês vazio deixava marcar em cima de horário ocupado. */}
             {erro && (
               <EmptyState tipo="erro" tamanho="compacto" aoTentarDeNovo={() => void load()} className="mb-3" />
