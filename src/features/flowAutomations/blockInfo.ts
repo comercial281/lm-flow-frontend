@@ -83,7 +83,7 @@ const DESCRIPTIONS: Record<string, string> = {
   'lead_action:assign_broker': 'Escolhe o corretor responsável pelo lead.',
   'lead_action:assign_via_roleta': 'Oferece o lead a um corretor pela roleta escolhida.',
   'lead_action:create_task': 'Cria uma tarefa pra alguém da equipe.',
-  'lead_action:start_followup_sequence': 'Coloca o lead num follow-up do formato antigo.',
+  'lead_action:start_followup_sequence': 'Follow-up do formato antigo: não faz mais nada. Troque por Iniciar follow-up.',
   'lead_action:start_followup_flow': 'Coloca o lead num follow-up.',
   'lead_action:notify_group': 'Avisa alguém da equipe: no grupo, no WhatsApp ou no app.',
   'lead_action:notify_user': 'Manda um aviso pra uma pessoa da equipe.',

@@ -6,7 +6,7 @@ export type BroadcastStatus = 'running' | 'paused' | 'completed' | 'cancelled' |
 
 /** Ritmo do disparo: pacotes fixos (o servidor traduz em intervalo, lote e pausa). */
 export type BroadcastPace = 'fast' | 'normal' | 'slow';
-export type BroadcastMode = 'flow' | 'message' | 'template';
+export type BroadcastMode = 'flow' | 'message' | 'template' | 'automation';
 
 export interface BroadcastVariation {
   kind: 'text' | 'image' | 'audio' | 'video';
@@ -75,7 +75,7 @@ export interface BroadcastCampaign {
  * `pause_message` que o servidor manda (motivo novo aparece sem mexer aqui).
  * 'number_removed' = o número de saída escolhido não existe mais.
  */
-export type BroadcastPauseReason = 'number_disconnected' | 'number_removed' | 'funnel_disabled' | 'spend_cap';
+export type BroadcastPauseReason = 'number_disconnected' | 'number_removed' | 'funnel_disabled' | 'spend_cap' | 'flow_number_changed';
 
 /** Número de WhatsApp que pode mandar o disparo. */
 export interface SenderOption {
@@ -99,6 +99,8 @@ export interface BroadcastItemRow {
   reason: string | null;
   sent_at: string | null;
   conversation_id: string | null;
+  /** Disparo de automação: 'other_number' = entrou, mas pausado porque o lead já conversa em outro número. */
+  flow_paused?: 'other_number' | null;
 }
 
 export interface BroadcastAudience {
@@ -185,6 +187,10 @@ export interface CreateBroadcastPayload {
   flow_automation_id?: string;
   /** Teto de gasto em REAIS (Fase 4); backend converte pra centavos. */
   max_spend?: number;
+  /** Automação: incluir quem já passou por ela (por padrão fica de fora). */
+  include_passed?: boolean;
+  /** Automação: reiniciar quem está no meio dela (por padrão fica de fora). */
+  restart_running?: boolean;
 }
 
 /** Estimativa de custo de um disparo oficial (Fase 4). */
@@ -205,13 +211,72 @@ export interface AudienceExcluded {
   other_owner?: number;
   /** Já está em outro disparo em andamento. */
   busy?: number;
+  /** Automação: já está no meio dela. */
+  in_this_flow?: number;
+  /** Automação: já passou por ela. */
+  already_passed?: number;
+}
+
+/** Como o jeito de escolher o número de saída está configurado na automação. */
+export type NumberMode = 'fixed' | 'personal' | 'inherit' | 'per_block';
+
+/** Automação que pode ser disparada em massa (GET /broadcasts/automation_options). */
+export interface AutomationOption {
+  id: string;
+  name: string;
+  team: boolean;
+  owner_name: string | null;
+  number_mode: NumberMode;
+  inbox_id: string | null;
+  inbox_name: string | null;
+  first_step: { kind: string; text: string | null; config: Record<string, unknown> };
+  more_blocks: number;
+  trigger_data: Array<'visita' | 'formulario' | 'imovel'>;
+}
+
+/** Resumo da audiência diante de uma automação (só vem com flow_automation_id). */
+export interface FlowSummary {
+  passed: number;
+  passed_error: number;
+  running: number;
+  first_time: number;
+}
+
+/** Opções extras do preview quando o disparo roda uma automação. */
+export interface AudiencePreviewFlowOptions {
+  flow_automation_id?: string;
+  include_passed?: boolean;
+  restart_running?: boolean;
 }
 
 export interface AudiencePreviewFull {
   count: number;
-  excluded: Required<AudienceExcluded>;
+  excluded: Required<Pick<AudienceExcluded, 'opt_out' | 'frequency' | 'other_owner' | 'busy'>> &
+    Pick<AudienceExcluded, 'in_this_flow' | 'already_passed'>;
   /** Término previsto (ISO) em cada ritmo. */
   eta: Partial<Record<BroadcastPace, string>>;
+  /** Só com automação. */
+  flow?: FlowSummary;
+  /** Número que a automação impõe (null = o usuário escolhe). */
+  forced_inbox?: { inbox_id: string; name: string } | null;
+}
+
+/** Lead da lista do painel "Escolher leads" (GET /broadcasts/lead_options). Só quem tem telefone. */
+export interface LeadOption {
+  contact_id: string;
+  name: string | null;
+  phone: string;
+  stage_name: string | null;
+  labels: string[];
+}
+
+/** Filtros da lista de leads: funil obrigatório; etapa por id, etiqueta pelo nome. */
+export interface LeadOptionsParams {
+  pipeline_id: string;
+  q?: string;
+  stage_id?: string;
+  label?: string;
+  page?: number;
 }
 
 class BroadcastsService {
@@ -247,17 +312,45 @@ class BroadcastsService {
     pipelineId: string,
     audience: BroadcastAudience,
     inboxId?: string,
+    flowOpts?: AudiencePreviewFlowOptions,
   ): Promise<AudiencePreviewFull> {
     const res = await api.post(`${this.base}/audience_preview`, {
       pipeline_id: pipelineId,
       audience,
       inbox_id: inboxId,
+      ...(flowOpts?.flow_automation_id !== undefined && { flow_automation_id: flowOpts.flow_automation_id }),
+      ...(flowOpts?.include_passed !== undefined && { include_passed: flowOpts.include_passed }),
+      ...(flowOpts?.restart_running !== undefined && { restart_running: flowOpts.restart_running }),
     });
     const d = extractData<Partial<AudiencePreviewFull>>(res);
     return {
       count: d?.count ?? 0,
       excluded: { opt_out: 0, frequency: 0, other_owner: 0, busy: 0, ...(d?.excluded ?? {}) },
       eta: d?.eta ?? {},
+      ...(d?.flow && { flow: d.flow }),
+      forced_inbox: d?.forced_inbox ?? null,
+    };
+  }
+
+  // Automações que podem ser disparadas em massa (opção "Automação" do passo 2).
+  async automationOptions(): Promise<AutomationOption[]> {
+    const res = await api.get(`${this.base}/automation_options`);
+    const list = extractData<AutomationOption[]>(res);
+    return Array.isArray(list) ? list : [];
+  }
+
+  // Lista paginada (20 por página) pra marcar lead a lead. Corretor: o servidor recorta os dele.
+  async leadOptions(params: LeadOptionsParams): Promise<{
+    data: LeadOption[];
+    meta: { total: number; page: number; per_page: number };
+  }> {
+    const limpos = Object.fromEntries(
+      Object.entries(params).filter(([, v]) => v !== undefined && v !== ''),
+    ) as Partial<LeadOptionsParams>;
+    const body = (await api.get(`${this.base}/lead_options`, { params: limpos }))?.data ?? {};
+    return {
+      data: Array.isArray(body.data) ? (body.data as LeadOption[]) : [],
+      meta: body.meta ?? { total: 0, page: 1, per_page: 20 },
     };
   }
 

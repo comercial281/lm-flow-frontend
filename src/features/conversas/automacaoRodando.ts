@@ -1,6 +1,5 @@
 import { dataCurta, hora, toDate } from '@/lib/formato';
 import type { RunningFlow } from '@/services/flowAutomations/flowAutomationInstancesService';
-import type { LeadFollowupState } from '@/services/leadFollowup/leadFollowupService';
 
 /**
  * As linhas da faixa "tem mensagem automática programada pra este lead",
@@ -14,7 +13,7 @@ export interface LinhaAutomatica {
    * funil de conversa disparado no campo de mensagem (sprint 4) é `funil`.
    */
   tipo: 'fluxo' | 'followup' | 'funil';
-  /** Fluxo (automação ou follow-up novo): id da instância. Follow-up antigo: vazio (para pelo lead). */
+  /** Id da instância do fluxo (automação, follow-up ou funil): é por ele que o Parar age. */
   id: string;
   texto: string;
   podeParar: boolean;
@@ -64,26 +63,8 @@ export function linhaDoFluxo(fluxo: RunningFlow, agora: Date = new Date()): Linh
   };
 }
 
-export function linhaDoFollowup(estado: LeadFollowupState, agora: Date = new Date()): LinhaAutomatica | null {
-  if (estado.status !== 'running' && estado.status !== 'paused') return null;
-  const nome = estado.sequence?.name ? `Follow-up "${estado.sequence.name}"` : 'Follow-up';
-  const fase =
-    estado.status === 'paused'
-      ? 'pausado'
-      : estado.next_run_at
-        ? `próxima mensagem ${quando(estado.next_run_at, agora).includes('às') ? 'em' : 'às'} ${quando(estado.next_run_at, agora)}`
-        : 'em andamento';
-  return { key: 'followup', tipo: 'followup', id: '', texto: `${nome} · ${fase}`, podeParar: estado.can_stop };
-}
-
-export function linhasAutomaticas(
-  fluxos: RunningFlow[],
-  followup: LeadFollowupState | null,
-  agora: Date = new Date(),
-): LinhaAutomatica[] {
-  const linhas = fluxos.filter(f => f.active).map(f => linhaDoFluxo(f, agora));
-  const fu = followup ? linhaDoFollowup(followup, agora) : null;
-  return fu ? [...linhas, fu] : linhas;
+export function linhasAutomaticas(fluxos: RunningFlow[], agora: Date = new Date()): LinhaAutomatica[] {
+  return fluxos.filter(f => f.active).map(f => linhaDoFluxo(f, agora));
 }
 
 /** Identifica o conjunto de automações rodando: "Enviar e manter" vale até ele mudar. */

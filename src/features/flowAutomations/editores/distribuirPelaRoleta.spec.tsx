@@ -14,7 +14,7 @@ import { enableProblem } from '@/features/flowAutomations/readiness';
 import type { RoletaConfig } from '@/services/roletaConfig/roletaConfigService';
 
 const resources: AutomationResources = {
-  labels: [], sequences: [], followupFlows: [], users: [], pipelines: [], stagesByPipeline: {}, quickReplies: [],
+  labels: [], followupFlows: [], users: [], pipelines: [], stagesByPipeline: {}, quickReplies: [],
   adOrigins: [], formOrigins: [], messageFunnels: [], conversationFunnels: [], evolutionInstances: [],
   roletas: [
     { id: 'r1', name: 'Zona Sul', is_active: true },

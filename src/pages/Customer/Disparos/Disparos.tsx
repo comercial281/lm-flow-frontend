@@ -86,7 +86,7 @@ export default function Disparos() {
       cabecalho={
         <BaseHeader
           title="Disparos"
-          subtitle="Disparo em massa pelo WhatsApp: escolha quem recebe, o número, a mensagem ou um funil, e acompanhe a fila."
+          subtitle="Disparo em massa pelo WhatsApp: escolha quem recebe, o número, a mensagem, um funil ou uma automação, e acompanhe a fila."
         />
       }
     >
@@ -106,7 +106,7 @@ export default function Disparos() {
               ))}
             </Seletor>
           </div>
-          {pode('broadcasts', 'create') && (
+          {(pode('broadcasts', 'create') || pode('broadcasts', 'own')) && (
             <Button onClick={() => setJanelaAberta(true)} disabled={!funilDaJanela}>
               <Plus className="w-4 h-4 mr-1" /> Novo disparo
             </Button>

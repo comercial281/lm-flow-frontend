@@ -10,7 +10,7 @@ import { blockLabel, isVisibleNode, paletteItems } from './palette';
 import { buildSaveFlowPayload } from '@/lib/flowAutomationGraph';
 
 const resources: AutomationResources = {
-  labels: [], sequences: [], followupFlows: [], users: [{ id: 'u1', name: 'Ana' } as never], pipelines: [], stagesByPipeline: {}, quickReplies: [],
+  labels: [], followupFlows: [], users: [{ id: 'u1', name: 'Ana' } as never], pipelines: [], stagesByPipeline: {}, quickReplies: [],
   adOrigins: [], formOrigins: [], messageFunnels: [], conversationFunnels: [], evolutionInstances: [],
   reloadFunnels: () => {}, reloadLabels: () => {}, loading: false,
 };

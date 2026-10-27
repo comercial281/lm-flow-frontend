@@ -42,6 +42,10 @@ describe('o menu do CRM confere o cargo', () => {
     expect(faltando).toEqual([]);
   });
 
+  it('Disparos abre com a leitura ou com Disparos próprios', () => {
+    expect(achar('/disparos').permissions).toEqual(['broadcasts.read', 'broadcasts.own']);
+  });
+
   it.each([
     ['/disparos', 'broadcasts.read'],
     ['/ia-vendedora', 'sales_agents.read'],

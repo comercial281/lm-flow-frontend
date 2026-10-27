@@ -12,7 +12,6 @@ import {
 } from '@/components/ui/ds';
 import { useConfirmacao } from '@/hooks/useConfirmacao';
 import { flowAutomationInstancesService, type RunningFlow } from '@/services/flowAutomations/flowAutomationInstancesService';
-import { leadFollowupService, type LeadFollowupState } from '@/services/leadFollowup/leadFollowupService';
 import {
   assinaturaDasLinhas,
   linhasAutomaticas,
@@ -53,7 +52,6 @@ interface Opcoes {
 export function useAutomacaoRodando({ conversationId, atualizarQuando }: Opcoes) {
   const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
   const [fluxos, setFluxos] = useState<RunningFlow[]>([]);
-  const [followup, setFollowup] = useState<LeadFollowupState | null>(null);
   const [parando, setParando] = useState<string | null>(null);
   const [pergunta, setPergunta] = useState<LinhaAutomatica[] | null>(null);
   const responder = useRef<((r: RespostaAoEnviar) => void) | null>(null);
@@ -62,15 +60,13 @@ export function useAutomacaoRodando({ conversationId, atualizarQuando }: Opcoes)
   const carregar = useCallback(async () => {
     if (!conversationId) {
       setFluxos([]);
-      setFollowup(null);
       return;
     }
-    const [f, fu] = await Promise.allSettled([
-      flowAutomationInstancesService.running({ conversationId }),
-      leadFollowupService.get({ conversationId }),
-    ]);
-    setFluxos(f.status === 'fulfilled' ? f.value : []);
-    setFollowup(fu.status === 'fulfilled' ? fu.value.state : null);
+    try {
+      setFluxos(await flowAutomationInstancesService.running({ conversationId }));
+    } catch {
+      setFluxos([]);
+    }
   }, [conversationId]);
 
   useEffect(() => {
@@ -97,19 +93,16 @@ export function useAutomacaoRodando({ conversationId, atualizarQuando }: Opcoes)
     [conversationId],
   );
 
-  const linhas = linhasAutomaticas(fluxos, followup);
+  const linhas = linhasAutomaticas(fluxos);
   const paraveis = linhas.filter(l => l.podeParar);
 
   const pararLinha = useCallback(
     async (linha: LinhaAutomatica) => {
-      // Com id = instância do construtor (automação ou follow-up novo);
-      // sem id = a fila do follow-up antigo, que para pelo lead.
-      const r = linha.id
-        ? await flowAutomationInstancesService.stop(linha.id)
-        : await leadFollowupService.stop({ conversationId });
+      // Toda linha é uma instância do construtor (automação, follow-up ou funil).
+      const r = await flowAutomationInstancesService.stop(linha.id);
       return r.message;
     },
-    [conversationId],
+    [],
   );
 
   const pararTudo = useCallback(async () => {

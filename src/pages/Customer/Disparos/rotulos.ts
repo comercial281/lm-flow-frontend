@@ -13,6 +13,7 @@ export const PACOTE: Record<string, string> = { fast: 'Rápido', normal: 'Normal
 
 export function rotuloDoModo(c: Pick<BroadcastCampaign, 'mode' | 'flow_name'>): string {
   if (c.mode === 'flow') return c.flow_name ? `Funil ${c.flow_name}` : 'Funil';
+  if (c.mode === 'automation') return c.flow_name ? `Automação ${c.flow_name}` : 'Automação';
   if (c.mode === 'template') return 'Modelo oficial';
   return 'Mensagem';
 }

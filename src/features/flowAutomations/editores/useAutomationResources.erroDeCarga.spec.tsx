@@ -10,7 +10,6 @@ vi.mock('@/services/pipelines/pipelinesService', () => ({
 }));
 vi.mock('@/services/users/usersService', () => ({ default: { getUsers: s.users } }));
 vi.mock('@/services/quickReplies/quickRepliesService', () => ({ quickRepliesService: { getQuickReplies: vi.fn().mockResolvedValue({ data: [] }) } }));
-vi.mock('@/services/followupSequences/followupSequencesService', () => ({ followupSequencesService: { getAll: vi.fn().mockResolvedValue([]) } }));
 const listaDeFluxos = vi.hoisted(() => vi.fn());
 vi.mock('@/services/flowAutomations/flowAutomationsService', () => ({ flowAutomationsService: { list: listaDeFluxos } }));
 vi.mock('@/services/messageFunnels/messageFunnelsService', () => ({ messageFunnelsService: { list: vi.fn().mockResolvedValue([]) } }));
@@ -81,7 +80,7 @@ describe('useAutomationResources · erro de carga', () => {
 });
 
 const base = {
-  labels: [], sequences: [], followupFlows: [], users: [], pipelines: [], stagesByPipeline: {}, quickReplies: [],
+  labels: [], followupFlows: [], users: [], pipelines: [], stagesByPipeline: {}, quickReplies: [],
   adOrigins: [], formOrigins: [], messageFunnels: [], conversationFunnels: [], evolutionInstances: [],
   reloadFunnels: () => {}, reloadLabels: () => {}, loading: false,
 };

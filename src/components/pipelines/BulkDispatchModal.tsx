@@ -32,6 +32,7 @@ import {
   BroadcastSequenceItem,
   AudienceMode,
   AudiencePreviewFull,
+  AutomationOption,
   BroadcastChannelKind,
   BroadcastPace,
   BroadcastTemplateConfig,
@@ -46,10 +47,13 @@ import { type SequenceDraftItem, newSequenceItem } from '@/components/messaging/
 
 import { PhoneInput } from '@/components/shared/PhoneInput';
 import { CaixaDaJanela, CampoDaJanela, GrupoDaJanela } from '@/components/base/janela';
+import { useCan } from '@/hooks/useCan';
 import PassoQuemRecebe from './disparo/PassoQuemRecebe';
+import PainelDeLeads from './disparo/PainelDeLeads';
 import PassoMensagem, { type ModoDoEnvio } from './disparo/PassoMensagem';
 import PassoRitmo from './disparo/PassoRitmo';
 import { previsaoDoPacote, rotuloDoPacote } from './disparo/ritmo';
+import { frasesDaRevisao, linhaDeFora, motivoSemDisparo, numeroProprio } from './disparo/automacao';
 
 interface BulkDispatchModalProps {
   open: boolean;
@@ -121,6 +125,10 @@ export default function BulkDispatchModal({
   funis,
 }: BulkDispatchModalProps) {
   const [step, setStep] = useState<Step>('audience');
+  // Corretor (só "Disparos próprios"): o servidor recorta tudo; a tela esconde o canal oficial
+  // (as rotas dele dão 403) e trava o número no dele, que é o único que `sender_options` devolve.
+  const pode = useCan();
+  const modoCorretor = pode('broadcasts', 'own') && !pode('broadcasts', 'create');
 
   // Funil escolhido na janela (só quando `funis` vem). Troca recarrega as etapas e a contagem.
   const [funilId, setFunilId] = useState(pipelineIdProp);
@@ -141,6 +149,9 @@ export default function BulkDispatchModal({
   const [audienceMode, setAudienceMode] = useState<AudienceMode>('pipeline');
   const [stageId, setStageId] = useState('');
   const [selectedLabels, setSelectedLabels] = useState<string[]>([]);
+  // "Lista de leads": os marcados no painel à direita (valem entre páginas, buscas e fechar).
+  const [contactIds, setContactIds] = useState<string[]>([]);
+  const [painelDeLeads, setPainelDeLeads] = useState(false);
   const [availableLabels, setAvailableLabels] = useState<LabelType[]>([]);
   // Etiquetas e canais oficiais: falha ao carregar não vira "Nenhuma … cadastrada/conectada".
   const [erroEtiquetas, setErroEtiquetas] = useState(false);
@@ -159,6 +170,10 @@ export default function BulkDispatchModal({
   const [flowId, setFlowId] = useState('');
   const [flowName, setFlowName] = useState('');
   const [items, setItems] = useState<SequenceDraftItem[]>([newSequenceItem()]);
+  // Automação (23/10/2026): a escolhida e as duas escolhas do resumo "Quem recebe".
+  const [automacao, setAutomacao] = useState<AutomationOption | null>(null);
+  const [incluirQuemPassou, setIncluirQuemPassou] = useState(true);
+  const [recomecarRodando, setRecomecarRodando] = useState(false);
   const [variables, setVariables] = useState<TemplateVariable[]>([]);
 
   // Modelo oficial (WhatsApp Cloud).
@@ -194,12 +209,17 @@ export default function BulkDispatchModal({
     setAudienceMode('pipeline');
     setStageId('');
     setSelectedLabels([]);
+    setContactIds([]);
+    setPainelDeLeads(false);
     setAudiencePreview(null);
     setErroPrevia(false);
     setSendMode('message');
     setFlowId('');
     setFlowName('');
     setItems([newSequenceItem()]);
+    setAutomacao(null);
+    setIncluirQuemPassou(true);
+    setRecomecarRodando(false);
     setCloudInboxId('');
     setCloudTemplateName('');
     setCloudVars({});
@@ -248,6 +268,11 @@ export default function BulkDispatchModal({
   }, []);
 
   const carregarCanais = useCallback(() => {
+    if (modoCorretor) {
+      setCloudOptions([]);
+      setCarregandoCanais(false);
+      return;
+    }
     const vez = ++ultimaCargaCanais.current;
     setErroCanais(false);
     setCarregandoCanais(true);
@@ -264,7 +289,7 @@ export default function BulkDispatchModal({
         setErroCanais(true);
         setCarregandoCanais(false);
       });
-  }, []);
+  }, [modoCorretor]);
 
   const ultimaCargaEtapas = useRef(0);
   const carregarEtapas = useCallback((id: string) => {
@@ -279,6 +304,7 @@ export default function BulkDispatchModal({
   const escolherFunil = useCallback((id: string) => {
     setFunilId(id);
     setStageId('');
+    setContactIds([]); // os leads marcados eram do outro funil
     setPostStageId('');
     carregarEtapas(id);
   }, [carregarEtapas]);
@@ -339,10 +365,21 @@ export default function BulkDispatchModal({
       mode: audienceMode,
       stage_id: audienceMode === 'stage' ? stageId : undefined,
       labels: audienceMode === 'tag' ? selectedLabels : undefined,
+      contact_ids: audienceMode === 'manual' ? contactIds : undefined,
     }),
-    [audienceMode, stageId, selectedLabels],
+    [audienceMode, stageId, selectedLabels, contactIds],
   );
   const previewInboxId = cloudMode ? selectedCloudInbox?.inbox_id : senderInboxId || undefined;
+  // Automação escolhida: a contagem vem com o resumo dela e o número que ela impõe.
+  const automationMode = !cloudMode && sendMode === 'automation';
+  const automacaoId = automationMode ? automacao?.id ?? '' : '';
+  const flowOpts = useMemo(
+    () =>
+      automacaoId
+        ? { flow_automation_id: automacaoId, include_passed: incluirQuemPassou, restart_running: recomecarRodando }
+        : undefined,
+    [automacaoId, incluirQuemPassou, recomecarRodando],
+  );
   // Campanha direta: espera os números chegarem (senão conta duas vezes, sem e com o número).
   const esperandoNumeros = !cloudMode && senderOptions === null;
   useEffect(() => {
@@ -350,15 +387,27 @@ export default function BulkDispatchModal({
     setErroPrevia(false);
     // A contagem anterior foi descartada pela limpeza: não deixa o "Contando" preso.
     setCountingAudience(false);
-    if ((audienceMode === 'stage' && !stageId) || (audienceMode === 'tag' && selectedLabels.length === 0)) {
+    if (
+      (audienceMode === 'stage' && !stageId) ||
+      (audienceMode === 'tag' && selectedLabels.length === 0) ||
+      (audienceMode === 'manual' && contactIds.length === 0)
+    ) {
       setAudiencePreview(null);
       return;
     }
     if (esperandoNumeros) return;
+    // Corretor sem número próprio: o servidor responderia 422, o aviso do passo 1 já explica.
+    if (modoCorretor && senderOptions && senderOptions.length === 0) {
+      setAudiencePreview(null);
+      return;
+    }
+    // Com o painel de leads aberto não recontamos a cada clique: conta uma vez ao fechar.
+    if (painelDeLeads && audienceMode === 'manual') return;
     let alive = true;
     setCountingAudience(true);
-    broadcastsService
-      .audiencePreviewFull(pipelineId, audiencePayload, previewInboxId)
+    (flowOpts
+      ? broadcastsService.audiencePreviewFull(pipelineId, audiencePayload, previewInboxId, flowOpts)
+      : broadcastsService.audiencePreviewFull(pipelineId, audiencePayload, previewInboxId))
       .then(r => { if (alive) setAudiencePreview(r); })
       .catch(() => {
         if (!alive) return;
@@ -369,7 +418,13 @@ export default function BulkDispatchModal({
     return () => {
       alive = false;
     };
-  }, [open, pipelineId, audienceMode, stageId, selectedLabels, audiencePayload, previewInboxId, esperandoNumeros]);
+  }, [open, pipelineId, audienceMode, stageId, selectedLabels, contactIds, audiencePayload, previewInboxId, esperandoNumeros, flowOpts, painelDeLeads, modoCorretor, senderOptions]);
+  // O número que a automação impõe (null = vale o número do passo 1).
+  const forcedInbox = automacaoId ? audiencePreview?.forced_inbox ?? null : null;
+  // O número imposto também tem que estar conectado (mesma regra do passo 1).
+  const forcedInboxId = forcedInbox?.inbox_id ?? (automacao && numeroProprio(automacao) ? automacao.inbox_id : null);
+  const forcedSender = automacaoId && forcedInboxId ? senderOptions?.find(o => o.inbox_id === forcedInboxId) : undefined;
+  const forcedDesconectado = forcedSender?.sendable === false;
 
   const itemsValid = useMemo(() => items.length > 0 && items.every(itemIsValid), [items]);
 
@@ -403,7 +458,10 @@ export default function BulkDispatchModal({
   // Sem avançar com número velho: enquanto recontamos, o Próximo espera.
   const contando = countingAudience || esperandoNumeros;
   const step1Ok =
-    !contando && (recipientCount ?? 0) > 0 && (cloudMode ? cloudOptions.length > 0 : !!selectedSender?.sendable);
+    !contando &&
+    (recipientCount ?? 0) > 0 &&
+    (audienceMode !== 'manual' || contactIds.length > 0) &&
+    (cloudMode ? cloudOptions.length > 0 : forcedInbox ? !forcedDesconectado : !!selectedSender?.sendable);
   // Teto de gasto (só oficial), lido no jeito brasileiro ("1.000,00", "12,5").
   // Vazio = sem teto; texto que não é valor trava o Próximo com o erro no campo.
   const tetoVazio = maxSpend.trim() === '';
@@ -414,7 +472,9 @@ export default function BulkDispatchModal({
     ? !!selectedCloudInbox && !!selectedCloudTemplate && !!selectedCloudTemplate.approved && cloudVarsFilled && !tetoInvalido
     : flowMode
       ? !!flowId
-      : itemsValid;
+      : automationMode
+        ? !!automacao && !motivoSemDisparo(automacao) && !forcedDesconectado && (recipientCount ?? 0) > 0
+        : itemsValid;
 
   const eta = audiencePreview?.eta ?? {};
   const previsao = previsaoDoPacote(eta, pace);
@@ -463,12 +523,13 @@ export default function BulkDispatchModal({
         pipeline_id: pipelineId,
         channel_kind: channelKind,
         template_config: cloudMode ? buildTemplateConfig() : undefined,
-        // Campanha direta: o número de saída escolhido.
-        inbox_id: cloudMode ? undefined : senderInboxId,
+        // Campanha direta: o número de saída escolhido (ou o que a automação impõe).
+        inbox_id: cloudMode ? undefined : forcedInbox?.inbox_id ?? senderInboxId,
         audience: audiencePayload,
-        // Funil pronto: o lead entra no funil; senão, a sequência montada.
-        flow_automation_id: flowMode ? flowId : undefined,
-        funnel_items: cloudMode || flowMode ? undefined : toSequencePayload(items),
+        // Funil pronto ou Automação: o lead entra no fluxo; senão, a sequência montada.
+        flow_automation_id: flowMode ? flowId : automationMode ? automacao?.id : undefined,
+        funnel_items: cloudMode || flowMode || automationMode ? undefined : toSequencePayload(items),
+        ...(automationMode && { include_passed: incluirQuemPassou, restart_running: recomecarRodando }),
         post_send:
           postStageId || postLabel.trim()
             ? { stage_id: postStageId || undefined, label: postLabel.trim() || undefined }
@@ -530,6 +591,7 @@ export default function BulkDispatchModal({
           <PassoQuemRecebe
             channelKind={channelKind}
             aoEscolherCanal={setChannelKind}
+            modoCorretor={modoCorretor}
             temOficial={cloudOptions.length > 0}
             carregandoOficial={carregandoCanais}
             erroCanais={erroCanais}
@@ -539,8 +601,13 @@ export default function BulkDispatchModal({
             aoTentarNumeros={carregarNumeros}
             senderInboxId={senderInboxId}
             aoEscolherNumero={setSenderInboxId}
+            numeroTravado={forcedInbox ? `${forcedInbox.name}${forcedDesconectado ? ' (desconectado)' : ''}` : null}
             audienceMode={audienceMode}
-            aoEscolherPublico={setAudienceMode}
+            aoEscolherPublico={modo => {
+              setAudienceMode(modo);
+              // Escolher "Lista de leads" já abre o painel pra marcar.
+              if (modo === 'manual') setPainelDeLeads(true);
+            }}
             funis={funis?.map(f => ({ id: f.id, name: f.name }))}
             funilId={funilId}
             aoEscolherFunil={escolherFunil}
@@ -554,9 +621,22 @@ export default function BulkDispatchModal({
             aoMarcarEtiqueta={titulo =>
               setSelectedLabels(prev => (prev.includes(titulo) ? prev.filter(t => t !== titulo) : [...prev, titulo]))
             }
+            leadsEscolhidos={contactIds.length}
+            aoAbrirLeads={() => setPainelDeLeads(true)}
             previa={audiencePreview}
             contando={contando}
             erroPrevia={erroPrevia}
+          />
+        )}
+        {step === 'audience' && audienceMode === 'manual' && (
+          <PainelDeLeads
+            aberto={painelDeLeads}
+            pipelineId={pipelineId}
+            marcados={contactIds}
+            aoMudar={setContactIds}
+            aoFechar={() => setPainelDeLeads(false)}
+            etapas={stages}
+            etiquetas={availableLabels}
           />
         )}
 
@@ -574,6 +654,24 @@ export default function BulkDispatchModal({
               setFlowId(id);
               setFlowName(nome);
             }}
+            automacaoId={automacaoId}
+            aoEscolherAutomacao={a => {
+              setAutomacao(a);
+              // Automação nova, contas novas: as escolhas voltam ao padrão.
+              setIncluirQuemPassou(true);
+              setRecomecarRodando(false);
+            }}
+            resumoDaAutomacao={automacaoId ? audiencePreview?.flow ?? null : null}
+            contando={contando}
+            erroDaContagem={erroPrevia}
+            naoPronta={!!automacaoId && !contando && !erroPrevia && !!audiencePreview && !audiencePreview.flow}
+            quantos={recipientCount}
+            deFora={audiencePreview ? linhaDeFora(audiencePreview.excluded, false) : null}
+            numeroDesconectado={forcedDesconectado}
+            incluirQuemPassou={incluirQuemPassou}
+            aoMudarIncluirQuemPassou={setIncluirQuemPassou}
+            recomecarRodando={recomecarRodando}
+            aoMudarRecomecarRodando={setRecomecarRodando}
             cloudOptions={cloudOptions}
             erroCanais={erroCanais}
             aoTentarCanais={carregarCanais}
@@ -672,17 +770,28 @@ export default function BulkDispatchModal({
                   <strong className="text-right">
                     {cloudMode
                       ? 'WhatsApp oficial (modelo)'
-                      : `Campanha direta${selectedSender ? ` · ${selectedSender.name}${selectedSender.phone ? ` ${telefone(selectedSender.phone)}` : ''}` : ''}`}
+                      : forcedInbox
+                        ? `Campanha direta · ${forcedInbox.name}${(forcedSender?.phone ?? '') ? ` ${telefone(forcedSender?.phone ?? '')}` : ''}`
+                        : `Campanha direta${selectedSender ? ` · ${selectedSender.name}${selectedSender.phone ? ` ${telefone(selectedSender.phone)}` : ''}` : ''}`}
                   </strong>
                 </div>
                 <div className="flex justify-between gap-3 py-2">
                   <span className="text-muted-foreground">
-                    {cloudMode ? 'Modelo' : flowMode ? 'Funil' : 'Itens na sequência'}
+                    {cloudMode ? 'Modelo' : flowMode ? 'Funil' : automationMode ? 'Automação' : 'Itens na sequência'}
                   </span>
                   <strong className="text-right">
-                    {cloudMode ? selectedCloudTemplate?.name : flowMode ? flowName : items.length}
+                    {cloudMode ? selectedCloudTemplate?.name : flowMode ? flowName : automationMode ? automacao?.name : items.length}
                   </strong>
                 </div>
+                {automationMode &&
+                  frasesDaRevisao(audiencePreview?.flow ?? null, {
+                    incluirQuemPassou,
+                    recomecarRodando,
+                  }).map(frase => (
+                    <div key={frase} className="py-2">
+                      <span>{frase}</span>
+                    </div>
+                  ))}
                 {cloudMode && (
                   <div className="flex justify-between gap-3 py-2">
                     <span className="text-muted-foreground">Teto de gasto</span>
@@ -699,7 +808,7 @@ export default function BulkDispatchModal({
               </div>
             </CaixaDaJanela>
 
-            {!cloudMode && !flowMode && (
+            {!cloudMode && !flowMode && !automationMode && (
               <GrupoDaJanela titulo="Mensagens">
                 {items.map((it, i) => (
                   <div key={it.uiKey} className="p-3 rounded-lg bg-muted/50 text-sm whitespace-pre-wrap">
@@ -743,7 +852,7 @@ export default function BulkDispatchModal({
 
             {/* Enviar teste pra um número antes de disparar pros leads. No funil
                 pronto fica escondido: o teste manda a sequência montada, e ali não há sequência. */}
-            {!flowMode && (
+            {!flowMode && !automationMode && (
               <GrupoDaJanela titulo="Teste (opcional)">
                 <CampoDaJanela
                   rotulo="Enviar teste pra um número"

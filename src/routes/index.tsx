@@ -651,7 +651,7 @@ const AppRouter = () => {
             <Route
               path="/disparos"
               element={
-                <PermissionRoute resource="broadcasts" action="read">
+                <PermissionRoute permissions={['broadcasts.read', 'broadcasts.own']}>
                   <Disparos />
                 </PermissionRoute>
               }
@@ -661,7 +661,7 @@ const AppRouter = () => {
             <Route
               path="/disparos/:id"
               element={
-                <PermissionRoute resource="broadcasts" action="read">
+                <PermissionRoute permissions={['broadcasts.read', 'broadcasts.own']}>
                   <DisparoDetalhe />
                 </PermissionRoute>
               }

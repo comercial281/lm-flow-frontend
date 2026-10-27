@@ -28,6 +28,7 @@ const base = {
 };
 const c1 = { ...base, id: 'c1', name: 'Oferta junho' };
 const c2 = { ...base, id: 'c2', name: 'Plantão', pipeline_id: 'p2', mode: 'flow', flow_name: 'Boas-vindas', pace: 'slow' };
+const c3 = { ...base, id: 'c3', name: 'Reativação', mode: 'automation', flow_name: 'Pós-visita' };
 const tela = () => render(<MemoryRouter><Disparos /></MemoryRouter>);
 const resposta = (data: unknown[]) => ({ data, meta: { total: data.length, page: 1, per_page: 25 } });
 
@@ -55,6 +56,12 @@ describe('Disparos', () => {
     expect(screen.getByText('174')).toBeInTheDocument();
     expect(screen.getByText('Enviadas')).toBeInTheDocument();
     expect(screen.getByText('Falhas')).toBeInTheDocument();
+  });
+
+  it('disparo de automação aparece como "Automação <nome>"', async () => {
+    s.listAll.mockResolvedValue(resposta([c3]));
+    tela();
+    expect(await screen.findByText('Automação Pós-visita')).toBeInTheDocument();
   });
 
   it('filtrar por funil chama listAll com o pipeline_id', async () => {
@@ -107,6 +114,14 @@ describe('Disparos', () => {
     tela();
     await screen.findByText('Oferta junho');
     expect(screen.queryByRole('button', { name: /Novo disparo/ })).toBeNull();
+  });
+
+  it('corretor (só broadcasts.own) vê Novo disparo', async () => {
+    s.pode.mockImplementation((r: string, a: string) => r === 'broadcasts' && a === 'own');
+    s.listAll.mockResolvedValue(resposta([c1]));
+    tela();
+    await screen.findByText('Oferta junho');
+    expect(screen.getByRole('button', { name: /Novo disparo/ })).toBeInTheDocument();
   });
 
   it('erro ao carregar mostra o erro e Tentar de novo recarrega', async () => {

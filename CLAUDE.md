@@ -9805,6 +9805,16 @@ Pedido do dono (Tony) em 23/10/2026: "não consigo cortar fios de conexão entre
 
 Código: `src/components/flowAutomations/FlowEdge.tsx` (linha com o botão), `cutEdge` em `src/lib/flowAutomationGraph.ts`, `onEdgesChange`/`selectedEdgeId` no `FlowAutomationCanvas.tsx`. Testes: `FlowEdge.spec.tsx` e o describe "Cortar a linha entre dois blocos" em `flowAutomationGraph.spec.ts`.
 
+## Follow-up, Fase 4 (Entrega B): fila antiga desligada (2026-10-23)
+
+O follow-up do formato antigo (a fila de sequências) não roda mais. Só existe o follow-up novo, o que se monta em Funis de mensagem e começa por "Iniciar follow-up" ou "Colocar em follow-up".
+
+- **A etiqueta "follow-up" não começa mais nada.** Colocar a etiqueta num lead só marca o lead; quem coloca em follow-up é a ação "Colocar em follow-up" (ou mover o card pra coluna Follow-up).
+- **IA com funil antigo gravado entrega pro Follow-up padrão da conta.** A IA que ainda tinha um funil do formato antigo escolhido passa a entregar o lead pro Follow-up padrão da conta, e a tela da IA avisa isso, pra ninguém achar que o funil antigo continua valendo.
+- **Bloco antigo salvo nas automações aparece como "Follow-up antigo (inativo)".** Ele não faz nada quando o fluxo passa por ele. Abre com um aviso pedindo pra trocar por "Iniciar follow-up". No histórico da automação a linha diz "follow-up antigo (inativo)", nunca "iniciou follow-up".
+- **Saíram do card e da conversa** a faixa "Terminando no formato antigo" e o botão Parar da fila antiga. Parar o follow-up passa a ser só o do follow-up novo.
+- **Disparos não pulam mais lead por causa da fila antiga.** Lead com linha velha na fila antiga volta a poder receber disparo; só o follow-up novo vivo segura o lead fora do disparo ("já está num follow-up"). Religar o número também não reabre mais linha da fila antiga.
+
 ## Painel do lead: Etiquetas mostra as do lead e as da conversa (desde 2026-10-24)
 
 Pedido do dono (Tony) em 24/10/2026: "tag da IA aparece na conversa e não na direita" (Imobiliária Moeda Forte). Só frontend.
@@ -9838,5 +9848,98 @@ Os marcos do atendimento passam a aparecer no meio da conversa, na hora em que a
 - **O cartão não é o Card da casa, de propósito:** o anel violeta e a sombra da marca do Card brigam com a cor por família (azul da visita, âmbar da tarefa, verde do ganho, vermelho do perdido) do desenho aprovado. Fica como exceção declarada em `scripts/conferir-padrao.excecoes.json`.
 
 Código: `src/features/conversas/eventoDaConversa.ts` (lê o evento e monta os textos, `textosDosEventos.ts`), `src/components/chat/messages/CartaoDeEvento.tsx`, `PilulaDeSistema.tsx` e `SystemMessage.tsx` (só escolhe entre os dois). Testes: `eventoDaConversa.spec.ts` e `SystemMessage.spec.tsx`.
+
+Não reabrir sem o dono pedir.
+
+## Automações: cartão único e um botão só de criar (desde 2026-10-23)
+
+Pedido do dono (23/10/2026): o cartão da lista de Automações estava "horrível". O "Da equipe" aparecia duas vezes (selo e chave, com um "Ligado" que parecia ser da automação e o textão do número fixo), os quatro ícones soltos e dois botões de criar. Agora o cartão é o mesmo dos Funis de mensagem e do Follow-up (`CartaoDeFluxo`).
+
+O que muda pra quem usa:
+
+1. **À vista só ligar/desligar e Editar** (lápis). Quem não edita vê **Ver**.
+2. **No ⋮:** Duplicar, Arquivar, Passar pra equipe / Tirar da equipe (só o gestor), separador e Excluir em vermelho. Quem não edita vê só "Duplicar pra ter a sua cópia".
+3. **"Da equipe" é só o selo** ao lado do título. Pôr ou tirar da equipe é pelo ⋮. Na automação presa a número específico, "Tirar da equipe" aparece apagado com o motivo embaixo (o mesmo texto de antes, que saiu do cartão). Tirar continua perguntando antes, com o mesmo aviso.
+4. **Sem selo ATIVO/DESLIGADO:** o filete colorido e o botão de ligar/desligar dizem o estado. Arquivada ganha o selo "Arquivada".
+5. **Um botão só, "Nova automação"** (saem "Nova pessoal" e "Nova da equipe"). O gestor escolhe antes "Da equipe" (padrão) ou "Só minha"; o corretor cria a dele direto. Modelos não muda.
+
+Decisões (não reabrir sem o dono pedir):
+
+1. **A chave "Da equipe" saiu do cartão da automação.** Isso reabre, a pedido do dono, a linha "a opção de marcar uma automação como da equipe" da seção de Automações por cargo: a opção continua, mas no ⋮.
+2. **Disparar a automação num lead não fica no cartão.** Vai pro Disparo em massa (Disparos), como opção "Automação", com lista de leads e a regra "quem tem número manda". É um projeto à parte, com backend.
+
+Armadilhas:
+
+1. **Item apagado do menu ainda recebe clique no teste** (o Radix só corta o `onSelect`): o "Tirar da equipe" confere `presa` dentro do `onClick`.
+2. **A aba Follow-up ainda mostra a chave "Da equipe" à vista** (PR #619). Se o dono quiser os dois iguais, o Follow-up passa a usar o ⋮ e a `JanelaDeQuemE` compartilhada.
+
+Código: `pages/Customer/Automations/FlowBuilder/FlowAutomationsList.tsx`, `components/flowAutomations/JanelaDeQuemE.tsx` (a escolha "de quem é", reaproveitável), `features/flowAutomations/kind.ts` (`newButton`). Testes: `AutomationsOwnership.spec.tsx`.
+
+## Disparo em massa: opção Automação (desde 2026-10-26)
+
+Pedido do dono (Tony): disparar uma automação pronta (as que já existem no construtor) pra uma lista de leads, em vez de montar a mensagem na hora. Funciona junto com o backend A (`/broadcasts/automation_options`, `flow_automation_id` no create).
+
+O que muda pra quem usa:
+
+- **Passo 2 (Mensagem):** aparece a opção "Automação" ao lado de Mensagens e Funil. Escolhe a automação num campo, vê uma linha de prévia (`Primeira mensagem: "..." · e mais 8 blocos`) e, logo abaixo, o resumo "Quem recebe" com as caixinhas.
+- **Passo 4 (Revisar):** o resumo do disparo mostra "Automação <nome>", o canal com o número da automação e, só quando valem, as frases `Inclui N que já passaram por ela` e `Recomeça pra N que estavam com ela rodando`.
+- **Disparos e tela do disparo:** `Automação <nome>` onde o funil mostra `Funil <nome>`; o lead que entrou aparece como `Entrou na automação às 14:32` (outro dia: `em 16/10 às 14:32`); o filtro e o número do topo chamam `Entraram na automação`. Lead que entrou mas ficou pausado por já conversar em outro número: `Entrou na automação, pausado: já conversa em outro número`.
+
+Decisões (não reabrir sem o dono pedir):
+
+1. **Nada de botão solto, a escolha mora dentro do bloco** (cobrança do dono, 23/10). "Recebe de novo" e "Recomeçar" são caixinhas dentro das linhas do resumo, nunca botão ao lado de texto ou aviso. As frases do passo Revisar também ficam dentro do resumo, não num aviso à parte.
+2. **A prévia é UMA linha de altura fixa** (`linhaDaPrevia`), não a lista de blocos do mockup. Correção do dono depois do mockup.
+3. **O resumo "Quem recebe" mora no passo 2**, junto da escolha da automação. A contagem vem do `audience_preview` com `flow` (`passed`, `passed_error`, `running`, `first_time`); linha com zero não aparece. Padrões: incluir quem já passou = sim, recomeçar quem está rodando = não.
+4. **Quem tem número manda, quem não tem herda.** Automação com número próprio (fixo ou do dono) trava o "Número de saída" do passo 1 e mostra "Sai pelo número da automação: X"; sem número próprio, vale o número escolhido no passo 1.
+5. **Automação com "Número do responsável"** usa o número do disparo; os leads de outros corretores ficam de fora (o servidor manda pronto em `excluded.other_owner`). Pra vários corretores, um disparo por número.
+6. **Automação com número por bloco (legado) e número fixo que não envia disparo** aparecem apagadas, com o motivo ("Escolha o número nas Configurações da automação pra poder disparar." / "O número da automação não envia disparo. Troque nas Configurações da automação."). Evita mostrar um número e o bloco sair por outro. A trava vem de `motivoSemDisparo`.
+7. **"Esperar 10 minutos" na prévia vem do formatador do construtor** (`blockLabel`, `describeSeconds`, `leadWaitSeconds`), pra o disparo falar como o canvas.
+8. **"Teste" fica escondido no modo Automação** (e "Mensagens" também): o teste manda uma sequência de mensagens e aqui não existe sequência, só a automação. Se um dia precisar testar, é outra entrega.
+9. **A pausa automática mostra só o `pause_message` do servidor**; o motivo novo `flow_number_changed` não pede texto na tela.
+10. **O número imposto pela automação tem que estar conectado**, como o do passo 1: desconectado, a ajuda do campo diz "(desconectado)", um aviso na própria automação manda reconectar em Canais e o Próximo do passo 2 trava.
+11. **O resumo "Quem recebe" também diz quem ficou de fora** ("N ficaram de fora: ..."), com os mesmos motivos do passo 1 (`linhaDeFora`), sem caixinha; some quando é zero.
+12. **Automação sem ninguém pra receber trava o Próximo** do passo 2, e o resumo diz "Ninguém recebe com essa escolha.". Prévia que volta sem o resumo da automação diz que ela não está pronta pra disparar.
+
+Armadilhas:
+
+1. **Voltar o backend com esta tela no ar quebra a opção Automação**: sem o backend A, `automation_options` dá 404 e o create é recusado. Voltar a tela junto. O resto do Disparo (mensagem, funil, oficial) segue funcionando.
+2. **O item `in_funnel` serve ao funil e à automação**: o texto muda pelo `mode` do disparo (`rotuloDoItem(item, automacao)`). Lead pausado por outro número vem em `flow_paused: 'other_number'`.
+3. **"Enviadas" da automação é `sent`**, que no servidor já inclui quem entrou; só o rótulo muda.
+4. **Repo público:** testes sem dado real de cliente.
+
+Código: `src/components/pipelines/BulkDispatchModal.tsx`, `src/components/pipelines/disparo/` (`AutomacaoDoDisparo.tsx`, `ResumoDaAutomacao.tsx`, `automacao.ts` com `linhaDaPrevia`, `linhasDoResumo`, `frasesDaRevisao`, `motivoSemDisparo`), `src/pages/Customer/Disparos/` (`rotulos.ts`, `DisparoDetalhe.tsx`), `src/services/broadcasts/broadcastsService.ts`. Testes: `BulkDispatchModal.spec.tsx`, `automacao.spec.ts`, `DisparoDetalhe.spec.tsx`, `Disparos.spec.tsx`.
+
+Ficou pra frente (PR B): lista de leads e disparo do corretor (`broadcasts.own`).
+
+Não reabrir sem o dono pedir.
+
+## Disparo em massa: corretor e lista de leads (desde 2026-10-26)
+
+Pedido do dono (Tony): o corretor também dispara, mas só pelo número dele e só pros leads dele; e o gestor escolhe lead a lead em vez de só por funil, etapa ou etiqueta. Funciona junto com o backend B (chave `broadcasts.own`, `GET /broadcasts/lead_options`, audiência `manual`).
+
+O que muda pra quem usa:
+
+- **Passo 1, "Enviar para":** nova opção "Lista de leads". Escolher abre à direita o painel "Escolher leads" (busca por nome ou telefone, filtro de etapa e etiqueta, 20 por página, caixinha por lead e "Marcar os N desta página", no singular `Marcar o lead desta página`). O campo "Leads" mostra `N leads escolhidos` com "Mudar" dentro dele. "Pronto" e Esc fecham só o painel.
+- **Corretor** (cargo com "Disparos próprios"): Disparos aparece no menu, a página abre, "Novo disparo" e o ⋮ "Disparo em massa" do funil funcionam. Ele só vê os disparos que criou, só os leads dele e o "Número de saída" vem travado no número dele. Sem número próprio conectado, o passo 1 mostra `Você ainda não tem um número seu conectado. Fale com o gestor.` e o Próximo fica travado. O canal "WhatsApp oficial" nem aparece.
+- **Gestor:** nada muda, escolhe qualquer número e vê todos os disparos.
+
+Decisões (não reabrir sem o dono pedir):
+
+1. **Quem manda é o servidor, a tela só acompanha.** O recorte (só os dele) é do backend; a tela não filtra nada por conta própria. Modo corretor = `can('broadcasts','own')` e NÃO `can('broadcasts','create')`, o mesmo teste do `own_only?` do servidor. As listas de número e de automação e o fluxo de criar seguem a chave `broadcasts.create`; a lista de disparos segue `broadcasts.read`.
+2. **Uma fonte pro número do corretor:** `sender_options`, que o servidor já devolve só com o dele. A tela trava o campo nele (sem `usePersonalCapabilities`), e o `inbox_id` que ela manda é ignorado pelo servidor de qualquer jeito.
+3. **Canal oficial é do gestor:** no modo corretor a tela não chama `whatsapp_cloud_options` nem `whatsapp_cloud_metrics` nem `estimate_cost` (dão 403) e esconde a escolha. A rota `/settings/whatsapp-oficial` continua só com `broadcasts.read`.
+4. **Rotas, menu e botões abrem com `broadcasts.read` OU `broadcasts.own`** (`/disparos`, `/disparos/:id`, item do menu). "Novo disparo" e o ⋮ do funil abrem com `create` OU `own`. O `permissionRoutes.source.spec.ts` confere o mapa e o `index.tsx` nos dois sentidos.
+5. **Cargo personalizado com `broadcasts.read` + `broadcasts.own`** vê a lista de disparos toda (segue `broadcasts.read`), mas sem `create` o servidor devolve só o número e as automações dele nas listas e só deixa criar pelo número e pelos leads dele (`create` é que libera o gestor completo). Backend corrigido em paralelo.
+6. **A contagem não refaz a cada clique no painel:** com o painel aberto a prévia fica parada e conta uma vez ao fechar (Pronto ou Esc).
+7. **Nota do backend:** gerente antigo sem cargo e os modelos novos de Diretor passam a valer como "só os meus" até ganharem `broadcasts.create`/`read`; avisar o dono se alguém reclamar que sumiu disparo.
+
+Armadilhas:
+
+1. **Ordem pra voltar versão:** voltar o backend pra antes do B torna a chave do corretor inerte: a tela mostra Disparos e o servidor responde 403. Voltar a tela junto. Voltar a tela sozinha (antes do B) só some com o corretor e com a Lista de leads; nada quebra.
+2. **`useCan` sem provider libera tudo** (spec de tela isolada): por isso o teste do corretor precisa mockar `useCan`.
+3. **Repo público:** testes sem dado real de cliente.
+4. **Pausar, Retomar e Cancelar do corretor:** a tela mostra os botões com a chave da ação OU `broadcasts.own`. O JSON do disparo só traz `created_by_name` (sem id), então a tela não confere dono; quem recusa disparo alheio é o servidor (404).
+
+Código: `src/components/pipelines/BulkDispatchModal.tsx` (`modoCorretor`, recontagem parada com painel aberto), `src/components/pipelines/disparo/PassoQuemRecebe.tsx` (campo travado e aviso) e `PainelDeLeads.tsx`, `src/pages/Customer/Disparos/Disparos.tsx`, `src/pages/Customer/Pipelines/boardActions.ts`, `src/routes/permissionRoutes.ts` + `index.tsx`, `src/components/layout/config/menuItems.ts`.
 
 Não reabrir sem o dono pedir.

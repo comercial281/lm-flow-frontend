@@ -352,7 +352,7 @@ export const getCustomerMenuSections = (): MenuSection[] => [
         { name: 'Manual', href: '/automations/message-funnels', icon: Rocket, ...permissionFromRoute('/automations/message-funnels'), featureKey: 'message_funnels', foraDoCelular: true },
         { name: 'Follow-up', href: '/automations/follow-ups', icon: Repeat, ...permissionFromRoute('/automations/follow-ups'), ...permissionsFromRoute('/automations/follow-ups'), featureKey: 'follow_ups', celularPede: ['followup_sequences.read'] },
       ]),
-      { name: 'Disparos', href: '/disparos', icon: Megaphone, ...permissionFromRoute('/disparos'), featureKey: 'disparos', foraDoCelular: true },
+      { name: 'Disparos', href: '/disparos', icon: Megaphone, ...permissionFromRoute('/disparos'), ...permissionsFromRoute('/disparos'), featureKey: 'disparos', foraDoCelular: true },
       // Feature gerenciada pela Leal Mídia: super-admin SEMPRE vê; cliente só se ligar o toggle.
       { name: 'IA Vendedora', href: '/ia-vendedora', icon: Bot, ...permissionFromRoute('/ia-vendedora'), clientToggleKey: 'client_manage_automations' },
       // Automações = "quando X acontecer, faça Y": o construtor de fluxos, direto
