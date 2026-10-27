@@ -545,4 +545,22 @@ describe('Agenda de Visitas: Lista no mesmo cartão', () => {
     const lead = await within(janela).findByRole('group', { name: 'Lead' });
     expect(await within(lead).findByRole('link', { name: /Abrir conversa/ })).toHaveAttribute('href', '/conversations/conv7');
   });
+
+  it('estrelas da nota na janela e na Lista usam a mesma cor, sem roxo', async () => {
+    const hoje = new Date();
+    const as15 = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate(), 15, 0);
+    const visita = { id: 'v8', status: 'completed', rating: 4, scheduled_at: as15.toISOString(), duration_minutes: 60, contact: { id: 'c1', name: 'Maria de Souza' } };
+    list.mockResolvedValue({ data: [visita], meta: { total: 1, active_total: 1, only_mine: false } });
+    const user = userEvent.setup();
+    abrir();
+    await user.click(await screen.findByRole('button', { name: 'Ver em lista' }));
+    const linha = (await screen.findByText('Maria de Souza')).closest('[id^="visita-"]') as HTMLElement;
+    expect(linha.querySelector('svg.lucide-star.fill-amber-400')).not.toBeNull();
+    await user.click(within(linha).getByRole('button', { name: 'Maria de Souza' }));
+    const janela = await screen.findByRole('dialog');
+    const estrelas = janela.querySelectorAll('svg.lucide-star');
+    expect(estrelas.length).toBe(5);
+    expect(janela.querySelector('svg.lucide-star.fill-amber-400')).not.toBeNull();
+    expect(janela.innerHTML).not.toContain('violet');
+  });
 });

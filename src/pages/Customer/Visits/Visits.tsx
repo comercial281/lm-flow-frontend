@@ -1045,7 +1045,7 @@ function LinhaDaVisita({
               <button
                 type="button"
                 onClick={onAbrir}
-                className="relative cursor-pointer border-0 bg-transparent p-0 text-xs font-semibold text-foreground underline decoration-border underline-offset-[3px]"
+                className="relative cursor-pointer overflow-hidden border-0 bg-transparent p-0 text-xs font-semibold text-foreground underline decoration-border underline-offset-[3px]"
               >
                 {visit.contact.name}
               </button>
@@ -1125,7 +1125,7 @@ function VisitCard({
           {visit.rating != null && (
             <div className="flex items-center gap-0.5">
               {[1,2,3,4,5].map(n => (
-                <Star key={n} className={`h-3.5 w-3.5 ${n <= (visit.rating ?? 0) ? 'text-violet-400 fill-violet-400' : 'text-muted-foreground'}`} />
+                <Star key={n} className={`h-3.5 w-3.5 ${n <= (visit.rating ?? 0) ? 'fill-amber-400 text-amber-400' : 'text-muted-foreground'}`} />
               ))}
             </div>
           )}
