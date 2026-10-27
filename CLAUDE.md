@@ -9996,3 +9996,13 @@ Bug: no "Configurar destino" do formulário, escolher em "Imóvel vinculado" um 
 - **A lista do celular** (`<select>` do sistema, que o `Seletor` usa no toque) não tem o defeito: conferido no navegador.
 
 Teste: `src/components/ui/ds.select.spec.tsx`.
+
+## IA Vendedora: áudio na primeira resposta (desde 2026-10-27)
+
+Pedido do dono pra Sala de demonstração: abrir a conversa com áudio, imagem e texto juntos. Backend `claude/abertura-mista` (audio_mode `opening_mix`) entra antes.
+
+**O que aparece na tela:** em Configurar > Personalidade > Áudio, "Quando ela responde em áudio" ganhou a opção "Na primeira resposta", com a explicação embaixo quando marcada.
+
+**Regras:** na primeira resposta a 1ª parte sai em áudio (é onde a IA fala o nome do lead), depois a "Imagem de abertura" (Abertura) se tiver, e o resto em texto; nos turnos seguintes vale como "Quando o lead mandar áudio". Voz falhando, tudo em texto.
+
+Código: `configurar/paginas/Personalidade.tsx`, tipo em `salesAgentsService.ts`. Testes: `Personalidade.spec.tsx`.

@@ -55,9 +55,16 @@ export default function Personalidade({ agent, gravar }: PropsDaPagina) {
       <Secao titulo="Áudio" descricao="Resposta em áudio, com a voz que você escolher.">
         <LinhaComChave rotulo="Responder em áudio" ligada={audioLigado}
           aoMudar={(v) => gravar(v ? { audio_enabled: true, ...(agent.audio_mode === 'never' || !agent.audio_mode ? { audio_mode: 'mirror' as const } : {}) } : { audio_enabled: false })}>
-          <BotoesDeEscolha rotulo="Quando ela responde em áudio" valor={agent.audio_mode === 'always' ? 'always' : 'mirror'}
-            opcoes={[{ valor: 'mirror', rotulo: 'Quando o lead mandar áudio' }, { valor: 'always', rotulo: 'Sempre' }]}
+          <BotoesDeEscolha rotulo="Quando ela responde em áudio"
+            valor={agent.audio_mode === 'always' || agent.audio_mode === 'opening_mix' ? agent.audio_mode : 'mirror'}
+            opcoes={[{ valor: 'mirror', rotulo: 'Quando o lead mandar áudio' }, { valor: 'opening_mix', rotulo: 'Na primeira resposta' },
+              { valor: 'always', rotulo: 'Sempre' }]}
             aoEscolher={(m) => void gravar({ audio_mode: m })} />
+          {agent.audio_mode === 'opening_mix' && (
+            <p className="text-sm text-muted-foreground">
+              A primeira mensagem sai em áudio falando o nome do lead, com a imagem de abertura (se tiver) e o resto em texto. Depois, ela responde em áudio quando o lead mandar áudio.
+            </p>
+          )}
           {!vozGravada && <p className="text-sm text-muted-foreground">Sem escolha, ela usa a voz padrão da plataforma.</p>}
           <CartoesDeEscolha rotulo="Voz" valor={vozGravada} opcoes={opcoesDeVoz} aoEscolher={(id) => void gravar({ audio_voice_id: id })}
             acessorio={(o) => {

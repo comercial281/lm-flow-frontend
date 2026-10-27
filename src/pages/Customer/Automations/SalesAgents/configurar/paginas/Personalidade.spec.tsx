@@ -33,6 +33,18 @@ describe('Personalidade', () => {
     expect(gravar).toHaveBeenCalledWith({ audio_enabled: true, audio_mode: 'mirror' });
   });
 
+  it('abertura mista: "Na primeira resposta" grava opening_mix e explica o que sai', async () => {
+    const gravar = abrir(agenteDeTeste({ audio_enabled: true, audio_mode: 'mirror' }));
+    await userEvent.click(screen.getByRole('radio', { name: 'Na primeira resposta' }));
+    expect(gravar).toHaveBeenCalledWith({ audio_mode: 'opening_mix' });
+  });
+
+  it('abertura mista gravada aparece marcada, com a explicação', () => {
+    abrir(agenteDeTeste({ audio_enabled: true, audio_mode: 'opening_mix' }));
+    expect(screen.getByRole('radio', { name: 'Na primeira resposta' })).toHaveAttribute('aria-checked', 'true');
+    expect(screen.getByText(/A primeira mensagem sai em áudio falando o nome do lead/)).toBeInTheDocument();
+  });
+
   it('vozes do catálogo com "Ouvir"; escolher grava; voz própria aparece como "Voz própria"', async () => {
     const gravar = abrir(agenteDeTeste({ audio_enabled: true, audio_mode: 'mirror', audio_voice_id: 'combinada-123' }));
     expect(await screen.findByRole('radio', { name: 'Sergio' })).toBeInTheDocument();
