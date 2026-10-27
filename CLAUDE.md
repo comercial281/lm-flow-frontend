@@ -9943,3 +9943,24 @@ Armadilhas:
 Código: `src/components/pipelines/BulkDispatchModal.tsx` (`modoCorretor`, recontagem parada com painel aberto), `src/components/pipelines/disparo/PassoQuemRecebe.tsx` (campo travado e aviso) e `PainelDeLeads.tsx`, `src/pages/Customer/Disparos/Disparos.tsx`, `src/pages/Customer/Pipelines/boardActions.ts`, `src/routes/permissionRoutes.ts` + `index.tsx`, `src/components/layout/config/menuItems.ts`.
 
 Não reabrir sem o dono pedir.
+
+## Agenda de Visitas: cores, prévia do lead e quem agendou (desde 2026-10-27)
+
+Prévia aprovada pelo dono: https://claude.ai/artifact/LFVkrzc1mybySoUbqzyYAK. Spec em `LM FLOW/specs/2026-10-27-agenda-de-visitas-redesenho-design.md`.
+
+O que mudou na tela:
+
+- **Cores por situação, sem roxo.** Cada situação da visita (Agendada, Confirmada, Em andamento, Reagendada, Realizada, Não compareceu, Cancelada) tem a própria cor nos tokens `--visita-*`, lidos num módulo só (`src/features/visits/situacaoDaVisita.ts`: `estiloDaSituacao`, `corDaSituacao`, `ehAtrasada`). Nenhuma cor de situação é roxo nem `--primary`. A legenda sob a barra do calendário usa as mesmas cores e acrescenta "Passou e ninguém registrou".
+- **Quem agendou.** Ícone de robô quando foi a IA, de pessoa quando foi gente (`IconeDeQuemAgendou`, em `PecaDaVisita.tsx`). Regra do produto inteiro: **robô = "a IA fez"**, inclusive no rodapé dos cartões de evento da conversa (`CartaoDeEvento`). **Sparkles fica só para botões de "fazer com IA".** Não misturar.
+- **Prévia do lead ao parar o mouse.** Em cada visita do Mês, Semana e Dia, e no nome do lead na Lista: depois de 450 ms parado (só mouse, nunca toque) abre o resumo do lead num cartão no body (portal, `stopPropagation` para o clique dentro dela não abrir o Agendar do dia). A barrinha na cor da situação enche durante a espera. Cache de 2 minutos em `guardaDoResumo.ts`, compartilhado com a janela.
+- **Janela da visita.** O clique abre a janela da casa com o resumo do lead em cima (conversa pelo `conversation_id`, card/contato pelo link), a visita no meio e os botões no pé. Resumo que não chega mostra aviso e mantém visita e botões.
+- **Lista e Calendário no mesmo cartão.** As duas visões moram no mesmo `Card` (`data-testid="agenda-cartao"`, `gap-0 p-4`), sem `max-w-3xl`. Cada linha da Lista tem faixa na cor da situação, situação em bolinha com texto, ícone de quem agendou, telefone, bairro, corretor e os botões de sempre (ordem e regra em `botoesDaVisita`, não mudaram).
+- **Alinhamento.** O título "Visitas" andava ao trocar Lista/Calendário porque a barra de rolagem aparecia e sumia. `Pagina` (modo página) agora reserva o espaço com `[scrollbar-gutter:stable]`: vale para todas as telas, decisão do dono.
+
+Contrato lido do backend: `GET /visits/:id/lead_summary` (resumo do lead) e os campos `booked_by` e `created_by` na visita. O backend de leitura da visita só acrescenta campos.
+
+Voltar de versão é seguro (aditivo): sem migration e sem formato de dado novo. O backend pode voltar sozinho (a tela fica sem ícone e com o aviso no lugar do resumo). A tela também pode voltar sozinha (o backend só manda campos que ninguém lê). Não precisa entrada nas armadilhas do `LM FLOW/CLAUDE.md`.
+
+Código: `src/pages/Customer/Visits/Visits.tsx` (`LinhaDaVisita`, `JanelaDaVisita`), `src/features/visits/` (`PecaDaVisita`, `PreviaDoLead`, `ResumoDoLead`, `guardaDoResumo`, `situacaoDaVisita`), `src/components/base/Pagina.tsx`.
+
+Não reabrir sem o dono pedir.
