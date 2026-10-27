@@ -39,9 +39,9 @@ import {
   visitsService,
   Visit,
   VISIT_STATUS_LABELS,
-  VISIT_STATUS_COLORS,
 } from '@/services/visits/visitsService';
 
+import { estiloDaSituacao } from '@/features/visits/situacaoDaVisita';
 import { ScheduleVisitDialog } from '@/components/visits/ScheduleVisitDialog';
 import { HorarioVisitaDialog } from '@/components/visits/HorarioVisitaDialog';
 import { FolgasDialog } from '@/components/visits/FolgasDialog';
@@ -990,7 +990,8 @@ function VisitCard({
       <div className="flex-1 min-w-0">
         <div className="flex items-start justify-between gap-2 mb-2">
           <div>
-            <span className={`inline-flex items-center text-xs px-2 py-0.5 rounded font-medium ${VISIT_STATUS_COLORS[visit.status] ?? ''}`}>
+            <span className="inline-flex items-center gap-1.5 text-xs font-medium" style={estiloDaSituacao(visit.status)}>
+              <span aria-hidden className="h-2 w-2 rounded-full bg-[var(--st)]" />
               {VISIT_STATUS_LABELS[visit.status] ?? visit.status}
             </span>
             {isPastVisit && isActive && (
