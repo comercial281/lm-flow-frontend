@@ -563,4 +563,42 @@ describe('Agenda de Visitas: Lista no mesmo cartão', () => {
     expect(janela.querySelector('svg.lucide-star.fill-amber-400')).not.toBeNull();
     expect(janela.innerHTML).not.toContain('violet');
   });
+
+  it('Atrasada no cartão da janela só vale para Agendada/Confirmada, como na Lista', async () => {
+    const ontem = new Date(Date.now() - 26 * 3600 * 1000);
+    const visita = { id: 'v9', status: 'in_progress', scheduled_at: ontem.toISOString(), duration_minutes: 60, contact: { id: 'c1', name: 'Maria de Souza' } };
+    list.mockResolvedValue({ data: [visita], meta: { total: 1, active_total: 1, only_mine: false } });
+    const user = userEvent.setup();
+    abrir();
+    await user.click(await screen.findByRole('button', { name: 'Ver em lista' }));
+    const linha = (await screen.findByText('Maria de Souza')).closest('[id^="visita-"]') as HTMLElement;
+    expect(within(linha).queryByText('Atrasada')).toBeNull();
+    await user.click(within(linha).getByRole('button', { name: 'Maria de Souza' }));
+    const janela = await screen.findByRole('dialog');
+    expect(within(janela).queryByText('Atrasada')).toBeNull();
+  });
+
+  it('janela: botões da visita ficam na seção "O que aconteceu"; encerrada sem botão não mostra seção vazia', async () => {
+    const hoje = new Date();
+    const as15 = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate(), 15, 0);
+    const aberta = { id: 'v10', status: 'scheduled', scheduled_at: as15.toISOString(), duration_minutes: 60, contact: { id: 'c1', name: 'Maria de Souza' } };
+    list.mockResolvedValue({ data: [aberta], meta: { total: 1, active_total: 1, only_mine: false } });
+    const user = userEvent.setup();
+    const { unmount } = abrir();
+    await user.click(await screen.findByRole('button', { name: 'Ver em lista' }));
+    await user.click(await screen.findByRole('button', { name: 'Maria de Souza' }));
+    const janela = await screen.findByRole('dialog');
+    const secao = within(janela).getByRole('group', { name: 'O que aconteceu' });
+    expect(within(secao).getByRole('button', { name: /^Remarcar$/ })).toBeInTheDocument();
+    unmount();
+
+    const cancelada = { ...aberta, id: 'v11', status: 'cancelled' };
+    list.mockResolvedValue({ data: [cancelada], meta: { total: 1, active_total: 1, only_mine: false } });
+    abrir();
+    await user.click(await screen.findByRole('button', { name: 'Ver em lista' }));
+    await user.click(await screen.findByRole('button', { name: 'Maria de Souza' }));
+    const janela2 = await screen.findByRole('dialog');
+    expect(within(janela2).queryByRole('group', { name: 'O que aconteceu' })).toBeNull();
+    expect(within(janela2).queryByText('O que aconteceu')).toBeNull();
+  });
 });

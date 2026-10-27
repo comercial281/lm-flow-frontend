@@ -513,7 +513,7 @@ export function ScheduleVisitDialog({
                           aria-label={`Avaliar com ${n} ${n === 1 ? 'estrela' : 'estrelas'}`}
                           title={`Avaliar com ${n} ${n === 1 ? 'estrela' : 'estrelas'}`}
                         >
-                          <Star className={`h-6 w-6 ${n <= nota ? 'text-violet-400 fill-violet-400' : 'text-muted-foreground'}`} />
+                          <Star className={`h-6 w-6 ${n <= nota ? 'fill-amber-400 text-amber-400' : 'text-muted-foreground'}`} />
                         </button>
                       ))}
                     </div>

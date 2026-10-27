@@ -30,6 +30,7 @@ describe('PecaDaVisita', () => {
   it('ícone avulso é uma imagem com nome', () => {
     render(<IconeDeQuemAgendou visita={{ booked_by: 'ia' }} />);
     expect(screen.getByRole('img', { name: 'Agendada pela IA Vendedora' })).toBeTruthy();
+    expect(screen.getByRole('img', { name: 'Agendada pela IA Vendedora' })).toHaveAttribute('title', 'Agendada pela IA Vendedora');
   });
 
   it('pessoa tem o ícone com o nome de quem agendou', () => {

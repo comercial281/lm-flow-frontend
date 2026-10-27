@@ -20,7 +20,12 @@ export function IconeDeQuemAgendou({
   if (!q) return null;
   const Icone = q.tipo === 'ia' ? Bot : User;
   if (decorativo) return <Icone aria-hidden="true" className={cn('shrink-0', className)} />;
-  return <Icone role="img" aria-label={q.rotulo} className={cn('shrink-0', className)} />;
+  // O `title` do svg não vira dica do mouse: a dica mora no span que leva o nome.
+  return (
+    <span role="img" aria-label={q.rotulo} title={q.rotulo} className="inline-flex shrink-0">
+      <Icone aria-hidden="true" className={cn('shrink-0', className)} />
+    </span>
+  );
 }
 
 const PARTICULAS = new Set(['de', 'da', 'do', 'dos', 'das', 'e']);

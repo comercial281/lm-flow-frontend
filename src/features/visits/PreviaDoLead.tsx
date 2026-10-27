@@ -16,6 +16,7 @@ import Aviso from '@/components/base/Aviso';
 import { Skeleton } from '@/components/ui/ds';
 import { cn } from '@/lib/utils';
 import type { LeadSummary, Visit } from '@/services/visits/visitsService';
+import { acaoDaVisita } from './acaoDaVisita';
 import { MARGEM, posicaoDaPrevia } from './posicaoDaPrevia';
 import { ResumoDoLead } from './ResumoDoLead';
 import { lerResumoDoLead, resumoGuardado } from './guardaDoResumo';
@@ -34,9 +35,20 @@ const BARRA_DA_ESPERA =
 
 type PropsDaPeca = Partial<PropsDoAlvo> & { className?: string; style?: CSSProperties };
 
-type VisitaDaPrevia = Pick<Visit, 'id' | 'booked_by' | 'created_by'>;
+type VisitaDaPrevia = Pick<Visit, 'id' | 'booked_by' | 'created_by' | 'status' | 'scheduled_at'>;
 
-export function PreviaDoLead({ visita, children }: { visita: VisitaDaPrevia; children: ReactElement<PropsDaPeca> }) {
+/** `abrir` = o clique sempre abre a visita (nome do lead na Lista); `auto` = segue `acaoDaVisita`. */
+type DicaDoClique = 'abrir' | 'auto';
+
+function textoDaDica(visita: VisitaDaPrevia, dica: DicaDoClique): string | null {
+  if (dica === 'abrir') return 'Clique para abrir a visita';
+  const acao = acaoDaVisita(visita, 'clique');
+  if (acao === 'resumo') return 'Clique para abrir a visita';
+  if (acao === 'retorno') return 'Clique para dar o retorno';
+  return null;
+}
+
+export function PreviaDoLead({ visita, dica = 'auto', children }: { visita: VisitaDaPrevia; dica?: DicaDoClique; children: ReactElement<PropsDaPeca> }) {
   const previa = usePreviaComAtraso({ atrasoMs: ATRASO_MS });
   const peca = Children.only(children);
   const deFora = peca.props;
@@ -58,7 +70,7 @@ export function PreviaDoLead({ visita, children }: { visita: VisitaDaPrevia; chi
         style: { ...deFora.style, '--atraso': `${ATRASO_MS}ms` } as CSSProperties,
       })}
       {previa.aberta && previa.ancora && createPortal(
-        <CartaoDaPrevia key={visita.id} visita={visita} ancora={previa.ancora} {...previa.conteudoProps} />,
+        <CartaoDaPrevia key={visita.id} visita={visita} dica={dica} ancora={previa.ancora} {...previa.conteudoProps} />,
         document.body,
       )}
     </>
@@ -71,8 +83,8 @@ export function PreviaDoLead({ visita, children }: { visita: VisitaDaPrevia; chi
 const naoSobe = (e: SyntheticEvent) => e.stopPropagation();
 
 function CartaoDaPrevia({
-  visita, ancora, onPointerEnter, onPointerLeave,
-}: { visita: VisitaDaPrevia; ancora: HTMLElement; onPointerEnter: () => void; onPointerLeave: () => void }) {
+  visita, dica, ancora, onPointerEnter, onPointerLeave,
+}: { visita: VisitaDaPrevia; dica: DicaDoClique; ancora: HTMLElement; onPointerEnter: () => void; onPointerLeave: () => void }) {
   const visitaId = visita.id;
   // Resumo guardado abre direto; senão esqueleto até chegar.
   const [estado, setEstado] = useState<{ resumo?: LeadSummary; erro?: boolean }>(() => ({ resumo: resumoGuardado(visitaId) }));
@@ -115,7 +127,9 @@ function CartaoDaPrevia({
       {estado.resumo ? (
         <>
           <ResumoDoLead resumo={estado.resumo} agendamento={visita} />
-          <p className="mt-2.5 text-center text-[11px] text-muted-foreground">Clique para abrir a visita</p>
+          {textoDaDica(visita, dica) && (
+            <p className="mt-2.5 text-center text-[11px] text-muted-foreground">{textoDaDica(visita, dica)}</p>
+          )}
         </>
       ) : estado.erro ? (
         <Aviso tom="erro" compacto>Não deu para carregar o resumo do lead.</Aviso>

@@ -25,13 +25,18 @@ const ponteiro = (el: Element, tipo: 'pointerover' | 'pointerout' | 'pointerdown
 const entrar = (el: Element, t = 'mouse') => ponteiro(el, 'pointerover', t);
 const sair = (el: Element) => ponteiro(el, 'pointerout');
 
-const VISITA = { id: 'v1', booked_by: null, created_by: null } satisfies Pick<Visit, 'id' | 'booked_by' | 'created_by'>;
+type VisitaDaPrevia = Pick<Visit, 'id' | 'booked_by' | 'created_by' | 'status' | 'scheduled_at'>;
+const VISITA: VisitaDaPrevia = { id: 'v1', booked_by: null, created_by: null, status: 'scheduled', scheduled_at: '2099-01-10T17:00:00.000Z' };
 
-const montar = (visita: Pick<Visit, 'id' | 'booked_by' | 'created_by'> = VISITA, pai?: { onClick?: () => void; onPointerDown?: () => void; onMouseDown?: () => void }) =>
+const montar = (
+  visita: VisitaDaPrevia = VISITA,
+  pai?: { onClick?: () => void; onPointerDown?: () => void; onMouseDown?: () => void },
+  dica?: 'abrir' | 'auto',
+) =>
   render(
     <MemoryRouter>
       <div {...pai}>
-        <PreviaDoLead visita={visita}><button type="button" className="peca">Peça</button></PreviaDoLead>
+        <PreviaDoLead visita={visita} dica={dica}><button type="button" className="peca">Peça</button></PreviaDoLead>
       </div>
     </MemoryRouter>,
   );
@@ -75,6 +80,38 @@ describe('PreviaDoLead', () => {
     expect(screen.getByText('Clique para abrir a visita')).toBeInTheDocument();
     // abrir a prévia não rouba o foco da página
     expect(document.activeElement).toBe(document.body);
+  });
+
+  describe('dica do clique segue o que o clique faz', () => {
+    const abrirCom = async (visita: VisitaDaPrevia, dica?: 'abrir' | 'auto') => {
+      leadSummary.mockResolvedValue(RESUMO);
+      montar(visita, undefined, dica);
+      entrar(screen.getByRole('button', { name: 'Peça' }));
+      await passar(450);
+      await act(async () => {});
+      expect(screen.getByText('Mariana Souza')).toBeInTheDocument();
+    };
+
+    it('visita agendada: Clique para abrir a visita', async () => {
+      await abrirCom(VISITA);
+      expect(screen.getByText('Clique para abrir a visita')).toBeInTheDocument();
+    });
+
+    it('visita realizada: Clique para dar o retorno', async () => {
+      await abrirCom({ ...VISITA, status: 'completed' });
+      expect(screen.getByText('Clique para dar o retorno')).toBeInTheDocument();
+      expect(screen.queryByText('Clique para abrir a visita')).toBeNull();
+    });
+
+    it('visita cancelada: sem dica', async () => {
+      await abrirCom({ ...VISITA, status: 'cancelled' });
+      expect(screen.queryByText(/^Clique para/)).toBeNull();
+    });
+
+    it('na Lista o nome do lead sempre abre a visita, até na cancelada', async () => {
+      await abrirCom({ ...VISITA, status: 'cancelled' }, 'abrir');
+      expect(screen.getByText('Clique para abrir a visita')).toBeInTheDocument();
+    });
   });
 
   it('erro mostra o aviso da casa', async () => {

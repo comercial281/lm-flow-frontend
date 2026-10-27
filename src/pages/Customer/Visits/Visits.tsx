@@ -76,6 +76,8 @@ import {
   tituloDaVisao,
 } from '@/features/visits/gradeDoCalendario';
 import { AcoesDaVisita } from '@/features/visits/AcoesDaVisita';
+import { botoesDaVisita } from '@/features/visits/acaoDaVisita';
+import { useCan } from '@/hooks/useCan';
 import { MioloDoCancelamentoDaVisita, MioloDoRetornoDaVisita } from '@/features/visits/MioloDaAcaoDaVisita';
 import { acaoDaVisita, type AcaoDaVisita } from '@/features/visits/acaoDaVisita';
 
@@ -107,10 +109,6 @@ function isToday(iso: string) {
   const d = new Date(iso);
   const t = new Date();
   return d.toDateString() === t.toDateString();
-}
-
-function isPast(iso: string) {
-  return new Date(iso) < new Date();
 }
 
 type ViewMode = 'calendar' | 'list';
@@ -945,6 +943,20 @@ export default function Visits() {
   );
 }
 
+// Seção "O que aconteceu": os botões da visita. Sem botão nenhum (visita
+// encerrada), nada de título solto; a peça segue montada por causa dos diálogos.
+function SecaoOQueAconteceu({ visit, onAtualizada }: { visit: Visit; onAtualizada: (v: Visit) => void }) {
+  const pode = useCan();
+  const botoes = botoesDaVisita(visit, {
+    confirmar: pode('visits', 'confirm'),
+    remarcar: pode('visits', 'reschedule'),
+    cancelar: pode('visits', 'cancel'),
+    concluir: pode('visits', 'complete'),
+  });
+  const acoes = <AcoesDaVisita visita={visit} onAtualizada={onAtualizada} />;
+  return botoes.length > 0 ? <GrupoDaJanela titulo="O que aconteceu">{acoes}</GrupoDaJanela> : acoes;
+}
+
 // Miolo da janela do clique: Lead em cima (resumo completo), Visita no meio e
 // os botões no pé. Resumo que não chega não tira a visita nem os botões.
 function JanelaDaVisita({ visit, onAtualizada }: { visit: Visit; onAtualizada: (v: Visit) => void }) {
@@ -986,9 +998,7 @@ function JanelaDaVisita({ visit, onAtualizada }: { visit: Visit; onAtualizada: (
       <GrupoDaJanela titulo="Visita">
         <VisitCard visit={visit} ancorada={false} semBotoes onAtualizada={onAtualizada} />
       </GrupoDaJanela>
-      <div>
-        <AcoesDaVisita visita={visit} onAtualizada={onAtualizada} />
-      </div>
+      <SecaoOQueAconteceu visit={visit} onAtualizada={onAtualizada} />
     </div>
   );
 }
@@ -1041,7 +1051,7 @@ function LinhaDaVisita({
         )}
         <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-muted-foreground">
           {visit.contact?.name && (
-            <PreviaDoLead visita={visit}>
+            <PreviaDoLead visita={visit} dica="abrir">
               <button
                 type="button"
                 onClick={onAbrir}
@@ -1089,12 +1099,11 @@ function VisitCard({
   /** Os botões são da peça única `AcoesDaVisita`; ela avisa com a visita alterada (ou nova). */
   onAtualizada: (v: Visit) => void;
 }) {
-  const isPastVisit = isPast(visit.scheduled_at);
-  const isActive = ['scheduled', 'confirmed', 'in_progress', 'rescheduled'].includes(visit.status);
+  const atrasada = ehAtrasada(visit);
 
   return (
     <Card id={ancorada ? `visita-${visit.id}` : undefined} className={`flex-row gap-4 p-4 transition-shadow ${
-      isPastVisit && isActive ? 'border-orange-300 dark:border-orange-700' : ''
+      atrasada ? 'border-orange-300 dark:border-orange-700' : ''
     } ${destacada ? 'outline-2 outline-primary' : ''}`}>
       {/* Time column */}
       <div className="flex-shrink-0 w-16 text-center">
@@ -1118,7 +1127,7 @@ function VisitCard({
               {VISIT_STATUS_LABELS[visit.status] ?? visit.status}
             </span>
             <IconeDeQuemAgendou visita={visit} className="ml-2 inline-block h-3.5 w-3.5 align-[-2px] text-muted-foreground" />
-            {isPastVisit && isActive && (
+            {atrasada && (
               <span className="ml-2 text-xs text-orange-600 dark:text-orange-400 font-medium">Atrasada</span>
             )}
           </div>
