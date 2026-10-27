@@ -266,7 +266,7 @@ export default function SalesAgents() {
   // mentiria até o de B chegar). Só relido por `updated_at` mantém, sem piscar.
   const diagnosticoDaIa = selected && diagnostico?.id === selected.id ? diagnostico.report : null;
   const numeroOficial = inboxes.find((i) => String(i.id) === String(selected?.inbox_id ?? ''))?.oficial ?? false;
-  const situacao = selected ? situacaoDaIa(selected, diagnosticoDaIa, selected.hidden_warnings ?? [], numeroOficial) : null;
+  const situacao = selected ? situacaoDaIa(selected, diagnosticoDaIa, numeroOficial) : null;
   const info = telaInfo(tela);
   const trilha = trilhaDe(tela);
 

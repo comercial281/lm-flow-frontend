@@ -1,4 +1,4 @@
-import { hora } from '@/lib/formato';
+import { hora, quandoAcontece } from '@/lib/formato';
 import type { TeamAccessMember } from '@/types/teamAccess';
 
 /* A coluna "Acesso" da lista de Pessoas: o gestor quer saber se a pessoa JÁ
@@ -39,7 +39,11 @@ export function accessStatus(
   const until = member.access_link_until ? new Date(member.access_link_until) : null;
   if (until && !Number.isNaN(until.getTime())) {
     if (until.getTime() > now.getTime()) {
-      return { label: 'Link enviado', detail: `Ainda não entrou · vale até ${hora(until)}`, tone: 'warn' };
+      // O link vale 24h: só a hora ("vale até 12:53") lê como "vence agora" pra
+      // quem acabou de mandar às 12:53. O dia vai junto: "amanhã às 12:53".
+      const quando = quandoAcontece(until, now);
+      const ate = quando.charAt(0).toLowerCase() + quando.slice(1);
+      return { label: 'Link enviado', detail: `Ainda não entrou · vale até ${ate}`, tone: 'warn' };
     }
     // Mandou e passou do prazo sem ela entrar: precisa de um link novo.
     return { label: 'Link expirou', detail: 'Ainda não entrou', tone: 'warn' };

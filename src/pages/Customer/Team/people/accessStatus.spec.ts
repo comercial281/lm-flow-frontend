@@ -28,7 +28,17 @@ describe('accessStatus', () => {
 
   it('link ainda válido e sem entrada: Link enviado com a hora limite', () => {
     expect(accessStatus({ access_link_until: iso(2026, 9, 9, 18, 30) }, agora))
-      .toEqual({ label: 'Link enviado', detail: 'Ainda não entrou · vale até 18:30', tone: 'warn' });
+      .toEqual({ label: 'Link enviado', detail: 'Ainda não entrou · vale até hoje às 18:30', tone: 'warn' });
+  });
+
+  it('link de 24h mandado agora vence amanhã: diz o dia, não só a hora', () => {
+    expect(accessStatus({ access_link_until: iso(2026, 9, 10, 12, 0) }, agora).detail)
+      .toBe('Ainda não entrou · vale até amanhã às 12:00');
+  });
+
+  it('link que vence depois de amanhã mostra a data', () => {
+    expect(accessStatus({ access_link_until: iso(2026, 9, 12, 9, 15) }, agora).detail)
+      .toBe('Ainda não entrou · vale até 12/10 às 09:15');
   });
 
   it('quem já entrou ignora o link pendente', () => {
