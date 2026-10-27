@@ -9,24 +9,40 @@ import { ehAtrasada, estiloDaSituacao } from './situacaoDaVisita';
 export function IconeDeQuemAgendou({
   visita,
   className,
+  decorativo,
 }: {
   visita: Pick<Visit, 'booked_by' | 'created_by'>;
   className?: string;
+  /** Dentro de botão com aria-label: o nome já está no botão, o ícone fica mudo. */
+  decorativo?: boolean;
 }) {
   const q = quemAgendou(visita);
   if (!q) return null;
   const Icone = q.tipo === 'ia' ? Bot : User;
+  if (decorativo) return <Icone aria-hidden="true" className={cn('shrink-0', className)} />;
   return <Icone role="img" aria-label={q.rotulo} className={cn('shrink-0', className)} />;
 }
 
-function nomeDaVisita(v: Visit): string {
-  return v.contact?.name || v.property?.title || 'Visita';
+const PARTICULAS = new Set(['de', 'da', 'do', 'dos', 'das', 'e']);
+
+function nomeDoContato(v: Visit): string {
+  return v.contact?.name?.trim() ?? '';
 }
 
-// "Maria Souza Lima" -> "Maria S." (cabe na pílula do mês).
+function nomeDaVisita(v: Visit): string {
+  return nomeDoContato(v) || v.property?.title || 'Visita';
+}
+
+// "Maria de Souza Lima" -> "Maria S." (cabe na pílula do mês). Só pro nome do contato.
 function nomeCurto(nome: string): string {
-  const [primeiro, segundo] = nome.trim().split(/\s+/);
-  return segundo ? `${primeiro} ${segundo[0].toUpperCase()}.` : primeiro;
+  const [primeiro, ...resto] = nome.split(/\s+/);
+  const sobrenome = resto.find(p => !PARTICULAS.has(p.toLowerCase()));
+  return sobrenome ? `${primeiro} ${sobrenome[0].toUpperCase()}.` : primeiro;
+}
+
+function nomeDaPilula(v: Visit): string {
+  const contato = nomeDoContato(v);
+  return contato ? nomeCurto(contato) : nomeDaVisita(v);
 }
 
 type Props = Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'onClick'> & {
@@ -53,21 +69,24 @@ export const PecaDaVisita = forwardRef<HTMLButtonElement, Props>(function PecaDa
   const q = quemAgendou(visita);
   const icone = q ? (
     <span title={q.rotulo} className="inline-flex shrink-0">
-      <IconeDeQuemAgendou visita={visita} className={forma === 'pilula' ? 'h-[11px] w-[11px]' : 'h-3 w-3'} />
+      <IconeDeQuemAgendou decorativo visita={visita} className={forma === 'pilula' ? 'h-[11px] w-[11px]' : 'h-3 w-3'} />
     </span>
   ) : null;
+  const nomeAcessivel = [h, nome, situacao, q?.rotulo, atrasada ? 'passou sem registro' : null]
+    .filter(Boolean)
+    .join(' · ');
   const base: CSSProperties = { ...estiloDaSituacao(visita.status), ...style };
 
   const comum = {
+    ...handlersDaPrevia,
     ref,
     id: `visita-${visita.id}`,
     type: 'button' as const,
     'data-visit': visita.id,
     'data-s': visita.status,
-    'aria-label': `${h} · ${nome} · ${situacao}`,
+    'aria-label': nomeAcessivel,
     onClick: (e: React.MouseEvent) => { e.stopPropagation(); onClick(visita); },
     style: base,
-    ...handlersDaPrevia,
   };
 
   if (forma === 'pilula') {
@@ -84,7 +103,7 @@ export const PecaDaVisita = forwardRef<HTMLButtonElement, Props>(function PecaDa
         <span className="shrink-0 font-medium tabular-nums text-muted-foreground">{h}</span>
         {visita.status === 'completed' && <Check aria-hidden className="h-[11px] w-[11px] shrink-0" style={{ color: 'var(--visita-confirmed)' }} />}
         {icone}
-        <span className={cn('min-w-0 truncate font-semibold', riscado && 'text-muted-foreground line-through')}>{nomeCurto(nome)}</span>
+        <span className={cn('min-w-0 truncate font-semibold', riscado && 'text-muted-foreground line-through')}>{nomeDaPilula(visita)}</span>
         {atrasada && (
           <span
             title="Passou e ninguém registrou"
@@ -109,7 +128,7 @@ export const PecaDaVisita = forwardRef<HTMLButtonElement, Props>(function PecaDa
       )}
     >
       <span className="flex items-center gap-1 text-[10.5px] font-medium tabular-nums text-muted-foreground">
-        {fim ? `${h}–${fim}` : h}
+        {fim ? `${h} às ${fim}` : h}
         {atrasada && (
           <span
             title="Passou e ninguém registrou"
