@@ -60,6 +60,7 @@ describe('aba Follow-up', () => {
     list.mockResolvedValue([{
       id: 'f1', name: 'Follow-up longo', kind: 'followup', is_enabled: true, archived_at: null,
       trigger: { event: 'lead.stage_changed', conditions: [], alternatives: [{ event: 'lead.tag_added', conditions: [] }] },
+      live_count: 3,
     }]);
     renderAt('followup');
 
@@ -68,8 +69,9 @@ describe('aba Follow-up', () => {
     expect(list).toHaveBeenCalledWith(expect.objectContaining({ kind: 'followup' }));
     expect(foldersList).not.toHaveBeenCalled();
     expect(screen.queryByText('Modelos')).toBeNull();
-    // O cartão mostra todos os gatilhos.
-    expect(screen.getByText('Etapa alterada ou Etiqueta adicionada')).toBeTruthy();
+    // Follow-up não tem gatilho (o motor ignora o gravado): o cartão diz quantos leads estão dentro.
+    expect(screen.queryByText('Etapa alterada ou Etiqueta adicionada')).toBeNull();
+    expect(screen.getByText('3 leads em follow-up agora')).toBeTruthy();
   });
 
   it('"Novo follow-up" cria com kind followup e abre o canvas do follow-up', async () => {
