@@ -70,14 +70,18 @@ export function BuscaDeImovel({ id, aoEscolher, disabled }: {
   );
 }
 
-/** O imóvel escolhido, com a lixeira pra tirar. */
+/**
+ * O imóvel escolhido, com a lixeira pra tirar. `min-w-0 max-w-full`: dentro das
+ * grades da janela o nome inteiro viraria a largura mínima e a janela rolaria
+ * pro lado (mesma causa da caixa de escolha, 27/10); assim o nome corta com "…".
+ */
 export function CartaoDoImovel({ imovel, aoTirar, disabled }: {
   imovel: ImovelResumo;
   aoTirar: () => void;
   disabled?: boolean;
 }) {
   return (
-    <div className="flex items-center gap-3 rounded-md border border-border bg-background px-3 py-2">
+    <div data-testid="cartao-do-imovel" className="flex min-w-0 max-w-full items-center gap-3 rounded-md border border-border bg-background px-3 py-2">
       <span aria-hidden className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
         <Building2 className="h-4 w-4" />
       </span>

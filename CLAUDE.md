@@ -10027,4 +10027,6 @@ Código: `features/flowAutomations/readiness.ts` (`hasOwnTrigger`, `nodeProblem(
 
 **Regras:** a caixa antiga carregava só os 100 imóveis Ativos mais novos, uma vez, ao abrir a página: imóvel antigo de cliente com mais de 100 não aparecia, o vinculado fora da lista abria como "Nenhum", e o recém-cadastrado só aparecia recarregando. A busca vai ao servidor a cada texto (até 20 resultados, sem teto de catálogo, qualquer situação do imóvel, como em Tarefas). O imóvel já vinculado é lido pelo id; apagado, aparece "Imóvel não encontrado" com a lixeira.
 
+**Nome comprido não estica a janela** (corrigido no mesmo dia): o cartão do imóvel escolhido é `min-w-0 max-w-full` e o nome corta com "…", mesma causa e mesmo conserto da caixa de escolha (27/10). Sem isso, um nome de 70 letras levava a janela de 499 px a 627 px de conteúdo (medido em produção).
+
 Código: `components/properties/BuscaDeImovel.tsx` (`BuscaDeImovel`, `CartaoDoImovel`, `CampoDeImovel`), usado em `LeadAdsForms.tsx` e `features/tarefas/JanelaDaTarefa.tsx`. Testes: `BuscaDeImovel.spec.tsx`.
