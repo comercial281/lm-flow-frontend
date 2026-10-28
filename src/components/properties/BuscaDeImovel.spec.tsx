@@ -47,6 +47,14 @@ describe('CampoDeImovel', () => {
     await waitFor(() => expect(screen.getByPlaceholderText('Buscar por título ou código')).toBeInTheDocument());
   });
 
+  it('nome comprido não estica a janela: o cartão encolhe e o nome corta', async () => {
+    get.mockResolvedValue({ id: 'p4', title: 'Vibra Jardim Bonfiglioli - Apartamento 2 Quartos com Lazer Completo', code: 'IM0004' });
+    render(<Campo inicial="p4" />);
+    const nome = await screen.findByText(/Vibra Jardim Bonfiglioli/);
+    expect(nome).toHaveClass('truncate');
+    expect(screen.getByTestId('cartao-do-imovel')).toHaveClass('min-w-0', 'max-w-full');
+  });
+
   it('imóvel apagado aparece como não encontrado, com a lixeira', async () => {
     get.mockRejectedValue(new Error('404'));
     render(<Campo inicial="sumiu" />);
