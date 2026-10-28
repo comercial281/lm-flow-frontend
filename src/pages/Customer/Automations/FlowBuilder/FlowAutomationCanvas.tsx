@@ -51,7 +51,7 @@ import {
   presaNaEquipe, tirarDaEquipe, useEhCorretorDeAutomacao,
 } from '@/features/flowAutomations/personal';
 import { usePersonalCapabilities } from '@/features/flowAutomations/usePersonalCapabilities';
-import { enableProblem, nodeProblem } from '@/features/flowAutomations/readiness';
+import { enableProblem, hasOwnTrigger, nodeProblem } from '@/features/flowAutomations/readiness';
 import {
   reentryOf, reentrySummary, reentryWarning, serializeReentry, type ReentrySetting,
 } from '@/features/flowAutomations/reentry';
@@ -101,6 +101,8 @@ export interface FlowAutomationCanvasProps {
 
 /** O Início do funil de conversa: o gatilho é fixo (sprint 4). */
 const CONVERSATION_TRIGGER_LINE = 'Você dispara o funil numa conversa, pelo botão de funil do campo de mensagem';
+// Follow-up não tem gatilho (Fase 2): começa por uma das portas, nunca sozinho.
+const FOLLOWUP_TRIGGER_LINE = 'Começa quando o lead é colocado em follow-up: pela coluna Follow-up, pelo card, pela IA ou por uma automação';
 
 const PEDIDO_TIRAR_MENSAGEM = {
   titulo: 'Tirar esta mensagem do funil?',
@@ -221,6 +223,9 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
   // funis da equipe. O servidor garante; a tela esconde o que ele recusaria.
   const kind = kindOf(automation);
   const isConversation = kind === 'conversation';
+  // Funil de conversa e follow-up não têm gatilho próprio: o Início só informa,
+  // nada de gatilho é gravado nem cobrado pra ligar.
+  const semGatilho = !hasOwnTrigger(kind);
   const readOnly = isReadOnly(automation);
   const [resolvendoPausas, setResolvendoPausas] = useState(false);
   // Automação PESSOAL: o corretor monta com os gatilhos e blocos do cargo; o
@@ -317,8 +322,8 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
   // fluxo ainda não liga. O cartão mostra; a chave recusa.
   // Roleta nova: "Distribuir pela roleta" sem roleta escolhida é bloco incompleto.
   const problems = useMemo(
-    () => Object.fromEntries(nodes.map(n => [n.id, nodeProblem(n)])) as Record<string, string | null>,
-    [nodes],
+    () => Object.fromEntries(nodes.map(n => [n.id, nodeProblem(n, kind)])) as Record<string, string | null>,
+    [nodes, kind],
   );
   const blockingProblem = useMemo(
     () => enableProblem(trigger, nodes, kind),
@@ -382,7 +387,7 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
       } else {
         await flowAutomationsService.update(id, {
           name: automation.name,
-          ...(isConversation ? {} : { trigger: serializeTrigger(trigger) }),
+          ...(semGatilho ? {} : { trigger: serializeTrigger(trigger) }),
           ...serializeReentry(reentry),
           business_hours_only: businessHoursOnly,
           ...(sendNumber ? serializeFlowNumber(numberSetting) : {}),
@@ -408,7 +413,7 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
     } finally {
       setSaving(false);
     }
-  }, [id, automation, guided, loaded, isConversation, trigger, reentry, businessHoursOnly, numeroAtivo, numberSetting, applyFlow, load]);
+  }, [id, automation, guided, loaded, isConversation, semGatilho, trigger, reentry, businessHoursOnly, numeroAtivo, numberSetting, applyFlow, load]);
 
   const handleRemove = useCallback(async (nodeId: string) => {
     if (guided) {
@@ -558,9 +563,9 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
   // O bloco Início: o gatilho principal e cada "Ou quando", com os filtros, numa linha.
   const startData: FlowStartNodeData = useMemo(() => {
     // Funil de conversa (sprint 4): gatilho fixo, o Início só informa.
-    if (isConversation) {
+    if (semGatilho) {
       return {
-        summary: CONVERSATION_TRIGGER_LINE, hint: null, problem: null, editing: false,
+        summary: isConversation ? CONVERSATION_TRIGGER_LINE : FOLLOWUP_TRIGGER_LINE, hint: null, problem: null, editing: false,
         highlighted: highlighted === TRIGGER_NODE_ID, fixed: true, onEdit: () => {},
       };
     }
@@ -576,7 +581,7 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
         if (!readOnly) requestPanel({ type: 'trigger' });
       },
     };
-  }, [isConversation, trigger, resources, numberView, openPanel, highlighted, readOnly, requestPanel]);
+  }, [isConversation, semGatilho, trigger, resources, numberView, openPanel, highlighted, readOnly, requestPanel]);
 
   // O Início fica sempre uma coluna antes do primeiro bloco, na mesma altura.
   const startPosition = useMemo(() => {
@@ -653,7 +658,7 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
 
   const save = async () => {
     if (!id || !automation || readOnly) return;
-    const issue = isConversation ? null : triggerProblem(trigger);
+    const issue = semGatilho ? null : triggerProblem(trigger);
     if (issue) {
       toast.error(issue);
       requestPanel({ type: 'trigger' });
@@ -1008,7 +1013,7 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
               numerosDiferentes={numeroDoFluxoVale && !numeroAtivo && numberDivergent}
             />
           )}
-          {openPanel?.type === 'trigger' && !isConversation && (
+          {openPanel?.type === 'trigger' && !semGatilho && (
             <FlowTriggerPanel
               trigger={trigger}
               resources={resources}

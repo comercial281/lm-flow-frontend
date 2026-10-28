@@ -11,7 +11,7 @@ import { usesBook } from './book';
 import { hasStoredItems, messageItemsOf } from './messageItems';
 import { conditionProblem } from './conditions';
 import { leadActionProblem } from './leadAction';
-import { moveStageProblem } from './moveStage';
+import { moveStageModeOf, moveStageProblem } from './moveStage';
 import { progressProblem } from './progress';
 import { blockLabel, isVisibleNode } from './palette';
 import { triggerProblem, type FlowTrigger } from './trigger';
@@ -37,8 +37,21 @@ function sequenceProblem(config: FlowNodeConfig): string | null {
   return sendFromProblem(sendFromOf(config)) ?? progressProblem(config);
 }
 
+/**
+ * No follow-up, o "Mover pra coluna de resposta" com o nome em branco é
+ * escolha válida (o modelo nasce assim): o motor não move e, quando o lead
+ * responde, o card volta pra coluna de onde veio (Fase 2). O corretor nem
+ * pode preencher (modo guiado), então não pode travar o Ligado.
+ */
+function blankReplyColumn(node: BlockLike): boolean {
+  const config = node.config ?? {};
+  return node.kind === 'move_stage' && moveStageModeOf(config) === 'name'
+    && typeof config.stage_name === 'string' && config.stage_name.trim() === '';
+}
+
 /** O que falta no bloco, em português, ou null. Bloco escondido não é conferido. */
-export function nodeProblem(node: BlockLike): string | null {
+export function nodeProblem(node: BlockLike, kind: FlowAutomationKind = 'automation'): string | null {
+  if (kind === 'followup' && blankReplyColumn(node)) return null;
   if (!isVisibleNode(node)) return null;
   const config = node.config ?? {};
   switch (node.kind) {
@@ -72,6 +85,15 @@ export function nodeProblem(node: BlockLike): string | null {
 }
 
 /**
+ * O fluxo começa pelo gatilho dele? Só a automação. O funil de conversa é
+ * disparado na conversa; o follow-up, pelas portas (o motor ignora gatilho
+ * gravado num follow-up).
+ */
+export function hasOwnTrigger(kind: FlowAutomationKind): boolean {
+  return kind !== 'conversation' && kind !== 'followup';
+}
+
+/**
  * Por que o fluxo ainda não pode ser ligado, ou null. Confere o gatilho e cada
  * bloco; a frase diz qual bloco e o que falta nele.
  */
@@ -81,10 +103,11 @@ export function enableProblem(
   kind: FlowAutomationKind = 'automation',
 ): string | null {
   // O funil de conversa (sprint 4) tem gatilho fixo: começa quando alguém dispara na conversa.
-  const issue = kind === 'conversation' ? null : triggerProblem(trigger);
+  // O follow-up não tem gatilho (Fase 2): começa pelas portas (coluna, janela, IA, automação).
+  const issue = hasOwnTrigger(kind) ? triggerProblem(trigger) : null;
   if (issue) return `Antes de ligar: ${issue.charAt(0).toLowerCase()}${issue.slice(1)}`;
   for (const node of nodes) {
-    const problem = nodeProblem(node);
+    const problem = nodeProblem(node, kind);
     if (problem) return `Antes de ligar, complete o bloco "${node.label || blockLabel(node)}": ${problem.charAt(0).toLowerCase()}${problem.slice(1)}`;
   }
   return null;
