@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import { Briefcase, Building2, Search, Trash2 } from 'lucide-react';
+import { Briefcase, Search } from 'lucide-react';
 import { Button, Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, Input, Textarea, Checkbox } from '@/components/ui/ds';
 import { Seletor } from '@/components/base/Seletor';
 import Aviso from '@/components/base/Aviso';
 import { CampoDaJanela, ESCOLHA, GradeDaJanela, GrupoDaJanela } from '@/components/base/janela';
 import { visitsService, type LeadPickerItem, type PersonRef } from '@/services/visits/visitsService';
-import { propertiesService } from '@/services/properties/propertiesService';
+import { BuscaDeImovel, CartaoDoImovel } from '@/components/properties/BuscaDeImovel';
 import { useAuthStore } from '@/store/authStore';
 import { apiErrorMessage } from '@/utils/apiHelpers';
 import { cn } from '@/lib/utils';
@@ -319,20 +319,9 @@ export default function JanelaDaTarefa({ aberta, aoFechar, aoSalvar, tarefa, pip
 
                 <CampoDaJanela rotulo={T.imovel} htmlFor="tarefa-imovel" colunas={2}>
                   {imovel ? (
-                    <div className="flex items-center gap-3 rounded-md border border-border bg-background px-3 py-2">
-                      <span aria-hidden className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
-                        <Building2 className="h-4 w-4" />
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium">{imovel.title}</p>
-                        <p className="text-xs text-muted-foreground">{imovel.code}</p>
-                      </div>
-                      <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" aria-label={T.tirarImovel} onClick={() => { setImovel(null); setImovelMexido(true); }}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
+                    <CartaoDoImovel imovel={imovel} aoTirar={() => { setImovel(null); setImovelMexido(true); }} />
                   ) : (
-                    <BuscaDeImovel aoEscolher={p => { setImovel(p); setImovelMexido(true); }} />
+                    <BuscaDeImovel id="tarefa-imovel" aoEscolher={p => { setImovel(p); setImovelMexido(true); }} />
                   )}
                 </CampoDaJanela>
 
@@ -443,48 +432,5 @@ export default function JanelaDaTarefa({ aberta, aoFechar, aoSalvar, tarefa, pip
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  );
-}
-
-/** Busca no catálogo de imóveis (título ou código), como no Agendar visita. */
-function BuscaDeImovel({ aoEscolher }: { aoEscolher: (p: ImovelDaTarefa) => void }) {
-  const [texto, setTexto] = useState('');
-  const [lista, setLista] = useState<ImovelDaTarefa[] | null>(null);
-
-  useEffect(() => {
-    if (!texto.trim()) { setLista(null); return; }
-    let vivo = true;
-    const id = window.setTimeout(() => {
-      propertiesService
-        .list({ q: texto, per_page: 8 })
-        .then(r => { if (vivo) setLista((r.data ?? []).map(p => ({ id: String(p.id), title: p.title, code: p.code }))); })
-        .catch(() => { if (vivo) setLista([]); });
-    }, 300);
-    return () => { vivo = false; window.clearTimeout(id); };
-  }, [texto]);
-
-  return (
-    <div className="grid gap-1.5">
-      <div className="relative">
-        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <Input id="tarefa-imovel" value={texto} onChange={e => setTexto(e.target.value)} placeholder={T.buscarImovel} className="pl-9" />
-      </div>
-      {lista && (
-        lista.length === 0 ? (
-          <p className="px-2 text-sm text-muted-foreground">{T.nenhumImovel}</p>
-        ) : (
-          <ul className="max-h-48 overflow-y-auto rounded-md border border-border">
-            {lista.map(p => (
-              <li key={p.id}>
-                <button type="button" className="w-full border-b border-border px-3 py-2 text-left text-sm last:border-0 hover:bg-muted/50" onClick={() => aoEscolher(p)}>
-                  <span className="block truncate font-medium">{p.title}</span>
-                  <span className="text-xs text-muted-foreground">{p.code}</span>
-                </button>
-              </li>
-            ))}
-          </ul>
-        )
-      )}
-    </div>
   );
 }

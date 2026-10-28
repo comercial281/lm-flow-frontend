@@ -10006,3 +10006,11 @@ Pedido do dono pra Sala de demonstração: abrir a conversa com áudio, imagem e
 **Regras:** na primeira resposta a 1ª parte sai em áudio (é onde a IA fala o nome do lead), depois a "Imagem de abertura" (Abertura) se tiver, e o resto em texto; nos turnos seguintes vale como "Quando o lead mandar áudio". Voz falhando, tudo em texto.
 
 Código: `configurar/paginas/Personalidade.tsx`, tipo em `salesAgentsService.ts`. Testes: `Personalidade.spec.tsx`.
+
+## Formulários do Meta: imóvel vinculado por busca (desde 2026-10-28)
+
+**O que aparece na tela:** em Configurações > Formulários do Meta, o campo "Imóvel vinculado" deixou de ser uma caixa de escolha e virou a busca por título ou código (a mesma de Tarefas). Escolhido, vira o cartão do imóvel com a lixeira pra tirar.
+
+**Regras:** a caixa antiga carregava só os 100 imóveis Ativos mais novos, uma vez, ao abrir a página: imóvel antigo de cliente com mais de 100 não aparecia, o vinculado fora da lista abria como "Nenhum", e o recém-cadastrado só aparecia recarregando. A busca vai ao servidor a cada texto (até 20 resultados, sem teto de catálogo, qualquer situação do imóvel, como em Tarefas). O imóvel já vinculado é lido pelo id; apagado, aparece "Imóvel não encontrado" com a lixeira.
+
+Código: `components/properties/BuscaDeImovel.tsx` (`BuscaDeImovel`, `CartaoDoImovel`, `CampoDeImovel`), usado em `LeadAdsForms.tsx` e `features/tarefas/JanelaDaTarefa.tsx`. Testes: `BuscaDeImovel.spec.tsx`.
