@@ -10006,3 +10006,17 @@ Pedido do dono pra Sala de demonstração: abrir a conversa com áudio, imagem e
 **Regras:** na primeira resposta a 1ª parte sai em áudio (é onde a IA fala o nome do lead), depois a "Imagem de abertura" (Abertura) se tiver, e o resto em texto; nos turnos seguintes vale como "Quando o lead mandar áudio". Voz falhando, tudo em texto.
 
 Código: `configurar/paginas/Personalidade.tsx`, tipo em `salesAgentsService.ts`. Testes: `Personalidade.spec.tsx`.
+
+## Follow-up não tem gatilho, nem pra ligar (2026-10-28)
+
+**O furo:** desde a Fase 2 o follow-up começa pelas portas (coluna Follow-up, janela "Colocar em follow-up", card, IA, automação) e o motor ignora gatilho gravado num follow-up (`Dispatcher.candidates` e o `next false if automation.followup?`). Mas a trava da tela que decide "dá pra ligar?" (`enableProblem`) ainda cobrava gatilho de follow-up como se fosse automação. O Follow-up padrão escapou porque já nasceu ligado; **todo "Novo follow-up" (corretor ou gestor) ficava preso desligado** com a faixa "Antes de ligar: escolha o gatilho do fluxo.". No modo guiado do corretor era pior: o Início abria o gatilho, o Salvar dizia "Fluxo salvo" e o gatilho não ia (o guiado só manda o nome). Achado gravando a aula do corretor, 28/10/2026.
+
+O que mudou:
+
+- **Follow-up e funil de conversa não têm gatilho próprio** (`hasOwnTrigger(kind)` em `readiness.ts`). Pra eles a chave Ligado (editor e lista) não confere gatilho, o Salvar não manda gatilho e o Início não abre a janela de gatilho: no follow-up ele só informa "Começa quando o lead é colocado em follow-up: pela coluna Follow-up, pelo card, pela IA ou por uma automação".
+- **"Mover pra coluna de resposta" em branco vale no follow-up** (`nodeProblem(node, kind)`): é como o modelo nasce, e o motor não move (o card volta pra coluna de onde veio quando o lead responde, regra da Fase 2). Não trava o Ligado, não pinta o bloco de laranja, e o gestor pode salvar o bloco em branco. Na automação a coluna em branco continua faltando.
+- **Cartão da lista de follow-ups:** a linha de apoio deixou de mostrar o gatilho ("Sem gatilho definido") e diz quantos leads estão dentro agora ("3 leads em follow-up agora" / "Nenhum lead em follow-up agora", `live_count`).
+
+Não reabrir sem o dono pedir: "quando acontecer X, começa o follow-up" é uma **Automação** com aquele gatilho e o bloco "Iniciar follow-up" (o corretor faz na automação pessoal dele). O gatilho mora na automação, nunca dentro do follow-up.
+
+Código: `features/flowAutomations/readiness.ts` (`hasOwnTrigger`, `nodeProblem(node, kind)`), `FlowAutomationCanvas.tsx` (`semGatilho`), `ListaDeFollowups.tsx`, `FlowNodePanel.tsx`. Testes: `readiness.spec.ts`, `FollowupList.spec.tsx`.

@@ -598,7 +598,7 @@ export function FlowNodePanel({ node, resources, onClose, onSave, onDirtyChange,
     const finalConfig = peloDono ? withOwnerSendFrom(activeNode.kind, baseConfig) : baseConfig;
     // Mesma régua do cartão e da chave de ligar (readiness.ts), e o que o passo
     // do guia pede (sprint 4).
-    const issue = nodeProblem({ kind: activeNode.kind, config: finalConfig }) ?? guideRequiredProblem(guide, finalConfig, activeNode.kind);
+    const issue = nodeProblem({ kind: activeNode.kind, config: finalConfig }, flowKind) ?? guideRequiredProblem(guide, finalConfig, activeNode.kind);
     if (issue) {
       setProblem(issue);
       return;

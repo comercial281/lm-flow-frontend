@@ -22,6 +22,23 @@ describe('o fluxo pode ser ligado?', () => {
     expect(enableProblem({ event: '', conditions: [] }, [])).toBe('Antes de ligar: escolha o gatilho do fluxo.');
   });
 
+  it('follow-up não tem gatilho: liga sem ele (começa pelas portas, Fase 2)', () => {
+    expect(enableProblem({ event: '', conditions: [] }, [], 'followup')).toBeNull();
+  });
+
+  it('follow-up: coluna de resposta em branco é escolha válida (volta pra coluna de onde veio)', () => {
+    const resposta = b('move_stage', { stage_name: '' }, 'Mover pra coluna de resposta');
+    expect(enableProblem({ event: '', conditions: [] }, [resposta], 'followup')).toBeNull();
+    expect(nodeProblem(resposta, 'followup')).toBeNull();
+    // Na automação a mesma coluna em branco continua faltando.
+    expect(nodeProblem(resposta)).toBe('Escreva o nome da coluna.');
+  });
+
+  it('follow-up ainda cobra o resto dos blocos', () => {
+    expect(enableProblem({ event: '', conditions: [] }, [b('send_whatsapp', { text: '', send_from: 'owner' }, 'Mensagem 1')], 'followup'))
+      .toBe('Antes de ligar, complete o bloco "Mensagem 1": escreva a mensagem.');
+  });
+
   it('tudo preenchido liga', () => {
     expect(enableProblem(gatilho, [
       b('lead_action', { action_type: 'assign_via_roleta', params: { roleta_config_id: 'r1' } }),

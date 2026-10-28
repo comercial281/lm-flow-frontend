@@ -18,7 +18,7 @@ import { flowAutomationsService } from '@/services/flowAutomations/flowAutomatio
 import { isForbiddenError } from '@/services/core/forbidden';
 import type { FlowAutomation } from '@/types/flowAutomations';
 import { FLOW_KIND_COPY } from '@/features/flowAutomations/kind';
-import { flowTriggerSummary, normalizeTrigger, triggerEvents } from '@/features/flowAutomations/trigger';
+import { normalizeTrigger } from '@/features/flowAutomations/trigger';
 import { enableProblem } from '@/features/flowAutomations/readiness';
 import { serverMessage } from '@/features/flowAutomations/guide';
 import { avisoLeadsSaindo, leadsDentro, pedidoDesligarFollowup } from '@/features/flowAutomations/desligarFollowup';
@@ -26,6 +26,7 @@ import { useAuthStore } from '@/store/authStore';
 import { useCan } from '@/hooks/useCan';
 import { useConfirmacao } from '@/hooks/useConfirmacao';
 import { cn } from '@/lib/utils';
+import { plural } from '@/lib/formato';
 
 // FOLLOW-UP POR USUÁRIO (Fase 3, 21/10/2026): a aba Follow-up de Funis de
 // mensagem. Mesmo título e mesmo cartão (CartaoDeFluxo) da aba Manual (22/10). Uma lista só (sem abas internas), em seções:
@@ -157,7 +158,7 @@ export default function ListaDeFollowups() {
       // Ligar confere o fluxo salvo: bloco de modelo com campo em branco não liga.
       if (!f.is_enabled) {
         const full = await flowAutomationsService.get(f.id);
-        const problem = enableProblem(normalizeTrigger(full.trigger), full.nodes ?? []);
+        const problem = enableProblem(normalizeTrigger(full.trigger), full.nodes ?? [], 'followup');
         if (problem) {
           toast.error(problem);
           return;
@@ -284,7 +285,9 @@ export default function ListaDeFollowups() {
     const podeTornarPadrao = ehGestor && secao === 'equipe' && f.is_enabled && !f.account_default && !f.archived_at;
     const estado = f.archived_at ? 'Arquivado' : f.is_enabled ? 'Ligado' : 'Desligado';
     const estadoDoCartao = f.archived_at ? 'arquivado' : f.is_enabled ? 'ligado' : 'desligado';
-    const gatilho = triggerEvents(normalizeTrigger(f.trigger)).length ? flowTriggerSummary(normalizeTrigger(f.trigger)) : 'Sem gatilho definido';
+    // Follow-up não tem gatilho (Fase 2): a linha diz quantos leads estão dentro agora.
+    const dentroAgora = leadsDentro(f);
+    const linha = dentroAgora > 0 ? `${plural(dentroAgora, 'lead', 'leads')} em follow-up agora` : 'Nenhum lead em follow-up agora';
     return (
       <CartaoDeFluxo
         key={f.id}
@@ -317,7 +320,7 @@ export default function ListaDeFollowups() {
             )}
           </>
         }
-        linha={<span className="block truncate" title={gatilho}>{gatilho}</span>}
+        linha={<span className="block truncate" title={linha}>{linha}</span>}
         acoes={
           <div className="flex w-full flex-wrap items-center gap-1">
             {comAlfinete && (
