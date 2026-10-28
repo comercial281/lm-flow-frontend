@@ -43,7 +43,7 @@ import { useAutomationResources } from '@/features/flowAutomations/editores/Lead
 import { roletaConfigService, roletaLabel, type RoletaConfig } from '@/services/roletaConfig/roletaConfigService';
 import CampoQuemAssume, { type QuemAssume } from '@/components/roleta/CampoQuemAssume';
 import { regraQuePega } from './regraPorPalavra';
-import { propertiesService, type Property } from '@/services/properties/propertiesService';
+import { CampoDeImovel } from '@/components/properties/BuscaDeImovel';
 import LabelMultiSelect from '@/components/labels/LabelMultiSelect';
 
 import { useConfirmacao } from '@/hooks/useConfirmacao';
@@ -229,19 +229,16 @@ export default function LeadAdsForms() {
     }
   };
 
-  // Roletas e imóveis pra escolher no roteamento de entrada. TODAS as roletas
+  // Roletas pra escolher no roteamento de entrada. TODAS as roletas
   // (não só as ligadas): a escolhida que foi desligada continua na lista, com
   // "(desligada)" — sem ela a caixa abria em "Ninguém" e salvar apagava a
   // escolha calado (inventário da roleta §4.7). `null` = cargo sem acesso.
+  // O imóvel não tem lista pré-carregada: o campo busca no servidor (CampoDeImovel).
   const [roletas, setRoletas] = useState<RoletaConfig[] | null>(null);
-  const [properties, setProperties] = useState<Property[]>([]);
   useEffect(() => {
     roletaConfigService.getAll()
       .then(list => setRoletas(list || []))
       .catch(() => setRoletas(null));
-    propertiesService.list({ status: 'active', per_page: 100 })
-      .then(res => setProperties(res.data ?? []))
-      .catch(() => setProperties([]));
   }, []);
 
   const load = useCallback(async () => {
@@ -1334,17 +1331,12 @@ export default function LeadAdsForms() {
 
               {/* Imóvel vinculado a todo lead desse formulário */}
               <CampoDaJanela rotulo="Imóvel vinculado" htmlFor="property_id">
-                <Seletor
+                <CampoDeImovel
                   id="property_id"
-                  className={campoDaJanelaClass}
-                  value={form.property_id}
-                  onChange={e => setForm(f => ({ ...f, property_id: e.target.value }))}
-                >
-                  <option value="">Nenhum</option>
-                  {properties.map(p => (
-                    <option key={p.id} value={p.id}>{p.title || p.code || 'Imóvel'}</option>
-                  ))}
-                </Seletor>
+                  propertyId={form.property_id}
+                  aoMudar={property_id => setForm(f => ({ ...f, property_id }))}
+                  disabled={saving}
+                />
               </CampoDaJanela>
             </GrupoDaJanela>
 
