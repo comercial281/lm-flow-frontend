@@ -27,6 +27,7 @@ import SystemMessage from '@/components/chat/messages/SystemMessage';
 import type { PipelineItem } from '@/types/analytics';
 import { MESSAGE_TYPE } from '@/types/chat/api';
 import type { Message, Attachment } from '@/types/chat/api';
+import { avisarSeEventoDaIa } from '@/features/conversas/atalhosDoLead';
 
 // Hook seguro — não lança se o WebSocketProvider não estiver na árvore acima.
 function useSafeWsHandlers() {
@@ -285,6 +286,7 @@ export default function CardConversationTab({ item, onAgendarEnvio }: CardConver
     registerHandlers({
       onMessageCreated: (msg: Message) => {
         if (String((msg as any).conversation_id) !== conversationId) return;
+        avisarSeEventoDaIa(msg);
         if (messagesRef.current.some(m => String(m.id) === String(msg.id))) return;
         receberRecentes(juntarMensagens(messagesRef.current, [msg]));
       },

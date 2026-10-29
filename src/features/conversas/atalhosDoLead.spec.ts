@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   EVENTO_IA_MUDOU,
+  EVENTO_IA_RECARREGAR,
+  avisarSeEventoDaIa,
   avisarIaMudou,
   dicaDaIa,
   iaLigada,
@@ -91,5 +93,67 @@ describe('leadDoPainelParaVisita', () => {
   it('sem contato, não tem visita', () => {
     expect(leadDoPainelParaVisita(null, [], 'x')).toBeNull();
     expect(leadDoPainelParaVisita({ id: undefined } as never, [], 'x')).toBeNull();
+  });
+});
+
+describe('IA desligada porque alguém respondeu à mão', () => {
+  const agora = new Date(2026, 9, 28, 15, 0);
+  const pausada = (by: string | null, at: string): SalesAgentCardState => ({
+    ...estado('paused', 'IA desligada neste lead'),
+    paused_by: { reason: 'manual_message', by, at },
+  });
+
+  it('mesmo dia: diz quem e a hora', () => {
+    expect(dicaDaIa(pausada('Bruno Teste', new Date(2026, 9, 28, 10, 16).toISOString()), agora)).toBe(
+      'IA desligada: Bruno Teste respondeu à mão às 10h16. Clique para religar',
+    );
+  });
+
+  it('outro dia: diz a data', () => {
+    expect(dicaDaIa(pausada('Bruno Teste', new Date(2026, 9, 27, 10, 16).toISOString()), agora)).toBe(
+      'IA desligada: Bruno Teste respondeu à mão em 27/10 às 10h16. Clique para religar',
+    );
+  });
+
+  it('sem nome: alguém da equipe', () => {
+    expect(dicaDaIa(pausada(null, new Date(2026, 9, 28, 10, 16).toISOString()), agora)).toBe(
+      'IA desligada: alguém da equipe respondeu à mão às 10h16. Clique para religar',
+    );
+  });
+
+  it('hora cheia sem minutos', () => {
+    expect(dicaDaIa(pausada('Bruno Teste', new Date(2026, 9, 28, 10, 0).toISOString()), agora)).toBe(
+      'IA desligada: Bruno Teste respondeu à mão às 10h. Clique para religar',
+    );
+    expect(dicaDaIa(pausada('Bruno Teste', new Date(2026, 9, 27, 9, 0).toISOString()), agora)).toBe(
+      'IA desligada: Bruno Teste respondeu à mão em 27/10 às 9h. Clique para religar',
+    );
+  });
+
+  it('sem horário (at nulo): texto de sempre, nunca 1970', () => {
+    expect(dicaDaIa(pausada('Bruno Teste', null as never), agora)).toBe('IA desligada neste lead \u2014 clique para reativar');
+    expect(dicaDaIa(pausada('Bruno Teste', ''), agora)).toBe('IA desligada neste lead \u2014 clique para reativar');
+  });
+
+  it('data inválida ou sem paused_by: texto de sempre', () => {
+    expect(dicaDaIa(pausada('Bruno Teste', 'lixo'), agora)).toBe('IA desligada neste lead \u2014 clique para reativar');
+    expect(dicaDaIa(estado('paused', 'IA desligada neste lead'), agora)).toBe('IA desligada neste lead \u2014 clique para reativar');
+  });
+});
+
+describe('avisarSeEventoDaIa', () => {
+  const msg = (type?: string) =>
+    ({ id: 1, conversation_id: 77, content_attributes: type ? { event: { type } } : {} }) as never;
+
+  it('dispara só pros dois eventos da IA', () => {
+    const ouvir = vi.fn();
+    window.addEventListener(EVENTO_IA_RECARREGAR, ouvir);
+    avisarSeEventoDaIa(msg('ai_paused_manual'));
+    avisarSeEventoDaIa(msg('ai_resumed'));
+    avisarSeEventoDaIa(msg('visit_scheduled'));
+    avisarSeEventoDaIa(msg());
+    window.removeEventListener(EVENTO_IA_RECARREGAR, ouvir);
+    expect(ouvir).toHaveBeenCalledTimes(2);
+    expect((ouvir.mock.calls[0][0] as CustomEvent).detail).toEqual({ conversationId: '77' });
   });
 });

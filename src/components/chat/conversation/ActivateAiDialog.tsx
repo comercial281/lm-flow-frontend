@@ -21,6 +21,7 @@ import { chatService } from '@/services/chat/chatService';
 import type { SalesAgentLeadReport } from '@/types/analytics/pipelines';
 import EmptyState from '@/components/base/EmptyState';
 import Aviso from '@/components/base/Aviso';
+import { avisarIaRecarregar } from '@/features/conversas/atalhosDoLead';
 
 interface Props {
   conversation: Conversation | null;
@@ -88,6 +89,8 @@ const ActivateAiDialog: React.FC<Props> = ({ conversation, open, onOpenChange })
         propertyCode: propertyCode.trim() || undefined,
         fresh,
       });
+      // A IA foi religada no servidor: o robô do topo precisa buscar o estado de novo.
+      avisarIaRecarregar(conversation.id);
       toast.success('IA acionada. Ela vai atender este lead no WhatsApp.');
       onOpenChange(false);
     } catch {

@@ -19,6 +19,7 @@ import {
   Activity,
   CheckCircle2,
   RotateCw,
+  Bot,
   type LucideIcon,
 } from 'lucide-react';
 import { Message } from '@/types/chat/api';
@@ -152,6 +153,7 @@ const ICONES_DA_PILULA: Record<PilulaDoEvento['icone'], LucideIcon> = {
   check: CheckCircle2,
   estrela: Star,
   remarcar: RotateCw,
+  robo: Bot,
 };
 
 const NOME_E_VERBO = /^(.+) (adicionou|removeu)$/s;

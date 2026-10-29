@@ -1,7 +1,10 @@
 // Atalhos do painel do lead (07/10/2026): a fileira de botões redondos logo
 // abaixo do nome (Agendar mensagem · IA · Agendar visita), inspirada no CRM do
 // LM Hub. Aqui moram as regras puras; a fileira em `painel/AtalhosDoLead.tsx`.
+import { format, isSameDay } from 'date-fns';
+
 import type { LeadPickerItem } from '@/services/visits/visitsService';
+import type { Message } from '@/types/chat/api';
 import type { Pipeline } from '@/types/analytics';
 import type { SalesAgentCardState } from '@/types/analytics/pipelines';
 
@@ -23,7 +26,19 @@ export function nomeDaAcaoIa(state: SalesAgentCardState): string {
   return iaLigada(state) ? 'Desligar IA Vendedora' : 'Ligar IA Vendedora';
 }
 
-export function dicaDaIa(state: SalesAgentCardState): string {
+export function dicaDaIa(state: SalesAgentCardState, agora: Date = new Date()): string {
+  const pausa = state.status === 'paused' ? state.paused_by : null;
+  if (pausa?.reason === 'manual_message') {
+    // `new Date(null)` é 1970 (data válida): sem `at` cai no texto de sempre.
+    const quando = pausa.at ? new Date(pausa.at) : null;
+    if (quando && !Number.isNaN(quando.getTime())) {
+      const nome = pausa.by?.trim() || 'alguém da equipe';
+      // Hora cheia sem os minutos, como na linha da conversa: "10h", "10h16".
+      const hora = format(quando, quando.getMinutes() === 0 ? "H'h'" : "H'h'mm");
+      const momento = isSameDay(quando, agora) ? `às ${hora}` : `em ${format(quando, 'dd/MM')} às ${hora}`;
+      return `IA desligada: ${nome} respondeu à mão ${momento}. Clique para religar`;
+    }
+  }
   if (state.status === 'handoff') return 'A IA passou este lead pra um corretor — clique para religar';
   return iaLigada(state) ? `${state.label} — clique para desativar` : `${state.label} — clique para reativar`;
 }
@@ -44,6 +59,29 @@ export function avisarIaMudou(conversationId: string | number, state: SalesAgent
   if (typeof window === 'undefined') return;
   const detail: IaMudouDetalhe = { conversationId: String(conversationId), state };
   window.dispatchEvent(new CustomEvent(EVENTO_IA_MUDOU, { detail }));
+}
+
+/**
+ * A linha de atividade da IA ("IA desligada porque X respondeu", "IA religada")
+ * chegou ao vivo no chat: o robô precisa buscar o estado de novo, senão fica
+ * dizendo "IA atendendo" ao lado de uma pílula que diz que ela saiu.
+ */
+export const EVENTO_IA_RECARREGAR = 'lmflow:ia-recarregar';
+
+export interface IaRecarregarDetalhe {
+  conversationId: string;
+}
+
+export function avisarIaRecarregar(conversationId: string | number): void {
+  if (typeof window === 'undefined') return;
+  const detail: IaRecarregarDetalhe = { conversationId: String(conversationId) };
+  window.dispatchEvent(new CustomEvent(EVENTO_IA_RECARREGAR, { detail }));
+}
+
+export function avisarSeEventoDaIa(message: Message): void {
+  const evento = (message?.content_attributes as { event?: { type?: string } } | undefined)?.event;
+  if (evento?.type !== 'ai_paused_manual' && evento?.type !== 'ai_resumed') return;
+  avisarIaRecarregar(message.conversation_id);
 }
 
 interface ContatoMinimo {
