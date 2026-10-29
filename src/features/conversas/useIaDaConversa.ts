@@ -97,8 +97,11 @@ export function useIaDaConversa(conversationId: string | number | null | undefin
     try {
       const state = await chatService.toggleSalesAgent(pedida, proximo);
       avisarIaMudou(pedida, state);
-      pedido.current += 1;
-      if (pedida === idAtual.current) setAtual({ de: pedida, state });
+      // Só conta como escrita se ainda é a mesma conversa: senão derrubaria a busca da conversa nova.
+      if (pedida === idAtual.current) {
+        pedido.current += 1;
+        setAtual({ de: pedida, state });
+      }
       toast.success(proximo ? 'IA reativada nesta conversa' : 'IA desativada nesta conversa');
     } catch (e) {
       toast.error(apiErrorMessage(e, 'Não consegui mudar o status da IA'));

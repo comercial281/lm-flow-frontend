@@ -51,4 +51,23 @@ describe('useIaDaConversa: o pedido mais recente vence', () => {
     await act(async () => { soltar({ state: { status: 'paused', label: 'IA desligada', agent_id: 'a' } }); });
     expect(result.current.ligada).toBe(true);
   });
+
+  it('troca que termina depois de abrir outra conversa não derruba a busca da nova', async () => {
+    let soltarTroca!: (v: unknown) => void;
+    let soltarB!: (v: unknown) => void;
+    toggleSalesAgent.mockReturnValueOnce(new Promise(r => { soltarTroca = r; }));
+    getSalesAgentStatus
+      .mockResolvedValueOnce({ state: { status: 'paused', label: 'IA desligada', agent_id: 'a' } })
+      .mockReturnValueOnce(new Promise(r => { soltarB = r; }));
+    const { result, rerender } = renderHook(({ id }) => useIaDaConversa(id), { initialProps: { id: 1 } });
+    await waitFor(() => expect(result.current.estado).not.toBeNull());
+
+    let troca!: Promise<void>;
+    act(() => { troca = result.current.trocar(); });
+    rerender({ id: 2 });
+
+    await act(async () => { soltarTroca({ status: 'active', label: 'IA atendendo', agent_id: 'a' }); await troca; });
+    await act(async () => { soltarB({ state: { status: 'active', label: 'IA atendendo', agent_id: 'b' } }); });
+    expect(result.current.estado?.agent_id).toBe('b');
+  });
 });
