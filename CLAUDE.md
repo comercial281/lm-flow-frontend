@@ -9126,6 +9126,22 @@ Armadilhas:
 5. **Escape de acento no `clientGroups.ts`:** a ferramenta de edição já converteu 5 vezes o intervalo de acentos (`̀-ͯ`) no caractere literal. O spec pega; não "arrumar" na mão.
 6. **Ambiente sem pnpm:** instalar com `npm ci --legacy-peer-deps` e não commitar `yarn.lock` nem lockfile alterado.
 
+### Escolha do grupo com busca e na ordem certa (desde 2026-10-29)
+
+Relato do dono, com print do *Adicionar grupo*: *"aqui os grupos não atualizam, ou estão limitados"*. A lista vinha inteira (88 grupos no número operacional, renovados a cada 5 min), mas a ordem punha no topo só o que termina em "LEAL MÍDIA". Os grupos renomeados com o número no fim ("PANDORA | LEAL MÍDIA [#185]") caíam para as posições 42 a 88, depois de ~20 reuniões de prospecção, e pareciam não existir.
+
+O que aparece na tela:
+
+- **Adicionar grupo** abre **Buscar grupo** (nome ou número, sem acento nem caixa; Enter escolhe o primeiro) em cima de uma lista que rola com todos os grupos. Clicar marca o grupo; **Tipo** e **Incluir** seguem iguais. Digitar desmarca, para o Incluir nunca levar um grupo que sumiu da lista filtrada.
+- **Ordem da lista:** o grupo com o nome do cliente (em qualquer parte do nome); os grupos com `[#NNN]` (na frente ou no fim), do número mais novo pro mais velho; os de LOGS; os "... LEAL MÍDIA" sem número (reuniões); o resto.
+- **Cada clique em Adicionar grupo busca a lista de novo:** grupo criado ou renomeado aparece sem recarregar a página. O servidor guarda a lista por até 5 min e renova em segundo plano, então um grupo de agora pode levar alguns minutos.
+- **Montar lista** (cliente não mapeado) passa a reconhecer o grupo do cliente com o número na frente ou no fim do nome.
+
+Armadilhas:
+
+1. **A busca é local:** filtra a lista que já veio do servidor (`searchGroups` em `clientGroups.ts`), sem pedido novo a cada letra.
+2. **A lista é um `listbox` com botões, não o `Seletor`:** com ~90 grupos, a lista do produto sem busca não resolve. Não é peça da casa (só este bloco usa); se outra tela precisar da mesma escolha única com busca, extrair para `components/base`.
+
 ## Mapa de Imóveis: card no alfinete (desde 2026-10-16)
 
 Pedido do dono: mapa maior e, com o mouse no alfinete, a prévia do imóvel (como o mini card do funil), com clique levando ao imóvel.

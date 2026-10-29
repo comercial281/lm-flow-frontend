@@ -127,16 +127,48 @@ export function normalizeGroupName(t: string): string {
   return t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').replace(/[^a-z0-9]+$/, '').trim();
 }
 
-/** Os grupos que já têm cara de grupo de cliente vão primeiro na lista, ordenados; o resto depois. */
+// O número do cliente na Leal ("[#185]"). Vinha na frente do nome ("[#154] DAIANE
+// ROSA - LEAL MÍDIA") e desde out/2026 os grupos são renomeados com ele no fim
+// ("PANDORA | LEAL MÍDIA [#185]"): a regra aceita os dois.
+const NUMERO_DO_CLIENTE = /\[#\s*(\d+)\s*\]/;
+
+/** O número do cliente no nome do grupo, na frente ou no fim; null quando não tem. */
+export function groupClientNumber(name: string): number | null {
+  const m = NUMERO_DO_CLIENTE.exec(name);
+  return m ? Number(m[1]) : null;
+}
+
+/** O nome sem o "[#NNN]" e sem emoji ou sinal na frente: "🟦 [#102] CRISTIAN - LEAL MÍDIA" vira "cristian - leal midia". */
+function baseGroupName(name: string): string {
+  return normalizeGroupName(name.replace(new RegExp(NUMERO_DO_CLIENTE.source, 'g'), ' ')).replace(/^[^a-z0-9]+/, '');
+}
+
+/**
+ * Ordem da lista de escolha: o grupo com o nome do cliente; os grupos de cliente
+ * (com número), do mais novo pro mais velho; os de logs; os "... Leal Mídia" sem
+ * número (reuniões de prospecção); o resto. São ~90 grupos no número operacional.
+ */
 export function sortGroupsForPicker(groups: WaGroup[], clientName: string): WaGroup[] {
   const alvo = normalizeGroupName(clientName);
-  const score = (g: WaGroup) => {
+  const faixa = (g: WaGroup) => {
     const n = normalizeGroupName(g.name);
-    if (alvo && n.startsWith(alvo)) return 0;
-    if (n.endsWith('leal midia')) return 1;
-    return 2;
+    if (alvo && n.includes(alvo)) return 0;
+    if (groupClientNumber(g.name) !== null) return 1;
+    if (/\blogs\b/.test(n)) return 2;
+    if (baseGroupName(g.name).endsWith('leal midia')) return 3;
+    return 4;
   };
-  return [...groups].sort((a, b) => score(a) - score(b) || a.name.localeCompare(b.name, 'pt-BR'));
+  return groups
+    .map(g => ({ g, faixa: faixa(g), numero: groupClientNumber(g.name) ?? -1 }))
+    .sort((a, b) => a.faixa - b.faixa || b.numero - a.numero || a.g.name.localeCompare(b.g.name, 'pt-BR'))
+    .map(x => x.g);
+}
+
+/** A busca da lista de escolha: pedaço do nome ou do número, sem acento nem caixa. */
+export function searchGroups(groups: WaGroup[], busca: string): WaGroup[] {
+  const termo = normalizeGroupName(busca);
+  if (!termo) return groups;
+  return groups.filter(g => normalizeGroupName(g.name).includes(termo));
 }
 
 // ── Lista de grupos liberados (desde 2026-10-15) ─────────────────────────────
@@ -182,12 +214,12 @@ export function removeAllowedGroup(list: AllowedGroup[], jid: string): AllowedGr
   return list.filter(g => g.jid !== jid);
 }
 
-/** Pré-preenchimento de quem ainda não foi mapeado: o grupo "Cliente x Leal Mídia" + os dois cadastros antigos. */
+/** Pré-preenchimento de quem ainda não foi mapeado: o grupo "Cliente x Leal Mídia" (com ou sem "[#NNN]") + os dois cadastros antigos. */
 export function suggestAllowedGroups(central: WaGroup[], clientName: string, legacy: ClientGroupJids): AllowedGroup[] {
   const alvo = normalizeGroupName(clientName);
   let lista: AllowedGroup[] = [];
   for (const g of central) {
-    const n = normalizeGroupName(g.name);
+    const n = baseGroupName(g.name);
     if (alvo && n.startsWith(alvo) && n.endsWith('leal midia')) lista = addAllowedGroup(lista, g, 'cliente');
   }
   const nomeDe = (jid: string) => central.find(g => g.jid === jid)?.name ?? jid;
