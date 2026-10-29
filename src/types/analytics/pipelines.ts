@@ -29,10 +29,18 @@ export interface AvailableContactsResponse extends StandardResponse<Contact[]> {
  */
 export type SalesAgentCardStatus = 'active' | 'paused' | 'handoff' | 'idle' | 'none';
 
+/** Quem respondeu à mão e desligou a IA neste lead (o backend manda; versão antiga não manda). */
+export interface SalesAgentPausedBy {
+  reason: 'manual_message';
+  by: string | null;
+  at: string;
+}
+
 export interface SalesAgentCardState {
   status: SalesAgentCardStatus;
   label: string;
   agent_id: string | null;
+  paused_by?: SalesAgentPausedBy | null;
 }
 
 /** Um turno da IA neste lead: respondeu, pulou (com motivo) ou falhou. */

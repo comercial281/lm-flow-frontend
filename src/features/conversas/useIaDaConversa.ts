@@ -5,7 +5,14 @@ import { chatService } from '@/services/chat/chatService';
 import { apiErrorMessage } from '@/utils/apiHelpers';
 import type { SalesAgentCardState } from '@/types/analytics/pipelines';
 
-import { EVENTO_IA_MUDOU, avisarIaMudou, iaLigada, type IaMudouDetalhe } from './atalhosDoLead';
+import {
+  EVENTO_IA_MUDOU,
+  EVENTO_IA_RECARREGAR,
+  avisarIaMudou,
+  iaLigada,
+  type IaMudouDetalhe,
+  type IaRecarregarDetalhe,
+} from './atalhosDoLead';
 
 /**
  * A IA Vendedora NESTA conversa: o estado e o liga/desliga. Usado pelo robô do
@@ -30,15 +37,37 @@ export function useIaDaConversa(conversationId: string | number | null | undefin
   const idAtual = useRef(id);
   idAtual.current = id;
 
-  useEffect(() => {
-    if (!id) return;
+  // Busca o estado e devolve o "desfazer" (conversa trocada = resposta atrasada descartada).
+  const buscar = useCallback((alvo: string) => {
     let vivo = true;
     chatService
-      .getSalesAgentStatus(id)
-      .then(r => { if (vivo) setAtual({ de: id, state: r.state }); })
-      .catch(() => { if (vivo) setAtual({ de: id, state: null }); });
+      .getSalesAgentStatus(alvo)
+      .then(r => { if (vivo) setAtual({ de: alvo, state: r.state }); })
+      .catch(() => { if (vivo) setAtual({ de: alvo, state: null }); });
     return () => { vivo = false; };
-  }, [id]);
+  }, []);
+
+  useEffect(() => {
+    if (!id) return;
+    return buscar(id);
+  }, [id, buscar]);
+
+  // A linha de atividade da IA chegou no chat ao vivo: o estado mudou no servidor.
+  useEffect(() => {
+    if (!id) return;
+    let desfazer: (() => void) | undefined;
+    const ouvir = (e: Event) => {
+      const detalhe = (e as CustomEvent<IaRecarregarDetalhe>).detail;
+      if (detalhe?.conversationId !== id) return;
+      desfazer?.();
+      desfazer = buscar(id);
+    };
+    window.addEventListener(EVENTO_IA_RECARREGAR, ouvir);
+    return () => {
+      window.removeEventListener(EVENTO_IA_RECARREGAR, ouvir);
+      desfazer?.();
+    };
+  }, [id, buscar]);
 
   useEffect(() => {
     if (!id) return;

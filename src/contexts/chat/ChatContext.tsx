@@ -21,6 +21,7 @@ import {
 import { ConversationsContextValue } from '@/types/chat/conversations';
 import { useAppDataStore, mayRead } from '@/store/appDataStore';
 import { useAuth } from '@/contexts/AuthContext';
+import { avisarSeEventoDaIa } from '@/features/conversas/atalhosDoLead';
 import { playNotificationSound, getAudioSettings } from '@/utils/audioNotificationUtils';
 import { normalizeToUnixSeconds } from '@/utils/time/timeHelpers';
 
@@ -191,6 +192,7 @@ function useChatIntegration() {
           return;
         }
 
+        avisarSeEventoDaIa(message);
         const conversationId = String(message.conversation_id);
         const findConversationByAnyId = (id: string): Conversation | null => {
           const idStr = String(id);
