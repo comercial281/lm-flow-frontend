@@ -5,8 +5,9 @@ import { useIaDaConversa } from './useIaDaConversa';
 import { EVENTO_IA_RECARREGAR } from './atalhosDoLead';
 
 const getSalesAgentStatus = vi.fn();
+const toggleSalesAgent = vi.fn();
 vi.mock('@/services/chat/chatService', () => ({
-  chatService: { getSalesAgentStatus: (...a: unknown[]) => getSalesAgentStatus(...a), toggleSalesAgent: vi.fn() },
+  chatService: { getSalesAgentStatus: (...a: unknown[]) => getSalesAgentStatus(...a), toggleSalesAgent: (...a: unknown[]) => toggleSalesAgent(...a) },
 }));
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
@@ -32,5 +33,22 @@ describe('useIaDaConversa recarrega ao ouvir a atividade da IA', () => {
     await waitFor(() => expect(result.current.ligada).toBe(false));
     expect(getSalesAgentStatus).toHaveBeenCalledTimes(2);
     expect(getSalesAgentStatus).toHaveBeenLastCalledWith('5');
+  });
+});
+
+describe('useIaDaConversa: o pedido mais recente vence', () => {
+  afterEach(() => { getSalesAgentStatus.mockReset(); toggleSalesAgent.mockReset(); });
+
+  it('GET que começou antes da troca e volta depois não desfaz a troca', async () => {
+    let soltar!: (v: unknown) => void;
+    getSalesAgentStatus.mockReturnValueOnce(new Promise(r => { soltar = r; }));
+    toggleSalesAgent.mockResolvedValue({ status: 'active', label: 'IA atendendo', agent_id: 'a' });
+    const { result } = renderHook(() => useIaDaConversa(5));
+
+    await act(async () => { await result.current.trocar(); });
+    expect(result.current.ligada).toBe(true);
+
+    await act(async () => { soltar({ state: { status: 'paused', label: 'IA desligada', agent_id: 'a' } }); });
+    expect(result.current.ligada).toBe(true);
   });
 });

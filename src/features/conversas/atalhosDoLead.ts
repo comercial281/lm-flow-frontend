@@ -70,12 +70,16 @@ export interface IaRecarregarDetalhe {
   conversationId: string;
 }
 
-export function avisarSeEventoDaIa(message: Message): void {
+export function avisarIaRecarregar(conversationId: string | number): void {
   if (typeof window === 'undefined') return;
+  const detail: IaRecarregarDetalhe = { conversationId: String(conversationId) };
+  window.dispatchEvent(new CustomEvent(EVENTO_IA_RECARREGAR, { detail }));
+}
+
+export function avisarSeEventoDaIa(message: Message): void {
   const evento = (message?.content_attributes as { event?: { type?: string } } | undefined)?.event;
   if (evento?.type !== 'ai_paused_manual' && evento?.type !== 'ai_resumed') return;
-  const detail: IaRecarregarDetalhe = { conversationId: String(message.conversation_id) };
-  window.dispatchEvent(new CustomEvent(EVENTO_IA_RECARREGAR, { detail }));
+  avisarIaRecarregar(message.conversation_id);
 }
 
 interface ContatoMinimo {

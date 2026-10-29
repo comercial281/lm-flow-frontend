@@ -36,14 +36,19 @@ export function useIaDaConversa(conversationId: string | number | null | undefin
   const [trocando, setTrocando] = useState(false);
   const idAtual = useRef(id);
   idAtual.current = id;
+  // Três escritas disputam `atual` (busca, recarga, troca/aviso do outro robô):
+  // vale o pedido mais recente. Cada escrita incrementa; GET que volta depois
+  // de outra escrita não aplica (senão o estado velho cobre o que acabou de mudar).
+  const pedido = useRef(0);
 
   // Busca o estado e devolve o "desfazer" (conversa trocada = resposta atrasada descartada).
   const buscar = useCallback((alvo: string) => {
     let vivo = true;
+    const meu = ++pedido.current;
     chatService
       .getSalesAgentStatus(alvo)
-      .then(r => { if (vivo) setAtual({ de: alvo, state: r.state }); })
-      .catch(() => { if (vivo) setAtual({ de: alvo, state: null }); });
+      .then(r => { if (vivo && meu === pedido.current) setAtual({ de: alvo, state: r.state }); })
+      .catch(() => { if (vivo && meu === pedido.current) setAtual({ de: alvo, state: null }); });
     return () => { vivo = false; };
   }, []);
 
@@ -73,7 +78,9 @@ export function useIaDaConversa(conversationId: string | number | null | undefin
     if (!id) return;
     const ouvir = (e: Event) => {
       const detalhe = (e as CustomEvent<IaMudouDetalhe>).detail;
-      if (detalhe?.conversationId === id) setAtual({ de: id, state: detalhe.state });
+      if (detalhe?.conversationId !== id) return;
+      pedido.current += 1;
+      setAtual({ de: id, state: detalhe.state });
     };
     window.addEventListener(EVENTO_IA_MUDOU, ouvir);
     return () => window.removeEventListener(EVENTO_IA_MUDOU, ouvir);
@@ -90,6 +97,7 @@ export function useIaDaConversa(conversationId: string | number | null | undefin
     try {
       const state = await chatService.toggleSalesAgent(pedida, proximo);
       avisarIaMudou(pedida, state);
+      pedido.current += 1;
       if (pedida === idAtual.current) setAtual({ de: pedida, state });
       toast.success(proximo ? 'IA reativada nesta conversa' : 'IA desativada nesta conversa');
     } catch (e) {
