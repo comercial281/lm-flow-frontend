@@ -153,6 +153,19 @@ describe('lerEvento', () => {
   it('deal_reopened vira pílula', () => {
     expect(pilula({ type: 'deal_reopened', by: 'Cirlei' })).toEqual({ icone: 'remarcar', nome: 'Cirlei', texto: 'reabriu o negócio' });
   });
+  it('ai_paused_manual vira pílula do robô', () => {
+    expect(pilula({ type: 'ai_paused_manual', by: 'Bruno' })).toEqual({
+      icone: 'robo', nome: 'Bruno', texto: 'respondeu à mão e a IA saiu do atendimento',
+    });
+    expect(pilula({ type: 'ai_paused_manual' })).toEqual({
+      icone: 'robo', nome: 'Alguém da equipe', texto: 'respondeu à mão e a IA saiu do atendimento',
+    });
+  });
+  it('ai_resumed vira pílula do robô', () => {
+    expect(pilula({ type: 'ai_resumed', by: 'Bruno' })).toEqual({ icone: 'robo', nome: 'Bruno', texto: 'religou a IA' });
+    expect(pilula({ type: 'ai_resumed', by_automation: true })).toEqual({ icone: 'robo', nome: 'Uma automação', texto: 'religou a IA' });
+    expect(pilula({ type: 'ai_resumed' })).toEqual({ icone: 'robo', nome: 'Alguém da equipe', texto: 'religou a IA' });
+  });
   it('type desconhecido → null', () => {
     expect(lerEvento(msg({ type: 'algo_novo' }))).toBeNull();
   });

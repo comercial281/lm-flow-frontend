@@ -30,7 +30,7 @@ export interface CartaoDoEvento {
 }
 
 export interface PilulaDoEvento {
-  icone: 'check' | 'estrela' | 'remarcar';
+  icone: 'check' | 'estrela' | 'remarcar' | 'robo';
   nome?: string;
   texto: string;
   estrelas?: number;
@@ -240,6 +240,13 @@ export function lerEvento(message: Message): { cartao: CartaoDoEvento } | { pilu
   }
   if (tipo === 'deal_reopened') {
     return { pilula: limpar({ icone: 'remarcar' as const, nome, texto: T.pilulas.reabriuNegocio }) };
+  }
+  if (tipo === 'ai_paused_manual') {
+    return { pilula: limpar({ icone: 'robo' as const, nome: nome ?? T.pilulas.alguemDaEquipe, texto: T.pilulas.iaSaiu }) };
+  }
+  if (tipo === 'ai_resumed') {
+    const quem = nome ?? (ev.by_automation === true ? T.pilulas.umaAutomacao : T.pilulas.alguemDaEquipe);
+    return { pilula: limpar({ icone: 'robo' as const, nome: quem, texto: T.pilulas.religouIa }) };
   }
 
   const cartao =

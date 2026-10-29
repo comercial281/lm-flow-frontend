@@ -42,6 +42,10 @@ export const TEXTOS_DOS_EVENTOS = {
     confirmouVisitaDe: (data: string) => `confirmou a visita de ${data}`,
     deuRetorno: 'deu o retorno da visita',
     reabriuNegocio: 'reabriu o negócio',
+    iaSaiu: 'respondeu à mão e a IA saiu do atendimento',
+    religouIa: 'religou a IA',
+    alguemDaEquipe: 'Alguém da equipe',
+    umaAutomacao: 'Uma automação',
   },
   // leitor de tela: as estrelas são um desenho só
   estrelas: (n: number) => `${n} de 5 estrelas`,
