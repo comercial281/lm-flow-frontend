@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { groupJidsFrom, groupsPatch, groupLabel, isGroupJid, sortGroupsForPicker, nameRuleHint } from './clientGroups';
+import { groupJidsFrom, groupsPatch, groupLabel, isGroupJid, sortGroupsForPicker, searchGroups, nameRuleHint } from './clientGroups';
 import {
   allowedGroupsFrom, allowedGroupsPatch, addAllowedGroup, removeAllowedGroup,
   suggestAllowedGroups, allowedRow, ALLOWED_KIND_LABEL,
@@ -77,6 +77,53 @@ describe('grupos de WhatsApp do cliente (painel raiz)', () => {
     expect(sortGroupsForPicker(grupos, 'Apto Premium').map(g => g.jid)).toEqual(['222@g.us', '444@g.us', '111@g.us', '333@g.us']);
   });
 
+  // Desde 29/10/2026: os grupos passaram a ser renomeados com o número no FIM
+  // ("PANDORA | LEAL MÍDIA [#185]") e caíam no fim da lista, depois das reuniões
+  // de prospecção. Nomes tirados da lista real do número operacional.
+  it('grupo com [#NNN] em qualquer lugar vem antes do resto, do número mais novo pro mais velho', () => {
+    const reais = [
+      { jid: 'a@g.us', name: 'ALEX I. [13/10 às 11h] | LEAL MÍDIA' },
+      { jid: 'b@g.us', name: '[#154] DAIANE ROSA - LEAL MÍDIA' },
+      { jid: 'c@g.us', name: 'teste-ignorar' },
+      { jid: 'd@g.us', name: 'BASEL SOLUCTIONS - LEAL MÍDIA [#178]' },
+      { jid: 'e@g.us', name: 'LOGS - LM FLOW' },
+      { jid: 'f@g.us', name: '🟦 [#102] CRISTIAN SILVA - LEAL MÍDIA' },
+      { jid: 'g@g.us', name: 'PANDORA | LEAL MÍDIA [#185]' },
+    ];
+    expect(sortGroupsForPicker(reais, 'Mais que Imóveis').map(g => g.name)).toEqual([
+      'PANDORA | LEAL MÍDIA [#185]',
+      'BASEL SOLUCTIONS - LEAL MÍDIA [#178]',
+      '[#154] DAIANE ROSA - LEAL MÍDIA',
+      '🟦 [#102] CRISTIAN SILVA - LEAL MÍDIA',
+      'LOGS - LM FLOW',
+      'ALEX I. [13/10 às 11h] | LEAL MÍDIA',
+      'teste-ignorar',
+    ]);
+  });
+
+  it('o grupo com o nome do cliente sobe mesmo com número ou etiqueta na frente', () => {
+    const reais = [
+      { jid: 'a@g.us', name: 'PANDORA | LEAL MÍDIA [#185]' },
+      { jid: 'b@g.us', name: '[LOGS] FRANK CASTELLATO - LEAL MÍDIA [#183]' },
+      { jid: 'c@g.us', name: '[#154] DAIANE ROSA - LEAL MÍDIA' },
+      { jid: 'd@g.us', name: 'FRANK CASTELLATO - LEAL MÍDIA [#183]' },
+    ];
+    expect(sortGroupsForPicker(reais, 'Frank Castellato').map(g => g.jid)).toEqual(['b@g.us', 'd@g.us', 'a@g.us', 'c@g.us']);
+    expect(sortGroupsForPicker(reais, 'Daiane Rosa')[0].jid).toBe('c@g.us');
+  });
+
+  it('a busca acha pelo nome sem acento nem caixa e pelo número', () => {
+    const reais = [
+      { jid: 'a@g.us', name: 'PANDORA | LEAL MÍDIA [#185]' },
+      { jid: 'b@g.us', name: 'IMOBILIÁRIA MOEDA FORTE - LEAL MÍDIA [#149]' },
+    ];
+    expect(searchGroups(reais, 'pandora').map(g => g.jid)).toEqual(['a@g.us']);
+    expect(searchGroups(reais, 'imobiliaria').map(g => g.jid)).toEqual(['b@g.us']);
+    expect(searchGroups(reais, '185').map(g => g.jid)).toEqual(['a@g.us']);
+    expect(searchGroups(reais, ' LEAL  mídia ').map(g => g.jid)).toEqual(['a@g.us', 'b@g.us']);
+    expect(searchGroups(reais, '')).toEqual(reais);
+  });
+
   it('a dica da regra de nome cita o nome do cliente', () => {
     expect(nameRuleHint('Moeda Forte')).toContain('"Moeda Forte x Leal Mídia"');
   });
@@ -126,6 +173,15 @@ describe('lista de grupos liberados (painel raiz)', () => {
       { jid: '222@g.us', name: 'APTO PREMIUM x Leal Mídia', kind: 'cliente' },
       { jid: '333@g.us', name: 'Time interno', kind: 'logs' },
     ]);
+  });
+
+  it('sugere o grupo do cliente com o número na frente ou no fim do nome', () => {
+    const reais = [
+      { jid: 'a@g.us', name: 'BASEL SOLUTIONS - LEAL MÍDIA [#178]' },
+      { jid: 'b@g.us', name: '🟦 [#102] BASEL SOLUTIONS | LEAL MÍDIA' },
+      { jid: 'c@g.us', name: 'BASEL SOLUTIONS [12/10 às 14h] | REUNIÃO' },
+    ];
+    expect(suggestAllowedGroups(reais, 'Basel Solutions', { reminder: '', logs: '' }).map(g => g.jid)).toEqual(['a@g.us', 'b@g.us']);
   });
 
   it('linha avisa quando a central não lista mais o grupo', () => {

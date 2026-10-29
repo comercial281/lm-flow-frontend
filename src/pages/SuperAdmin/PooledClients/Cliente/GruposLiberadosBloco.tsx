@@ -1,15 +1,16 @@
 import { useState } from 'react';
-import { MessageCircle } from 'lucide-react';
+import { MessageCircle, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { Seletor } from '@/components/base/Seletor';
-import { Button } from '@/components/ui/ds';
+import { Button, Input } from '@/components/ui/ds';
+import { cn } from '@/lib/utils';
 import { SECAO, TITULO_SECAO } from '@/pages/Admin/Area/estilo';
 import { clientesService } from '@/services/superAdmin/clientesService';
 import { useConfirmacao } from '@/hooks/useConfirmacao';
 import type { ClientePooled } from '@/types/admin/clientes';
 import {
   ALLOWED_KIND_LABEL, addAllowedGroup, allowedGroupsFrom, allowedGroupsPatch, allowedRow, groupsPatch,
-  removeAllowedGroup, sortGroupsForPicker, suggestAllowedGroups,
+  removeAllowedGroup, searchGroups, sortGroupsForPicker, suggestAllowedGroups,
   type AllowedGroup, type AllowedKind, type ClientGroupJids, type WaGroup,
 } from '../clientGroups';
 
@@ -21,7 +22,9 @@ type Props = {
 
 // Lista de grupos da central liberados para este cliente (spec 2026-10-15).
 // Só a Leal mexe aqui; dentro do CRM o cliente vê só os "Com o cliente".
-// A lista da central só carrega no clique (conversa com o WhatsApp operacional).
+// A lista da central só carrega no clique (conversa com o WhatsApp operacional),
+// e carrega de novo a CADA clique: grupo criado ou renomeado aparece sem
+// recarregar a página (o servidor guarda a lista por até 5 min e renova sozinho).
 export function GruposLiberadosBloco({ cliente, groupJids, patch }: Props) {
   const gravada = allowedGroupsFrom(cliente.settings);
   const [lista, setLista] = useState<AllowedGroup[] | null>(gravada);
@@ -29,6 +32,7 @@ export function GruposLiberadosBloco({ cliente, groupJids, patch }: Props) {
   const [carregando, setCarregando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [adicionando, setAdicionando] = useState(false);
+  const [busca, setBusca] = useState('');
   const [escolhido, setEscolhido] = useState('');
   const [tipo, setTipo] = useState<AllowedKind>('cliente');
   const [gravando, setGravando] = useState(false);
@@ -37,7 +41,6 @@ export function GruposLiberadosBloco({ cliente, groupJids, patch }: Props) {
 
   // Devolve null quando a leitura falha (distinto de lista vazia).
   const carregarCentral = async (): Promise<WaGroup[] | null> => {
-    if (central) return central;
     setCarregando(true);
     setErro(null);
     try {
@@ -71,7 +74,15 @@ export function GruposLiberadosBloco({ cliente, groupJids, patch }: Props) {
       setErro('O número operacional não devolveu grupo nenhum.');
       return;
     }
+    setBusca('');
+    setEscolhido('');
     setAdicionando(true);
+  };
+
+  // Digitar tira a escolha: o Incluir nunca leva um grupo que sumiu da lista filtrada.
+  const buscar = (texto: string) => {
+    setBusca(texto);
+    setEscolhido('');
   };
 
   const incluir = () => {
@@ -112,6 +123,7 @@ export function GruposLiberadosBloco({ cliente, groupJids, patch }: Props) {
   };
 
   const opcoes = central ? sortGroupsForPicker(central, cliente.name).filter(g => !lista?.some(l => l.jid === g.jid)) : [];
+  const achados = searchGroups(opcoes, busca);
 
   return (
     <section aria-labelledby="grupos" className={SECAO}>
@@ -150,17 +162,35 @@ export function GruposLiberadosBloco({ cliente, groupJids, patch }: Props) {
           })}
 
           {adicionando ? (
-            <div className="flex flex-wrap items-end gap-2">
-              <Seletor aria-label="Grupo" value={escolhido} onChange={e => setEscolhido(e.target.value)} className="w-full sm:w-80">
-                <option value="">{carregando ? 'Carregando grupos do número operacional...' : 'Escolha o grupo'}</option>
-                {opcoes.map(g => <option key={g.jid} value={g.jid}>{g.name}</option>)}
-              </Seletor>
-              <Seletor aria-label="Tipo" value={tipo} onChange={e => setTipo(e.target.value as AllowedKind)} className="w-full sm:w-48">
-                <option value="cliente">{ALLOWED_KIND_LABEL.cliente}</option>
-                <option value="logs">{ALLOWED_KIND_LABEL.logs}</option>
-              </Seletor>
-              <Button size="sm" onClick={incluir} disabled={!escolhido || gravando}>Incluir</Button>
-              <Button size="sm" variant="ghost" onClick={() => setAdicionando(false)}>Cancelar</Button>
+            <div className="space-y-2 sm:max-w-xl">
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
+                <Input aria-label="Buscar grupo" placeholder="Buscar pelo nome ou pelo número" value={busca} autoFocus
+                  onChange={e => buscar(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); if (achados[0]) setEscolhido(achados[0].jid); } }}
+                  className="pl-9" />
+              </div>
+              {/* Lista que rola, já na ordem de sortGroupsForPicker: o grupo do cliente e os numerados no topo. */}
+              <div role="listbox" aria-label="Grupo" className="max-h-64 overflow-y-auto rounded-md border border-border">
+                {achados.length === 0 ? (
+                  <p className="p-3 text-sm text-muted-foreground">Nenhum grupo com esse nome.</p>
+                ) : achados.map(g => (
+                  <button key={g.jid} type="button" role="option" aria-selected={g.jid === escolhido} title={g.jid}
+                    onClick={() => setEscolhido(g.jid)}
+                    className={cn('block w-full px-3 py-2 text-left text-sm hover:bg-muted focus-visible:bg-muted focus-visible:outline-none',
+                      g.jid === escolhido && 'bg-primary/10 font-medium text-primary hover:bg-primary/10')}>
+                    {g.name}
+                  </button>
+                ))}
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <Seletor aria-label="Tipo" value={tipo} onChange={e => setTipo(e.target.value as AllowedKind)} className="w-full sm:w-48">
+                  <option value="cliente">{ALLOWED_KIND_LABEL.cliente}</option>
+                  <option value="logs">{ALLOWED_KIND_LABEL.logs}</option>
+                </Seletor>
+                <Button size="sm" onClick={incluir} disabled={!escolhido || gravando}>Incluir</Button>
+                <Button size="sm" variant="ghost" onClick={() => setAdicionando(false)}>Cancelar</Button>
+              </div>
             </div>
           ) : (
             <Button size="sm" variant="outline" onClick={() => void abrirAdicionar()} disabled={carregando || gravando}>Adicionar grupo</Button>
