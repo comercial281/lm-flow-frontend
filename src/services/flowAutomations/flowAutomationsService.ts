@@ -133,7 +133,8 @@ class FlowAutomationsService {
     return unwrap<FlowAutomation>(await api.put(`${this.baseUrl}/${id}/save_flow`, payload));
   }
 
-  async movePositions(id: string, positions: Array<{ id: string; pos_x: number; pos_y: number }>): Promise<void> {
+  // Posição nula = sem lugar salvo (o canvas calcula). O Desfazer do Organizar devolve nulo.
+  async movePositions(id: string, positions: Array<{ id: string; pos_x: number | null; pos_y: number | null }>): Promise<void> {
     await api.patch(`${this.baseUrl}/${id}/move_nodes`, { positions });
   }
 

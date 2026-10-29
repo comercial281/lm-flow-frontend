@@ -10096,3 +10096,29 @@ Servidor: comercial281/lm-flow#542 (entra antes). Antes, o corretor que respondi
 Não reabrir sem o dono pedir.
 
 Código: `features/conversas/atalhosDoLead.ts` (`dicaDaIa`, `avisarIaRecarregar`, `avisarSeEventoDaIa`), `useIaDaConversa.ts`, `eventoDaConversa.ts` e `textosDosEventos.ts` (pílulas), `components/chat/conversation/ActivateAiDialog.tsx`, `SystemMessage.tsx`, `CardConversationTab.tsx`, `contexts/chat/ChatContext.tsx`, `types/analytics/pipelines.ts`. Testes: `atalhosDoLead.spec.ts`, `useIaDaConversa.spec.tsx`, `eventoDaConversa.spec.ts`, `ActivateAiDialog.recarrega.spec.tsx`.
+
+## Construtor: Organizar e linhas em ângulo reto (desde 2026-10-29)
+
+Pedido do dono (Tony) em 29/10/2026: "um botaozinho em todas as partes do flow builder, automação, funil, follow-up, pra organizar o fluxo, com colunas e direcionamentos mais horizontais e ligações mais claras. O follow-up é uma doidera, ninguém entende como mexer." Só frontend: as posições já eram gravadas pelo `move_nodes`.
+
+**A causa.** O follow-up padrão nasce sem posição salva, e o desenho automático antigo empilhava cada bloco numa linha nova: virava uma escada na diagonal, de trás pra frente (a Mensagem 1 no canto de baixo à direita), com as 5 linhas do "Respondeu" cruzando o desenho até o Recuperado.
+
+**O que mudou (vale pra Automações, Funis de mensagem e Follow-up, é o mesmo canvas):**
+
+- **Desenho novo.** O caminho do lead corre reto da esquerda pra direita; o desvio desce. Na espera com prazo, "Não respondeu" segue reto e "Respondeu" desce; na condição, "Sim" segue reto e "Não" desce logo embaixo dela, então condições em cascata (as 6 de retomada do follow-up) empilham numa coluna, e cada "Sim" desce em cima de onde o lead retoma. Bloco onde vários caminhos chegam (o Recuperado) fica embaixo, depois do último que chega.
+- **Abre organizado.** Bloco sem posição salva usa esse desenho, então fluxo que ninguém arrumou na mão já abre assim, sem clicar.
+- **Botão Organizar**, ao lado de Blocos e Simular (só pra quem monta; some no só leitura e no guiado, e com o fluxo vazio). Redesenha o fluxo inteiro, inclusive o arrumado à mão, grava as posições na hora (como o arraste) e mostra "Fluxo organizado" com **Desfazer** por 8 s. O Desfazer devolve cada bloco pro lugar de antes, inclusive o "sem posição".
+- **Linhas em ângulo reto**, com canto arredondado, no lugar da curva. "Não" da condição e "Respondeu" da espera com prazo saem por baixo do cartão; o resto sai pela direita. A linha entra no bloco pela esquerda, ou por cima quando desce pro bloco logo embaixo ou vai pra um bloco mais embaixo e mais à frente. Isso vale pra todo fluxo, também o arrumado à mão.
+
+**Decisões do dono:** o desenho escolhido entre três (o arranjo dele por colunas de tipo, linha reta com condições empilhadas, e linha reta sem as condições de retomada); ficou a linha reta com as condições empilhadas. Os dois caminhos (abre organizado e o botão), o Desfazer e as linhas em ângulo reto pra todo fluxo vieram na proposta e ele aprovou.
+
+**Decisões de quem desenhou:**
+
+- Condição sozinha: "Sim" segue reto, "Não" desce logo embaixo (a mesma regra da cascata).
+- A coluna de cada bloco é a do caminho mais longo até ele; linha que volta pra trás (laço) não conta pra coluna. Bloco solto (sem ligação com o Início) fica embaixo do resto, na primeira coluna.
+- A entrada por cima (`in-top`) é invisível no cartão: só a da esquerda aparece como bolinha.
+- Bloco novo ainda não salvo (id temporário) ganha o lugar na tela e grava no próximo Salvar, como no arraste.
+
+**Fora (próxima demanda):** tirar da tela as 6 condições de retomada do follow-up (o servidor retomaria sozinho e os follow-ups em andamento seriam convertidos). Está no backlog do LM Flow.
+
+Código: `calculateLayout`, `outputSide` e `targetSide` em `src/lib/flowAutomationGraph.ts`; saídas e entradas do cartão em `FlowNodeCard.tsx`; `getSmoothStepPath` no `FlowEdge.tsx`; `organize`/`applyPositions` e o `targetHandle` de cada linha no `FlowAutomationCanvas.tsx`. Testes: `flowAutomationLayout.spec.ts`, `FlowNodeCardSaidas.spec.tsx`, `FlowCanvasOrganizar.spec.tsx`.

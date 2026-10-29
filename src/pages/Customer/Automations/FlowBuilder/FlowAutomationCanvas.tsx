@@ -6,7 +6,7 @@ import {
   type Node, type Edge, type EdgeChange, type NodeChange, type Connection, type ReactFlowInstance, BackgroundVariant,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { ArrowLeft, Save, Play, Loader2, Settings2, LayoutGrid, Copy, Users } from 'lucide-react';
+import { ArrowLeft, Save, Play, Loader2, Settings2, LayoutGrid, Copy, Users, Workflow } from 'lucide-react';
 import { Badge, Button, Input } from '@/components/ui/ds';
 import Chave from '@/components/base/Chave';
 import Faixa from '@/components/base/Faixa';
@@ -17,7 +17,8 @@ import { flowAutomationsService } from '@/services/flowAutomations/flowAutomatio
 import type { FlowAutomation, FlowAutomationNode, TestRunResult } from '@/types/flowAutomations';
 import {
   resolvedPositions, buildEdges, cutEdge, insertAt, link, removeNode, moveNode, newTempId, TRIGGER_NODE_ID,
-  normalizeLoadedNodes, buildSaveFlowPayload, handleLabel, NODE_WIDTH, type OutputHandle,
+  normalizeLoadedNodes, buildSaveFlowPayload, handleLabel, NODE_WIDTH, calculateLayout, outputSide, targetSide,
+  type OutputHandle,
 } from '@/lib/flowAutomationGraph';
 import { flowNodeTypes, type FlowLookups, type FlowStartNodeData } from '@/components/flowAutomations/FlowNodeCard';
 import { flowEdgeTypes, type FlowEdgeData } from '@/components/flowAutomations/FlowEdge';
@@ -638,17 +639,50 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
     });
   }, [builderTools, handleCutEdge]);
 
-  const reactFlowEdges: Edge[] = useMemo(
-    () => graphEdges.map(e => ({
-      id: e.id, type: 'flowEdge', source: e.source, target: e.target, sourceHandle: e.sourceHandle,
-      deletable: e.deletable && builderTools, selected: e.id === selectedEdgeId,
-      label: e.label || undefined,
-      labelStyle: { fontSize: 10, fill: e.color },
-      style: { stroke: e.color },
-      data: { onCut: handleCutEdge } satisfies FlowEdgeData,
-    })),
-    [graphEdges, builderTools, selectedEdgeId, handleCutEdge]
-  );
+  // A linha entra por cima ou pela esquerda conforme onde os dois blocos estão
+  // (Organizar, 29/10/2026): descendo pro bloco logo embaixo, ou indo pra um
+  // bloco mais embaixo e mais à frente, entra por cima.
+  const reactFlowEdges: Edge[] = useMemo(() => {
+    const byId = new Map(nodes.map(n => [n.id, n]));
+    return graphEdges.map(e => {
+      const source = byId.get(e.source);
+      const from = source ? outputSide(source, e.sourceHandle) : 'right';
+      const sourcePos = e.source === TRIGGER_NODE_ID ? startPosition : positions[e.source];
+      const targetPos = positions[e.target];
+      const entersTop = !!sourcePos && !!targetPos && targetSide(from, sourcePos, targetPos) === 'top';
+      return {
+        id: e.id, type: 'flowEdge', source: e.source, target: e.target, sourceHandle: e.sourceHandle,
+        targetHandle: entersTop ? 'in-top' : 'in',
+        deletable: e.deletable && builderTools, selected: e.id === selectedEdgeId,
+        label: e.label || undefined,
+        labelStyle: { fontSize: 10, fill: e.color },
+        style: { stroke: e.color },
+        data: { onCut: handleCutEdge } satisfies FlowEdgeData,
+      };
+    });
+  }, [graphEdges, nodes, positions, startPosition, builderTools, selectedEdgeId, handleCutEdge]);
+
+  // Organizar (29/10/2026): redesenha o fluxo inteiro (caminho reto, desvio
+  // embaixo) e grava as posições na hora, como no arraste. Desfazer devolve
+  // cada bloco pro lugar de antes, inclusive o "sem posição" (nulo).
+  const applyPositions = useCallback((next: Record<string, { x: number | null; y: number | null }>) => {
+    setNodes(prev => prev.map(n => (n.id in next ? { ...n, pos_x: next[n.id].x, pos_y: next[n.id].y } : n)));
+    // Bloco novo (id temporário) ainda não existe no servidor: vai no próximo Salvar.
+    const payload = Object.entries(next)
+      .filter(([nid]) => !nid.startsWith('tmp_'))
+      .map(([nid, p]) => ({ id: nid, pos_x: p.x, pos_y: p.y }));
+    if (!id || payload.length === 0) return;
+    flowAutomationsService.movePositions(id, payload).catch(() => {
+      // silencioso, como no arraste: o próximo Salvar completo grava as posições
+    });
+    requestAnimationFrame(() => flowInstance.current?.fitView({ duration: 300 }));
+  }, [id]);
+
+  const organize = useCallback(() => {
+    const before = Object.fromEntries(nodes.map(n => [n.id, { x: n.pos_x, y: n.pos_y }]));
+    applyPositions(calculateLayout(nodes, initialNodeId));
+    toast('Fluxo organizado', { action: { label: 'Desfazer', onClick: () => applyPositions(before) }, duration: 8000 });
+  }, [nodes, initialNodeId, applyPositions]);
 
   const pendingLabel = useMemo(() => {
     if (!pendingSource) return '';
@@ -958,6 +992,17 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
               >
                 {testing ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Play className="h-4 w-4 mr-1" />} Simular
               </Button>
+              {nodes.length > 0 && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-8 bg-background shadow-sm"
+                  onClick={organize}
+                  title="Arruma os blocos: o caminho do lead corre reto e cada desvio desce"
+                >
+                  <Workflow className="h-4 w-4 mr-1" aria-hidden="true" /> Organizar
+                </Button>
+              )}
             </div>
             )}
 
