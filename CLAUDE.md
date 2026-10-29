@@ -10056,7 +10056,7 @@ Servidor: comercial281/lm-flow#542 (entra antes). Antes, o corretor que respondi
 **Decisões do dono (28/10):**
 
 - Vale a lead inteira, não só a conversa onde a pessoa falou.
-- A IA sai mesmo quando ainda não tinha falado com o lead, e o aviso vai igual.
+- A IA sai mesmo quando ainda não tinha falado com o lead. O aviso só vai quando a IA ia atender aquele lead: o gatilho dela bate (ex.: o lead veio do formulário dela) ou ela atende todo lead do número. Lead que a IA nunca pegaria (outro formulário, lead antiga, que nunca escreveu) perde a IA calado, sem aviso, sem pílula e sem linha no Histórico. Ajuste do dono em 29/10: uma corretora da Pinot recebeu 63 avisos numa noite puxando leads antigas, 57 de leads que a IA dela nunca atenderia. Não voltar a avisar todo lead sem o dono pedir.
 - O bloco "Passar para a IA" do construtor liga a IA de novo, por cima da mensagem manual. Inclui o modelo do Book do site.
 - Vale pra todos os clientes, sem chave pra desligar.
 - Mídia conta.
@@ -10085,7 +10085,7 @@ Servidor: comercial281/lm-flow#542 (entra antes). Antes, o corretor que respondi
 **Textos exatos:**
 
 - Central de Notificações: "A IA saiu porque você respondeu o lead".
-- Aviso (WhatsApp e push): "A IA não vai mais responder {nome do lead} porque você mandou uma mensagem manual. Se quiser religar, abra a conversa e clique no robô da IA: {link}".
+- Aviso (WhatsApp e push): "A IA não vai mais responder {nome do lead} porque você mandou uma mensagem manual. Se quiser religar, abra a conversa e clique no robô da IA: {link}". Quando o nome gravado não é de gente (o código "5511…@s.whatsapp.net" que o WhatsApp deixa no lugar do nome), vai o telefone. O mesmo vale nos avisos de lead que a IA passou.
 - Sem autor conhecido, vai pro responsável: "...porque alguém da equipe mandou uma mensagem manual pelo celular...".
 - Título do push: "A IA saiu do atendimento".
 - Pílulas na conversa: "**Bruno Teste** respondeu à mão e a IA saiu do atendimento" e "**Bruno Teste** religou a IA". Sem nome: "Alguém da equipe" e "Uma automação".
