@@ -1,5 +1,6 @@
-import { BaseEdge, EdgeLabelRenderer, getSmoothStepPath, type Edge, type EdgeProps } from '@xyflow/react';
+import { BaseEdge, EdgeLabelRenderer, getSmoothStepPath, Position, type Edge, type EdgeProps } from '@xyflow/react';
 import { Scissors } from 'lucide-react';
+import { NODE_WIDTH, STEP_X } from '@/lib/flowAutomationGraph';
 
 export type FlowEdgeData = { onCut?: (edgeId: string) => void };
 
@@ -15,7 +16,11 @@ export function FlowEdge({
   label, labelStyle, labelShowBg, labelBgStyle, labelBgPadding, labelBgBorderRadius,
   style, markerEnd, interactionWidth, selected, deletable, data,
 }: EdgeProps<Edge<FlowEdgeData>>) {
-  const [path, labelX, labelY] = getSmoothStepPath({ sourceX, sourceY, sourcePosition, targetX, targetY, targetPosition, borderRadius: 10 });
+  // Indo pra um bloco de outra linha mais à frente, a curva fica no vão logo
+  // antes dele: no meio do caminho ela passaria por trás de outro cartão.
+  const forward = sourcePosition === Position.Right && targetPosition === Position.Left && targetX > sourceX;
+  const centerX = forward ? targetX - (STEP_X - NODE_WIDTH) / 2 : undefined;
+  const [path, labelX, labelY] = getSmoothStepPath({ sourceX, sourceY, sourcePosition, targetX, targetY, targetPosition, borderRadius: 10, centerX });
   const canCut = !!selected && deletable !== false && !!data?.onCut;
 
   return (

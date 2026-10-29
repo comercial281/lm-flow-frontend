@@ -36,7 +36,8 @@ export function handleColor(kind: FlowNodeKind, handle: OutputHandle): string {
 }
 
 export const NODE_WIDTH = 260;
-const STEP_X = 320;
+// 100 px entre colunas: cabe o nome da linha ("Não respondeu") sem encostar no cartão.
+export const STEP_X = 360;
 const STEP_Y = 200;
 
 export interface Point {
@@ -104,45 +105,65 @@ export function calculateLayout(nodes: FlowAutomationNode[], initialNodeId: stri
     ...nodes.map(n => n.id), // o que sobrar (só laço) entra por último
   ];
 
-  // Linha que volta pra trás (laço) não conta pra coluna, senão o desenho não acaba.
+  // Linha que volta pra trás (laço) não conta pra coluna, senão o desenho não
+  // acaba. A ordem de passagem é a do fluxo do Início (o solto vem depois) e,
+  // dentro dele, o que desce antes do que segue reto, e o desvio por último.
   const backEdges = new Set<string>();
   const onStack = new Set<string>();
   const seen = new Set<string>();
-  const postOrder: string[] = [];
-  const walk = (id: string) => {
+  const order: string[] = [];
+  const walk = (id: string, postOrder: string[]) => {
     seen.add(id);
     onStack.add(id);
-    ordered(byId.get(id)!).forEach(o => {
+    [...ordered(byId.get(id)!)].reverse().forEach(o => {
       if (onStack.has(o.target)) backEdges.add(`${id}>${o.target}`);
-      else if (!seen.has(o.target)) walk(o.target);
+      else if (!seen.has(o.target)) walk(o.target, postOrder);
     });
     onStack.delete(id);
     postOrder.push(id);
   };
-  roots.forEach(id => { if (!seen.has(id)) walk(id); });
-  const forward = (id: string) => ordered(byId.get(id)!).filter(o => !backEdges.has(`${id}>${o.target}`));
-
-  const column: Record<string, number> = Object.fromEntries(nodes.map(n => [n.id, 0]));
-  [...postOrder].reverse().forEach(id => {
-    forward(id).forEach(o => { column[o.target] = Math.max(column[o.target], column[id] + (o.down ? 0 : 1)); });
+  roots.forEach(id => {
+    if (seen.has(id)) return;
+    const postOrder: string[] = [];
+    walk(id, postOrder);
+    order.push(...postOrder.reverse());
   });
+  const forward = (id: string) => ordered(byId.get(id)!).filter(o => !backEdges.has(`${id}>${o.target}`));
+  const incoming = new Map<string, Array<LayoutOut & { from: string }>>();
+  order.forEach(id => forward(id).forEach(o => incoming.set(o.target, [...(incoming.get(o.target) ?? []), { ...o, from: id }])));
 
+  // Coluna = caminho mais longo até o bloco (o "Não" da condição fica na mesma coluna).
+  const column: Record<string, number> = Object.fromEntries(nodes.map(n => [n.id, 0]));
+  const pending = new Map(nodes.map(n => [n.id, (incoming.get(n.id) ?? []).length]));
+  const ready = order.filter(id => pending.get(id) === 0);
+  while (ready.length) {
+    const id = ready.shift()!;
+    forward(id).forEach(o => {
+      column[o.target] = Math.max(column[o.target], column[id] + (o.down ? 0 : 1));
+      pending.set(o.target, pending.get(o.target)! - 1);
+      if (pending.get(o.target) === 0) ready.push(o.target);
+    });
+  }
+
+  // Linha: o bloco segue quem chega mais perto dele (a coluna mais à direita).
+  // Pela direita, na mesma linha; pelo "Não" da condição ou pelo desvio, na de
+  // baixo. Linha ocupada naquela coluna: a próxima livre embaixo.
   const lane: Record<string, number> = {};
   const taken = new Set<string>();
   let lastLane = -1;
-  const place = (id: string, wanted: number | null) => {
-    if (id in lane) return;
-    const free = wanted !== null && !taken.has(`${column[id]}:${wanted}`);
-    lane[id] = free ? wanted : lastLane + 1;
+  const freeFrom = (id: string, from: number) => {
+    let l = from;
+    while (taken.has(`${column[id]}:${l}`)) l += 1;
+    return l;
+  };
+  order.forEach(id => {
+    const placed = (incoming.get(id) ?? []).filter(o => o.from in lane);
+    const parent = placed.sort((a, b) => column[b.from] - column[a.from] || lane[b.from] - lane[a.from])[0];
+    const wanted = !parent ? lastLane + 1 : parent.side === 'right' && !parent.down ? lane[parent.from] : lane[parent.from] + 1;
+    lane[id] = freeFrom(id, wanted);
     taken.add(`${column[id]}:${lane[id]}`);
     lastLane = Math.max(lastLane, lane[id]);
-    forward(id).forEach(o => {
-      if (o.down) place(o.target, lane[id] + 1);
-      else if (o.side === 'right') place(o.target, lane[id]);
-      else place(o.target, null);
-    });
-  };
-  roots.forEach(id => place(id, null));
+  });
 
   return Object.fromEntries(nodes.map(n => [n.id, { x: column[n.id] * STEP_X, y: lane[n.id] * STEP_Y }]));
 }

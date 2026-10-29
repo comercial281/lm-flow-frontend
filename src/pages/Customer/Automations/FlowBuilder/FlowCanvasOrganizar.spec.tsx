@@ -95,7 +95,7 @@ describe('Organizar', () => {
     await waitFor(() => expect(movePositions).toHaveBeenCalledTimes(1));
     expect(movePositions).toHaveBeenCalledWith('fa1', [
       { id: 'n1', pos_x: 0, pos_y: 0 },
-      { id: 'n2', pos_x: 320, pos_y: 0 },
+      { id: 'n2', pos_x: 360, pos_y: 0 },
     ]);
   });
 

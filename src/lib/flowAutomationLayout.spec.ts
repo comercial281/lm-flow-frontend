@@ -87,6 +87,32 @@ describe('Organizar o Follow-up padrão', () => {
   });
 });
 
+describe('Organizar uma automação comum', () => {
+  // Boas-vindas → espera (Respondeu: IA; Não respondeu: lembrete) → condição
+  // (Sim: etiqueta; Não: tarefa) → os dois caminhos se juntam no fechamento.
+  const nodes = [
+    msg('boas', 'espera'),
+    wait('espera', 'ia', 'lembrete'),
+    node('ia', 'hand_to_ai'),
+    msg('lembrete', 'veio'),
+    cond('veio', 'etiqueta', 'tarefa'),
+    node('etiqueta', 'add_label', { next_node_id: 'fecha' }),
+    node('tarefa', 'create_task', { next_node_id: 'fecha' }),
+    msg('fecha', null),
+  ];
+  const pos = calculateLayout(nodes, 'boas');
+
+  it('o desvio desce uma linha só, quando ela está livre', () => {
+    expect(pos.ia.y).toBe(pos.tarefa.y);
+    expect(pos.ia.y).toBeGreaterThan(pos.espera.y);
+  });
+
+  it('onde dois caminhos se juntam, o bloco segue a linha de quem chega mais perto', () => {
+    expect(pos.fecha.y).toBe(pos.etiqueta.y);
+    expect(pos.fecha.x).toBeGreaterThan(pos.etiqueta.x);
+  });
+});
+
 describe('Organizar fluxo fora do padrão', () => {
   it('bloco solto (sem ligação com o Início) não some: fica embaixo do resto', () => {
     const pos = calculateLayout([msg('a', 'b'), msg('b', null), msg('solto', null)], 'a');
@@ -133,7 +159,7 @@ describe('Por onde a linha entra no bloco', () => {
   });
 
   it('saindo pela direita, pro bloco da mesma linha: entra pela esquerda', () => {
-    expect(targetSide('right', at(0, 0), at(320, 0))).toBe('left');
+    expect(targetSide('right', at(0, 0), at(360, 0))).toBe('left');
   });
 
   it('saindo pela direita, pra um bloco mais embaixo e mais à direita: entra por cima', () => {

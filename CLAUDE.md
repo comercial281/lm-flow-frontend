@@ -10116,6 +10116,8 @@ Pedido do dono (Tony) em 29/10/2026: "um botaozinho em todas as partes do flow b
 
 - Condição sozinha: "Sim" segue reto, "Não" desce logo embaixo (a mesma regra da cascata).
 - A coluna de cada bloco é a do caminho mais longo até ele; linha que volta pra trás (laço) não conta pra coluna. Bloco solto (sem ligação com o Início) fica embaixo do resto, na primeira coluna.
+- Onde dois caminhos se juntam, o bloco segue a linha de quem chega mais perto dele (a coluna mais à direita). O desvio desce só uma linha quando ela está livre.
+- 100 px entre colunas (antes 60), pra caber o nome da linha ("Não respondeu") sem encostar no cartão. A linha que vai pra um bloco de outra linha mais à frente faz a curva no vão logo antes dele, senão passaria por trás de outro cartão.
 - A entrada por cima (`in-top`) é invisível no cartão: só a da esquerda aparece como bolinha.
 - Bloco novo ainda não salvo (id temporário) ganha o lugar na tela e grava no próximo Salvar, como no arraste.
 

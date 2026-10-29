@@ -17,7 +17,7 @@ import { flowAutomationsService } from '@/services/flowAutomations/flowAutomatio
 import type { FlowAutomation, FlowAutomationNode, TestRunResult } from '@/types/flowAutomations';
 import {
   resolvedPositions, buildEdges, cutEdge, insertAt, link, removeNode, moveNode, newTempId, TRIGGER_NODE_ID,
-  normalizeLoadedNodes, buildSaveFlowPayload, handleLabel, NODE_WIDTH, calculateLayout, outputSide, targetSide,
+  normalizeLoadedNodes, buildSaveFlowPayload, handleLabel, NODE_WIDTH, STEP_X, calculateLayout, outputSide, targetSide,
   type OutputHandle,
 } from '@/lib/flowAutomationGraph';
 import { flowNodeTypes, type FlowLookups, type FlowStartNodeData } from '@/components/flowAutomations/FlowNodeCard';
@@ -113,7 +113,7 @@ const PEDIDO_TIRAR_MENSAGEM = {
 };
 
 /** Distância entre o Início e o primeiro bloco (a mesma entre colunas do layout). */
-const START_GAP_X = 320;
+const START_GAP_X = STEP_X;
 
 // O que conta como "alteração não salva": nome, gatilho, configurações ("pode
 // rodar de novo", horário comercial, a regra de número do fluxo) e blocos. A
