@@ -131,13 +131,13 @@ describe('IA desligada porque alguém respondeu à mão', () => {
   });
 
   it('sem horário (at nulo): texto de sempre, nunca 1970', () => {
-    expect(dicaDaIa(pausada('Bruno Teste', null as never), agora)).toBe('IA desligada neste lead — clique para reativar');
-    expect(dicaDaIa(pausada('Bruno Teste', ''), agora)).toBe('IA desligada neste lead — clique para reativar');
+    expect(dicaDaIa(pausada('Bruno Teste', null as never), agora)).toBe('IA desligada neste lead \u2014 clique para reativar');
+    expect(dicaDaIa(pausada('Bruno Teste', ''), agora)).toBe('IA desligada neste lead \u2014 clique para reativar');
   });
 
   it('data inválida ou sem paused_by: texto de sempre', () => {
-    expect(dicaDaIa(pausada('Bruno Teste', 'lixo'), agora)).toBe('IA desligada neste lead — clique para reativar');
-    expect(dicaDaIa(estado('paused', 'IA desligada neste lead'), agora)).toBe('IA desligada neste lead — clique para reativar');
+    expect(dicaDaIa(pausada('Bruno Teste', 'lixo'), agora)).toBe('IA desligada neste lead \u2014 clique para reativar');
+    expect(dicaDaIa(estado('paused', 'IA desligada neste lead'), agora)).toBe('IA desligada neste lead \u2014 clique para reativar');
   });
 });
 
