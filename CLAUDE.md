@@ -10080,3 +10080,17 @@ Servidor: comercial281/lm-flow#542 (entra antes). Antes, o corretor que respondi
 Não reabrir sem o dono pedir.
 
 Código: `features/conversas/atalhosDoLead.ts` (`dicaDaIa`, `avisarIaRecarregar`, `avisarSeEventoDaIa`), `useIaDaConversa.ts`, `eventoDaConversa.ts` e `textosDosEventos.ts` (pílulas), `components/chat/conversation/ActivateAiDialog.tsx`, `SystemMessage.tsx`, `CardConversationTab.tsx`, `contexts/chat/ChatContext.tsx`, `types/analytics/pipelines.ts`. Testes: `atalhosDoLead.spec.ts`, `useIaDaConversa.spec.tsx`, `eventoDaConversa.spec.ts`, `ActivateAiDialog.recarrega.spec.tsx`.
+
+## IA Vendedora no Sonnet 5.5 (desde 2026-10-29)
+
+O Sonnet 4.5 sai do ar em 30/11/2026. A opção "Equilibrada (Sonnet, padrão)" do Motor passou a ser o Sonnet 5.5, e as IAs ligadas no 4.5 foram trocadas por lista (backend #543). IA nova nasce no 5.5. O Haiku (Moeda, Bruno e o painel Testar) não mudou. As funções internas que usam o modelo padrão (preencher imóvel com IA, descrição, site, qualificação, sugestões, relatório semanal) seguem no 4.5 até um PR próprio antes de 30/11.
+
+O que muda pra quem usa:
+- **A IA espera o lead quando a nossa última mensagem já perguntou algo.** Caso típico: o lead manda o formulário, a boas-vindas da automação pergunta "esse é o seu número?" e a IA não fala por cima. Antes, no 4.5, ela repetia a boas-vindas. Se a nossa mensagem não perguntou nada, ela continua o atendimento sem se apresentar de novo.
+- **A ficha não some mais no Sonnet.** No Sonnet 5 (Castellatto), 1 em cada 3 respostas saía sem a ficha: o lead lia o texto, mas o repasse, a visita e o que ele contou não eram registrados. Agora o formato é obrigatório nos dois Sonnets.
+
+Ensaio de 29/10 (turnos reais do 4.5 reenviados ao 5.5): "termina com pergunta" na mesma faixa (amostra pequena) e respostas mais curtas. Quando não tem o dado, ela passa mais por "não sabe". Ainda vale conferir no dia a dia.
+
+**Voltar versão:** voltar o modelo de uma IA é escolher outro no Motor, e o 4.5 só vale até 30/11. Voltar o backend pra antes do #543 com IA no 5.5 deixa a IA muda: antes, voltar as IAs pro 4.5.
+
+Código: `configurar/opcoes.ts` (`MODELOS`). No backend: `AnthropicService`, `SalesAgents::ResponseSchema`, `ConversationRunner.awaits_lead?`, `Responder::CONTINUE_SEED`.

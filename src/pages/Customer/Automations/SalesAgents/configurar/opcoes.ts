@@ -1,6 +1,6 @@
 // Listas de escolha do passo a passo. Mesmos valores que o servidor aceita.
 export const MODELOS: [string, string][] = [
-  ['claude-sonnet-4-5-20250929', 'Equilibrada (Sonnet, padrão)'],
+  ['claude-sonnet-5-5', 'Equilibrada (Sonnet, padrão)'],
   ['claude-haiku-4-5-20251001', 'Mais rápida e barata (Haiku)'],
 ];
 
