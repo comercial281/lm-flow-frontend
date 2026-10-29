@@ -10033,7 +10033,7 @@ Código: `components/properties/BuscaDeImovel.tsx` (`BuscaDeImovel`, `CartaoDoIm
 
 ## Corretor falou, IA sai (desde 2026-10-28)
 
-Backend `claude/corretor-falou-ia-sai` (PR 1) entra antes. A IA Vendedora não voltava sozinha pro atendimento só quando o lead pedia, e o corretor que respondia à mão disputava a conversa com ela. Agora quem fala sai por cima.
+Backend `claude/corretor-falou-ia-sai` (PR 1) entra antes. Antes, o corretor que respondia à mão disputava a conversa com a IA Vendedora. Agora, quem fala à mão tira a IA do atendimento.
 
 **A regra:** alguém manda mensagem manual pro lead, pela tela ou pelo celular, inclusive áudio, foto e figurinha. A IA sai do atendimento do lead em TODAS as conversas dele, em qualquer número, e nunca volta sozinha.
 
