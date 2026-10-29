@@ -10030,3 +10030,45 @@ Código: `features/flowAutomations/readiness.ts` (`hasOwnTrigger`, `nodeProblem(
 **Nome comprido não estica a janela** (corrigido no mesmo dia): o cartão do imóvel escolhido é `min-w-0 max-w-full` e o nome corta com "…", mesma causa e mesmo conserto da caixa de escolha (27/10). Sem isso, um nome de 70 letras levava a janela de 499 px a 627 px de conteúdo (medido em produção).
 
 Código: `components/properties/BuscaDeImovel.tsx` (`BuscaDeImovel`, `CartaoDoImovel`, `CampoDeImovel`), usado em `LeadAdsForms.tsx` e `features/tarefas/JanelaDaTarefa.tsx`. Testes: `BuscaDeImovel.spec.tsx`.
+
+## Corretor falou, IA sai (desde 2026-10-28)
+
+Backend `claude/corretor-falou-ia-sai` (PR 1) entra antes. A IA Vendedora não voltava sozinha pro atendimento só quando o lead pedia, e o corretor que respondia à mão disputava a conversa com ela. Agora quem fala sai por cima.
+
+**A regra:** alguém manda mensagem manual pro lead, pela tela ou pelo celular, inclusive áudio, foto e figurinha. A IA sai do atendimento do lead em TODAS as conversas dele, em qualquer número, e nunca volta sozinha.
+
+**Decisões do dono (28/10):**
+
+- Vale a lead inteira, não só a conversa onde a pessoa falou.
+- A IA sai mesmo quando ainda não tinha falado com o lead (caso Pinot), e o aviso vai igual.
+- O bloco "Passar para a IA" do construtor liga a IA de novo, por cima da mensagem manual. Inclui o modelo do Book do site.
+- Vale pra todos os clientes, sem chave pra desligar.
+- Mídia conta.
+
+**Decisões de quem desenhou (não vieram do dono):**
+
+- Conversa nova do mesmo lead em outro número nasce com a IA desligada. Conversa que a IA já tinha transferido também é desligada.
+- Um aviso por lead por pessoa a cada 12 h, e ele nasce LIGADO na Central de Notificações.
+- Mensagem enviada pelo MCP ou por token de API com login de uma pessoa conta como manual.
+- Quando o sistema não sabe com certeza quem mandou do celular, o aviso vai pro responsável do lead e a tela diz "Alguém da equipe".
+- Reabrir card NÃO liga a IA de novo.
+- Reação e histórico importado do WhatsApp não contam.
+- Mensagem agendada ("Agendar mensagem") conta.
+- Mídia sem legenda enviada do celular NÃO conta em dois casos: até 2 min depois de mídia da IA ou de automação (é o eco do sistema) e até 5 min depois de um Disparo praquele lead (o Disparo não grava a mensagem na conversa).
+- Antes de entregar, a IA confere se alguém falou naquela conversa desde o começo do turno ou nos últimos 30 s. Se sim, não envia.
+- "Ativar IA pra este lead" agora liga de verdade. Antes falava uma vez e voltava a ficar calada.
+
+**Como religar:** o robô ("Religar IA neste lead"), "Ativar IA pra este lead" ou o bloco "Passar para a IA". Qualquer um vale pra lead inteira.
+
+**Textos exatos:**
+
+- Central de Notificações: "A IA saiu porque você respondeu o lead".
+- Aviso (WhatsApp e push): "A IA não vai mais responder {nome do lead} porque você mandou uma mensagem manual. Se quiser religar, abra a conversa e clique no robô da IA: {link}".
+- Sem autor conhecido, vai pro responsável: "...porque alguém da equipe mandou uma mensagem manual pelo celular...".
+- Título do push: "A IA saiu do atendimento".
+- Cartões na conversa: "**Bruno** respondeu à mão e a IA saiu do atendimento" e "**Bruno** religou a IA". Sem nome: "Alguém da equipe" e "Uma automação".
+- Dica do robô: "IA desligada: Bruno respondeu à mão às 10h16. Clique para religar". Em outro dia: "... em 27/10 às 10h16 ...".
+
+**Voltar versão:** sem migration. Voltar o backend é seguro: o código antigo ignora o motivo e segue respeitando `sales_agent_paused`, então os leads continuam desligados e o robô liga de novo. Tela antiga com o backend novo só não mostra o motivo.
+
+Não reabrir sem o dono pedir.
