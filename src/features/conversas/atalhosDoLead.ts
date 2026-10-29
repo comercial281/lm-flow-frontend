@@ -29,10 +29,12 @@ export function nomeDaAcaoIa(state: SalesAgentCardState): string {
 export function dicaDaIa(state: SalesAgentCardState, agora: Date = new Date()): string {
   const pausa = state.status === 'paused' ? state.paused_by : null;
   if (pausa?.reason === 'manual_message') {
-    const quando = new Date(pausa.at);
-    if (!Number.isNaN(quando.getTime())) {
+    // `new Date(null)` é 1970 (data válida): sem `at` cai no texto de sempre.
+    const quando = pausa.at ? new Date(pausa.at) : null;
+    if (quando && !Number.isNaN(quando.getTime())) {
       const nome = pausa.by?.trim() || 'alguém da equipe';
-      const hora = format(quando, "H'h'mm");
+      // Hora cheia sem os minutos, como na linha da conversa: "10h", "10h16".
+      const hora = format(quando, quando.getMinutes() === 0 ? "H'h'" : "H'h'mm");
       const momento = isSameDay(quando, agora) ? `às ${hora}` : `em ${format(quando, 'dd/MM')} às ${hora}`;
       return `IA desligada: ${nome} respondeu à mão ${momento}. Clique para religar`;
     }

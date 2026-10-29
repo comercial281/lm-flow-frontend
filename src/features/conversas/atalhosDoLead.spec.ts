@@ -121,6 +121,20 @@ describe('IA desligada porque alguém respondeu à mão', () => {
     );
   });
 
+  it('hora cheia sem minutos', () => {
+    expect(dicaDaIa(pausada('Bruno Teste', new Date(2026, 9, 28, 10, 0).toISOString()), agora)).toBe(
+      'IA desligada: Bruno Teste respondeu à mão às 10h. Clique para religar',
+    );
+    expect(dicaDaIa(pausada('Bruno Teste', new Date(2026, 9, 27, 9, 0).toISOString()), agora)).toBe(
+      'IA desligada: Bruno Teste respondeu à mão em 27/10 às 9h. Clique para religar',
+    );
+  });
+
+  it('sem horário (at nulo): texto de sempre, nunca 1970', () => {
+    expect(dicaDaIa(pausada('Bruno Teste', null as never), agora)).toBe('IA desligada neste lead — clique para reativar');
+    expect(dicaDaIa(pausada('Bruno Teste', ''), agora)).toBe('IA desligada neste lead — clique para reativar');
+  });
+
   it('data inválida ou sem paused_by: texto de sempre', () => {
     expect(dicaDaIa(pausada('Bruno Teste', 'lixo'), agora)).toBe('IA desligada neste lead — clique para reativar');
     expect(dicaDaIa(estado('paused', 'IA desligada neste lead'), agora)).toBe('IA desligada neste lead — clique para reativar');
