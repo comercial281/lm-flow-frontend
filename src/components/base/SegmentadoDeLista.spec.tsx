@@ -37,7 +37,15 @@ describe('SegmentadoDeLista', () => {
     montar('arquivadas');
     const botao = screen.getByRole('button', { name: 'Arquivadas' });
     expect(botao).toHaveAttribute('data-laranja');
-    expect(botao).toHaveClass('bg-orange-100', 'text-orange-700', 'dark:bg-orange-950/40', 'dark:text-orange-400');
+    expect(botao).toHaveAttribute('aria-pressed', 'true');
+    // A cor mora no CSS (fora de camada, como a regra cinza da opção): classe do
+    // Tailwind fica em @layer utilities e perderia pra ela, deixando o texto cinza.
+    const css = readFileSync(resolve(__dirname, '../../styles/globals.css'), 'utf8');
+    const claro = css.slice(css.indexOf(".segmentado-opcao[data-laranja][aria-pressed='true'] {"));
+    expect(claro).toMatch(/^[^}]*color: #c2410c/);
+    expect(claro).toMatch(/^[^}]*background-color: #ffedd5/);
+    const escuro = css.slice(css.indexOf(".dark .segmentado-opcao[data-laranja][aria-pressed='true'] {"));
+    expect(escuro).toMatch(/^[^}]*color: #fb923c/);
   });
 
   it('o grupo tem nome pra leitor de tela', () => {

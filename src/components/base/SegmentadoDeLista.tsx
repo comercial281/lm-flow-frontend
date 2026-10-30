@@ -35,9 +35,7 @@ export default function SegmentadoDeLista<T extends string>({ opcoes, valor, aoE
             aria-pressed={ativa}
             data-laranja={laranja ? '' : undefined}
             onClick={() => aoEscolher(id)}
-            className={`segmentado-opcao flex items-center justify-center gap-1.5 py-1.5 text-xs font-medium ${cheio ? 'flex-1 px-2' : 'px-3'} ${
-              ativa && laranja ? 'bg-orange-100 text-orange-700 shadow-sm dark:bg-orange-950/40 dark:text-orange-400' : ''
-            }`}
+            className={`segmentado-opcao flex items-center justify-center gap-1.5 py-1.5 text-xs font-medium ${cheio ? 'flex-1 px-2' : 'px-3'}`}
           >
             {Icone && <Icone className="h-3 w-3" aria-hidden="true" />}
             {texto}

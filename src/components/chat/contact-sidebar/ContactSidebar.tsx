@@ -46,7 +46,9 @@ interface ContactSidebarProps {
 // translate-x-* mexe na propriedade `translate` (não em `transform`): é ela que
 // anima. Com a lateral fechada a troca é sem animação (ninguém vê, e abrir já
 // nas prontas não mostra o lead de relance).
-const CAMADA = 'absolute inset-y-0 left-0 flex w-full md:w-[calc(24rem-1px)] flex-col bg-background';
+// Sem fundo próprio: quem pinta é o painel (conversas-painel, opaco quando é gaveta no
+// celular). As duas camadas se escondem pela opacidade.
+const CAMADA = 'absolute inset-y-0 left-0 flex w-full md:w-[calc(24rem-1px)] flex-col';
 const DESLIZA = 'transition-[translate,opacity] duration-200 ease-out motion-reduce:transition-none';
 
 type Objeto = Record<string, unknown>;

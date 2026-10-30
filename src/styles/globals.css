@@ -709,6 +709,17 @@ button[role='switch'][data-state='unchecked'],
   color: #ffffff;
   box-shadow: 0 8px 18px -10px rgba(140, 96, 244, 0.9);
 }
+/* Laranja aqui, não em classe do Tailwind: utilitário fica em @layer e perderia
+   pra cor cinza da .segmentado-opcao (texto cinza no fundo laranja). */
+.segmentado-opcao[data-laranja][aria-pressed='true'] {
+  background-color: #ffedd5;
+  color: #c2410c;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+.dark .segmentado-opcao[data-laranja][aria-pressed='true'] {
+  background-color: rgba(67, 20, 7, 0.4);
+  color: #fb923c;
+}
 
 /* ============================================================================
    MÓDULO ESPAÇO (Notion por tenant) — tokens lm-* portados do LM Hub.

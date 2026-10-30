@@ -454,5 +454,12 @@ describe('ContactSidebar — superfície de Conversas', () => {
     const { container } = renderPainel();
     expect(container.querySelector('.conversas-painel')).not.toBeNull();
   });
+
+  it('as camadas do painel (lead e mensagens prontas) não cobrem a superfície com fundo opaco', () => {
+    const { container } = renderPainel();
+    const camadas = container.querySelectorAll('.conversas-painel [class*="inset-y-0"]');
+    expect(camadas.length).toBeGreaterThan(0);
+    camadas.forEach(camada => expect(camada).not.toHaveClass('bg-background'));
+  });
 });
 
