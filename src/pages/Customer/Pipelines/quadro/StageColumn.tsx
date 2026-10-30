@@ -2,7 +2,7 @@
 // Uma coluna (etapa) do quadro do funil: cabeçalho com nome, contagem, valor e
 // menu da etapa, e a lista de cards que recebe o arraste. Saiu do
 // PipelineKanban.tsx sem mudar comportamento (spec funil §4.5).
-import { Fragment, useCallback, useEffect, useRef, type DragEvent, type MutableRefObject } from 'react';
+import { Fragment, useCallback, useEffect, useRef, type CSSProperties, type DragEvent, type MutableRefObject } from 'react';
 import { toast } from 'sonner';
 import { Copy, Edit, Trash2 } from 'lucide-react';
 import {
@@ -19,6 +19,7 @@ import { Skeleton } from '@/components/ui/ds';
 import PipelineItemCard from '../PipelineItemCard';
 import { calculateStageTotal } from '../pipelineItemHelpers';
 import type { EventoDoMouse } from './useMiniCard';
+import './quadro.css';
 
 export interface StageColumnProps {
   stage: PipelineStage;
@@ -96,20 +97,18 @@ export default function StageColumn({
       id={`etapa-${stage.id}`}
       className={`w-80 flex-shrink-0 rounded-xl transition-shadow ${destacada ? 'ring-2 ring-primary' : ''}`}
     >
-      <div className="bg-muted/40 rounded-xl shadow-sm border border-border h-full flex flex-col">
+      <div className="quadro-coluna border h-full flex flex-col">
         {/* Stage Header */}
         <div
-          className="flex-shrink-0 px-4 py-3 border-b border-border rounded-t-xl border-t-4"
-          style={{
-            borderTopColor: stage.color,
-            backgroundColor: stage.color?.startsWith('#') ? `${stage.color}1f` : undefined,
-          }}
+          className="quadro-coluna-topo flex-shrink-0 px-4 py-3 border-b"
+          // Fio aceso na cor da etapa (quadro.css); sem cor, o roxo de reserva do CSS.
+          style={stage.color ? ({ '--etapa': stage.color } as CSSProperties) : undefined}
         >
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <div className="w-3 h-3 rounded-full" style={{ backgroundColor: stage.color }} />
-              <h3 className="text-sm font-medium text-foreground">{stage.name}</h3>
-              <span className="bg-muted text-muted-foreground text-xs px-2 py-1 rounded-full">
+              <h3 className="quadro-coluna-nome text-foreground">{stage.name}</h3>
+              <span className="quadro-coluna-total text-xs px-2 py-1 rounded-full">
                 {naColuna}
               </span>
               {/* Stage Total Value */}

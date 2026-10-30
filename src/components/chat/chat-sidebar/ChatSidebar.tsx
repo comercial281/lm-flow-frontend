@@ -72,6 +72,8 @@ import type {
 } from '@/types/chat/search';
 import { telefone } from '@/lib/formato';
 import { esperaDoLead, horaDoItem } from '@/features/conversas/itemDaLista';
+import SegmentadoDeLista from '@/components/base/SegmentadoDeLista';
+import '../conversas.css';
 
 interface ChatSidebarProps {
   mobileView: 'list' | 'chat';
@@ -645,7 +647,7 @@ const ChatSidebar = ({
       data-tour="chat-sidebar"
       className={`
         ${mobileView === 'list' ? 'flex' : 'hidden'} md:flex
-        w-full md:w-80 border-r bg-card/50 flex-col h-full
+        conversas-lista w-full md:w-80 border-r flex-col h-full
       `}
     >
       {/* Search and Filter Header */}
@@ -658,7 +660,7 @@ const ChatSidebar = ({
             value={searchInput}
             onChange={e => handleSearchChange(e.target.value)}
             onFocus={handleSearchFocus}
-            className="pl-10"
+            className="pl-10 rounded-[13px]"
           />
           <GlobalSearchPanel
             isOpen={isSearchPanelOpen && searchInput.trim().length > 0}
@@ -671,30 +673,13 @@ const ChatSidebar = ({
           />
         </div>
 
-        <div className="flex items-center gap-1 rounded-lg border border-border bg-muted/40 p-0.5">
-          {PILULAS.map(({ id, rotulo }) => {
-            const ativa = pilula === id;
-            const arquivadas = id === 'arquivadas';
-            return (
-              <button
-                key={id}
-                type="button"
-                aria-pressed={ativa}
-                onClick={() => handleChangePilula(id)}
-                className={`flex flex-1 items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-medium transition-all ${
-                  ativa
-                    ? arquivadas
-                      ? 'bg-orange-100 text-orange-700 shadow-sm dark:bg-orange-950/40 dark:text-orange-400'
-                      : 'bg-background text-foreground shadow-sm'
-                    : 'text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                {arquivadas && <Archive className="h-3 w-3" />}
-                {rotulo}
-              </button>
-            );
-          })}
-        </div>
+        <SegmentadoDeLista
+          rotulo="Filtrar conversas"
+          cheio
+          valor={pilula}
+          aoEscolher={handleChangePilula}
+          opcoes={PILULAS.map(({ id, rotulo }) => (id === 'arquivadas' ? { id, rotulo, icone: Archive, laranja: true } : { id, rotulo }))}
+        />
 
         <div className="flex items-center justify-between">
           <span className="text-sm text-muted-foreground">
@@ -802,27 +787,10 @@ const ChatSidebar = ({
                 conversation,
                 <div
                   key={conversation.id}
-                  className={`relative hover:bg-accent cursor-pointer transition-colors ${
-                    isSelected ? 'bg-primary/10' : 'border-b border-border/50'
-                  }`}
+                  data-aberta={isSelected ? 'true' : undefined}
+                  className="conversa-linha hover:bg-accent cursor-pointer"
                   onClick={() => onConversationSelect(conversation)}
                 >
-                  {/* Selected indicator */}
-                  {isSelected && (
-                    <div
-                      aria-hidden
-                      style={{
-                        position: 'absolute',
-                        left: 0,
-                        top: 0,
-                        bottom: 0,
-                        width: 3,
-                        background: 'var(--primary)',
-                        borderRadius: '0 2px 2px 0',
-                      }}
-                    />
-                  )}
-
                   <div className="p-4 pl-5">
                     <div className="flex items-start justify-between">
                       <div className="flex items-start gap-3 min-w-0 flex-1">
@@ -851,6 +819,7 @@ const ChatSidebar = ({
                           contact={conversation.contact}
                           channelType={channelType}
                           channelProvider={channelProvider}
+                          className="conversa-foto"
                         />
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center justify-between mb-1">

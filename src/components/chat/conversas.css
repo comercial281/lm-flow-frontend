@@ -1,0 +1,69 @@
+/*
+ * Conversas no Vidro violeta (spec 2026-10-30-vidro-violeta-telas-design.md).
+ * Sem desfoque (lista longa). O verde do WhatsApp (topo, balões, enviar) e os
+ * vistos não são tocados aqui: são decisão do dono (02/10/2026).
+ */
+
+/* Lista: superfície clara e leve. */
+.conversas-lista {
+  background: rgba(255, 255, 255, 0.55);
+}
+.dark .conversas-lista {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+/* Linha: solta (sem risco entre elas), canto de 14 px. A aberta ganha o brilho
+   do item ativo do menu, com o fio aceso na lateral. */
+.conversa-linha {
+  position: relative;
+  margin: 2px 8px;
+  border-radius: 14px;
+  transition: background-color 0.2s ease;
+  animation: conversas-sobe 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.conversa-linha[data-aberta='true'] {
+  background: linear-gradient(90deg, rgba(140, 96, 244, 0.2), rgba(140, 96, 244, 0.03));
+}
+.dark .conversa-linha[data-aberta='true'] {
+  background: linear-gradient(90deg, rgba(140, 96, 244, 0.28), rgba(140, 96, 244, 0.04));
+}
+.conversa-linha[data-aberta='true']::before {
+  content: '';
+  position: absolute;
+  left: -8px;
+  top: 14px;
+  bottom: 14px;
+  width: 3px;
+  border-radius: 0 4px 4px 0;
+  background: linear-gradient(#c58ffa, #5b34d1);
+  box-shadow: 0 0 14px #8c60f4;
+}
+.conversa-foto {
+  box-shadow: 0 0 0 2px var(--card), 0 0 0 3.5px rgba(140, 96, 244, 0.3);
+}
+
+/* Painel do lead: no celular ele abre por cima da conversa, então é opaco; ao
+   lado da conversa (md em diante, quando o painel deixa de ser gaveta), a mesma
+   superfície da lista. */
+.conversas-painel {
+  background: var(--card);
+}
+@media (min-width: 768px) {
+  .conversas-painel {
+    background: rgba(255, 255, 255, 0.55);
+  }
+  .dark .conversas-painel {
+    background: rgba(255, 255, 255, 0.03);
+  }
+}
+
+@keyframes conversas-sobe {
+  from { opacity: 0; transform: translateY(8px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .conversa-linha {
+    animation: none;
+    transition: none;
+  }
+}

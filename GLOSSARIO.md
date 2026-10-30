@@ -85,12 +85,12 @@ As peças 11 a 22 (e os acréscimos em 6, 7 e 9) são as **escolhas do dono em 1
    - Com `para` em todas as abas, a faixa é navegação (e guarda a saída).
    - Sem `para`, é aba de estado: setas esquerda/direita andam e trocam, Home/End vão às pontas, só a ativa entra no Tab. Não precisa do roteador (serve em janela). Em janela, `useAbaDaJanela(aberta, inicial)` faz a aba voltar pra primeira ao abrir.
    - Não usar como aba: pílula do pacote base (`Tabs`/`TabsList`), pílula roxa cheia nem botão fazendo papel de aba.
-   - **Filtro rápido não é aba.** O segmentado cinza de Conversas e Contatos (Todas · Minhas · Sem resposta · Arquivadas) continua como está.
+   - **Filtro rápido não é aba.** O filtro de Conversas e Contatos (Todas · Minhas · Sem resposta · Arquivadas) é o `SegmentadoDeLista` (`components/base`): grupo de vidro claro, a opção ativa com o degradê da marca e Arquivadas em laranja (escolha do dono em 30/10/2026, no Vidro violeta).
    - **Categoria é aba, mesmo dentro de painel ou janela** (Tony, 12/10/2026). Se cada opção mostra *outro tipo de coisa*, é `Abas`: Textos · Áudios · Mídias · Funis nas Mensagens prontas, Meus funis · Da equipe. Ícone da categoria e contagem quando ajudam e cabem; "Tudo" primeiro quando existe a visão junta. **Aba não rola de lado:** se não cabe numa linha, encurte o nome ou tire ícone/contagem antes (a lateral de 384 px comporta umas cinco abas curtas, sem ícone nem contagem).
    - **Como escolher entre as peças parecidas** (pergunte nesta ordem):
      1. Muda a *forma* de ver a mesma coisa (cartões, lista, mapa, calendário)? → `AlternadorDeVisao`.
      2. Cada opção mostra *outra coisa* (outro tipo, outra seção, outra tela)? → `Abas`.
-     3. *Recorta* a mesma lista (situação, dono, período: Todas · Minhas · Sem resposta, Mês · Semana · Dia)? → segmentado cinza / `BotoesDeEscolha`.
+     3. *Recorta* a mesma lista (situação, dono, período: Todas · Minhas · Sem resposta, Mês · Semana · Dia)? → `SegmentadoDeLista` (Conversas e Contatos) / `BotoesDeEscolha`.
      4. É um *valor* de formulário ou configuração, de 2 a 5 opções curtas? → `BotoesDeEscolha`; com frase de explicação, `CartoesDeEscolha`; lista comprida, `Seletor`.
      5. Liga/desliga com efeito na hora? → `Chave`.
    - **Trava:** `abaForaDaCasa` conta o `Tabs` do pacote em JSX e o sublinhado copiado (`border-b-2` + `-mb-px`) fora de `Abas.tsx`.
@@ -136,7 +136,7 @@ As peças 11 a 22 (e os acréscimos em 6, 7 e 9) são as **escolhas do dono em 1
    - **Trava:** `rodinhaCentral` e `telaEmBranco` (`fallback={null}`).
 14. **Botões:** o `Button` de `components/ui/ds`, sempre (ele marca `data-variant`; **nunca** importar de `@evoapi/design-system/button`).
    - Variantes: `default` (principal, com o degradê roxo do Vidro violeta, `#4B2FE2 → #8C60F4`, que sobe 1 px no mouse), `outline` (secundário), `ghost` (discreto), `destructive` (Excluir). Tamanhos `default` (36 px) e `sm` (32 px).
-   - **O degradê é só do principal:** a regra do `globals.css` vale pra `[data-slot='button'][data-variant='default']` sem `aria-pressed`. Botão de selecionar (`variant={ativo ? 'default' : 'outline'}`) leva `aria-pressed={ativo}` e fica roxo liso.
+   - **O degradê é só do principal:** a regra do `globals.css` vale pra `[data-slot='button'][data-variant='default']` sem `aria-pressed`. Botão de selecionar (`variant={ativo ? 'default' : 'outline'}`) leva `aria-pressed={ativo}` e fica roxo liso. **Exceção decidida pelo dono (30/10/2026):** a opção ativa do `SegmentadoDeLista` (filtro de Conversas e Contatos) leva o degradê, como o seletor do Dashboard.
    - **Nunca** `<button>` pintado à mão com `bg-primary`, cor fixa (`bg-[#…]`) nem botão menor que 32 px. Exceções de significado: Ganho verde no card, área do administrador.
    - Botão só-ícone: `size="icon"` com `className="size-8"` no mínimo. A ação da `Faixa` é `size="sm"`. Barra apertada: compense no espaço em volta, nunca encolha o botão.
    - **Trava:** `botaoPintado` e `botaoPequeno` (`h-4`…`h-7`/`size-4`…`size-7` na tag do `<Button`; ponto cego: componente que embrulha o `Button`, como o `IconActionButton`).
