@@ -441,3 +441,18 @@ describe('ContactSidebar — Mensagens prontas no lugar do lead', () => {
     expect(prontas.className).toContain('translate-x-full');
   });
 });
+
+// Vidro violeta (spec 2026-10-30-vidro-violeta-telas-design.md).
+describe('ContactSidebar — superfície de Conversas', () => {
+  beforeEach(() => {
+    getPipelinesByConversation.mockResolvedValue([]);
+    getContactConversations.mockResolvedValue({ data: [] });
+    listarAgendados.mockResolvedValue([]);
+  });
+
+  it('o painel usa a superfície de Conversas', () => {
+    const { container } = renderPainel();
+    expect(container.querySelector('.conversas-painel')).not.toBeNull();
+  });
+});
+

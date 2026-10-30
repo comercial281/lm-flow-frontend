@@ -20,6 +20,7 @@ import SecaoNotas from './painel/SecaoNotas';
 import SecaoRespostas from './painel/SecaoRespostas';
 import SecaoAgendados from './painel/SecaoAgendados';
 import SecaoTarefas from './painel/SecaoTarefas';
+import '../conversas.css';
 
 interface ContactSidebarProps {
   isOpen: boolean;
@@ -205,7 +206,7 @@ const ContactSidebar: React.FC<ContactSidebarProps> = ({
       {/* Sidebar */}
       <div
         className={`
-        border-l bg-background flex flex-col
+        conversas-painel border-l flex flex-col
         fixed md:static left-0 md:left-auto right-0 md:right-auto bottom-0 md:bottom-auto z-40 md:z-auto
         transform transition-all duration-300 ease-in-out overflow-hidden
         ${isOpen
