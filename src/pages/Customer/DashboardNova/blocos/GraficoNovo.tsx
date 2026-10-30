@@ -72,27 +72,34 @@ export const GraficoNovo: React.FC<{
   faixa?: { de: string; ate: string };
 }> = ({ id, modo, linhas, altura, destaque = -1, intervalo, faixa }) => {
   const idDoDegrade = `ds-degrade-${id}`;
+  const idDoTraco = `ds-traco-${id}`;
   const margem = { top: 12, right: 8, left: 0, bottom: 0 };
+  const vazio = !linhas.some(l => l.leads > 0);
   return (
+    <div className={`ds-grafico${vazio ? ' ds-grafico-vazio' : ''}`}>
     <ResponsiveContainer width="100%" height={altura}>
       {modo === 'curva' ? (
         <AreaChart data={linhas} margin={margem} accessibilityLayer={false}>
           <defs>
             <linearGradient id={idDoDegrade} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" style={{ stopColor: 'var(--lmf-data)', stopOpacity: 0.38 }} />
-              <stop offset="100%" style={{ stopColor: 'var(--lmf-data)', stopOpacity: 0 }} />
+              <stop offset="0%" style={{ stopColor: 'var(--ds-traco-de)', stopOpacity: 'var(--ds-area-topo)' }} />
+              <stop offset="100%" style={{ stopColor: 'var(--ds-traco-ate)', stopOpacity: 0 }} />
+            </linearGradient>
+            <linearGradient id={idDoTraco} x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" style={{ stopColor: 'var(--ds-traco-de)' }} />
+              <stop offset="100%" style={{ stopColor: 'var(--ds-traco-ate)' }} />
             </linearGradient>
           </defs>
           {faixa && <ReferenceArea x1={faixa.de} x2={faixa.ate} fill="var(--lmfn-neutro)" fillOpacity={1} />}
           <XAxis dataKey="x" interval={intervalo} tick={eixo} tickLine={false} axisLine={false} />
           <YAxis tick={eixo} allowDecimals={false} tickLine={false} axisLine={false} width={30} />
-          <Tooltip content={<Dica />} cursor={{ stroke: 'var(--lmf-data)', strokeWidth: 1, strokeDasharray: '4 4' }} />
+          <Tooltip content={<Dica />} cursor={{ stroke: 'var(--lmf-data-muted)', strokeWidth: 1, strokeDasharray: '4 4' }} />
           <Area
             type="monotone"
             dataKey="leads"
-            stroke="var(--lmf-data)"
-            strokeWidth={2.5}
-            fill={`url(#${idDoDegrade})`}
+            stroke={`url(#${idDoTraco})`}
+            strokeWidth={2}
+            fill={vazio ? 'none' : `url(#${idDoDegrade})`}
             dot={false}
             activeDot={{ r: 6, fill: 'var(--lmf-surface)', stroke: 'var(--lmf-data)', strokeWidth: 3, className: 'ds-ponto' }}
             animationDuration={1100}
@@ -113,5 +120,6 @@ export const GraficoNovo: React.FC<{
         </BarChart>
       )}
     </ResponsiveContainer>
+    </div>
   );
 };

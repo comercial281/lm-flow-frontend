@@ -104,10 +104,10 @@ html.dark[data-ds='a'] {
 }
 
 /* Fundo vivo: grade + bolhas que derivam devagar, SÓ na Dashboard (o componente
-   mora lá). Só no escuro: no claro as bolhas viravam mancha e a grade incomodava. */
+   mora lá). No claro só a grade: as bolhas viravam mancha roxa. */
 .ds-fundo-vivo { display: none; }
-/* No claro, nem bolha nem grade: fundo liso (Tony, 30/10: "não curti as linhas do modo branco"). */
-html[data-ds='a']:not(.dark) .ds-fundo-vivo { display: none; }
+/* No claro, sem bolhas (viravam mancha roxa); a grade fica (Tony gostou). */
+html[data-ds='a']:not(.dark) .ds-fundo-vivo .ds-bolha { display: none; }
 html[data-ds='a'] .ds-fundo-vivo {
   display: block;
   position: fixed;
@@ -645,6 +645,19 @@ html.dark[data-ds] .lmfn { --lmfn-neutro: rgba(255, 255, 255, 0.04); }
 .ds-dica strong { color: var(--lmf-text); font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .ds-ponto { filter: drop-shadow(0 0 6px var(--lmf-data)); }
 html[data-ds='b'] .ds-ponto { filter: none; }
+
+/* Traço da curva: degradê de violeta pra lilás, sombra colorida embaixo. No claro mais
+   fino e mais claro (o roxo escuro de 2,5px pesava no branco, Tony 30/10). */
+html[data-ds] { --ds-traco-de: #6d45e8; --ds-traco-ate: #b98cf9; --ds-area-topo: 0.2; }
+html.dark[data-ds] { --ds-traco-de: #8c60f4; --ds-traco-ate: #c58ffa; --ds-area-topo: 0.38; }
+html[data-ds='b'] { --ds-traco-de: #6d28d9; --ds-traco-ate: #8b5cf6; --ds-area-topo: 0.12; }
+html.dark[data-ds='b'] { --ds-traco-de: #8b5cf6; --ds-traco-ate: #a78bfa; --ds-area-topo: 0.2; }
+.ds-grafico .recharts-area-curve { stroke-width: 2px; filter: drop-shadow(0 6px 8px rgba(109, 69, 232, 0.25)); }
+html.dark[data-ds] .ds-grafico .recharts-area-curve { stroke-width: 2.5px; filter: drop-shadow(0 0 10px rgba(140, 96, 244, 0.45)); }
+html[data-ds='b'] .ds-grafico .recharts-area-curve { filter: none; }
+html[data-ds]:not(.dark) .ds-ponto { filter: drop-shadow(0 2px 6px rgba(109, 69, 232, 0.35)); }
+/* Sem lead no período: a linha é um tracejado cinza, não uma faixa roxa no chão. */
+.ds-grafico-vazio .recharts-area-curve { stroke: var(--lmf-border-strong) !important; stroke-dasharray: 4 5; filter: none !important; }
 html[data-ds='b'] .ds-dica { border-radius: 9px; box-shadow: 0 8px 20px -10px rgba(16, 16, 20, 0.25); }
 
 /* Ponto "ao vivo" pulsando. */
