@@ -7,6 +7,7 @@ import EmptyState from '@/components/base/EmptyState';
 import TituloDoFiltro from '@/components/base/TituloDoFiltro';
 import { labelsService } from '@/services/contacts/labelsService';
 import type { User } from '@/types/users';
+import SegmentadoDeLista from '@/components/base/SegmentadoDeLista';
 import {
   FILTROS_VAZIOS,
   PILULAS_DE_CONTATOS,
@@ -58,24 +59,7 @@ export default function ContactsFiltros({ pilula, onPilula, filtros, onFiltros, 
   return (
     <div className="flex flex-wrap items-center gap-2">
       {daEquipe && (
-        <div className="flex items-center gap-1 rounded-lg border border-border bg-muted/40 p-0.5">
-          {PILULAS_DE_CONTATOS.map(({ id, rotulo }) => {
-            const ativa = pilula === id;
-            return (
-              <button
-                key={id}
-                type="button"
-                aria-pressed={ativa}
-                onClick={() => onPilula(id)}
-                className={`rounded-md px-3 py-1.5 text-xs font-medium transition-all ${
-                  ativa ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                {rotulo}
-              </button>
-            );
-          })}
-        </div>
+        <SegmentadoDeLista rotulo="Filtrar contatos" valor={pilula} aoEscolher={onPilula} opcoes={PILULAS_DE_CONTATOS} />
       )}
 
       <Popover>

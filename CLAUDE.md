@@ -10177,3 +10177,21 @@ Armadilhas:
 
 Não reabrir sem o dono pedir.
 
+## Conversas e o filtro de Contatos no Vidro violeta (desde 2026-10-30)
+
+Continuação do "Visual Vidro violeta". Spec `LM FLOW/specs/2026-10-30-vidro-violeta-telas-design.md` (pasta do Tony), aprovada pelo dono olhando o rascunho com Antes | Depois na prévia.
+
+- **Filtro rápido** (Todas · Minhas · Sem resposta · Arquivadas em Conversas; Todos · Meus · Sem responsável em Contatos) virou uma peça só: `SegmentadoDeLista` (`components/base`). Grupo de vidro claro, a opção ativa com o degradê da marca (`globals.css`, "Segmentado de lista"), Arquivadas em laranja (`laranja: true`). Em Conversas as opções dividem a largura (`cheio`); em Contatos, cada uma do tamanho do texto. **Decisão do dono (30/10/2026):** o degradê vale nos dois, e as duas telas continuam com o mesmo filtro (GLOSSARIO, peças 6 e 14).
+- **Lista** (`components/chat/conversas.css`): superfície clara e leve; linha solta (sem risco entre elas), canto de 14 px, 8 px de margem; a conversa aberta (`data-aberta`) ganha o brilho do item ativo do menu e o fio aceso na lateral, no lugar da faixa roxa reta. Fotos com anel fino (`conversa-foto`). Busca com canto de 13 px. As linhas sobem de leve ao abrir.
+- **Painel do lead** (`conversas-painel`): opaco quando é gaveta por cima da conversa (abaixo de 768 px) e com a superfície da lista quando fica ao lado.
+
+Ficou como estava (travas): o verde do WhatsApp no topo, nos balões e no enviar; os vistos; sem faixa colorida de espera (o sinal é o texto "sem resposta há X"); a faixa âmbar de número desconectado; a barra "automação rodando"; os cartões de evento fora do cartão da casa; cor só onde informa no painel.
+
+Armadilhas:
+
+1. `conversas.css` não pode citar `.wa-header`, `.wa-msg-bubble` nem `.wa-chat` (trava em `conversas.source.spec.ts`).
+2. O painel é gaveta (`fixed`) abaixo de `md`: lá ele tem que ser opaco, senão a conversa aparece por trás.
+3. Opção nova no filtro entra no `PILULAS` / `PILULAS_DE_CONTATOS`; não montar segmentado à mão.
+
+Não reabrir sem o dono pedir.
+

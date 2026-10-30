@@ -106,3 +106,5 @@ export type {
 
 // Flow Utilities Types - moved to @/lib/utils
 // export type { FlowValidationResult } from '@/lib/utils';
+export { default as SegmentadoDeLista } from './SegmentadoDeLista';
+export type { OpcaoDoSegmentado, SegmentadoDeListaProps } from './SegmentadoDeLista';
