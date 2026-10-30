@@ -1,0 +1,82 @@
+/*
+ * Construtor no Vidro violeta (spec 2026-10-30-vidro-violeta-telas-design.md).
+ * Sem desfoque. Ficam como estavam (decisões do dono): linhas curvas, cor de cada
+ * grupo na faixa (style inline), Início verde, borda amarela no bloco incompleto,
+ * tesoura ao clicar na linha. Este arquivo não muda o desenho nem a cor das linhas.
+ */
+
+/* Fundo de pontos levemente roxos. */
+.react-flow {
+  --xy-background-pattern-color: rgba(91, 52, 209, 0.22);
+}
+.dark .react-flow {
+  --xy-background-pattern-color: rgba(197, 143, 250, 0.16);
+}
+
+/* Bloco: canto de 16 px, sombra roxa leve; no escuro, o vidro leve do cartão da
+   casa. Selecionado: halo roxo (anel de 2 px + aura de 7 px). */
+.fluxo-bloco {
+  border-radius: 16px;
+  box-shadow: 0 1px 2px rgba(43, 33, 117, 0.05), 0 12px 28px -18px rgba(43, 33, 117, 0.35);
+  transition: box-shadow 0.3s ease;
+}
+.dark .fluxo-bloco {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.025)), var(--background);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.06) inset, 0 16px 34px -18px rgba(0, 0, 0, 0.7);
+}
+.fluxo-bloco:hover {
+  box-shadow: 0 2px 4px rgba(43, 33, 117, 0.06), 0 22px 40px -20px rgba(91, 52, 209, 0.45);
+}
+.fluxo-bloco[data-selecionado='true'] {
+  box-shadow: 0 0 0 2px #8c60f4, 0 0 0 7px rgba(140, 96, 244, 0.18), 0 22px 40px -20px rgba(91, 52, 209, 0.45);
+}
+
+/* Faixa: um brilho claro por cima da cor do grupo (a cor fica no style inline). */
+.fluxo-faixa {
+  border-radius: 15px 15px 0 0;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0) 70%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+
+/* Início: verde mantido, mesmo canto dos outros. */
+.fluxo-inicio {
+  border-radius: 16px;
+  box-shadow: 0 1px 2px rgba(5, 150, 105, 0.08), 0 14px 30px -18px rgba(5, 150, 105, 0.5);
+}
+.fluxo-inicio[data-selecionado='true'] {
+  box-shadow: 0 0 0 2px #8c60f4, 0 0 0 7px rgba(140, 96, 244, 0.18), 0 14px 30px -18px rgba(5, 150, 105, 0.5);
+}
+
+/* Passo atual do guia: anel amarelo (o ring-4 do Tailwind fica em @layer e perde
+   pro box-shadow acima; a classe animate-pulse continua piscando). */
+.fluxo-bloco[data-highlighted='true'], .fluxo-inicio[data-highlighted='true'] {
+  box-shadow: 0 0 0 4px rgba(251, 191, 36, 0.8), 0 12px 28px -18px rgba(43, 33, 117, 0.35);
+}
+
+/* Linha: 2 px; a clicada (tesoura) brilha roxo. Pontos com contorno do cartão. */
+.react-flow__edge-path {
+  stroke-width: 2px;
+}
+.react-flow__edge.selected .react-flow__edge-path {
+  filter: drop-shadow(0 0 6px rgba(140, 96, 244, 0.6));
+}
+.react-flow__handle {
+  box-shadow: 0 0 0 2px var(--card);
+}
+
+/* Barra Blocos · Simular · Organizar. */
+.fluxo-barra [data-slot='button'] {
+  border-radius: 12px;
+}
+/* Sem a sombra no foco do teclado: o anel de foco do botão também é box-shadow. */
+.fluxo-barra [data-slot='button']:not(:focus-visible) {
+  box-shadow: 0 1px 2px rgba(43, 33, 117, 0.05), 0 12px 28px -18px rgba(43, 33, 117, 0.35);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fluxo-bloco {
+    transition: none;
+  }
+}

@@ -10195,3 +10195,27 @@ Armadilhas:
 
 Não reabrir sem o dono pedir.
 
+## Construtor no Vidro violeta (desde 2026-10-30)
+
+Continuação do "Visual Vidro violeta". Spec `LM FLOW/specs/2026-10-30-vidro-violeta-telas-design.md` (pasta do Tony), aprovada pelo dono olhando o rascunho com Antes | Depois na prévia.
+
+- **Folha** `components/flowAutomations/construtor.css`, importada no `FlowAutomationCanvas.tsx`. Sem desfoque.
+- **Fundo:** pontos levemente roxos (`--xy-background-pattern-color`).
+- **Bloco** (`fluxo-bloco`): canto de 16 px, sombra roxa leve; no escuro, o vidro leve do cartão da casa. Selecionado (`data-selecionado`) acende um halo roxo (anel de 2 px + aura de 7 px), no lugar do `ring-2 ring-primary`.
+- **Faixa** (`fluxo-faixa`): brilho claro por cima da cor do grupo e 2 px a mais de altura. A cor do grupo continua no `style` inline (`nodeColor`).
+- **Início** (`fluxo-inicio`): verde mantido, mesmo canto dos outros, sombra verde.
+- **Linhas:** 2 px (eram 1); a clicada (tesoura) brilha roxo. Pontos com contorno da cor do cartão.
+- **Barra** Blocos · Simular · Organizar (`fluxo-barra`): canto de 12 px e sombra leve.
+- **Conserto:** o resumo do bloco (Mensagem e outros) invadia a linha "Pelo número do responsável pelo lead": o `line-clamp` estava no mesmo elemento que o `py-2`, e a 3ª linha aparecia no espaço de baixo, com a linha do número puxada por `-mt-1`. Agora o espaço fica num contêiner por fora e o recorte num `<p>` por dentro; sai o `-mt-1`.
+
+Ficou como estava (travas): linhas curvas (bezier); cor de cada grupo; Início verde uma coluna antes; borda amarela e frase no bloco incompleto (quando não selecionado); "+" em toda saída; tesoura no clique da linha; Blocos em lista embaixo do botão.
+
+Armadilhas:
+
+1. `construtor.css` não muda o desenho (`d`) nem a cor (`stroke`) das linhas: a cor de cada saída vem do grafo (Respondeu verde, Não respondeu cinza). Trava em `construtor.source.spec.ts`.
+2. Bloco selecionado não leva classe de borda (nem amarela): o halo cobre. Não selecionado e incompleto, a borda amarela volta (teste em `FlowNodeCardVisual.spec.tsx`).
+3. `line-clamp` nunca no mesmo elemento que padding vertical.
+4. Anel feito com `ring-*` do Tailwind some em `fluxo-bloco`/`fluxo-inicio`: o utilitário fica em `@layer utilities` e perde pro `box-shadow` do `construtor.css` (fora de camada). Por isso o anel amarelo do guia (`data-highlighted`) e o halo do Início aberto (`data-selecionado`) moram no `construtor.css`.
+
+Não reabrir sem o dono pedir.
+

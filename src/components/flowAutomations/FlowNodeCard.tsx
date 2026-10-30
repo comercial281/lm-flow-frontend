@@ -191,7 +191,7 @@ export function FlowStartNode({ data }: NodeProps) {
   const { summary, hint, problem, editing, highlighted, fixed, numberLine, onEdit } = data as unknown as FlowStartNodeData;
   const body = (
     <>
-      <div className="flex items-center gap-2 rounded-t-md bg-emerald-500 px-3 py-1.5 text-xs font-semibold text-white">
+      <div className="flex items-center gap-2 rounded-t-[14px] bg-emerald-500 px-3 py-1.5 text-xs font-semibold text-white">
         <Zap className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
         <span className="flex-1">Início</span>
         {!fixed && <Pencil className="h-3 w-3 opacity-80" aria-hidden="true" />}
@@ -216,21 +216,21 @@ export function FlowStartNode({ data }: NodeProps) {
     <div
       data-testid="bloco-inicio"
       data-highlighted={highlighted ? 'true' : undefined}
+      data-selecionado={editing ? 'true' : undefined}
       className={cn(
-        'rounded-lg border-2 bg-emerald-50 dark:bg-emerald-950/40 shadow-sm',
+        'fluxo-inicio border-2 bg-emerald-50 dark:bg-emerald-950/40',
         problem ? 'border-amber-500' : 'border-emerald-500',
-        editing && 'ring-2 ring-primary',
         highlighted && HIGHLIGHT_CLASS,
       )}
       style={{ width: NODE_WIDTH }}
     >
       {fixed ? (
-        <div className="rounded-lg" role="group" aria-label={`Início. Quando: ${summary}`}>{body}</div>
+        <div className="rounded-[14px]" role="group" aria-label={`Início. Quando: ${summary}`}>{body}</div>
       ) : (
         <button
           type="button"
           onClick={own(onEdit)}
-          className="block w-full text-left rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          className="block w-full text-left rounded-[14px] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
           aria-label={`Início. Quando: ${summary}. Abrir o gatilho`}
         >
           {body}
@@ -266,10 +266,12 @@ export function FlowNodeCard({ id, data, selected }: NodeProps) {
     <div
       data-highlighted={highlighted ? 'true' : undefined}
       data-guide={guideMark?.state}
+      data-selecionado={selected || editing ? 'true' : undefined}
       className={cn(
-        'relative rounded-lg border bg-card shadow-sm transition-shadow',
+        'fluxo-bloco relative border bg-card',
         can.edit && 'cursor-pointer',
-        selected || editing ? 'ring-2 ring-primary' : problem ? 'border-amber-500' : 'border-border',
+        // Selecionado: halo roxo do construtor.css (data-selecionado), no lugar do anel duro.
+        !(selected || editing) && (problem ? 'border-amber-500' : 'border-border'),
         hidden && 'opacity-80',
         highlighted && HIGHLIGHT_CLASS,
       )}
@@ -294,7 +296,7 @@ export function FlowNodeCard({ id, data, selected }: NodeProps) {
         </span>
       )}
 
-      <div className="flex items-center justify-between gap-1 rounded-t-lg px-3 py-1.5 text-xs font-semibold text-white" style={{ backgroundColor: color }}>
+      <div className="fluxo-faixa flex items-center justify-between gap-1 px-3 text-xs font-semibold text-white" style={{ backgroundColor: color }}>
         {renaming ? (
           <Input
             aria-label="Nome do bloco"
@@ -343,11 +345,15 @@ export function FlowNodeCard({ id, data, selected }: NodeProps) {
         </div>
       </div>
 
-      <div className={cn('px-3 py-2 text-xs text-muted-foreground min-h-[2.5rem]', node.kind === 'condition' || node.kind === 'filter_label' ? 'line-clamp-4' : 'line-clamp-2')}>
-        {summaryLine(node, lookups)}
+      {/* O espaço fica por fora do recorte: padding dentro do line-clamp deixa a
+          linha seguinte aparecer cortada por cima de "Pelo número…". */}
+      <div className="px-3 py-2 text-xs text-muted-foreground min-h-[2.5rem]">
+        <p className={node.kind === 'condition' || node.kind === 'filter_label' ? 'line-clamp-4' : 'line-clamp-2'}>
+          {summaryLine(node, lookups)}
+        </p>
       </div>
-      {envio && <div className="px-3 -mt-1 pb-2 text-[11px] text-muted-foreground/80">{envio}</div>}
-      {progresso && <div className="px-3 -mt-1 pb-2 text-[11px] text-violet-600 dark:text-violet-300">{progresso}</div>}
+      {envio && <div className="px-3 pb-2 text-[11px] text-muted-foreground/80">{envio}</div>}
+      {progresso && <div className="px-3 pb-2 text-[11px] text-violet-600 dark:text-violet-300">{progresso}</div>}
       {problem && (
         <div className="mx-3 mb-2 flex items-start gap-1 rounded bg-amber-500/10 px-1.5 py-1 text-[11px] text-amber-700 dark:text-amber-300">
           <AlertTriangle className="h-3 w-3 mt-px shrink-0" aria-hidden="true" />
