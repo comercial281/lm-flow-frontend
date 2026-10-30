@@ -1,152 +1,141 @@
 /*
  * Design system do dashboard — namespaced `lmf-*`.
  *
- * Recriado a partir do protótipo (dev/lm-flow-redesign/prototype.html), NÃO
- * derivado das telas antigas.
+ * TEMA: claro e escuro (classe `dark` no <html>, ver src/utils/themeUtils.ts).
+ * O padrão aqui é o CLARO e o escuro entra por `.dark`.
  *
- * TEMA: o app tem claro e escuro (classe `dark` no <html>, ver
- * src/utils/themeUtils.ts) e o protótipo TAMBÉM define os dois conjuntos de
- * token (`:root[data-theme=light]` e `[data-theme=dark]`). A primeira versão
- * disto fixou só o escuro: no tema claro o dashboard virava um bloco preto
- * dentro de um app branco. Por isso o padrão aqui é o CLARO e o escuro entra
- * por `.dark`, com os valores copiados do protótipo, não inventados.
- *
- * Claro:  --bg #F6F6F7 · --surface #FFFFFF · --border #E6E6E9 · --text #18181B
- * Escuro: --bg #0A0416 · --surface #150A29 · --border #2A1B49 · --text #F2EFFA
- * Comum:  accent #7C3AED / #9333EA · Inter · raio 16px
- *
- * Claro (pedido do dono, 15/10/2026): cartão branco chapado e fundo cinza
- * neutro, sem o véu roxo. Gráfico em roxo claro (--lmf-data-muted) e roxo
- * forte (--lmf-data) só no detalhe que se destaca. No escuro os tokens de
- * dado são os de sempre.
+ * Vidro violeta (30/10/2026, escolha do Tony olhando as propostas lado a lado na
+ * prévia): a linguagem do Portal do Cliente do Hub. Cartão de vidro com anel de
+ * 1px que acende no canto, rótulo em caixa alta espaçada, número grande.
+ * Claro:  fundo #F6F5FA · cartão branco quase opaco · roxo #5B34D1
+ * Escuro: fundo #0B0B1A · vidro translúcido · roxo #8C60F4 / lilás #C58FFA
+ * Substitui o "neutro grafite" de 15/10/2026.
  */
 
 .lmf {
-  --lmf-bg: #f6f6f7;
-  --lmf-surface: #ffffff;
-  --lmf-surface-2: #fafafa;
-  --lmf-accent: #7c3aed;
-  --lmf-accent-2: #9333ea;
-  /* Fundo claro de hover, segmento e aviso: neutro no claro (era véu roxo). */
-  --lmf-accent-soft: #f1f1f3;
-  --lmf-text: #18181b;
-  --lmf-muted: #71717a;
-  --lmf-faint: #a1a1aa;
-  --lmf-border: #e6e6e9;
-  --lmf-border-strong: #d4d4d8;
-  --lmf-radius: 16px;
-  --lmf-radius-sm: 10px;
-  --lmf-up: #16a34a;
-  --lmf-down: #dc2626;
-  --lmf-warn: #b45309;
+  --lmf-bg: transparent;
+  --lmf-surface: rgba(255, 255, 255, 0.78);
+  --lmf-surface-2: rgba(255, 255, 255, 0.6);
+  --lmf-accent: #5b34d1;
+  --lmf-accent-2: #8c60f4;
+  --lmf-accent-soft: rgba(91, 52, 209, 0.08);
+  --lmf-text: #0b0b1a;
+  --lmf-muted: rgba(11, 11, 26, 0.62);
+  --lmf-faint: rgba(11, 11, 26, 0.42);
+  --lmf-border: rgba(43, 33, 117, 0.08);
+  --lmf-border-strong: rgba(43, 33, 117, 0.16);
+  --lmf-radius: 22px;
+  --lmf-radius-sm: 13px;
+  --lmf-up: #0f9f65;
+  --lmf-down: #e11d48;
+  --lmf-warn: #b7700b;
 
-  /* Dado (gráficos, barras, funil, mapa de calor) em roxo sólido, sem degradê.
-     --lmf-data-muted é a série que não é destaque; --lmf-data-fade é pra onde
-     o funil clareia. */
-  --lmf-data: #7c3aed;
-  --lmf-data-muted: #c4b5fd;
-  --lmf-data-soft: rgba(124, 58, 237, 0.08);
+  /* Dado (gráficos, barras, funil, mapa de calor). --lmf-data-muted é a série que
+     não é destaque; --lmf-data-fade é pra onde o funil clareia. */
+  --lmf-data: #5b34d1;
+  --lmf-data-muted: #c9b8fb;
+  --lmf-data-soft: rgba(91, 52, 209, 0.09);
   --lmf-data-fade: #ffffff;
-  /* Faixas da forma Funil: um tom abaixo, pro texto branco ler mesmo na faixa mais clara. */
-  --lmf-funil: #6d28d9;
-  --lmf-heat-rgb: 124 58 237;
-  /* Número em destaque (ex.: ganhos no período). */
-  --lmf-highlight-text: #7c3aed;
+  --lmf-funil: #5b34d1;
+  --lmf-heat-rgb: 91 52 209;
+  --lmf-highlight-text: #5b34d1;
 
-  /* Cartão no claro: branco chapado, sem véu e sem brilho no topo. Quem dá
-     volume é a sombra leve. */
-  --lmf-glass-from: #ffffff;
-  --lmf-glass-to: #ffffff;
-  --lmf-glass-top: transparent;
-  --lmf-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 4px 14px -10px rgba(0, 0, 0, 0.1);
-  --lmf-track: #f1f1f3;
-  --lmf-control-bg: #ffffff;
-  --lmf-tooltip-bg: rgba(255, 255, 255, 0.98);
-  --lmf-grid-line: #ececef;
+  /* Vidro: no claro quase opaco (o fundo é liso); quem dá volume é a sombra. */
+  --lmf-glass-from: rgba(255, 255, 255, 0.95);
+  --lmf-glass-to: rgba(255, 255, 255, 0.82);
+  --lmf-glass-top: #ffffff;
+  --lmf-anel-alto: #ffffff;
+  --lmf-anel-tinta: rgba(91, 52, 209, 0.3);
+  --lmf-shadow: 0 1px 2px rgba(43, 33, 117, 0.05), 0 16px 36px -24px rgba(43, 33, 117, 0.3);
+  --lmf-track: rgba(43, 33, 117, 0.07);
+  --lmf-control-bg: rgba(255, 255, 255, 0.7);
+  --lmf-tooltip-bg: rgba(255, 255, 255, 0.96);
+  --lmf-grid-line: rgba(43, 33, 117, 0.07);
+
+  /* Degradês da marca e curva de movimento. */
+  --lmf-grad: linear-gradient(135deg, #4b2fe2 0%, #8c60f4 100%);
+  --lmf-grad-texto: linear-gradient(100deg, #8c60f4 0%, #c58ffa 100%);
+  --lmf-ease: cubic-bezier(0.16, 1, 0.3, 1);
 
   background: var(--lmf-bg);
   color: var(--lmf-text);
-  font-family: Inter, system-ui, sans-serif;
+  font-family: 'Poppins', system-ui, sans-serif;
   min-height: 100%;
   padding: 24px;
 }
 
 .dark .lmf {
-  --lmf-bg: #0a0416;
-  --lmf-surface: #150a29;
-  --lmf-surface-2: #1c0f36;
-  --lmf-accent-soft: rgba(168, 85, 247, 0.15);
-  --lmf-text: #f2effa;
-  --lmf-muted: #a79fc4;
-  --lmf-faint: #6e6690;
-  --lmf-border: #2a1b49;
-  --lmf-border-strong: #37255e;
-  --lmf-up: #34d399;
-  --lmf-down: #fb7185;
-  --lmf-warn: #fbbf24;
+  --lmf-surface: rgba(255, 255, 255, 0.06);
+  --lmf-surface-2: rgba(255, 255, 255, 0.04);
+  --lmf-accent: #8c60f4;
+  --lmf-accent-2: #c58ffa;
+  --lmf-accent-soft: rgba(140, 96, 244, 0.16);
+  --lmf-text: #ffffff;
+  --lmf-muted: rgba(255, 255, 255, 0.66);
+  --lmf-faint: rgba(255, 255, 255, 0.42);
+  --lmf-border: rgba(255, 255, 255, 0.1);
+  --lmf-border-strong: rgba(255, 255, 255, 0.18);
+  --lmf-up: #3ddc97;
+  --lmf-down: #ff4d6d;
+  --lmf-warn: #f5b84b;
 
-  --lmf-glass-from: rgba(124, 58, 237, 0.08);
-  --lmf-glass-to: rgba(21, 10, 41, 0.72);
-  --lmf-glass-top: rgba(242, 239, 250, 0.28);
-  --lmf-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 12px 28px -14px rgba(0, 0, 0, 0.55);
-  --lmf-track: rgba(42, 27, 73, 0.9);
-  --lmf-control-bg: rgba(21, 10, 41, 0.8);
-  --lmf-tooltip-bg: rgba(12, 5, 26, 0.96);
-  --lmf-grid-line: #2a1b49;
+  --lmf-glass-from: rgba(255, 255, 255, 0.085);
+  --lmf-glass-to: rgba(255, 255, 255, 0.045);
+  --lmf-glass-top: rgba(255, 255, 255, 0.14);
+  --lmf-anel-alto: rgba(255, 255, 255, 0.34);
+  --lmf-anel-tinta: rgba(140, 96, 244, 0.45);
+  --lmf-shadow: 0 24px 60px -24px rgba(0, 0, 0, 0.75);
+  --lmf-track: rgba(255, 255, 255, 0.07);
+  --lmf-control-bg: rgba(255, 255, 255, 0.06);
+  --lmf-tooltip-bg: rgba(16, 14, 40, 0.96);
+  --lmf-grid-line: rgba(255, 255, 255, 0.06);
 
-  --lmf-data: #7c3aed;
-  --lmf-data-muted: #7c3aed;
-  --lmf-data-soft: rgba(168, 85, 247, 0.15);
-  --lmf-data-fade: #7c3aed;
-  --lmf-funil: #7c3aed;
-  --lmf-heat-rgb: 124 58 237;
-  --lmf-highlight-text: inherit;
+  --lmf-data: #8c60f4;
+  --lmf-data-muted: rgba(140, 96, 244, 0.5);
+  --lmf-data-soft: rgba(140, 96, 244, 0.16);
+  --lmf-data-fade: #2b2175;
+  --lmf-funil: #6d45e8;
+  --lmf-heat-rgb: 140 96 244;
+  --lmf-highlight-text: #c58ffa;
 }
 
+/* Vidro: desfoque + anel de 1px que acende no canto (::after). Só na Dashboard: em
+   lista longa o backdrop-filter pesa no notebook do corretor. */
 .lmf-glass {
   position: relative;
   background: linear-gradient(180deg, var(--lmf-glass-from), var(--lmf-glass-to));
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
-  border: 1px solid var(--lmf-border);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  border: 1px solid transparent;
   border-radius: var(--lmf-radius);
-  box-shadow: var(--lmf-shadow);
+  box-shadow: var(--lmf-shadow), inset 0 1px 0 var(--lmf-glass-top);
   overflow: hidden;
+  transition: transform 0.45s var(--lmf-ease), box-shadow 0.45s ease;
 }
 
-/* Contorno do cartão no claro (pedido do dono, 15/10/2026): 1px em degradê roxo
-   bem leve, no lugar da borda cinza. Feito com duas camadas de fundo: o branco
-   recortado no padding-box e o degradê no border-box, aparecendo só na borda
-   transparente. O hover dos números (border-color roxo) pinta por cima. No
-   escuro o vidro é translúcido (o degradê vazaria): volta o de antes. */
-.lmf .lmf-glass {
-  border-color: transparent;
-  background:
-    linear-gradient(var(--lmf-surface), var(--lmf-surface)) padding-box,
-    linear-gradient(135deg, rgba(124, 58, 237, 0.34), rgba(124, 58, 237, 0.07) 45%, rgba(147, 51, 234, 0.24)) border-box;
-}
-
-.dark .lmf .lmf-glass {
-  border-color: var(--lmf-border);
-  background: linear-gradient(180deg, var(--lmf-glass-from), var(--lmf-glass-to));
-}
-
-/* Brilho de 1px no topo — é ele que faz ler como vidro, não o blur. */
-.lmf-glass::before {
+.lmf-glass::after {
   content: '';
   position: absolute;
-  inset: 0 0 auto 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, var(--lmf-glass-top), transparent);
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
   pointer-events: none;
+  background: linear-gradient(135deg, var(--lmf-anel-alto), var(--lmf-border) 35%, var(--lmf-border) 65%, var(--lmf-anel-tinta));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
 }
 
-.lmf-card { padding: 20px; }
+.lmf .lmf-glass:hover { transform: translateY(-3px); }
 
+.lmf-card { padding: 22px 24px; }
+
+/* Título de cartão = rótulo em caixa alta espaçada (o "eyebrow" do Portal). */
 .lmf-card-title {
-  font-size: 15px;
+  font-size: 11px;
   font-weight: 600;
-  letter-spacing: -0.01em;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
   margin: 0;
 }
 
@@ -169,13 +158,11 @@
   place-items: center;
   width: 30px;
   height: 30px;
-  border-radius: var(--lmf-radius-sm);
-  background: var(--lmf-data-soft);
-  color: var(--lmf-data);
+  border-radius: 12px;
+  background: var(--lmf-accent-soft);
+  color: var(--lmf-accent-2);
   flex: none;
 }
-
-.dark .lmf-kpi-icon { color: #c4b5fd; }
 
 .lmf-kpi-value {
   font-size: 34px;
@@ -379,7 +366,7 @@ button.lmf-campo-controle[aria-pressed='true'] { color: var(--lmf-accent); backg
 .lmf-bar-fill {
   height: 100%;
   border-radius: 999px;
-  background: var(--lmf-data);
+  background: var(--lmf-grad);
 }
 
 .lmf-heat {

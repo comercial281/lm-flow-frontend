@@ -26,6 +26,7 @@ import { Funil } from './blocos/Funil';
 import { Resultados } from './blocos/Resultados';
 import { TempoNegociacao } from './blocos/TempoNegociacao';
 import { LeadsDiaSemana, LeadsHorario, LeadsSeisMeses, MapaCalor, Origem } from './blocos/Analise';
+import { FundoVivo } from './base/FundoVivo';
 
 const COMPONENTES: Record<BlocoId, React.FC<ContextoBloco>> = {
   imoveis: Imoveis, numeros: Numeros, pendencias: Pendencias, proximas_visitas: ProximasVisitas,
@@ -120,9 +121,9 @@ const DashboardNova: React.FC = () => {
               {linha.subtitulo && <p>{linha.subtitulo}</p>}
             </div>
           )}
-          <div className={`lmfn-linha${linha.principal ? ' lmfn-linha-principal' : ''}${linha.lateral ? ' lmfn-linha-lateral' : ''}`}>
-            {linha.colunas.map(coluna => (
-              <div key={coluna.join('-')} className="lmfn-coluna">
+          <div className={`lmfn-linha${linha.principal ? ' lmfn-linha-principal' : ''}${linha.lateral ? ' lmfn-linha-lateral' : ''}`} style={{ '--lmfn-i': i } as React.CSSProperties}>
+            {linha.colunas.map((coluna, j) => (
+              <div key={coluna.join('-')} className="lmfn-coluna" style={{ '--lmfn-j': j } as React.CSSProperties}>
                 {coluna.map(id => {
                   const Bloco = COMPONENTES[id];
                   return <Bloco key={id} {...ctx} nivelTitulo={nivelTitulo} />;
@@ -137,6 +138,7 @@ const DashboardNova: React.FC = () => {
 
   return (
     <div className="lmf lmfn h-full">
+      <FundoVivo />
       <Pagina
         // Banner da Leal Mídia (spec 2026-10-12-banner-dashboard-design.md) ACIMA da
         // saudação: no meio, separava os filtros dos números que eles mudam (dono,
@@ -148,7 +150,8 @@ const DashboardNova: React.FC = () => {
         )}
         cabecalho={(
           <Cabecalho
-            nome={`${saudacao()}${primeiroNome ? `, ${primeiroNome}` : ''}`}
+            // O nome em degradê (Vidro violeta, 30/10/2026).
+            nome={primeiroNome ? <>{saudacao()}, <span className="lmfn-destaque">{primeiroNome}</span></> : saudacao()}
             visao={visao}
             scope={scope}
             carregando={pendente}

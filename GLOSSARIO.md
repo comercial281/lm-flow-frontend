@@ -135,7 +135,7 @@ As peças 11 a 22 (e os acréscimos em 6, 7 e 9) são as **escolhas do dono em 1
    - **Nunca tela em branco.** Janela carregada sob demanda pode ter `fallback={null}` (o esqueleto apareceria fora dela).
    - **Trava:** `rodinhaCentral` e `telaEmBranco` (`fallback={null}`).
 14. **Botões:** o `Button` de `components/ui/ds`, sempre (ele marca `data-variant`; **nunca** importar de `@evoapi/design-system/button`).
-   - Variantes: `default` (principal, com o degradê roxo), `outline` (secundário), `ghost` (discreto), `destructive` (Excluir). Tamanhos `default` (36 px) e `sm` (32 px).
+   - Variantes: `default` (principal, com o degradê roxo do Vidro violeta, `#4B2FE2 → #8C60F4`, que sobe 1 px no mouse), `outline` (secundário), `ghost` (discreto), `destructive` (Excluir). Tamanhos `default` (36 px) e `sm` (32 px).
    - **O degradê é só do principal:** a regra do `globals.css` vale pra `[data-slot='button'][data-variant='default']` sem `aria-pressed`. Botão de selecionar (`variant={ativo ? 'default' : 'outline'}`) leva `aria-pressed={ativo}` e fica roxo liso.
    - **Nunca** `<button>` pintado à mão com `bg-primary`, cor fixa (`bg-[#…]`) nem botão menor que 32 px. Exceções de significado: Ganho verde no card, área do administrador.
    - Botão só-ícone: `size="icon"` com `className="size-8"` no mínimo. A ação da `Faixa` é `size="sm"`. Barra apertada: compense no espaço em volta, nunca encolha o botão.
@@ -166,14 +166,15 @@ As peças 11 a 22 (e os acréscimos em 6, 7 e 9) são as **escolhas do dono em 1
    - Ícones: `Grid3X3` cartões, `List` lista, `Map` mapa, `CalendarDays` calendário, `Kanban` quadro. `nome` é o efeito e vira `aria-label` + `title`. 40 px no celular, 32 no computador.
    - Período (Mês/Semana/Dia) e filtro não são visão: são `BotoesDeEscolha`. Categoria também não é visão: é `Abas` (ver "Como escolher" no item 6).
    - **Trava:** `alternadorAMao` (ícone de visão em tag fora do componente).
-20. **Cartão:** `Card` de `components/ui/ds` (é o que tem o anel violeta e a sombra da marca).
+20. **Cartão:** `Card` de `components/ui/ds` (é o que tem o canto de 14 px e a sombra roxa leve da marca; no escuro, vidro leve sem desfoque).
    - Bloco dentro de um cartão: `rounded-lg border bg-muted/30 p-4`. Tela de configuração continua em `Secoes`/`Secao`.
    - Cartão clicável = link ou botão com o `Card` dentro (o efeito do mouse vai no `group-hover`). Cartão com `ring-*` perde o anel (a sombra do Card ganha): pra destacar, `outline-2 outline-primary`.
-   - O Painel mantém o cartão de vidro dele (tela com padrão próprio).
+   - O Painel mantém o cartão de vidro dele (tela com padrão próprio). A Dashboard também: vidro com desfoque e anel de 1 px que acende no canto (`lmf-glass`), só lá, porque desfoque em lista longa pesa no notebook do corretor.
    - **Trava:** `cartaoAMao` (`rounded-lg/xl` + `border` + `bg-card`, ou `bg-sidebar` + `border-sidebar-border`).
 21. **Gráficos:** o desenho do Painel (recharts), com medidas e cores em `components/base/grafico.ts` (`CORES_DO_GRAFICO` = `--chart-1..5`, `EIXO_DO_GRAFICO`, `CANTOS_DA_BARRA`, `DICA_DO_GRAFICO`).
    - Sem grade; barras na cor do tema com cantos de 4 px no topo; eixo cinza de 11 px, sem linha; dica com borda e cantos de 10 px.
    - Barra de progresso: `h-2 rounded-full bg-muted` com o preenchimento `bg-primary`.
+   - **Na Dashboard** (Vidro violeta, 30/10/2026): `GraficoDeLeads` (`DashboardNova/blocos`). Curva suave com degradê embaixo, ponto que acende e dica de vidro ao passar o mouse, e a troca pra colunas no canto do cartão (`AlternadorDeVisao`, a escolha fica guardada por gráfico). Sem lead no período, a linha vira tracejado cinza.
    - **Trava:** `corFixaEmGrafico` (`fill`/`stroke`/`stopColor` com hex direto; ponto cego: hex guardado numa constante).
 22. **Ícones:** só `lucide-react`, em três tamanhos.
    - `h-3.5 w-3.5` em aba, etiqueta e filtro; `h-4 w-4` em botão e menu (dentro de `Button` é sempre 16 px); `h-5 w-5` em título. Ilustração de estado vazio fica com o tamanho dela, em classe.

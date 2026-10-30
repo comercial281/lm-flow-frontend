@@ -9005,6 +9005,8 @@ Pedido do dono, depois de ver o tema e o olhinho "soltos" embaixo do suporte. O 
 
 ## Dashboard: tema claro sem o degradê rosado (15/10/2026)
 
+> **Substituído em 30/10/2026 pelo Vidro violeta** (seção "Visual Vidro violeta", no fim deste arquivo). O que segue é histórico.
+
 Pedido do dono: no tema claro a Dashboard tinha um degradê rosado em todo cartão (véu roxo do "vidro" sobre fundo lavanda) e tudo era roxo forte (ícones, funil, gráficos, origem). Ele escolheu o "neutro grafite" entre duas propostas e, vendo na prévia, pediu o roxo de volta "em alguns detalhes".
 
 - **Cartão branco chapado** sobre fundo cinza neutro (`#f6f6f7`), contorno de 1px em degradê roxo bem leve (`.lmf .lmf-glass`), sombra leve, sem véu nem brilho no topo. Texto e bordas em cinza neutro (eram arroxeados).
@@ -10125,3 +10127,33 @@ Pedido do dono (Tony) em 29/10/2026: "um botaozinho em todas as partes do flow b
 **Fora (próxima demanda):** tirar da tela as 6 condições de retomada do follow-up (o servidor retomaria sozinho e os follow-ups em andamento seriam convertidos). Está no backlog do LM Flow.
 
 Código: `calculateLayout`, `outputSide` e `targetSide` em `src/lib/flowAutomationGraph.ts`; saídas e entradas do cartão em `FlowNodeCard.tsx`; a curva (`getBezierPath`) no `FlowEdge.tsx`; `organize`/`applyPositions` e o `targetHandle` de cada linha no `FlowAutomationCanvas.tsx`. Testes: `flowAutomationLayout.spec.ts`, `FlowNodeCardSaidas.spec.tsx`, `FlowCanvasOrganizar.spec.tsx`, `FlowEdge.spec.tsx` (a linha é curva).
+
+## Visual Vidro violeta (desde 30/10/2026)
+
+Pedido do dono: o LM Flow "não é feio, mas não é refinado" e não tem movimento; o Giovani achava feio. Referência: o Portal do Cliente novo do Hub (`/portal-do-cliente/<slug>`, protótipo `docs/mockups/portal-cliente.html` no LM Hub). Ele escolheu esta direção entre duas propostas, olhando lado a lado numa prévia com seletor (branch `claude/ds-propostas`, rascunho, não mergeado), e pediu os ajustes abaixo na própria prévia.
+
+- **Cores da base em hex** (`globals.css`, `:root` e `.dark`): roxo `#5B34D1` no claro e `#8C60F4` no escuro, fundo `#F6F5FA` / `#0B0B1A`. Sai o oklch das cores principais: elas não somem mais no Chrome abaixo do 111 (as cores da Agenda de visitas ainda são oklch).
+- **Vermelho mais vivo no escuro** (`--destructive: #ff4d6d`, `--lmf-down` igual): pedido do dono, "o vermelho poderia ficar mais destacado no tema escuro". As pílulas de alerta da Dashboard ganham fundo e contorno vermelhos mais fortes no escuro, e o selo de perigo do card do funil, fundo `/20`.
+- **Casca:** menu lateral flutuando em vidro (canto de 24 px, solto 12 px da borda, só no computador) e barra do topo de vidro. Item ativo do menu é um brilho roxo que some pra direita com um fio aceso na lateral, no lugar do degradê cheio.
+- **Cabeçalho das páginas** (`BaseHeader`): título de 30 px (26 no celular), semibold, e o risquinho lilás → roxo com brilho.
+- **Botão principal:** degradê `#4B2FE2 → #8C60F4` que sobe 1 px no mouse (peça 14). **Cartão da casa:** canto de 14 px e sombra roxa leve; no escuro, vidro leve sem desfoque (peça 20).
+- **Dashboard** (`lmf.css` + `dashboard-nova.css`):
+  - Cartões de vidro com desfoque e anel de 1 px que acende no canto (`.lmf-glass::after`). O desfoque é só aqui: em lista longa ele pesa no notebook do corretor.
+  - Título de cartão vira rótulo em caixa alta espaçada. Os quatro números: número de 44 px que conta ao abrir (`NumeroQueConta`), rótulo em até duas linhas com a mesma altura em todos, variação em selo, orbe roxo no canto só no escuro.
+  - Saudação com o nome em degradê.
+  - **Fundo vivo** (`FundoVivo`): grade fraca e, no escuro, bolhas roxas que derivam devagar. **No claro, sem bolhas** (o dono: "muito feio com essa mancha roxa em cima"); a grade fica ("as linhas do fundo ficou top"). Só na Dashboard: no construtor e nas outras telas o fundo é liso. Enquanto ele está na tela a casca (`data-casca`/`data-miolo` no `MainLayout`) fica transparente.
+  - **Funil** afina até 30% (era 44%), faixas de 48 px e número de 21 px em negrito (pedido do dono: "formato de funil mesmo e os números maiores").
+  - **Gráficos** (`GraficoDeLeads`): curva suave, ponto que acende e dica de vidro no mouse, troca pra colunas no canto do cartão, escolha guardada por gráfico (pedido do dono). No claro o traço é fino e claro, de violeta pra lilás, com sombra suave ("não curti a linha do gráfico no modo branco" era o roxo escuro de 2,5 px). Sem lead no período, tracejado cinza. Faixa do horário comercial bem mais leve.
+  - **Movimento:** blocos entram em cascata, faixas do funil descem uma a uma, barras crescem. Só transform e opacidade, uma vez ao abrir. Com "reduzir movimento" no sistema, nada se mexe.
+
+Armadilhas:
+
+1. **Não animar `clip-path` nas faixas do funil.** O formato é recorte inline (`polygon` no `style`); animação de `clip-path` vence o inline e, no fim, deixa retângulo. Foi o que aconteceu na primeira prévia.
+2. O fundo vivo usa `z-index: -1` dentro do isolamento da casca (`[data-casca] { isolation: isolate }`). Tirar o isolamento faz as bolhas sumirem atrás do fundo ou cobrirem o menu.
+3. A casca transparente depende de `:has(.lmfn-fundo-vivo)`. Tela nova que queira o fundo vivo monta o `FundoVivo`; o resto fica com o fundo liso.
+4. Gráfico novo na Dashboard usa o `GraficoDeLeads`; cor de série por `--lmf-data`/`--lmf-data-muted`, traço por `--lmfn-traco-de`/`--lmfn-traco-ate` (trava `corFixaEmGrafico`: nada de hex no `fill`/`stroke`/`stopColor`).
+5. Testes: `base/lmf.source.spec.ts` trava fundo transparente, vidro do claro, roxo e vermelho do escuro e o anel.
+
+Ficou de fora (próximas demandas, tela a tela): levar a linguagem pro card do funil, Conversas e o construtor. Nesta entrega as outras telas pegam só as cores, o cartão e a casca.
+
+Não reabrir sem o dono pedir.

@@ -80,40 +80,41 @@
  * Accent:  soft violet highlight (marca) — sem dourado/amarelo
  * ==================================================================== */
 :root {
-  /* [redesign fase 1] neutros com viés violeta + fundo separado dos cards */
-  --background: oklch(0.968 0.006 300);
-  --foreground: oklch(0.165 0.018 295);
-  --card: oklch(0.995 0.002 300);
-  --card-foreground: oklch(0.165 0.018 295);
-  --popover: oklch(0.995 0.002 300);
-  --popover-foreground: oklch(0.165 0.018 295);
-  --primary: oklch(0.55 0.22 295);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.955 0.008 300);
-  --secondary-foreground: oklch(0.205 0.015 295);
-  --muted: oklch(0.955 0.008 300);
-  --muted-foreground: oklch(0.556 0.012 295);
-  --accent: oklch(0.9 0.05 300);
-  --accent-foreground: oklch(0.3 0.12 295);
-  --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.985 0 0);
-  --border: oklch(0.91 0.009 300);
-  --input: oklch(0.91 0.009 300);
-  --ring: oklch(0.55 0.22 295);
-  --radius: 0.875rem;
-  --sidebar: oklch(0.99 0.003 300);
-  --sidebar-foreground: oklch(0.165 0.018 295);
-  --sidebar-primary: oklch(0.55 0.22 295);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.955 0.008 300);
-  --sidebar-accent-foreground: oklch(0.205 0.015 295);
-  --sidebar-border: oklch(0.91 0.009 300);
-  --sidebar-ring: oklch(0.55 0.22 295);
-  --chart-1: oklch(0.55 0.22 295);
-  --chart-2: oklch(0.70 0.14 200);
-  --chart-3: oklch(0.45 0.18 295);
-  --chart-4: oklch(0.65 0.20 350);
-  --chart-5: oklch(0.65 0.12 305);
+  /* Vidro violeta (30/10/2026): a paleta do Portal do Cliente do Hub. Em hex, não oklch:
+     o oklch some no Chrome < 111 e a tela fica "em rascunho". */
+  --background: #f6f5fa;
+  --foreground: #0b0b1a;
+  --card: #ffffff;
+  --card-foreground: #0b0b1a;
+  --popover: #ffffff;
+  --popover-foreground: #0b0b1a;
+  --primary: #5b34d1;
+  --primary-foreground: #ffffff;
+  --secondary: #eeeafb;
+  --secondary-foreground: #1d1745;
+  --muted: #efecf8;
+  --muted-foreground: #5f5c75;
+  --accent: #ebe4fe;
+  --accent-foreground: #2b2175;
+  --destructive: #e11d48;
+  --destructive-foreground: #ffffff;
+  --border: #e3def3;
+  --input: #e3def3;
+  --ring: #8c60f4;
+  --radius: 1rem;
+  --sidebar: rgba(255, 255, 255, 0.62);
+  --sidebar-foreground: #0b0b1a;
+  --sidebar-primary: #5b34d1;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: rgba(91, 52, 209, 0.07);
+  --sidebar-accent-foreground: #1d1745;
+  --sidebar-border: rgba(43, 33, 117, 0.08);
+  --sidebar-ring: #8c60f4;
+  --chart-1: #5b34d1;
+  --chart-2: #8c60f4;
+  --chart-3: #c58ffa;
+  --chart-4: #3ddc97;
+  --chart-5: #f5b84b;
 }
 
 .dark {
@@ -126,58 +127,62 @@
   --visita-no_show: oklch(0.68 0.19 25);
   --visita-cancelled: oklch(0.52 0.01 270);
   --visita-atrasada: oklch(0.78 0.15 60);
-  /* [redesign fase A] preto/cinza real — violeta SÓ nos destaques */
-  --background: oklch(0.09 0 0);
-  --foreground: oklch(0.97 0 0);
-  --card: oklch(0.135 0 0);
-  --card-foreground: oklch(0.97 0 0);
-  --popover: oklch(0.135 0 0);
-  --popover-foreground: oklch(0.97 0 0);
-  --primary: oklch(0.55 0.23 295);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.2 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.2 0 0);
-  --muted-foreground: oklch(0.7 0 0);
-  --accent: oklch(0.26 0.03 295);
-  --accent-foreground: oklch(0.97 0 0);
-  --destructive: oklch(0.65 0.24 27);
-  --destructive-foreground: oklch(0.985 0 0);
-  --border: oklch(0.24 0 0);
-  --input: oklch(0.2 0 0);
-  --ring: oklch(0.62 0.24 295);
-  --sidebar: oklch(0.11 0 0);
-  --sidebar-foreground: oklch(0.95 0 0);
-  --sidebar-primary: oklch(0.55 0.23 295);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.2 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(0.24 0 0);
-  --sidebar-ring: oklch(0.62 0.24 295);
-  --chart-1: oklch(0.62 0.24 295);
-  --chart-2: oklch(0.70 0.14 200);
-  --chart-3: oklch(0.48 0.2 295);
-  --chart-4: oklch(0.65 0.20 350);
-  --chart-5: oklch(0.7 0.14 305);
+  /* Vidro violeta (30/10/2026): fundo azul-noite com viés roxo. Vermelho mais vivo que no
+     claro (#ff4d6d): no escuro o alerta tem que saltar (pedido do Tony). */
+  --background: #0b0b1a;
+  --foreground: #ffffff;
+  --card: #13122b;
+  --card-foreground: #ffffff;
+  --popover: #16152f;
+  --popover-foreground: #ffffff;
+  --primary: #8c60f4;
+  --primary-foreground: #ffffff;
+  --secondary: #1b1a3a;
+  --secondary-foreground: #ffffff;
+  --muted: #1a1937;
+  --muted-foreground: #a8a6c4;
+  --accent: #242150;
+  --accent-foreground: #ffffff;
+  --destructive: #ff4d6d;
+  --destructive-foreground: #ffffff;
+  --border: rgba(255, 255, 255, 0.09);
+  --input: rgba(255, 255, 255, 0.1);
+  --ring: #8c60f4;
+  --sidebar: rgba(20, 20, 52, 0.55);
+  --sidebar-foreground: #ffffff;
+  --sidebar-primary: #8c60f4;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: rgba(255, 255, 255, 0.06);
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: rgba(255, 255, 255, 0.08);
+  --sidebar-ring: #8c60f4;
+  --chart-1: #8c60f4;
+  --chart-2: #c58ffa;
+  --chart-3: #5b34d1;
+  --chart-4: #3ddc97;
+  --chart-5: #f5b84b;
 }
 
-/* [redesign fase 2] Cards "flutuam" (sombra suave estilo kit CRM).
-   Mira o contrato do design-system (data-slot=card). Mantém um anel violeta
-   sutil pra definição + sombra de profundidade. Só visual. */
+/* Cartão da casa (Vidro violeta, 30/10/2026): canto de 14px e sombra leve tingida de
+   roxo. Mira o contrato do design-system (data-slot=card). Só visual. */
 /* !important porque o design-system aplica box-shadow INLINE (anel violeta)
    no card — sem !important a folha de estilo perde pro inline. rgba (não oklch)
    pra sombra renderizar consistente. Provado no app real (screenshot). */
 [data-slot="card"] {
+  border-radius: 14px;
+  border-color: rgba(43, 33, 117, 0.08);
   box-shadow:
-    0 0 0 1px rgba(124, 58, 237, 0.12),
-    0 1px 2px rgba(20, 12, 44, 0.05),
-    0 14px 28px -12px rgba(90, 40, 160, 0.20) !important;
+    0 1px 2px rgba(43, 33, 117, 0.05),
+    0 10px 24px -18px rgba(43, 33, 117, 0.28) !important;
 }
+/* No escuro, vidro leve sem desfoque (lista longa com backdrop-filter pesa no
+   notebook do corretor): o vidro de verdade fica na Dashboard. */
 .dark [data-slot="card"] {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.03)), var(--background);
+  border-color: rgba(255, 255, 255, 0.08);
   box-shadow:
-    0 0 0 1px rgba(168, 85, 247, 0.16),
-    0 2px 6px -1px rgba(0, 0, 0, 0.40),
-    0 18px 36px -16px rgba(0, 0, 0, 0.55) !important;
+    0 1px 0 rgba(255, 255, 255, 0.07) inset,
+    0 12px 30px -18px rgba(0, 0, 0, 0.6) !important;
 }
 
 /* Hover com CONTRASTE real no tema escuro.
@@ -613,24 +618,67 @@ button[role='switch'][data-state='unchecked'],
   color: #53bdeb !important; /* ✓✓ lido = azul do WhatsApp */
 }
 
-/* ═══ Degradê da marca: só no botão PRINCIPAL (peça 14 do GLOSSARIO, 10/10/2026) ═══
+/* ═══ Degradê da marca: só no botão PRINCIPAL (peça 14 do GLOSSARIO, 10/10/2026;
+   cores do Vidro violeta desde 30/10/2026) ═══
    A marca `data-slot`/`data-variant` vem do Button de `components/ui/ds`. Filtro,
    pílula e alternador selecionados (bg-primary à mão, ou Button com aria-pressed)
    ficam com o roxo liso, sem degradê nem sombra. */
 [data-slot='button'][data-variant='default'].bg-primary:not([aria-pressed]) {
-  background-image: linear-gradient(135deg, #7c3aed 0%, #9333ea 55%, #a855f7 100%) !important;
-  box-shadow: 0 8px 18px -6px rgba(124, 58, 237, 0.5) !important;
+  background-image: linear-gradient(135deg, #4b2fe2 0%, #8c60f4 100%) !important;
+  box-shadow: 0 10px 24px -12px rgba(140, 96, 244, 0.9) !important;
   border-color: transparent !important;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease, filter 0.2s;
 }
 [data-slot='button'][data-variant='default'].bg-primary:not([aria-pressed]):hover {
-  filter: brightness(1.07);
+  transform: translateY(-1px);
+  box-shadow: 0 16px 30px -12px rgba(140, 96, 244, 1) !important;
 }
-/* item ativo do menu com o mesmo gradiente */
-[aria-label='Menu lateral'] a.bg-primary,
-[aria-label='Menu lateral'] .bg-primary {
-  background-image: linear-gradient(135deg, #7c3aed 0%, #9333ea 55%, #a855f7 100%) !important;
+
+/* ═══ Casca no Vidro violeta (30/10/2026) ═══
+   Menu lateral flutuando em vidro, barra do topo de vidro. O item ativo do menu é
+   um brilho roxo que some pra direita, com um fio aceso na lateral (o desenho do
+   Portal do Cliente do Hub). */
+[role='banner'] {
+  background: color-mix(in srgb, var(--background) 55%, transparent) !important;
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  border-bottom-color: var(--sidebar-border) !important;
+  box-shadow: none !important;
+}
+@media (min-width: 768px) {
+  [aria-label='Menu lateral'] {
+    margin: 12px 0 12px 12px;
+    border: 1px solid var(--sidebar-border);
+    border-radius: 24px;
+    backdrop-filter: blur(20px) saturate(160%);
+    -webkit-backdrop-filter: blur(20px) saturate(160%);
+    box-shadow: 0 24px 60px -30px rgba(43, 33, 117, 0.35), inset 0 1px 0 #ffffff;
+  }
+  .dark [aria-label='Menu lateral'] {
+    box-shadow: 0 24px 60px -24px rgba(0, 0, 0, 0.75), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  }
+}
+[aria-label='Menu lateral'] a { border-radius: 13px; transition: background 0.25s, color 0.25s; }
+[aria-label='Menu lateral'] a[aria-current='page'] {
+  position: relative;
+  background: linear-gradient(90deg, rgba(140, 96, 244, 0.26), rgba(140, 96, 244, 0.04)) !important;
+  color: var(--foreground) !important;
   border-color: transparent !important;
+  box-shadow: none !important;
 }
+[aria-label='Menu lateral'] a[aria-current='page']::before {
+  content: '';
+  position: absolute;
+  left: -8px;
+  top: 9px;
+  bottom: 9px;
+  width: 3px;
+  border-radius: 0 4px 4px 0;
+  background: linear-gradient(#c58ffa, #5b34d1);
+  box-shadow: 0 0 14px #8c60f4;
+}
+[aria-label='Menu lateral'] a[aria-current='page'] svg { color: #8c60f4 !important; }
+.dark [aria-label='Menu lateral'] a[aria-current='page'] svg { color: #c58ffa !important; }
 
 /* ============================================================================
    MÓDULO ESPAÇO (Notion por tenant) — tokens lm-* portados do LM Hub.

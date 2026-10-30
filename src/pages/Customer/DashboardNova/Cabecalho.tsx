@@ -26,7 +26,7 @@ export const PERIODOS: { valor: PeriodPreset; rotulo: string }[] = [
 ];
 
 interface Props {
-  nome: string;
+  nome: React.ReactNode;
   visao: Visao;
   scope?: ScopeInfoNova;
   /** O pedido com os filtros atuais ainda não voltou (o `carregando` do useDashboardNova). */

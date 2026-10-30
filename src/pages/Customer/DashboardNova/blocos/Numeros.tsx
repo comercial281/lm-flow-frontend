@@ -9,6 +9,7 @@ import type { ContextoBloco } from '../usePodeAbrir';
 import { recorteBateComDestino } from '../visao';
 import { CATALOGO } from '../catalogo';
 import { diaDoPeriodo } from './comum';
+import { NumeroQueConta } from '../base/NumeroQueConta';
 
 export const Numeros: React.FC<ContextoBloco> = ({ dados, carregando, visao, pode, filtros, abrirLista }) => {
   const navigate = useNavigate();
@@ -51,19 +52,22 @@ export const Numeros: React.FC<ContextoBloco> = ({ dados, carregando, visao, pod
     <div>
       {titulo}
       <div className={`lmfn-numeros${cartoes.length === 3 ? ' lmfn-numeros-3' : ''}`}>
-        {cartoes.map(c => {
+        {cartoes.map((c, i) => {
           const kpi = kpis[c.chave];
+          // --lmfn-k atrasa a entrada de cada cartão (cascata do dashboard-nova.css).
+          const cascata = { '--lmfn-k': i } as React.CSSProperties;
           const corpo = (
             <>
+              <span className="lmfn-orbe" aria-hidden="true" />
               <span className="lmf-card-title">{c.rotulo}</span>
-              <span className="lmfn-numero-valor">{kpi ? numero(kpi.value) : '—'}</span>
+              <span className="lmfn-numero-valor">{kpi ? <NumeroQueConta valor={kpi.value} formatar={numero} /> : '—'}</span>
               {kpi && <Delta value={kpi.delta} suffix="vs. período anterior" />}
             </>
           );
           return c.acao ? (
-            <button key={c.chave} type="button" className="lmf-glass lmf-card lmfn-numero" onClick={c.acao}>{corpo}</button>
+            <button key={c.chave} type="button" className="lmf-glass lmf-card lmfn-numero" style={cascata} onClick={c.acao}>{corpo}</button>
           ) : (
-            <div key={c.chave} className="lmf-glass lmf-card lmfn-numero">{corpo}</div>
+            <div key={c.chave} className="lmf-glass lmf-card lmfn-numero" style={cascata}>{corpo}</div>
           );
         })}
       </div>
