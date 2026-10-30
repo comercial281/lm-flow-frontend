@@ -309,7 +309,7 @@ export function FlowNodeCard({ id, data, selected }: NodeProps) {
               if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); }
               else if (e.key === 'Escape') { cancelled.current = true; e.currentTarget.blur(); }
             }}
-            className="nodrag nopan h-7 min-w-0 flex-1 bg-white text-xs text-foreground"
+            className="nodrag nopan h-7 min-w-0 flex-1 bg-white text-xs text-zinc-900"
           />
         ) : can.rename ? (
           <button
