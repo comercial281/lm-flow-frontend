@@ -10175,6 +10175,8 @@ Armadilhas:
 2. Mudar a largura da coluna ou o espaço entre colunas exige mudar `PASSO_DA_SETA` junto.
 3. Testes: `quadro/quadro.source.spec.ts` (o CSS) e `quadro/StageColumn.spec.tsx` (`--etapa`, `w-80`).
 
+Não reabrir sem o dono pedir.
+
 ## Conversas e o filtro de Contatos no Vidro violeta (desde 2026-10-30)
 
 Continuação do "Visual Vidro violeta". Spec `LM FLOW/specs/2026-10-30-vidro-violeta-telas-design.md` (pasta do Tony), aprovada pelo dono olhando o rascunho com Antes | Depois na prévia.
