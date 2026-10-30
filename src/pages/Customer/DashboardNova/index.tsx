@@ -26,6 +26,7 @@ import { Funil } from './blocos/Funil';
 import { Resultados } from './blocos/Resultados';
 import { TempoNegociacao } from './blocos/TempoNegociacao';
 import { LeadsDiaSemana, LeadsHorario, LeadsSeisMeses, MapaCalor, Origem } from './blocos/Analise';
+import { FundoVivo } from '@/components/rascunho/TrocaDeVisual';
 
 const COMPONENTES: Record<BlocoId, React.FC<ContextoBloco>> = {
   imoveis: Imoveis, numeros: Numeros, pendencias: Pendencias, proximas_visitas: ProximasVisitas,
@@ -137,6 +138,8 @@ const DashboardNova: React.FC = () => {
 
   return (
     <div className="lmf lmfn h-full">
+      {/* RASCUNHO: grade e bolhas atrás da Dashboard (só na proposta A). */}
+      <FundoVivo />
       <Pagina
         // Banner da Leal Mídia (spec 2026-10-12-banner-dashboard-design.md) ACIMA da
         // saudação: no meio, separava os filtros dos números que eles mudam (dono,

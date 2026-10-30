@@ -11,6 +11,7 @@ import { recorteBateComDestino } from '../visao';
 import { Seletor } from '@/components/base/Seletor';
 import { VAZIO } from '@/lib/formato';
 import { tempoEmDias } from './comum';
+import { useProposta } from '@/components/rascunho/TrocaDeVisual';
 
 type Forma = 'lista' | 'funil';
 const CHAVE_FORMA = 'lmf.painel.funil.forma';
@@ -39,6 +40,7 @@ const FORCA_FINAL = 78;
 
 export const Funil: React.FC<ContextoBloco> = ({ dados, visao, pode, filtros, funil, mudarFunil }) => {
   const navigate = useNavigate();
+  const proposta = useProposta();
   const [forma, setForma] = useState<Forma>(lerForma);
   const [relogio, setRelogio] = useState(false);
   // O Funil lê o pedido dele (dados, erro e espera próprios), não o dos outros blocos.
@@ -126,7 +128,9 @@ export const Funil: React.FC<ContextoBloco> = ({ dados, visao, pode, filtros, fu
   const abrir = (etapaId: string) => navigate(linkFunil(bloco.pipeline.id, etapaId));
   const n = bloco.stages.length;
   // Recuo de cada lado, em %: a faixa i começa onde a anterior terminou.
-  const recuo = (i: number) => (n <= 1 ? 0 : ((100 - LARGURA_FINAL) / 2) * (i / n));
+  // RASCUNHO: na proposta A o funil afina mais (formato de funil de verdade, pedido do Tony 30/10).
+  const larguraFinal = proposta === 'a' ? 30 : LARGURA_FINAL;
+  const recuo = (i: number) => (n <= 1 ? 0 : ((100 - larguraFinal) / 2) * (i / n));
 
   return (
     // Mesmo aviso da área dos blocos: ocupado e esmaecido enquanto o funil novo não chega.

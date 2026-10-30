@@ -24,11 +24,11 @@ html[data-ds='a'] {
   --ds-blob-b: #c58ffa;
   --ds-blob-c: #5b34d1;
   --ds-blob-op: 0.22;
-  --ds-grade: rgba(43, 33, 117, 0.045);
+  --ds-grade: rgba(43, 33, 117, 0.035);
   --ds-anel-alto: rgba(255, 255, 255, 1);
   --ds-anel-tinta: rgba(91, 52, 209, 0.3);
 
-  --background: #f4f2fb;
+  --background: #f6f5fa;
   --foreground: #0b0b1a;
   --card: #ffffff;
   --card-foreground: #0b0b1a;
@@ -103,15 +103,10 @@ html.dark[data-ds='a'] {
   --chart-5: #f5b84b;
 }
 
-/* Fundo vivo: grade + bolhas que derivam devagar. Fica atrás de tudo, sem clique. */
-html[data-ds='a'] body {
-  background:
-    radial-gradient(1200px 700px at 78% -10%, color-mix(in srgb, var(--ds-blob-b) 18%, transparent), transparent 60%),
-    radial-gradient(900px 600px at -10% 60%, color-mix(in srgb, var(--ds-blob-c) 16%, transparent), transparent 60%),
-    var(--background);
-  background-attachment: fixed;
-}
+/* Fundo vivo: grade + bolhas que derivam devagar, SÓ na Dashboard (o componente
+   mora lá). No claro, só a grade: as bolhas viravam mancha roxa (Tony, 30/10). */
 .ds-fundo-vivo { display: none; }
+html[data-ds='a']:not(.dark) .ds-fundo-vivo .ds-bolha { display: none; }
 html[data-ds='a'] .ds-fundo-vivo {
   display: block;
   position: fixed;
@@ -151,13 +146,14 @@ html[data-ds='a'] #root { position: relative; z-index: 1; }
 /* Cartão da casa (Card do ds) fora da Dashboard: vidro leve, sem desfoque
    (lista longa com backdrop-filter pesa no notebook do corretor). */
 html[data-ds='a'] [data-slot='card'] {
-  border-radius: 20px;
-  border-color: var(--border);
-  box-shadow: 0 1px 0 var(--ds-anel-alto) inset, 0 18px 40px -24px rgba(43, 33, 117, 0.35) !important;
+  border-radius: 14px;
+  border-color: rgba(43, 33, 117, 0.08);
+  box-shadow: 0 1px 2px rgba(43, 33, 117, 0.05), 0 10px 24px -18px rgba(43, 33, 117, 0.28) !important;
 }
 html.dark[data-ds='a'] [data-slot='card'] {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.035)), var(--background);
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.1) inset, 0 24px 60px -24px rgba(0, 0, 0, 0.75) !important;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.03)), var(--background);
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.07) inset, 0 12px 30px -18px rgba(0, 0, 0, 0.6) !important;
 }
 
 /* Botão principal: o degradê da marca do Portal. */
@@ -183,8 +179,8 @@ html[data-ds='a'] .lmf {
   --lmf-text: #0b0b1a;
   --lmf-muted: rgba(11, 11, 26, 0.62);
   --lmf-faint: rgba(11, 11, 26, 0.42);
-  --lmf-border: rgba(43, 33, 117, 0.1);
-  --lmf-border-strong: rgba(43, 33, 117, 0.18);
+  --lmf-border: rgba(43, 33, 117, 0.08);
+  --lmf-border-strong: rgba(43, 33, 117, 0.16);
   --lmf-radius: 22px;
   --lmf-radius-sm: 13px;
   --lmf-up: #0f9f65;
@@ -196,10 +192,10 @@ html[data-ds='a'] .lmf {
   --lmf-funil: #5b34d1;
   --lmf-data-fade: #ffffff;
   --lmf-highlight-text: #5b34d1;
-  --lmf-glass-from: rgba(255, 255, 255, 0.82);
-  --lmf-glass-to: rgba(255, 255, 255, 0.55);
+  --lmf-glass-from: rgba(255, 255, 255, 0.95);
+  --lmf-glass-to: rgba(255, 255, 255, 0.82);
   --lmf-glass-top: #ffffff;
-  --lmf-shadow: 0 24px 50px -28px rgba(43, 33, 117, 0.38);
+  --lmf-shadow: 0 1px 2px rgba(43, 33, 117, 0.05), 0 16px 36px -24px rgba(43, 33, 117, 0.3);
   --lmf-track: rgba(43, 33, 117, 0.07);
   --lmf-control-bg: rgba(255, 255, 255, 0.7);
   --lmf-tooltip-bg: rgba(255, 255, 255, 0.96);
@@ -265,9 +261,10 @@ html[data-ds='a'] .lmf .lmf-glass::before { display: none; }
 html[data-ds='a'] .lmf .lmf-card-title {
   font-size: 11px;
   font-weight: 600;
-  letter-spacing: 0.2em;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
 }
+html[data-ds='a'] .lmfn-numero .lmf-card-title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; letter-spacing: 0.12em; }
 html[data-ds='a'] .lmf .lmf-card { padding: 22px 24px; }
 
 /* Os números: cartão com orbe roxo no canto e número grande. */
@@ -287,7 +284,7 @@ html[data-ds='a'] .lmfn-numero .ds-orbe {
   z-index: 0;
 }
 .ds-orbe { display: none; }
-html[data-ds='a'] .ds-orbe { display: block; }
+html.dark[data-ds='a'] .ds-orbe { display: block; }
 html[data-ds='a'] .lmfn-numero-valor {
   font-size: 44px;
   font-weight: 700;
@@ -295,7 +292,8 @@ html[data-ds='a'] .lmfn-numero-valor {
   line-height: 1;
   margin-top: 18px !important;
 }
-html[data-ds='a'] .lmfn-numero .lmf-kpi-delta {
+html[data-ds='a'] .lmfn-numero .lmf-kpi-delta { white-space: nowrap; }
+html[data-ds='a'] .lmfn-numero .lmf-kpi-delta:not(.lmf-flat) {
   padding: 5px 10px;
   border-radius: 99px;
   background: color-mix(in srgb, currentColor 14%, transparent);
@@ -316,7 +314,6 @@ html[data-ds='a'] .lmf h1 .ds-titulo-destaque { font-weight: 700; }
 /* Segmentos e funil no desenho do Portal. */
 html[data-ds='a'] .lmfn-seg { border-radius: 13px; background: var(--lmf-control-bg); border-color: var(--lmf-border); }
 html[data-ds='a'] .lmfn-seg button[aria-pressed='true'] { background: var(--ds-grad); color: #fff; box-shadow: 0 8px 18px -10px rgba(140, 96, 244, 0.9); }
-html[data-ds='a'] .lmfn-funil-faixa { border-radius: 12px; }
 html[data-ds='a'] .lmf-bar-fill { background: var(--ds-grad); }
 html[data-ds='a'] .lmf-kpi-icon { border-radius: 12px; background: var(--lmf-accent-soft); color: var(--lmf-accent-2); }
 
@@ -508,8 +505,8 @@ html[data-ds='b'] .lmfn-secao h2 { font-size: 15px; font-weight: 600; letter-spa
  * CASCA (menu lateral, barra do topo, cabeçalho das páginas)
  * ═══════════════════════════════════════════════════════════════════════ */
 /* A: a casca fica transparente pro fundo vivo aparecer; menu e topo de vidro. */
-html[data-ds='a'] [data-ds-casca],
-html[data-ds='a'] [data-ds-miolo] { background: transparent; }
+html[data-ds='a'] [data-ds-casca]:has(.ds-fundo-vivo),
+html[data-ds='a'] [data-ds-miolo]:has(.ds-fundo-vivo) { background: transparent; }
 html[data-ds='a'] [role='banner'] {
   background: color-mix(in srgb, var(--background) 55%, transparent);
   backdrop-filter: blur(20px) saturate(160%);
@@ -605,11 +602,23 @@ html[data-ds='b'] .lmfn-blocos > .lmfn-secao {
 @keyframes ds-sobe { from { opacity: 0; transform: translateY(18px); } }
 @keyframes ds-sobe-curto { from { opacity: 0; transform: translateY(6px); } }
 
-/* Funil se revela da esquerda (recorte, pra não espremer o texto); barra cresce. */
-html[data-ds] .lmfn-funil-faixa { animation: ds-revela 0.9s var(--ds-ease) both; animation-delay: 0.3s; }
+/* Funil: as faixas descem uma a uma (o formato é recorte inline: não animar clip-path,
+   que apagava o funil e deixava retângulo). Barra cresce da esquerda. */
+html[data-ds] .lmfn-funil-faixa { animation: ds-faixa 0.6s var(--ds-ease) both; animation-delay: calc(var(--ds-f, 0) * 70ms + 250ms); }
+html[data-ds] .lmfn-funil-faixa:nth-child(2) { --ds-f: 1; }
+html[data-ds] .lmfn-funil-faixa:nth-child(3) { --ds-f: 2; }
+html[data-ds] .lmfn-funil-faixa:nth-child(4) { --ds-f: 3; }
+html[data-ds] .lmfn-funil-faixa:nth-child(5) { --ds-f: 4; }
+html[data-ds] .lmfn-funil-faixa:nth-child(6) { --ds-f: 5; }
+html[data-ds] .lmfn-funil-faixa:nth-child(7) { --ds-f: 6; }
+html[data-ds] .lmfn-funil-faixa:nth-child(n + 8) { --ds-f: 7; }
 html[data-ds] .lmf-bar-fill { transform-origin: left center; animation: ds-cresce 0.9s var(--ds-ease) both; animation-delay: 0.3s; }
-@keyframes ds-revela { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+@keyframes ds-faixa { from { opacity: 0; transform: translateY(-8px); } }
 @keyframes ds-cresce { from { transform: scaleX(0); } }
+html[data-ds='a'] .lmfn-funil { gap: 5px; }
+html[data-ds='a'] .lmfn-funil-faixa { min-height: 48px; }
+html[data-ds='a'] .lmfn-funil-nome { font-size: 12.5px; font-weight: 500; opacity: 0.92; }
+html[data-ds='a'] .lmfn-funil-valor { font-size: 21px; font-weight: 700; letter-spacing: -0.02em; }
 
 /* Ponto "ao vivo" pulsando. */
 .ds-ao-vivo {
