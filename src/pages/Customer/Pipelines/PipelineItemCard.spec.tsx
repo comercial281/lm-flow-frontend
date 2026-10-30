@@ -150,3 +150,23 @@ describe('card do quadro mínimo (spec funil §4.4)', () => {
     expect((PipelineItemCard as unknown as { $$typeof: symbol }).$$typeof).toBe(Symbol.for('react.memo'));
   });
 });
+
+// Vidro violeta no quadro (spec 2026-10-30-vidro-violeta-telas-design.md).
+describe('card do quadro no Vidro violeta', () => {
+  it('o card usa a classe do quadro', () => {
+    montar();
+    expect(document.querySelector('[data-card-id="i1"]')).toHaveClass('quadro-card');
+  });
+
+  it('card sendo arrastado não leva a classe do card (o fantasma do arrasto não desloca)', () => {
+    montar({ arrastando: true });
+    const raiz = document.querySelector('[data-card-id="i1"]');
+    expect(raiz).toHaveClass('border-dashed');
+    expect(raiz).not.toHaveClass('quadro-card');
+  });
+
+  it('o sinal é pílula redonda', () => {
+    montar();
+    expect(screen.getByText('Tarefa atrasada').closest('span')).toHaveClass('rounded-full');
+  });
+});

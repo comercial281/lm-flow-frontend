@@ -108,8 +108,8 @@ function PipelineItemCardComponent({
     <div
       data-card-id={item.id}
       className={arrastando
-        ? 'relative select-none rounded-xl border-2 border-dashed border-primary/40 bg-transparent p-3 [&>*]:invisible'
-        : 'group relative cursor-pointer select-none rounded-xl border border-border bg-background p-3 shadow-sm transition-all duration-200 hover:border-primary/30 hover:shadow-md'}
+        ? 'relative select-none rounded-2xl border-2 border-dashed border-primary/40 bg-transparent p-3 [&>*]:invisible'
+        : 'quadro-card group relative cursor-pointer select-none border p-3'}
       draggable={podeArrastar}
       onDragStart={e => { if (podeArrastar) onDragStart(item, e.currentTarget.offsetHeight); }}
       onDragEnd={onDragEnd}
@@ -125,10 +125,10 @@ function PipelineItemCardComponent({
       <div className="flex items-start justify-between gap-2">
         <div className="shrink-0">
           {fotoDoLead ? (
-            <img src={fotoDoLead} alt="" className="h-9 w-9 rounded-full bg-muted object-cover lm-redact" onError={fotoQuebrada} />
+            <img src={fotoDoLead} alt="" className="quadro-card-foto h-9 w-9 rounded-full bg-muted object-cover lm-redact" onError={fotoQuebrada} />
           ) : null}
           <span
-            className="h-9 w-9 items-center justify-center rounded-full text-sm font-bold text-white"
+            className="quadro-card-foto h-9 w-9 items-center justify-center rounded-full text-sm font-bold text-white"
             style={{ backgroundColor: getContactColor(nome), display: fotoDoLead ? 'none' : 'flex' }}
             aria-hidden="true"
           >
@@ -204,7 +204,7 @@ function PipelineItemCardComponent({
       </div>
 
       {sinal && Icone && (
-        <span className={`mt-2 inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-semibold ${CLASSE_DO_TOM[sinal.tom]}`}>
+        <span className={`mt-2 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold ${CLASSE_DO_TOM[sinal.tom]}`}>
           <Icone className="h-3 w-3" aria-hidden="true" />
           {sinal.texto}
         </span>
@@ -236,7 +236,7 @@ function PipelineItemCardComponent({
               disabled={openingConversation}
               aria-label="Abrir conversa no WhatsApp"
               title="Abrir conversa no WhatsApp"
-              className="size-8 border-emerald-300 p-0 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-800/40 dark:text-emerald-400 dark:hover:bg-emerald-900/20"
+              className="size-8 rounded-full border-emerald-300 p-0 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-800/40 dark:text-emerald-400 dark:hover:bg-emerald-900/20"
             >
               <MessageCircle className="h-3.5 w-3.5" aria-hidden="true" />
             </Button>
