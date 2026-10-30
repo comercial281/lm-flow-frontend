@@ -2,15 +2,16 @@
  * Só o que o base/lmf.css não tem. Tokens de cor sempre os --lmf-*,
  * que já trazem o claro e o escuro. A exceção é o cinza neutro de verdade
  * (os --lmf-* puxam todos para o roxo): --lmfn-neutro, com claro e escuro. */
-.lmfn { --lmfn-neutro: rgba(100, 116, 139, 0.18); }
-.dark .lmfn { --lmfn-neutro: rgba(148, 163, 184, 0.14); }
+/* Faixa do horário comercial bem leve (era um bloco cinza pesado atrás da curva). */
+.lmfn { --lmfn-neutro: rgba(100, 116, 139, 0.07); }
+.dark .lmfn { --lmfn-neutro: rgba(255, 255, 255, 0.04); }
 /* Dentro da moldura da casa (Pagina): a folga é a da moldura, não a do .lmf. */
 .lmf.lmfn { padding: 0; }
 /* O ritmo vertical é o space-y-6 da Pagina: aviso e filtros não somam margem própria. */
 .lmfn-controles { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-.lmfn-seg { display: inline-flex; padding: 3px; gap: 2px; border-radius: 10px; border: 1px solid var(--lmf-border); background: var(--lmf-accent-soft); }
+.lmfn-seg { display: inline-flex; padding: 3px; gap: 2px; border-radius: 13px; border: 1px solid var(--lmf-border); background: var(--lmf-control-bg); }
 .lmfn-seg button { border: 0; background: transparent; padding: 6px 12px; border-radius: 8px; font: inherit; font-size: 13px; font-weight: 500; color: var(--lmf-muted); cursor: pointer; }
-.lmfn-seg button[aria-pressed='true'] { background: var(--lmf-surface); color: var(--lmf-text); box-shadow: var(--lmf-shadow); }
+.lmfn-seg button[aria-pressed='true'] { background: var(--lmf-grad); color: #fff; box-shadow: 0 8px 18px -10px rgba(140, 96, 244, 0.9); }
 .lmfn-contador { background: var(--lmf-accent); color: #fff; border-radius: 999px; font-size: 11px; padding: 0 6px; line-height: 17px; }
 /* Painel de filtros: a mesma superfície dos cartões (lmf-glass), os campos numa
  * linha que quebra, todos com a caixa de 40 px (.lmf-campo), e "Limpar filtros"
@@ -63,6 +64,9 @@ button.lmfn-item:hover { background: var(--lmf-accent-soft); }
 .lmfn-pilula { display: inline-flex; align-items: center; gap: 4px; min-width: 40px; justify-content: center; border-radius: 8px; padding: 2px 8px; font-size: 13px; font-weight: 600; background: var(--lmf-surface-2); color: var(--lmf-muted); border: 1px solid var(--lmf-border); font-variant-numeric: tabular-nums; }
 .lmfn-pilula-atencao { color: var(--lmf-warn); border-color: transparent; background: rgba(217, 119, 6, 0.12); }
 .lmfn-pilula-alerta { color: var(--lmf-down); border-color: transparent; background: rgba(225, 29, 72, 0.1); }
+/* No escuro o alerta salta: fundo e contorno vermelhos mais fortes (pedido do Tony, 30/10/2026). */
+.dark .lmfn-pilula-alerta { color: #ff7a90; background: rgba(255, 77, 109, 0.2); box-shadow: inset 0 0 0 1px rgba(255, 77, 109, 0.4); }
+.dark .lmfn-pilula-atencao { color: #ffc966; background: rgba(245, 184, 75, 0.16); box-shadow: inset 0 0 0 1px rgba(245, 184, 75, 0.32); }
 /* Os números são cartões como os outros blocos: lmf-glass + lmf-card (superfície,
  * borda, raio, sombra e 20 px por dentro) e o rótulo no estilo do título de cartão.
  * Mesmo espaço entre cartões (18 px) do resto da página. */
@@ -72,7 +76,7 @@ button.lmfn-item:hover { background: var(--lmf-accent-soft); }
 .lmfn-numero { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; text-align: left; color: inherit; font: inherit; min-width: 0; margin: 0; }
 .lmfn-numero .lmfn-numero-valor { margin-top: 4px; }
 button.lmfn-numero { cursor: pointer; transition: border-color 0.15s ease; }
-button.lmfn-numero:hover { border-color: var(--lmf-accent); }
+button.lmfn-numero:hover { border-color: transparent; }
 button.lmfn-numero:focus-visible { outline: 2px solid var(--lmf-accent); outline-offset: 2px; }
 .lmfn-numero-valor { font-size: 28px; font-weight: 650; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
 .lmfn-numero-rotulo { font-size: 12.5px; color: var(--lmf-muted); }
@@ -122,12 +126,12 @@ button.lmfn-fase:hover { background: var(--lmf-accent-soft); }
  * número não decide a largura: "agora" não afunila de verdade). No claro a cor
  * clareia de faixa em faixa (--lmfn-forca, de 100% a 78%: abaixo disso o texto
  * branco perde contraste); no escuro o fade é o próprio roxo e nada muda. */
-.lmfn-funil { display: flex; flex-direction: column; gap: 3px; margin-bottom: 8px; }
-.lmfn-funil-faixa { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 38px; border: 0; background: color-mix(in srgb, var(--lmf-funil) var(--lmfn-forca, 100%), var(--lmf-data-fade)); color: #fff; font: inherit; font-size: 13px; text-align: left; }
+.lmfn-funil { display: flex; flex-direction: column; gap: 5px; margin-bottom: 8px; }
+.lmfn-funil-faixa { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 48px; border: 0; background: color-mix(in srgb, var(--lmf-funil) var(--lmfn-forca, 100%), var(--lmf-data-fade)); color: #fff; font: inherit; font-size: 13px; text-align: left; }
 button.lmfn-funil-faixa { cursor: pointer; }
 button.lmfn-funil-faixa:hover { filter: brightness(1.08); }
-.lmfn-funil-nome { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.lmfn-funil-valor { font-weight: 650; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.lmfn-funil-nome { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12.5px; font-weight: 500; opacity: 0.92; }
+.lmfn-funil-valor { font-size: 21px; font-weight: 700; letter-spacing: -0.02em; white-space: nowrap; font-variant-numeric: tabular-nums; }
 /* Tempo médio de negociação: o número desce para o pé do cartão (sem altura mínima própria). */
 .lmfn-negociacao-card { display: flex; flex-direction: column; }
 .lmfn-negociacao { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; gap: 4px; }
@@ -137,3 +141,111 @@ button.lmfn-funil-faixa:hover { filter: brightness(1.08); }
 .lmfn-linha-lateral > .lmfn-coluna:has(.lmfn-negociacao-card) { flex-basis: 340px; }
 .lmfn-vez .lmfn-carrossel { padding-top: 14px; justify-content: center; }
 .lmfn-blocos > :first-child { margin-top: 0; }
+
+/* ═══ Vidro violeta (30/10/2026) ═══════════════════════════════════════════
+ * Os quatro números: rótulo em até duas linhas (mesma altura em todos, número
+ * alinhado), número grande que conta ao abrir (NumeroQueConta), orbe roxo no
+ * canto só no escuro (no claro virava mancha), variação em selo. */
+.lmfn-numero { min-height: 168px; justify-content: space-between; overflow: hidden; }
+.lmfn-numero > * { position: relative; z-index: 1; }
+.lmfn-numero .lmf-card-title { font-size: 10.5px; letter-spacing: 0.12em; line-height: 1.45; min-height: 2.9em; }
+.lmfn-numero .lmfn-numero-valor { font-size: 44px; font-weight: 700; letter-spacing: -0.03em; line-height: 1; margin-top: 18px; }
+.lmfn-numero .lmf-kpi-delta:not(.lmf-flat) { white-space: nowrap; padding: 5px 10px; border-radius: 99px; background: color-mix(in srgb, currentColor 14%, transparent); font-weight: 600; }
+.lmfn-orbe { display: none; }
+.dark .lmfn-numero .lmfn-orbe {
+  display: block;
+  position: absolute;
+  width: 220px;
+  height: 220px;
+  border-radius: 50%;
+  filter: blur(50px);
+  opacity: 0.42;
+  right: -60px;
+  top: -70px;
+  pointer-events: none;
+  background: #8c60f4;
+  z-index: 0;
+}
+
+/* Saudação com o nome em degradê ("Bom dia, Tony"). */
+.lmfn-destaque { background: var(--lmf-grad-texto); -webkit-background-clip: text; background-clip: text; color: transparent; font-weight: 700; }
+
+/* Fundo vivo (FundoVivo): grade fraca + bolhas que derivam devagar, atrás da
+ * Dashboard. As bolhas só no escuro (no claro viravam mancha roxa). A casca do
+ * app (MainLayout) fica transparente enquanto ele está na tela, e o z-index -1
+ * vale dentro do isolamento da casca: acima do fundo, abaixo de tudo. */
+[data-casca] { isolation: isolate; }
+[data-casca]:has(.lmfn-fundo-vivo),
+[data-miolo]:has(.lmfn-fundo-vivo) { background: transparent; }
+.lmfn-fundo-vivo { position: fixed; inset: 0; z-index: -1; pointer-events: none; overflow: hidden; }
+.lmfn-fundo-vivo-grade {
+  position: absolute;
+  inset: 0;
+  background-image: linear-gradient(rgba(43, 33, 117, 0.035) 1px, transparent 1px), linear-gradient(90deg, rgba(43, 33, 117, 0.035) 1px, transparent 1px);
+  background-size: 56px 56px;
+  -webkit-mask-image: radial-gradient(ellipse at 60% 30%, #000 30%, transparent 80%);
+  mask-image: radial-gradient(ellipse at 60% 30%, #000 30%, transparent 80%);
+}
+.dark .lmfn-fundo-vivo-grade { background-image: linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px); }
+.lmfn-bolha { display: none; }
+.dark .lmfn-bolha { display: block; position: absolute; border-radius: 50%; filter: blur(90px); opacity: 0.55; will-change: transform; }
+.dark .lmfn-bolha-a { width: 620px; height: 620px; background: #5b34d1; top: -180px; left: 22%; animation: lmfn-deriva-1 26s ease-in-out infinite; }
+.dark .lmfn-bolha-b { width: 520px; height: 520px; background: #8c60f4; bottom: -200px; right: -80px; animation: lmfn-deriva-2 32s ease-in-out infinite; }
+.dark .lmfn-bolha-c { width: 460px; height: 460px; background: #2b2175; top: 38%; left: -160px; animation: lmfn-deriva-3 38s ease-in-out infinite; }
+@keyframes lmfn-deriva-1 { 50% { transform: translate(160px, 90px) scale(1.12); } }
+@keyframes lmfn-deriva-2 { 50% { transform: translate(-200px, -120px) scale(0.9); } }
+@keyframes lmfn-deriva-3 { 50% { transform: translate(120px, -140px) scale(1.15); } }
+
+/* Entrada em cascata, uma vez ao abrir: --lmfn-i = linha, --lmfn-j = coluna,
+ * --lmfn-k = cartão dos números. Só transform e opacidade. */
+.lmfn-blocos .lmfn-coluna > :not(:has(.lmfn-numeros)),
+.lmfn-numeros > *,
+.lmfn-blocos > .lmfn-secao {
+  animation: lmfn-sobe 0.75s var(--lmf-ease) both;
+  animation-delay: calc(var(--lmfn-i, 0) * 90ms + var(--lmfn-j, 0) * 60ms + var(--lmfn-k, 0) * 70ms + 60ms);
+}
+@keyframes lmfn-sobe { from { opacity: 0; transform: translateY(18px); } }
+/* Funil: as faixas descem uma a uma. O formato é recorte inline (clip-path): NÃO
+ * animar clip-path aqui, que apaga o funil e deixa retângulo. */
+.lmfn-funil-faixa { animation: lmfn-faixa 0.6s var(--lmf-ease) both; animation-delay: calc(var(--lmfn-f, 0) * 70ms + 250ms); }
+.lmfn-funil-faixa:nth-child(2) { --lmfn-f: 1; }
+.lmfn-funil-faixa:nth-child(3) { --lmfn-f: 2; }
+.lmfn-funil-faixa:nth-child(4) { --lmfn-f: 3; }
+.lmfn-funil-faixa:nth-child(5) { --lmfn-f: 4; }
+.lmfn-funil-faixa:nth-child(6) { --lmfn-f: 5; }
+.lmfn-funil-faixa:nth-child(7) { --lmfn-f: 6; }
+.lmfn-funil-faixa:nth-child(n + 8) { --lmfn-f: 7; }
+@keyframes lmfn-faixa { from { opacity: 0; transform: translateY(-8px); } }
+.lmf-bar-fill { transform-origin: left center; animation: lmfn-cresce 0.9s var(--lmf-ease) both; animation-delay: 0.3s; }
+@keyframes lmfn-cresce { from { transform: scaleX(0); } }
+
+/* Gráfico (GraficoDeLeads): curva com degradê e sombra, ponto que acende e dica
+ * de vidro no mouse. No claro o traço é mais fino e mais claro (roxo escuro de
+ * 2,5px pesava no branco). Sem lead no período: tracejado cinza. */
+.lmfn { --lmfn-traco-de: #6d45e8; --lmfn-traco-ate: #b98cf9; --lmfn-area-topo: 0.2; }
+.dark .lmfn { --lmfn-traco-de: #8c60f4; --lmfn-traco-ate: #c58ffa; --lmfn-area-topo: 0.38; }
+.lmfn-grafico .recharts-area-curve { stroke-width: 2px; filter: drop-shadow(0 6px 8px rgba(109, 69, 232, 0.25)); }
+.dark .lmfn-grafico .recharts-area-curve { stroke-width: 2.5px; filter: drop-shadow(0 0 10px rgba(140, 96, 244, 0.45)); }
+.lmfn-grafico-vazio .recharts-area-curve { stroke: var(--lmf-border-strong) !important; stroke-dasharray: 4 5; filter: none !important; }
+.lmfn-ponto { filter: drop-shadow(0 2px 6px rgba(109, 69, 232, 0.35)); }
+.dark .lmfn-ponto { filter: drop-shadow(0 0 6px #8c60f4); }
+.lmfn-dica {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 9px 12px;
+  border-radius: 12px;
+  background: var(--lmf-tooltip-bg);
+  border: 1px solid var(--lmf-border);
+  box-shadow: 0 14px 30px -14px rgba(16, 12, 40, 0.45);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  font-size: 12px;
+  color: var(--lmf-muted);
+  white-space: nowrap;
+}
+.lmfn-dica strong { color: var(--lmf-text); font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+@media (prefers-reduced-motion: reduce) {
+  .lmfn *, .lmfn *::before, .lmfn *::after, .lmfn-fundo-vivo * { animation: none !important; transition: none !important; }
+}

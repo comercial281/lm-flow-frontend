@@ -29,13 +29,32 @@
   padding: 5px;
 }
 
-.react-flow__controls {
-  background-color: rgba(30, 30, 30, 0.8);
-  backdrop-filter: blur(4px);
-  border-radius: 8px;
+/* Zoom e minimapa seguem o tema do app (Vidro violeta, 30/10/2026). Eram cores fixas
+   do fork: caixa preta no claro e minimapa branco no escuro. */
+.react-flow {
+  --xy-minimap-background-color: var(--card);
+  --xy-minimap-mask-background-color: rgba(91, 52, 209, 0.06);
+  --xy-minimap-node-background-color: #d9d0f5;
+}
+.dark .react-flow {
+  --xy-minimap-mask-background-color: rgba(0, 0, 0, 0.45);
+  --xy-minimap-node-background-color: rgba(140, 96, 244, 0.45);
+}
+.react-flow__minimap {
+  background-color: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
   overflow: hidden;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(70, 70, 70, 0.5);
+  box-shadow: 0 10px 24px -18px rgba(43, 33, 117, 0.35);
+}
+
+.react-flow__controls {
+  background-color: color-mix(in srgb, var(--card) 85%, transparent);
+  backdrop-filter: blur(12px);
+  border-radius: 13px;
+  overflow: hidden;
+  box-shadow: 0 10px 24px -18px rgba(43, 33, 117, 0.35);
+  border: 1px solid var(--border);
   padding: 4px;
 }
 
@@ -43,36 +62,26 @@
   padding: 6px;
   width: 32px;
   height: 32px;
-  margin: 4px 0;
+  margin: 2px 0;
   border: none !important;
-  background-color: rgba(40, 40, 40, 0.8) !important;
-  color: #a0a0a0 !important;
-  border-radius: 6px !important;
-  transition: all 0.2s ease;
+  background-color: transparent !important;
+  color: var(--muted-foreground) !important;
+  border-radius: 9px !important;
+  transition: background-color 0.2s ease, color 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .react-flow__controls-button:hover {
-  background-color: rgba(60, 60, 60, 0.9) !important;
-  color: #ffffff !important;
-  transform: translateY(-1px);
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  background-color: var(--accent) !important;
+  color: var(--foreground) !important;
 }
 
 .react-flow__controls-button svg {
   fill: currentColor;
   width: 16px;
   height: 16px;
-}
-
-.react-flow__controls-button[data-action="zoom-in"] {
-  border-bottom: 1px solid rgba(70, 70, 70, 0.5) !important;
-}
-
-.react-flow__controls-button[data-action="zoom-out"] {
-  border-bottom: 1px solid rgba(70, 70, 70, 0.5) !important;
 }
 
 /* Hide scrollbar for all browsers while maintaining scroll functionality */
@@ -310,20 +319,3 @@
   }
 }
 
-/* Dark theme adjustments */
-@media (prefers-color-scheme: dark) {
-  .react-flow__controls {
-    background-color: rgba(20, 20, 20, 0.9);
-    border-color: rgba(60, 60, 60, 0.5);
-  }
-
-  .react-flow__controls-button {
-    background-color: rgba(30, 30, 30, 0.8) !important;
-    color: #b0b0b0 !important;
-  }
-
-  .react-flow__controls-button:hover {
-    background-color: rgba(50, 50, 50, 0.9) !important;
-    color: #ffffff !important;
-  }
-}

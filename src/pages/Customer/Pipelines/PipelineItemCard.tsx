@@ -38,7 +38,7 @@ const fotoQuebrada = (e: SyntheticEvent<HTMLImageElement>) => {
 };
 
 const CLASSE_DO_TOM: Record<TomDoSinal, string> = {
-  perigo: 'bg-destructive/10 text-destructive',
+  perigo: 'bg-destructive/10 text-destructive dark:bg-destructive/20',
   aviso: 'bg-amber-500/15 text-amber-700 dark:text-amber-400',
   info: 'bg-primary/10 text-primary',
 };

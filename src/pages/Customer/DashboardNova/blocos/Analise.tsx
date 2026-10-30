@@ -3,12 +3,12 @@
 // e a origem. Os baldes (dia, hora, mês) já chegam no fuso da conta: a tela
 // nunca recalcula data, só desenha.
 import React from 'react';
-import { Area, AreaChart, Bar, BarChart, Cell, ReferenceArea, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { VAZIO, numero, porcentagem } from '@/lib/formato';
-import { EmptyBlock, GlassCard, Skeleton, tooltipStyle } from '../base/primitives';
+import { EmptyBlock, GlassCard, Skeleton } from '../base/primitives';
 import { Heatmap } from '../base/Heatmap';
 import { isAvailable, type Unavailable } from '../base/types';
 import type { ContextoBloco } from '../usePodeAbrir';
+import { GraficoDeLeads, TrocaDeGrafico, useModoDoGrafico } from './GraficoDeLeads';
 
 const DIAS = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
 const DIAS_CURTOS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
@@ -38,9 +38,6 @@ export function percentualForaDoHorario(hours: { hour: number; leads: number }[]
 
 /** '2026-09' → 'Set'. Fora do formato, volta como veio. */
 export const rotuloMes = (ym: string): string => MESES_CURTOS[Number(ym.slice(5, 7)) - 1] ?? ym;
-
-const eixo = { fill: 'var(--lmf-muted)', fontSize: 11 };
-const formatoLeads = (v?: number) => [numero(v ?? 0), 'Leads'] as [string, string];
 
 /** Bloco sem dado: carregando, erro ("não deu para carregar") ou o motivo que o servidor deu. */
 const SemDados: React.FC<{
@@ -78,30 +75,20 @@ const Destaque: React.FC<{ valor: string; legenda: string }> = ({ valor, legenda
 export const LeadsDiaSemana: React.FC<ContextoBloco> = ({ dados, carregando, visao, nivelTitulo }) => {
   const bloco = dados?.leads_by_weekday;
   const titulo = visao === 'corretor' ? 'Seus leads por dia da semana' : 'Leads por dia da semana';
+  const [modo, setModo] = useModoDoGrafico('dia-da-semana');
   if (!isAvailable(bloco)) {
     return <SemDados titulo={titulo} carregando={carregando} temDados={!!dados} bloco={bloco} oQue="os leads por dia da semana" nivel={nivelTitulo} />;
   }
   const dia = melhorDia(bloco.days);
-  const linhas = bloco.days.map(d => ({ nome: DIAS_CURTOS[d.day], leads: d.leads }));
+  const linhas = bloco.days.map(d => ({ x: DIAS_CURTOS[d.day], leads: d.leads }));
   const maior = Math.max(0, ...linhas.map(l => l.leads));
+  // O melhor dia em roxo forte nas colunas.
   const topo = maior > 0 ? linhas.findIndex(l => l.leads === maior) : -1;
   return (
-    <GlassCard title={titulo} titleAs={tituloEm(nivelTitulo)}>
+    <GlassCard title={titulo} titleAs={tituloEm(nivelTitulo)} action={<TrocaDeGrafico modo={modo} aoEscolher={setModo} />}>
       <Destaque valor={dia ?? VAZIO} legenda={dia ? 'é o dia que mais chega lead no período' : 'Nenhum lead no período'} />
-      <Grafico resumo={`${titulo}: ${linhas.map(l => `${l.nome} ${numero(l.leads)}`).join(', ')}`}>
-        <ResponsiveContainer width="100%" height={190}>
-          <BarChart data={linhas} accessibilityLayer={false}>
-            <XAxis dataKey="nome" tick={eixo} tickLine={false} axisLine={false} />
-            <YAxis tick={eixo} allowDecimals={false} tickLine={false} axisLine={false} width={28} />
-            <Tooltip {...tooltipStyle} formatter={formatoLeads} />
-            {/* O melhor dia em roxo forte; os outros em roxo claro. */}
-            <Bar dataKey="leads" radius={[4, 4, 0, 0]}>
-              {linhas.map((l, i) => (
-                <Cell key={l.nome} fill={i === topo ? 'var(--lmf-data)' : 'var(--lmf-data-muted)'} />
-              ))}
-            </Bar>
-          </BarChart>
-        </ResponsiveContainer>
+      <Grafico resumo={`${titulo}: ${linhas.map(l => `${l.x} ${numero(l.leads)}`).join(', ')}`}>
+        <GraficoDeLeads id="dia-da-semana" modo={modo} altura={200} destaque={topo} linhas={linhas} />
       </Grafico>
     </GlassCard>
   );
@@ -110,32 +97,33 @@ export const LeadsDiaSemana: React.FC<ContextoBloco> = ({ dados, carregando, vis
 export const LeadsHorario: React.FC<ContextoBloco> = ({ dados, carregando, nivelTitulo }) => {
   const bloco = dados?.leads_by_hour;
   const titulo = 'Leads por horário';
+  const [modo, setModo] = useModoDoGrafico('horario');
   if (!isAvailable(bloco)) {
     return <SemDados titulo={titulo} carregando={carregando} temDados={!!dados} bloco={bloco} oQue="os leads por horário" nivel={nivelTitulo} />;
   }
   const fora = percentualForaDoHorario(bloco.hours);
-  const linhas = bloco.hours.map(h => ({ hora: `${h.hour}h`, leads: h.leads }));
+  const linhas = bloco.hours.map(h => ({ x: `${h.hour}h`, leads: h.leads }));
   const pico = bloco.hours.reduce<{ hour: number; leads: number } | null>((m, h) => (!m || h.leads > m.leads ? h : m), null);
   const resumo = fora === null || !pico
     ? `${titulo}: nenhum lead no período`
     : `${titulo}: mais leads às ${pico.hour}h (${numero(pico.leads)}); ${porcentagem(fora, 0)} fora do horário comercial`;
   return (
-    <GlassCard title={titulo} titleAs={tituloEm(nivelTitulo)}>
+    <GlassCard title={titulo} titleAs={tituloEm(nivelTitulo)} action={<TrocaDeGrafico modo={modo} aoEscolher={setModo} />}>
       <Destaque
         valor={fora === null ? VAZIO : porcentagem(fora, 0)}
         legenda={fora === null ? 'Nenhum lead no período' : 'dos leads chegaram fora do horário comercial (8h às 18h)'}
       />
       <Grafico resumo={resumo}>
-        <ResponsiveContainer width="100%" height={190}>
-          <AreaChart data={linhas} accessibilityLayer={false}>
-            {/* A faixa do horário comercial é cinza neutro (não roxo): não pode se confundir com a área dos leads. */}
-            <ReferenceArea x1={`${ABRE}h`} x2={`${FECHA}h`} fill="var(--lmfn-neutro)" fillOpacity={1} />
-            <XAxis dataKey="hora" interval={3} tick={eixo} tickLine={false} axisLine={false} />
-            <YAxis tick={eixo} allowDecimals={false} tickLine={false} axisLine={false} width={28} />
-            <Tooltip {...tooltipStyle} formatter={formatoLeads} />
-            <Area type="monotone" dataKey="leads" stroke="var(--lmf-data)" fill="var(--lmf-data-soft)" strokeWidth={2} />
-          </AreaChart>
-        </ResponsiveContainer>
+        {/* A faixa do horário comercial é cinza neutro (não roxo): não pode se confundir com a área dos leads. */}
+        <GraficoDeLeads
+          id="horario"
+          modo={modo}
+          altura={200}
+          intervalo={3}
+          faixa={{ de: `${ABRE}h`, ate: `${FECHA}h` }}
+          destaque={pico && pico.leads > 0 ? bloco.hours.indexOf(pico) : -1}
+          linhas={linhas}
+        />
       </Grafico>
     </GlassCard>
   );
@@ -144,28 +132,23 @@ export const LeadsHorario: React.FC<ContextoBloco> = ({ dados, carregando, nivel
 export const LeadsSeisMeses: React.FC<ContextoBloco> = ({ dados, carregando, nivelTitulo }) => {
   const bloco = dados?.leads_6_months;
   const titulo = 'Leads nos últimos 6 meses';
+  const [modo, setModo] = useModoDoGrafico('seis-meses');
   if (!isAvailable(bloco)) {
     return <SemDados titulo={titulo} carregando={carregando} temDados={!!dados} bloco={bloco} oQue="os leads dos últimos 6 meses" nivel={nivelTitulo} />;
   }
-  const linhas = bloco.months.map(m => ({ mes: rotuloMes(m.month), leads: m.leads }));
+  const linhas = bloco.months.map(m => ({ x: rotuloMes(m.month), leads: m.leads }));
   const algum = linhas.some(l => l.leads > 0);
   return (
-    <GlassCard title={titulo} titleAs={tituloEm(nivelTitulo)} subtitle="Leads que entraram no funil, por mês">
+    <GlassCard
+      title={titulo}
+      titleAs={tituloEm(nivelTitulo)}
+      subtitle="Leads que entraram no funil, por mês"
+      action={algum ? <TrocaDeGrafico modo={modo} aoEscolher={setModo} /> : undefined}
+    >
       {algum ? (
-        <Grafico resumo={`${titulo}: ${linhas.map(l => `${l.mes} ${numero(l.leads)}`).join(', ')}`}>
-          <ResponsiveContainer width="100%" height={210}>
-            <BarChart data={linhas} accessibilityLayer={false}>
-              <XAxis dataKey="mes" tick={eixo} tickLine={false} axisLine={false} />
-              <YAxis tick={eixo} allowDecimals={false} tickLine={false} axisLine={false} width={32} />
-              <Tooltip {...tooltipStyle} formatter={formatoLeads} />
-              {/* Mês atual (o último) em roxo forte; os outros em roxo claro. */}
-              <Bar dataKey="leads" radius={[4, 4, 0, 0]}>
-                {linhas.map((l, i) => (
-                  <Cell key={l.mes + i} fill={i === linhas.length - 1 ? 'var(--lmf-data)' : 'var(--lmf-data-muted)'} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
+        <Grafico resumo={`${titulo}: ${linhas.map(l => `${l.x} ${numero(l.leads)}`).join(', ')}`}>
+          {/* Mês atual (o último) em roxo forte nas colunas. */}
+          <GraficoDeLeads id="seis-meses" modo={modo} altura={220} destaque={linhas.length - 1} linhas={linhas} />
         </Grafico>
       ) : (
         <EmptyBlock text="Nenhum lead nos últimos 6 meses" />

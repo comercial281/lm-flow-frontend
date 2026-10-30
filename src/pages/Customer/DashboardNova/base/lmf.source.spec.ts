@@ -21,29 +21,27 @@ describe('lmf.css e o Seletor', () => {
   });
 });
 
-// Tema claro (pedido do dono, 15/10/2026): sem o véu roxo nos cartões; o dado
-// continua roxo, sólido. O escuro não mudou.
-describe('lmf.css e o tema claro neutro', () => {
+// Vidro violeta (escolha do dono, 30/10/2026): a linguagem do Portal do Cliente do
+// Hub. Substitui o "neutro grafite" de 15/10/2026.
+describe('lmf.css e o Vidro violeta', () => {
   const claro = css.slice(css.indexOf('.lmf {'), css.indexOf('.dark .lmf {'));
   const escuro = css.slice(css.indexOf('.dark .lmf {'), css.indexOf('.lmf-glass {'));
 
-  it('no claro o cartão é branco chapado, sem véu roxo', () => {
-    expect(claro).toMatch(/--lmf-glass-from:\s*#ffffff/);
-    expect(claro).toMatch(/--lmf-glass-to:\s*#ffffff/);
-    expect(claro).toMatch(/--lmf-bg:\s*#f6f6f7/);
+  it('o fundo é transparente: quem pinta é a página (e o fundo vivo, no escuro)', () => {
+    expect(claro).toMatch(/--lmf-bg:\s*transparent/);
   });
 
-  it('no claro o dado é roxo sólido', () => {
-    expect(claro).toMatch(/--lmf-data:\s*#7c3aed/);
+  it('no claro o cartão é vidro quase opaco e o dado é o roxo do Portal', () => {
+    expect(claro).toMatch(/--lmf-glass-from:\s*rgba\(255, 255, 255, 0\.95\)/);
+    expect(claro).toMatch(/--lmf-data:\s*#5b34d1/);
   });
 
-  it('no claro o cartão tem contorno em degradê roxo leve; no escuro, o de antes', () => {
-    expect(css).toMatch(/\.lmf \.lmf-glass \{[^}]*border-color: transparent[^}]*border-box/s);
-    expect(css).toMatch(/\.dark \.lmf \.lmf-glass \{[^}]*border-color: var\(--lmf-border\)/s);
+  it('no escuro o dado é o roxo claro e o vermelho é vivo (alerta tem que saltar)', () => {
+    expect(escuro).toMatch(/--lmf-data:\s*#8c60f4/);
+    expect(escuro).toMatch(/--lmf-down:\s*#ff4d6d/);
   });
 
-  it('no escuro o dado continua roxo', () => {
-    expect(escuro).toMatch(/--lmf-data:\s*#7c3aed/);
-    expect(escuro).toMatch(/--lmf-data-fade:\s*#7c3aed/);
+  it('o cartão de vidro tem o anel de 1px que acende no canto', () => {
+    expect(css).toMatch(/\.lmf-glass::after \{[^}]*mask-composite: exclude/s);
   });
 });

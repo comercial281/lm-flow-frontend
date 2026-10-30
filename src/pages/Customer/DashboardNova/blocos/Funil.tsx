@@ -33,7 +33,7 @@ const gravarForma = (f: Forma) => {
 };
 
 /** O desenho afunila sempre no mesmo formato: a última faixa fica com esta largura (%). */
-const LARGURA_FINAL = 44;
+const LARGURA_FINAL = 30;
 /** Força da cor da última faixa (%): no claro o funil clareia até aqui, sem perder o contraste do texto branco. */
 const FORCA_FINAL = 78;
 

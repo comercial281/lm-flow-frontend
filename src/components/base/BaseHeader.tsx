@@ -121,18 +121,19 @@ export default function BaseHeader({
             <div className={`flex gap-3 ${foto ? 'items-center sm:gap-4' : 'items-start'}`}>
               {foto ?? (
                 <div
-                  className="w-1 h-8 rounded-full shrink-0 mt-0.5"
-                  style={{ background: 'linear-gradient(to bottom, #7c3aed, #9333ea)' }}
+                  className="w-1 h-9 rounded-full shrink-0 mt-0.5"
+                  // Risquinho aceso (Vidro violeta, 30/10/2026): lilás → roxo, com brilho.
+                  style={{ background: 'linear-gradient(to bottom, #c58ffa, #5b34d1)', boxShadow: '0 0 14px #8c60f4' }}
                 />
               )}
               <div className="min-w-0">
                 {aoLadoDoTitulo ? (
                   <div className="flex flex-wrap items-center gap-2">
-                    <h1 className="break-words text-2xl font-bold tracking-tight leading-8 text-sidebar-foreground">{title}</h1>
+                    <h1 className="break-words text-[26px] sm:text-[30px] font-semibold tracking-[-0.02em] leading-[1.15] text-sidebar-foreground">{title}</h1>
                     {aoLadoDoTitulo}
                   </div>
                 ) : (
-                  <h1 className="break-words text-2xl font-bold tracking-tight leading-8 text-sidebar-foreground">{title}</h1>
+                  <h1 className="break-words text-[26px] sm:text-[30px] font-semibold tracking-[-0.02em] leading-[1.15] text-sidebar-foreground">{title}</h1>
                 )}
                 {subtitle && (
                   <p className="text-sm leading-5 text-sidebar-foreground/70 mt-1">{subtitle}</p>

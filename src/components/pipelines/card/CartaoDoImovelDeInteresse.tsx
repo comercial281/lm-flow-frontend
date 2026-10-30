@@ -119,7 +119,7 @@ export default function CartaoDoImovelDeInteresse({
             )}
           </div>
         )}
-        <span className="absolute left-2 top-2 rounded bg-white px-1.5 py-0.5 text-xs font-medium text-foreground shadow-sm">
+        <span className="absolute left-2 top-2 rounded bg-white px-1.5 py-0.5 text-xs font-medium text-zinc-900 shadow-sm">
           {imovel.code}
         </span>
         {compacto && <span className="absolute right-2 top-2 shadow-sm">{situacao}</span>}
