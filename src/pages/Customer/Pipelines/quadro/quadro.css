@@ -1,0 +1,93 @@
+/*
+ * Quadro do funil no Vidro violeta (spec 2026-10-30-vidro-violeta-telas-design.md).
+ * Sem desfoque: o quadro carrega muitos cards e o notebook do corretor sofre.
+ * A largura da coluna (w-80) e o espaço entre colunas (gap-6) não mudam: as
+ * setas ‹ › andam 344 px (PASSO_DA_SETA).
+ */
+
+/* Coluna: superfície clara e leve, canto de 20 px, sem sombra. */
+.quadro-coluna {
+  background: rgba(255, 255, 255, 0.55);
+  border-color: rgba(43, 33, 117, 0.07);
+  border-radius: 20px;
+  box-shadow: none;
+  animation: quadro-sobe 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.dark .quadro-coluna {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.07);
+}
+
+/* Topo: sai a faixa grossa e o fundo tingido; entra um fio de 3 px aceso na cor
+   da etapa (--etapa, passada pela coluna). Sem cor de etapa, o roxo da marca. */
+.quadro-coluna-topo {
+  position: relative;
+  border-top-width: 0;
+  border-bottom-color: transparent;
+  background: transparent;
+  padding-top: 18px;
+  border-radius: 20px 20px 0 0;
+}
+.quadro-coluna-topo::before {
+  content: '';
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  top: 0;
+  height: 3px;
+  border-radius: 0 0 4px 4px;
+  background: var(--etapa, #8c60f4);
+  box-shadow: 0 0 14px var(--etapa, #8c60f4);
+}
+.quadro-coluna-nome {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.quadro-coluna-total {
+  background: color-mix(in srgb, var(--etapa, #8c60f4) 14%, transparent);
+  color: var(--foreground);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Card: canto de 16 px, sombra roxa leve; no escuro, o vidro leve do cartão da
+   casa. No mouse sobe 2 px e acende um contorno roxo. O card sendo arrastado não
+   leva esta classe (o fantasma do arrasto não pode deslocar). */
+.quadro-card {
+  border-radius: 16px;
+  border-color: rgba(43, 33, 117, 0.07);
+  background: var(--card);
+  box-shadow: 0 1px 2px rgba(43, 33, 117, 0.05), 0 12px 28px -18px rgba(43, 33, 117, 0.35);
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.35s ease, border-color 0.2s ease;
+}
+.dark .quadro-card {
+  border-color: rgba(255, 255, 255, 0.07);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.025)), var(--background);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.06) inset, 0 16px 34px -18px rgba(0, 0, 0, 0.7);
+}
+.quadro-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(140, 96, 244, 0.5);
+  box-shadow: 0 2px 4px rgba(43, 33, 117, 0.06), 0 22px 40px -20px rgba(91, 52, 209, 0.45);
+}
+.dark .quadro-card:hover {
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.08) inset, 0 24px 44px -18px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(140, 96, 244, 0.35);
+}
+.quadro-card-foto {
+  box-shadow: 0 0 0 2px var(--card), 0 0 0 3.5px rgba(140, 96, 244, 0.35);
+}
+
+@keyframes quadro-sobe {
+  from { opacity: 0; transform: translateY(8px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .quadro-coluna,
+  .quadro-card {
+    animation: none;
+    transition: none;
+  }
+  .quadro-card:hover { transform: none; }
+}
