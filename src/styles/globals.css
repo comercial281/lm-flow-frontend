@@ -102,7 +102,7 @@
   --input: #e3def3;
   --ring: #8c60f4;
   --radius: 1rem;
-  --sidebar: rgba(255, 255, 255, 0.62);
+  --sidebar: #fcfbfe;
   --sidebar-foreground: #0b0b1a;
   --sidebar-primary: #5b34d1;
   --sidebar-primary-foreground: #ffffff;
@@ -148,7 +148,7 @@
   --border: rgba(255, 255, 255, 0.09);
   --input: rgba(255, 255, 255, 0.1);
   --ring: #8c60f4;
-  --sidebar: rgba(20, 20, 52, 0.55);
+  --sidebar: #11102a;
   --sidebar-foreground: #ffffff;
   --sidebar-primary: #8c60f4;
   --sidebar-primary-foreground: #ffffff;
@@ -645,8 +645,11 @@ button[role='switch'][data-state='unchecked'],
   border-bottom-color: var(--sidebar-border) !important;
   box-shadow: none !important;
 }
+/* O token --sidebar é opaco (gaveta do celular, cartões e listas usam ele por cima do
+   conteúdo); a transparência do vidro é só aqui, no menu do computador. */
 @media (min-width: 768px) {
   [aria-label='Menu lateral'] {
+    background: rgba(255, 255, 255, 0.62);
     margin: 12px 0 12px 12px;
     border: 1px solid var(--sidebar-border);
     border-radius: 24px;
@@ -655,6 +658,7 @@ button[role='switch'][data-state='unchecked'],
     box-shadow: 0 24px 60px -30px rgba(43, 33, 117, 0.35), inset 0 1px 0 #ffffff;
   }
   .dark [aria-label='Menu lateral'] {
+    background: rgba(20, 20, 52, 0.55);
     box-shadow: 0 24px 60px -24px rgba(0, 0, 0, 0.75), inset 0 1px 0 rgba(255, 255, 255, 0.12);
   }
 }
