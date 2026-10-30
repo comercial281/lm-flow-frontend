@@ -72,6 +72,7 @@ import type {
 } from '@/types/chat/search';
 import { telefone } from '@/lib/formato';
 import { esperaDoLead, horaDoItem } from '@/features/conversas/itemDaLista';
+import SegmentadoDeLista from '@/components/base/SegmentadoDeLista';
 
 interface ChatSidebarProps {
   mobileView: 'list' | 'chat';
@@ -671,30 +672,13 @@ const ChatSidebar = ({
           />
         </div>
 
-        <div className="flex items-center gap-1 rounded-lg border border-border bg-muted/40 p-0.5">
-          {PILULAS.map(({ id, rotulo }) => {
-            const ativa = pilula === id;
-            const arquivadas = id === 'arquivadas';
-            return (
-              <button
-                key={id}
-                type="button"
-                aria-pressed={ativa}
-                onClick={() => handleChangePilula(id)}
-                className={`flex flex-1 items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-medium transition-all ${
-                  ativa
-                    ? arquivadas
-                      ? 'bg-orange-100 text-orange-700 shadow-sm dark:bg-orange-950/40 dark:text-orange-400'
-                      : 'bg-background text-foreground shadow-sm'
-                    : 'text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                {arquivadas && <Archive className="h-3 w-3" />}
-                {rotulo}
-              </button>
-            );
-          })}
-        </div>
+        <SegmentadoDeLista
+          rotulo="Filtrar conversas"
+          cheio
+          valor={pilula}
+          aoEscolher={handleChangePilula}
+          opcoes={PILULAS.map(({ id, rotulo }) => (id === 'arquivadas' ? { id, rotulo, icone: Archive, laranja: true } : { id, rotulo }))}
+        />
 
         <div className="flex items-center justify-between">
           <span className="text-sm text-muted-foreground">
