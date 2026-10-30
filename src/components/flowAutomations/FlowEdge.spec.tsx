@@ -46,4 +46,13 @@ describe('Linha do construtor', () => {
     renderEdge({ deletable: false });
     expect(screen.queryByRole('button', { name: 'Cortar conexão' })).toBeNull();
   });
+
+  // Dono (29/10/2026), depois do Organizar: "prefiro voltar pra curva mas
+  // organizar dessa forma que tá agora". Curva, sem trecho reto nem quina.
+  it('a linha é curva, também quando desce pra outra linha do desenho', () => {
+    renderEdge({ selected: false, targetX: 360, targetY: 200 });
+    const d = document.querySelector('path.react-flow__edge-path')?.getAttribute('d') ?? '';
+    expect(d).toMatch(/C/);
+    expect(d).not.toMatch(/[LQ]/);
+  });
 });
