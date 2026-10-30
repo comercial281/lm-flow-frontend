@@ -104,9 +104,10 @@ html.dark[data-ds='a'] {
 }
 
 /* Fundo vivo: grade + bolhas que derivam devagar, SÓ na Dashboard (o componente
-   mora lá). No claro, só a grade: as bolhas viravam mancha roxa (Tony, 30/10). */
+   mora lá). Só no escuro: no claro as bolhas viravam mancha e a grade incomodava. */
 .ds-fundo-vivo { display: none; }
-html[data-ds='a']:not(.dark) .ds-fundo-vivo .ds-bolha { display: none; }
+/* No claro, nem bolha nem grade: fundo liso (Tony, 30/10: "não curti as linhas do modo branco"). */
+html[data-ds='a']:not(.dark) .ds-fundo-vivo { display: none; }
 html[data-ds='a'] .ds-fundo-vivo {
   display: block;
   position: fixed;
