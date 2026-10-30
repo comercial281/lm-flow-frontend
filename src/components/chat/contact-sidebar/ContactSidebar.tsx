@@ -204,6 +204,7 @@ const ContactSidebar: React.FC<ContactSidebarProps> = ({
 
       {/* Sidebar */}
       <div
+        data-vv="painel-do-lead"
         className={`
         border-l bg-background flex flex-col
         fixed md:static left-0 md:left-auto right-0 md:right-auto bottom-0 md:bottom-auto z-40 md:z-auto

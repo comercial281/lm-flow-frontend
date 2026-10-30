@@ -215,6 +215,7 @@ export function FlowStartNode({ data }: NodeProps) {
   return (
     <div
       data-testid="bloco-inicio"
+      data-vv="inicio"
       data-highlighted={highlighted ? 'true' : undefined}
       className={cn(
         'rounded-lg border-2 bg-emerald-50 dark:bg-emerald-950/40 shadow-sm',
@@ -266,6 +267,8 @@ export function FlowNodeCard({ id, data, selected }: NodeProps) {
     <div
       data-highlighted={highlighted ? 'true' : undefined}
       data-guide={guideMark?.state}
+      data-vv="bloco"
+      data-selecionado={selected || editing ? 'true' : undefined}
       className={cn(
         'relative rounded-lg border bg-card shadow-sm transition-shadow',
         can.edit && 'cursor-pointer',
@@ -294,7 +297,7 @@ export function FlowNodeCard({ id, data, selected }: NodeProps) {
         </span>
       )}
 
-      <div className="flex items-center justify-between gap-1 rounded-t-lg px-3 py-1.5 text-xs font-semibold text-white" style={{ backgroundColor: color }}>
+      <div data-vv="faixa" className="flex items-center justify-between gap-1 rounded-t-lg px-3 py-1.5 text-xs font-semibold text-white" style={{ backgroundColor: color }}>
         {renaming ? (
           <Input
             aria-label="Nome do bloco"

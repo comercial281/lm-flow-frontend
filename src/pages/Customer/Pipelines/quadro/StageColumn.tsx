@@ -96,20 +96,23 @@ export default function StageColumn({
       id={`etapa-${stage.id}`}
       className={`w-80 flex-shrink-0 rounded-xl transition-shadow ${destacada ? 'ring-2 ring-primary' : ''}`}
     >
-      <div className="bg-muted/40 rounded-xl shadow-sm border border-border h-full flex flex-col">
+      <div data-vv="coluna" className="bg-muted/40 rounded-xl shadow-sm border border-border h-full flex flex-col">
         {/* Stage Header */}
         <div
+          data-vv="coluna-topo"
           className="flex-shrink-0 px-4 py-3 border-b border-border rounded-t-xl border-t-4"
           style={{
             borderTopColor: stage.color,
             backgroundColor: stage.color?.startsWith('#') ? `${stage.color}1f` : undefined,
+            // RASCUNHO: a cor da etapa pro fio aceso do topo (vv-telas.css).
+            ['--vv-etapa' as string]: stage.color,
           }}
         >
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <div className="w-3 h-3 rounded-full" style={{ backgroundColor: stage.color }} />
-              <h3 className="text-sm font-medium text-foreground">{stage.name}</h3>
-              <span className="bg-muted text-muted-foreground text-xs px-2 py-1 rounded-full">
+              <h3 data-vv="coluna-nome" className="text-sm font-medium text-foreground">{stage.name}</h3>
+              <span data-vv="coluna-total" className="bg-muted text-muted-foreground text-xs px-2 py-1 rounded-full">
                 {naColuna}
               </span>
               {/* Stage Total Value */}

@@ -643,6 +643,7 @@ const ChatSidebar = ({
   return (
     <div
       data-tour="chat-sidebar"
+      data-vv="lista-de-conversas"
       className={`
         ${mobileView === 'list' ? 'flex' : 'hidden'} md:flex
         w-full md:w-80 border-r bg-card/50 flex-col h-full
@@ -671,7 +672,7 @@ const ChatSidebar = ({
           />
         </div>
 
-        <div className="flex items-center gap-1 rounded-lg border border-border bg-muted/40 p-0.5">
+        <div data-vv="pilulas" className="flex items-center gap-1 rounded-lg border border-border bg-muted/40 p-0.5">
           {PILULAS.map(({ id, rotulo }) => {
             const ativa = pilula === id;
             const arquivadas = id === 'arquivadas';
@@ -802,6 +803,8 @@ const ChatSidebar = ({
                 conversation,
                 <div
                   key={conversation.id}
+                  data-vv="conversa"
+                  data-selecionada={isSelected ? 'true' : undefined}
                   className={`relative hover:bg-accent cursor-pointer transition-colors ${
                     isSelected ? 'bg-primary/10' : 'border-b border-border/50'
                   }`}

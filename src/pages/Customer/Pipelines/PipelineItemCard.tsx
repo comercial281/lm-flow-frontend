@@ -107,6 +107,7 @@ function PipelineItemCardComponent({
   return (
     <div
       data-card-id={item.id}
+      data-vv="card"
       className={arrastando
         ? 'relative select-none rounded-xl border-2 border-dashed border-primary/40 bg-transparent p-3 [&>*]:invisible'
         : 'group relative cursor-pointer select-none rounded-xl border border-border bg-background p-3 shadow-sm transition-all duration-200 hover:border-primary/30 hover:shadow-md'}

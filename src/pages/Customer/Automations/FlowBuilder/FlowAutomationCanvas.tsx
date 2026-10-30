@@ -963,7 +963,7 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
             )}
 
             {builderTools && (
-            <div className="absolute left-2 top-2 z-10 flex items-center gap-2">
+            <div data-vv="barra-do-construtor" className="absolute left-2 top-2 z-10 flex items-center gap-2">
               <FlowBlocksMenu
                 open={blocksOpen}
                 onOpenChange={closeOrOpenBlocks}

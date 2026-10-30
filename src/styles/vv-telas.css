@@ -1,0 +1,236 @@
+/*
+ * RASCUNHO (spike de 30/10/2026): card do funil, Conversas e construtor na
+ * linguagem do Vidro violeta. Só vale com data-vv-telas no <html> (botão
+ * Antes | Depois). Não vai pro ar como está: a versão escolhida vira PRs.
+ *
+ * Travas respeitadas (diário do front): sem desfoque fora da Dashboard; verde do
+ * WhatsApp no topo, balões e enviar; card do funil mínimo; coluna w-80 + gap-6
+ * (setas ‹ ›); construtor com linhas curvas, cor por grupo, Início verde, nome na
+ * faixa colorida e borda amarela no bloco incompleto; cartões de evento fora da
+ * casa. Movimento só transform/opacidade, uma vez.
+ */
+
+html[data-vv-telas] {
+  --vv-ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --vv-sombra: 0 1px 2px rgba(43, 33, 117, 0.05), 0 12px 28px -18px rgba(43, 33, 117, 0.35);
+  --vv-sombra-alta: 0 2px 4px rgba(43, 33, 117, 0.06), 0 22px 40px -20px rgba(91, 52, 209, 0.45);
+  --vv-anel: rgba(140, 96, 244, 0.5);
+  --vv-superficie: rgba(255, 255, 255, 0.55);
+  --vv-borda: rgba(43, 33, 117, 0.07);
+  --vv-brilho-ativo: linear-gradient(90deg, rgba(140, 96, 244, 0.2), rgba(140, 96, 244, 0.03));
+}
+html.dark[data-vv-telas] {
+  --vv-sombra: 0 1px 0 rgba(255, 255, 255, 0.06) inset, 0 16px 34px -18px rgba(0, 0, 0, 0.7);
+  --vv-sombra-alta: 0 1px 0 rgba(255, 255, 255, 0.08) inset, 0 24px 44px -18px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(140, 96, 244, 0.35);
+  --vv-superficie: rgba(255, 255, 255, 0.03);
+  --vv-borda: rgba(255, 255, 255, 0.07);
+  --vv-brilho-ativo: linear-gradient(90deg, rgba(140, 96, 244, 0.28), rgba(140, 96, 244, 0.04));
+}
+
+/* ═══ FUNIL ═══════════════════════════════════════════════════════════════ */
+/* Coluna: superfície translúcida (sem desfoque), canto de 20 px. O topo perde a
+   faixa grossa e o fundo tingido: vira um fio de 3 px aceso na cor da etapa, com
+   o nome em caixa alta espaçada e o total numa pílula. */
+html[data-vv-telas] [data-vv='coluna'] {
+  background: var(--vv-superficie);
+  border-color: var(--vv-borda);
+  border-radius: 20px;
+  box-shadow: none;
+}
+html[data-vv-telas] [data-vv='coluna-topo'] {
+  position: relative;
+  border-top-width: 0 !important;
+  border-bottom-color: transparent !important;
+  background-color: transparent !important;
+  padding-top: 18px;
+  border-radius: 20px 20px 0 0;
+}
+html[data-vv-telas] [data-vv='coluna-topo']::before {
+  content: '';
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  top: 0;
+  height: 3px;
+  border-radius: 0 0 4px 4px;
+  background: var(--vv-etapa, #8c60f4);
+  box-shadow: 0 0 14px var(--vv-etapa, #8c60f4);
+}
+html[data-vv-telas] [data-vv='coluna-nome'] {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+html[data-vv-telas] [data-vv='coluna-total'] {
+  background: color-mix(in srgb, var(--vv-etapa, #8c60f4) 14%, transparent);
+  color: var(--foreground);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Card: canto de 16 px, sombra roxa leve; no mouse sobe 2 px e acende um anel
+   roxo. Conteúdo igual (card mínimo). */
+html[data-vv-telas] [data-vv='card']:not(.border-dashed) {
+  border-radius: 16px;
+  border-color: var(--vv-borda);
+  background: var(--card);
+  box-shadow: var(--vv-sombra);
+  transition: transform 0.35s var(--vv-ease), box-shadow 0.35s ease, border-color 0.2s;
+}
+html.dark[data-vv-telas] [data-vv='card']:not(.border-dashed) {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.025)), var(--background);
+}
+html[data-vv-telas] [data-vv='card']:not(.border-dashed):hover {
+  transform: translateY(-2px);
+  border-color: var(--vv-anel);
+  box-shadow: var(--vv-sombra-alta);
+}
+html[data-vv-telas] [data-vv='card'].border-dashed { border-radius: 16px; }
+html[data-vv-telas] [data-vv='card'] img.rounded-full,
+html[data-vv-telas] [data-vv='card'] .h-9.w-9.rounded-full {
+  box-shadow: 0 0 0 2px var(--card), 0 0 0 3.5px rgba(140, 96, 244, 0.35);
+}
+html[data-vv-telas] [data-vv='card'] h4 { font-size: 14.5px; letter-spacing: -0.01em; }
+html[data-vv-telas] [data-vv='card'] .rounded-md.px-1\.5 { border-radius: 999px; padding-inline: 8px; }
+/* WhatsApp do card: botão redondo, verde mantido. */
+html[data-vv-telas] [data-vv='card'] .size-8.border-emerald-300,
+html[data-vv-telas] [data-vv='card'] [class*='border-emerald'] { border-radius: 999px; }
+
+/* ═══ CONVERSAS ═══════════════════════════════════════════════════════════ */
+/* Lista: linhas soltas (sem risco entre elas), canto de 14 px; a conversa aberta
+   ganha o mesmo brilho do item ativo do menu, com o fio aceso. O verde do
+   WhatsApp (topo, balões, enviar) e os vistos ficam como estão. */
+html[data-vv-telas] [data-vv='lista-de-conversas'] { background: var(--vv-superficie); }
+html[data-vv-telas] [data-vv='conversa'] {
+  margin: 2px 8px;
+  border-radius: 14px;
+  border-bottom-color: transparent !important;
+  transition: background 0.2s ease;
+}
+html[data-vv-telas] [data-vv='conversa'] > div:first-child[aria-hidden] { display: none; }
+html[data-vv-telas] [data-vv='conversa'][data-selecionada] {
+  background: var(--vv-brilho-ativo) !important;
+}
+html[data-vv-telas] [data-vv='conversa'][data-selecionada]::before {
+  content: '';
+  position: absolute;
+  left: -8px;
+  top: 14px;
+  bottom: 14px;
+  width: 3px;
+  border-radius: 0 4px 4px 0;
+  background: linear-gradient(#c58ffa, #5b34d1);
+  box-shadow: 0 0 14px #8c60f4;
+}
+html[data-vv-telas] [data-vv='conversa'] .rounded-full.h-10,
+html[data-vv-telas] [data-vv='conversa'] img.rounded-full {
+  box-shadow: 0 0 0 2px var(--card), 0 0 0 3.5px rgba(140, 96, 244, 0.3);
+}
+/* Pílulas Todas · Minhas · Sem resposta · Arquivadas: a ativa com o degradê da
+   marca (Arquivadas segue laranja, que é o significado dela). */
+html[data-vv-telas] [data-vv='pilulas'] {
+  border-radius: 13px;
+  background: var(--vv-superficie);
+  border-color: var(--vv-borda);
+  padding: 3px;
+}
+html[data-vv-telas] [data-vv='pilulas'] button { border-radius: 10px; }
+html[data-vv-telas] [data-vv='pilulas'] button[aria-pressed='true']:not(:has(svg)) {
+  background-image: linear-gradient(135deg, #4b2fe2 0%, #8c60f4 100%);
+  color: #fff;
+  box-shadow: 0 8px 18px -10px rgba(140, 96, 244, 0.9);
+}
+html[data-vv-telas] [data-vv='lista-de-conversas'] input { border-radius: 13px; }
+
+/* Painel do lead: mesma superfície da lista; título de seção em caixa alta. */
+html[data-vv-telas] [data-vv='painel-do-lead'] { background: var(--vv-superficie); }
+html[data-vv-telas] [data-vv='painel-do-lead'] h3,
+html[data-vv-telas] [data-vv='painel-do-lead'] h4 { letter-spacing: 0.02em; }
+
+/* ═══ CONSTRUTOR ══════════════════════════════════════════════════════════ */
+/* Fundo de pontos roxos bem leves. Linhas curvas e cores dos grupos intactas. */
+html[data-vv-telas] .react-flow { --xy-background-pattern-color: rgba(91, 52, 209, 0.22); }
+html.dark[data-vv-telas] .react-flow { --xy-background-pattern-color: rgba(197, 143, 250, 0.16); }
+
+/* Bloco: canto de 16 px, sombra roxa, faixa com brilho por cima da cor do grupo;
+   selecionado acende um halo roxo (no lugar do anel duro). */
+html[data-vv-telas] [data-vv='bloco'] {
+  border-radius: 16px;
+  box-shadow: var(--vv-sombra);
+  transition: box-shadow 0.3s ease, transform 0.3s var(--vv-ease);
+}
+html[data-vv-telas] [data-vv='bloco']:hover { box-shadow: var(--vv-sombra-alta); }
+html[data-vv-telas] [data-vv='bloco'][data-selecionado] {
+  --tw-ring-shadow: 0 0 0 0 transparent !important;
+  box-shadow: 0 0 0 2px #8c60f4, 0 0 0 7px rgba(140, 96, 244, 0.18), var(--vv-sombra-alta) !important;
+}
+html[data-vv-telas] [data-vv='faixa'] {
+  border-radius: 15px 15px 0 0;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0) 70%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  letter-spacing: 0.01em;
+}
+html.dark[data-vv-telas] [data-vv='bloco'].bg-card {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.025)), var(--background);
+}
+/* Início: verde mantido, mesma forma dos outros. */
+html[data-vv-telas] [data-vv='inicio'] {
+  border-radius: 16px;
+  box-shadow: 0 1px 2px rgba(5, 150, 105, 0.08), 0 14px 30px -18px rgba(5, 150, 105, 0.5);
+}
+html[data-vv-telas] [data-vv='inicio'] > div:first-child { border-radius: 13px 13px 0 0; }
+
+/* Linha: um pouco mais grossa; a selecionada (tesoura) acende em roxo. */
+html[data-vv-telas] .react-flow__edge-path { stroke-width: 2px; }
+html[data-vv-telas] .react-flow__edge.selected .react-flow__edge-path { filter: drop-shadow(0 0 6px rgba(140, 96, 244, 0.6)); }
+/* Pontos de entrada/saída com contorno claro. */
+html[data-vv-telas] .react-flow__handle { box-shadow: 0 0 0 2px var(--card); }
+
+/* Barra Blocos · Simular · Organizar: pílulas de vidro claro, sem desfoque. */
+html[data-vv-telas] [data-vv='barra-do-construtor'] [data-slot='button'] {
+  border-radius: 12px;
+  border-color: var(--vv-borda);
+  box-shadow: var(--vv-sombra) !important;
+}
+
+/* Entrada: cards do funil e linhas de Conversas sobem uma vez ao abrir. */
+@keyframes vv-sobe { from { opacity: 0; transform: translateY(8px); } }
+html[data-vv-telas] [data-vv='coluna'] { animation: vv-sobe 0.6s var(--vv-ease) both; }
+html[data-vv-telas] [data-vv='conversa'] { animation: vv-sobe 0.45s var(--vv-ease) both; }
+@media (prefers-reduced-motion: reduce) {
+  html[data-vv-telas] [data-vv] { animation: none !important; transition: none !important; }
+}
+
+/* ═══ Botão do rascunho ═══════════════════════════════════════════════════ */
+.vv-troca {
+  position: fixed;
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-50%);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px;
+  border-radius: 14px;
+  background: rgba(17, 17, 20, 0.88);
+  color: #fff;
+  font: 500 12.5px/1 'Poppins', system-ui, sans-serif;
+  box-shadow: 0 18px 40px -16px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+.vv-troca-rotulo { padding: 0 8px 0 6px; color: rgba(255, 255, 255, 0.55); white-space: nowrap; }
+.vv-troca button {
+  border: 0;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.72);
+  padding: 8px 14px;
+  border-radius: 10px;
+  cursor: pointer;
+  font: inherit;
+}
+.vv-troca button:hover { color: #fff; background: rgba(255, 255, 255, 0.08); }
+.vv-troca button[aria-pressed='true'] { background: #fff; color: #111114; }
+@media (max-width: 640px) { .vv-troca-rotulo { display: none; } }

@@ -40,6 +40,7 @@ import { WelcomeModal } from '@/components/WelcomeModal';
 import ConnectNumberPrompt from '@/components/numbers/ConnectNumberPrompt';
 import GlobalCommandPalette from '@/components/command-palette/GlobalCommandPalette';
 import SupportWidget from '@/components/support/SupportWidget';
+import { AntesDepois } from '@/components/rascunho/AntesDepois';
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -215,6 +216,9 @@ export default function MainLayout({ children }: MainLayoutProps) {
         </main>
 
       </div>
+
+      {/* RASCUNHO: Antes | Depois das telas */}
+      <AntesDepois />
 
       {/* Busca global (Cmd+K) */}
       <GlobalCommandPalette
