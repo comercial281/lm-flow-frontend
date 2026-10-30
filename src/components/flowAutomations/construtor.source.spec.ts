@@ -40,4 +40,21 @@ describe('construtor.css', () => {
     expect(i).toBeGreaterThan(-1);
     expect(css.slice(i)).toMatch(/\.fluxo-bloco[\s\S]*transition: none/);
   });
+
+  it('o anel amarelo do guia (passo atual) aparece no bloco e no Início', () => {
+    // O ring-4 do Tailwind fica em @layer e perde pro box-shadow do bloco: o anel mora aqui.
+    expect(bloco(".fluxo-bloco[data-highlighted='true'], .fluxo-inicio[data-highlighted='true']")).toMatch(/0 0 0 4px rgba\(251, 191, 36, 0\.8\)/);
+  });
+
+  it('o Início aberto acende o mesmo halo do bloco selecionado', () => {
+    expect(bloco(".fluxo-inicio[data-selecionado='true']")).toMatch(/0 0 0 2px #8c60f4, 0 0 0 7px rgba\(140, 96, 244, 0\.18\)/);
+  });
+
+  it('não arredonda o filho do Início pelo CSS (o canto é do próprio cabeçalho)', () => {
+    expect(css).not.toMatch(/\.fluxo-inicio > :first-child/);
+  });
+
+  it('a sombra dos botões da barra não apaga o anel de foco do teclado', () => {
+    expect(css).toMatch(/\.fluxo-barra \[data-slot='button'\]:not\(:focus-visible\) \{[^}]*box-shadow/);
+  });
 });

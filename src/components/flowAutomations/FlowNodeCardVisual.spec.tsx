@@ -66,6 +66,19 @@ describe('bloco do construtor no Vidro violeta', () => {
     const inicio = screen.getByTestId('bloco-inicio');
     expect(inicio).toHaveClass('fluxo-inicio');
     expect(inicio).toHaveClass('border-emerald-500');
+    // O cabeçalho verde tem o canto do cartão (14 px dentro da borda de 2 px): não vaza.
+    expect(screen.getByText('Início').parentElement).toHaveClass('rounded-t-[14px]');
+  });
+
+  it('o Início aberto marca data-selecionado (halo do CSS), sem o anel do Tailwind', () => {
+    render(
+      <ReactFlowProvider>
+        <FlowStartNode {...({ id: 'inicio', data: { summary: 'Quando o lead chega', hint: null, editing: true, onEdit: vi.fn() } } as never)} />
+      </ReactFlowProvider>,
+    );
+    const inicio = screen.getByTestId('bloco-inicio');
+    expect(inicio).toHaveAttribute('data-selecionado', 'true');
+    expect(inicio).not.toHaveClass('ring-2');
   });
 });
 

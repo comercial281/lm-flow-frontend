@@ -191,7 +191,7 @@ export function FlowStartNode({ data }: NodeProps) {
   const { summary, hint, problem, editing, highlighted, fixed, numberLine, onEdit } = data as unknown as FlowStartNodeData;
   const body = (
     <>
-      <div className="flex items-center gap-2 rounded-t-md bg-emerald-500 px-3 py-1.5 text-xs font-semibold text-white">
+      <div className="flex items-center gap-2 rounded-t-[14px] bg-emerald-500 px-3 py-1.5 text-xs font-semibold text-white">
         <Zap className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
         <span className="flex-1">Início</span>
         {!fixed && <Pencil className="h-3 w-3 opacity-80" aria-hidden="true" />}
@@ -216,21 +216,21 @@ export function FlowStartNode({ data }: NodeProps) {
     <div
       data-testid="bloco-inicio"
       data-highlighted={highlighted ? 'true' : undefined}
+      data-selecionado={editing ? 'true' : undefined}
       className={cn(
         'fluxo-inicio border-2 bg-emerald-50 dark:bg-emerald-950/40',
         problem ? 'border-amber-500' : 'border-emerald-500',
-        editing && 'ring-2 ring-primary',
         highlighted && HIGHLIGHT_CLASS,
       )}
       style={{ width: NODE_WIDTH }}
     >
       {fixed ? (
-        <div className="rounded-lg" role="group" aria-label={`Início. Quando: ${summary}`}>{body}</div>
+        <div className="rounded-[14px]" role="group" aria-label={`Início. Quando: ${summary}`}>{body}</div>
       ) : (
         <button
           type="button"
           onClick={own(onEdit)}
-          className="block w-full text-left rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          className="block w-full text-left rounded-[14px] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
           aria-label={`Início. Quando: ${summary}. Abrir o gatilho`}
         >
           {body}

@@ -10178,6 +10178,7 @@ Armadilhas:
 1. `construtor.css` não muda o desenho (`d`) nem a cor (`stroke`) das linhas: a cor de cada saída vem do grafo (Respondeu verde, Não respondeu cinza). Trava em `construtor.source.spec.ts`.
 2. Bloco selecionado não leva classe de borda (nem amarela): o halo cobre. Não selecionado e incompleto, a borda amarela volta (teste em `FlowNodeCardVisual.spec.tsx`).
 3. `line-clamp` nunca no mesmo elemento que padding vertical.
+4. Anel feito com `ring-*` do Tailwind some em `fluxo-bloco`/`fluxo-inicio`: o utilitário fica em `@layer utilities` e perde pro `box-shadow` do `construtor.css` (fora de camada). Por isso o anel amarelo do guia (`data-highlighted`) e o halo do Início aberto (`data-selecionado`) moram no `construtor.css`.
 
 Não reabrir sem o dono pedir.
 

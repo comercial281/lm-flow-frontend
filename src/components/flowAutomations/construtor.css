@@ -45,8 +45,14 @@
   border-radius: 16px;
   box-shadow: 0 1px 2px rgba(5, 150, 105, 0.08), 0 14px 30px -18px rgba(5, 150, 105, 0.5);
 }
-.fluxo-inicio > :first-child {
-  border-radius: 13px 13px 0 0;
+.fluxo-inicio[data-selecionado='true'] {
+  box-shadow: 0 0 0 2px #8c60f4, 0 0 0 7px rgba(140, 96, 244, 0.18), 0 14px 30px -18px rgba(5, 150, 105, 0.5);
+}
+
+/* Passo atual do guia: anel amarelo (o ring-4 do Tailwind fica em @layer e perde
+   pro box-shadow acima; a classe animate-pulse continua piscando). */
+.fluxo-bloco[data-highlighted='true'], .fluxo-inicio[data-highlighted='true'] {
+  box-shadow: 0 0 0 4px rgba(251, 191, 36, 0.8), 0 12px 28px -18px rgba(43, 33, 117, 0.35);
 }
 
 /* Linha: 2 px; a clicada (tesoura) brilha roxo. Pontos com contorno do cartão. */
@@ -63,6 +69,9 @@
 /* Barra Blocos · Simular · Organizar. */
 .fluxo-barra [data-slot='button'] {
   border-radius: 12px;
+}
+/* Sem a sombra no foco do teclado: o anel de foco do botão também é box-shadow. */
+.fluxo-barra [data-slot='button']:not(:focus-visible) {
   box-shadow: 0 1px 2px rgba(43, 33, 117, 0.05), 0 12px 28px -18px rgba(43, 33, 117, 0.35);
 }
 
