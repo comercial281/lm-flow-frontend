@@ -68,3 +68,17 @@ describe('bloco do construtor no Vidro violeta', () => {
     expect(inicio).toHaveClass('border-emerald-500');
   });
 });
+
+describe('resumo do bloco Mensagem', () => {
+  it('o resumo recorta em 2 linhas sem invadir "Pelo número do responsável"', () => {
+    const longo = 'Oi, posso fazer uma simulação de entrada e parcela pra você ver se cabe no bolso? Só me responder com um sim que eu já te mando os números certinhos.';
+    renderCard(msg({ config: { message: longo, send_from: 'owner' } }));
+    const linhaDoNumero = screen.getByText('Pelo número do responsável pelo lead');
+    expect(linhaDoNumero.className).not.toMatch(/-mt-/);
+    const recorte = document.querySelector('.line-clamp-2') as HTMLElement;
+    expect(recorte).not.toBeNull();
+    // O espaço em volta fica num contêiner por fora: padding dentro do recorte mostra a 3ª linha cortada.
+    expect(recorte.className).not.toMatch(/\bp[ytb]?-\d/);
+  });
+});
+
