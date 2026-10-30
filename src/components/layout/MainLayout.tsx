@@ -40,6 +40,7 @@ import { WelcomeModal } from '@/components/WelcomeModal';
 import ConnectNumberPrompt from '@/components/numbers/ConnectNumberPrompt';
 import GlobalCommandPalette from '@/components/command-palette/GlobalCommandPalette';
 import SupportWidget from '@/components/support/SupportWidget';
+import { FundoVivo, TrocaDeVisual } from '@/components/rascunho/TrocaDeVisual';
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -179,7 +180,8 @@ export default function MainLayout({ children }: MainLayoutProps) {
     // Sem transição na altura de propósito: animar faria a barra chegar
     // atrasada em relação ao teclado (`transition-colors` só afeta cores).
     <PendingOffersProvider>
-    <div className="flex flex-col h-[calc(100dvh-var(--keyboard-inset,0px))] bg-background transition-colors duration-150 ease-in-out">
+    <div data-ds-casca className="flex flex-col h-[calc(100dvh-var(--keyboard-inset,0px))] bg-background transition-colors duration-150 ease-in-out">
+      <FundoVivo />
 
       {/* Ofertas da roleta esperando aceite — só aparece quando há alguma */}
       <PendingOffersBanner />
@@ -206,7 +208,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
         <Sidebar isCollapsed={isCollapsed} secoes={secoes} rodape={rodape} />
 
         {/* Main Content — as páginas com abas leem o menu filtrado daqui. */}
-        <main className="flex-1 overflow-auto bg-background transition-colors duration-150 ease-in-out">
+        <main data-ds-miolo className="flex-1 overflow-auto bg-background transition-colors duration-150 ease-in-out">
           <MenuProvider value={secoes}>
             <NomeDaAba pagina={paginaDaAba} cliente={nomeDaConta}>
               <div className="h-full">{children}</div>
@@ -215,6 +217,9 @@ export default function MainLayout({ children }: MainLayoutProps) {
         </main>
 
       </div>
+
+      {/* RASCUNHO: seletor das propostas de visual */}
+      <TrocaDeVisual />
 
       {/* Busca global (Cmd+K) */}
       <GlobalCommandPalette

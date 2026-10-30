@@ -1,0 +1,673 @@
+/*
+ * RASCUNHO (spike) — propostas de design system, 30/10/2026.
+ * Nada daqui vai pro ar: vive só na branch claude/ds-propostas e na prévia da
+ * Vercel. Liga pelo seletor flutuante (TrocaDeVisual), que carimba
+ * data-ds="a" | "b" no <html>. Sem o atributo, o app é o de hoje.
+ *
+ *   A · Vidro violeta  — irmã do Portal do Cliente do Hub (Giovani, 30/10).
+ *   B · Claro refinado — premium contido: neutro, roxo só na ação.
+ *
+ * Cores em hex/rgba de propósito (o oklch de hoje some no Chrome < 111).
+ */
+
+/* ── Fontes ─────────────────────────────────────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap');
+
+/* ═══════════════════════════════════════════════════════════════════════
+ * A · VIDRO VIOLETA
+ * ═══════════════════════════════════════════════════════════════════════ */
+html[data-ds='a'] {
+  --ds-ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --ds-grad: linear-gradient(135deg, #4b2fe2 0%, #8c60f4 100%);
+  --ds-grad-texto: linear-gradient(100deg, #8c60f4 0%, #c58ffa 100%);
+  --ds-blob-a: #8c60f4;
+  --ds-blob-b: #c58ffa;
+  --ds-blob-c: #5b34d1;
+  --ds-blob-op: 0.22;
+  --ds-grade: rgba(43, 33, 117, 0.045);
+  --ds-anel-alto: rgba(255, 255, 255, 1);
+  --ds-anel-tinta: rgba(91, 52, 209, 0.3);
+
+  --background: #f4f2fb;
+  --foreground: #0b0b1a;
+  --card: #ffffff;
+  --card-foreground: #0b0b1a;
+  --popover: #ffffff;
+  --popover-foreground: #0b0b1a;
+  --primary: #5b34d1;
+  --primary-foreground: #ffffff;
+  --secondary: #eeeafb;
+  --secondary-foreground: #1d1745;
+  --muted: #efecf8;
+  --muted-foreground: #5f5c75;
+  --accent: #ebe4fe;
+  --accent-foreground: #2b2175;
+  --destructive: #e11d48;
+  --destructive-foreground: #ffffff;
+  --border: #e3def3;
+  --input: #e3def3;
+  --ring: #8c60f4;
+  --radius: 1rem;
+  --sidebar: rgba(255, 255, 255, 0.62);
+  --sidebar-foreground: #0b0b1a;
+  --sidebar-primary: #5b34d1;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: rgba(91, 52, 209, 0.07);
+  --sidebar-accent-foreground: #1d1745;
+  --sidebar-border: rgba(43, 33, 117, 0.08);
+  --sidebar-ring: #8c60f4;
+  --chart-1: #5b34d1;
+  --chart-2: #8c60f4;
+  --chart-3: #c58ffa;
+  --chart-4: #3ddc97;
+  --chart-5: #f5b84b;
+}
+
+html.dark[data-ds='a'] {
+  --ds-blob-a: #5b34d1;
+  --ds-blob-b: #8c60f4;
+  --ds-blob-c: #2b2175;
+  --ds-blob-op: 0.55;
+  --ds-grade: rgba(255, 255, 255, 0.035);
+  --ds-anel-alto: rgba(255, 255, 255, 0.34);
+  --ds-anel-tinta: rgba(140, 96, 244, 0.45);
+
+  --background: #0b0b1a;
+  --foreground: #ffffff;
+  --card: #13122b;
+  --card-foreground: #ffffff;
+  --popover: #16152f;
+  --popover-foreground: #ffffff;
+  --primary: #8c60f4;
+  --primary-foreground: #ffffff;
+  --secondary: #1b1a3a;
+  --secondary-foreground: #ffffff;
+  --muted: #1a1937;
+  --muted-foreground: #a8a6c4;
+  --accent: #242150;
+  --accent-foreground: #ffffff;
+  --destructive: #ff3b5c;
+  --border: rgba(255, 255, 255, 0.09);
+  --input: rgba(255, 255, 255, 0.1);
+  --ring: #8c60f4;
+  --sidebar: rgba(20, 20, 52, 0.55);
+  --sidebar-foreground: #ffffff;
+  --sidebar-primary: #8c60f4;
+  --sidebar-accent: rgba(255, 255, 255, 0.06);
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: rgba(255, 255, 255, 0.08);
+  --chart-1: #8c60f4;
+  --chart-2: #c58ffa;
+  --chart-3: #5b34d1;
+  --chart-4: #3ddc97;
+  --chart-5: #f5b84b;
+}
+
+/* Fundo vivo: grade + bolhas que derivam devagar. Fica atrás de tudo, sem clique. */
+html[data-ds='a'] body {
+  background:
+    radial-gradient(1200px 700px at 78% -10%, color-mix(in srgb, var(--ds-blob-b) 18%, transparent), transparent 60%),
+    radial-gradient(900px 600px at -10% 60%, color-mix(in srgb, var(--ds-blob-c) 16%, transparent), transparent 60%),
+    var(--background);
+  background-attachment: fixed;
+}
+.ds-fundo-vivo { display: none; }
+html[data-ds='a'] .ds-fundo-vivo {
+  display: block;
+  position: fixed;
+  inset: 0;
+  /* -1 dentro do #root (que tem z-index próprio): acima do fundo da página, abaixo de tudo. */
+  z-index: -1;
+  pointer-events: none;
+  overflow: hidden;
+}
+.ds-fundo-vivo .ds-grade {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(var(--ds-grade) 1px, transparent 1px),
+    linear-gradient(90deg, var(--ds-grade) 1px, transparent 1px);
+  background-size: 56px 56px;
+  -webkit-mask-image: radial-gradient(ellipse at 60% 30%, #000 30%, transparent 80%);
+  mask-image: radial-gradient(ellipse at 60% 30%, #000 30%, transparent 80%);
+}
+.ds-fundo-vivo .ds-bolha {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(90px);
+  opacity: var(--ds-blob-op);
+  will-change: transform;
+}
+.ds-fundo-vivo .ds-bolha-a { width: 620px; height: 620px; background: var(--ds-blob-a); top: -180px; left: 22%; animation: ds-deriva-1 26s ease-in-out infinite; }
+.ds-fundo-vivo .ds-bolha-b { width: 520px; height: 520px; background: var(--ds-blob-b); bottom: -200px; right: -80px; animation: ds-deriva-2 32s ease-in-out infinite; }
+.ds-fundo-vivo .ds-bolha-c { width: 460px; height: 460px; background: var(--ds-blob-c); top: 38%; left: -160px; animation: ds-deriva-3 38s ease-in-out infinite; }
+@keyframes ds-deriva-1 { 50% { transform: translate(160px, 90px) scale(1.12); } }
+@keyframes ds-deriva-2 { 50% { transform: translate(-200px, -120px) scale(0.9); } }
+@keyframes ds-deriva-3 { 50% { transform: translate(120px, -140px) scale(1.15); } }
+
+/* O conteúdo passa por cima do fundo vivo. */
+html[data-ds='a'] #root { position: relative; z-index: 1; }
+
+/* Cartão da casa (Card do ds) fora da Dashboard: vidro leve, sem desfoque
+   (lista longa com backdrop-filter pesa no notebook do corretor). */
+html[data-ds='a'] [data-slot='card'] {
+  border-radius: 20px;
+  border-color: var(--border);
+  box-shadow: 0 1px 0 var(--ds-anel-alto) inset, 0 18px 40px -24px rgba(43, 33, 117, 0.35) !important;
+}
+html.dark[data-ds='a'] [data-slot='card'] {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.035)), var(--background);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.1) inset, 0 24px 60px -24px rgba(0, 0, 0, 0.75) !important;
+}
+
+/* Botão principal: o degradê da marca do Portal. */
+html[data-ds='a'] [data-slot='button'][data-variant='default'].bg-primary:not([aria-pressed]) {
+  background-image: var(--ds-grad) !important;
+  box-shadow: 0 10px 24px -12px rgba(140, 96, 244, 0.9) !important;
+  border-radius: 13px;
+  transition: transform 0.2s var(--ds-ease), box-shadow 0.3s ease, filter 0.2s;
+}
+html[data-ds='a'] [data-slot='button'][data-variant='default'].bg-primary:not([aria-pressed]):hover {
+  transform: translateY(-1px);
+  box-shadow: 0 16px 30px -12px rgba(140, 96, 244, 1) !important;
+}
+
+/* ── Dashboard (A) ──────────────────────────────────────────────────── */
+html[data-ds='a'] .lmf {
+  --lmf-bg: transparent;
+  --lmf-surface: rgba(255, 255, 255, 0.78);
+  --lmf-surface-2: rgba(255, 255, 255, 0.6);
+  --lmf-accent: #5b34d1;
+  --lmf-accent-2: #8c60f4;
+  --lmf-accent-soft: rgba(91, 52, 209, 0.08);
+  --lmf-text: #0b0b1a;
+  --lmf-muted: rgba(11, 11, 26, 0.62);
+  --lmf-faint: rgba(11, 11, 26, 0.42);
+  --lmf-border: rgba(43, 33, 117, 0.1);
+  --lmf-border-strong: rgba(43, 33, 117, 0.18);
+  --lmf-radius: 22px;
+  --lmf-radius-sm: 13px;
+  --lmf-up: #0f9f65;
+  --lmf-down: #e11d48;
+  --lmf-warn: #b7700b;
+  --lmf-data: #5b34d1;
+  --lmf-data-muted: #c9b8fb;
+  --lmf-data-soft: rgba(91, 52, 209, 0.09);
+  --lmf-funil: #5b34d1;
+  --lmf-data-fade: #ffffff;
+  --lmf-highlight-text: #5b34d1;
+  --lmf-glass-from: rgba(255, 255, 255, 0.82);
+  --lmf-glass-to: rgba(255, 255, 255, 0.55);
+  --lmf-glass-top: #ffffff;
+  --lmf-shadow: 0 24px 50px -28px rgba(43, 33, 117, 0.38);
+  --lmf-track: rgba(43, 33, 117, 0.07);
+  --lmf-control-bg: rgba(255, 255, 255, 0.7);
+  --lmf-tooltip-bg: rgba(255, 255, 255, 0.96);
+  --lmf-grid-line: rgba(43, 33, 117, 0.07);
+  font-family: 'Poppins', system-ui, sans-serif;
+}
+html.dark[data-ds='a'] .lmf {
+  --lmf-surface: rgba(255, 255, 255, 0.06);
+  --lmf-surface-2: rgba(255, 255, 255, 0.04);
+  --lmf-accent: #8c60f4;
+  --lmf-accent-2: #c58ffa;
+  --lmf-accent-soft: rgba(140, 96, 244, 0.16);
+  --lmf-text: #ffffff;
+  --lmf-muted: rgba(255, 255, 255, 0.66);
+  --lmf-faint: rgba(255, 255, 255, 0.42);
+  --lmf-border: rgba(255, 255, 255, 0.1);
+  --lmf-border-strong: rgba(255, 255, 255, 0.18);
+  --lmf-up: #3ddc97;
+  --lmf-down: #ff3b5c;
+  --lmf-warn: #f5b84b;
+  --lmf-data: #8c60f4;
+  --lmf-data-muted: rgba(140, 96, 244, 0.5);
+  --lmf-data-soft: rgba(140, 96, 244, 0.16);
+  --lmf-funil: #6d45e8;
+  --lmf-data-fade: #2b2175;
+  --lmf-highlight-text: #c58ffa;
+  --lmf-glass-from: rgba(255, 255, 255, 0.085);
+  --lmf-glass-to: rgba(255, 255, 255, 0.045);
+  --lmf-glass-top: rgba(255, 255, 255, 0.14);
+  --lmf-shadow: 0 24px 60px -24px rgba(0, 0, 0, 0.75);
+  --lmf-track: rgba(255, 255, 255, 0.07);
+  --lmf-control-bg: rgba(255, 255, 255, 0.06);
+  --lmf-tooltip-bg: rgba(16, 14, 40, 0.96);
+  --lmf-grid-line: rgba(255, 255, 255, 0.06);
+}
+
+/* Vidro de verdade só na Dashboard: desfoque + anel de 1px que acende no canto. */
+html[data-ds='a'] .lmf .lmf-glass,
+html.dark[data-ds='a'] .lmf .lmf-glass {
+  background: linear-gradient(180deg, var(--lmf-glass-from), var(--lmf-glass-to));
+  border: 1px solid transparent;
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  box-shadow: var(--lmf-shadow), inset 0 1px 0 var(--lmf-glass-top);
+  transition: transform 0.45s var(--ds-ease), box-shadow 0.45s ease;
+}
+html[data-ds='a'] .lmf .lmf-glass::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  pointer-events: none;
+  background: linear-gradient(135deg, var(--ds-anel-alto), var(--lmf-border) 35%, var(--lmf-border) 65%, var(--ds-anel-tinta));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+}
+html[data-ds='a'] .lmf .lmf-glass:hover { transform: translateY(-3px); }
+html[data-ds='a'] .lmf .lmf-glass::before { display: none; }
+
+/* Título de cartão vira rótulo em caixa alta espaçada (o "eyebrow" do Portal). */
+html[data-ds='a'] .lmf .lmf-card-title {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+html[data-ds='a'] .lmf .lmf-card { padding: 22px 24px; }
+
+/* Os números: cartão com orbe roxo no canto e número grande. */
+html[data-ds='a'] .lmfn-numero { min-height: 168px; justify-content: space-between; overflow: hidden; }
+html[data-ds='a'] .lmfn-numero > * { position: relative; z-index: 1; }
+html[data-ds='a'] .lmfn-numero .ds-orbe {
+  position: absolute;
+  width: 220px;
+  height: 220px;
+  border-radius: 50%;
+  filter: blur(50px);
+  opacity: 0.42;
+  right: -60px;
+  top: -70px;
+  pointer-events: none;
+  background: var(--ds-blob-b);
+  z-index: 0;
+}
+.ds-orbe { display: none; }
+html[data-ds='a'] .ds-orbe { display: block; }
+html[data-ds='a'] .lmfn-numero-valor {
+  font-size: 44px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  margin-top: 18px !important;
+}
+html[data-ds='a'] .lmfn-numero .lmf-kpi-delta {
+  padding: 5px 10px;
+  border-radius: 99px;
+  background: color-mix(in srgb, currentColor 14%, transparent);
+  font-weight: 600;
+}
+html[data-ds='a'] button.lmfn-numero:hover { border-color: transparent; }
+
+/* Saudação com a palavra em degradê ("Bom dia, Tony"). */
+html[data-ds='a'] .ds-titulo-destaque {
+  background: var(--ds-grad-texto);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+html[data-ds='a'] .lmf h1 { font-size: 34px; font-weight: 300; letter-spacing: -0.02em; }
+html[data-ds='a'] .lmf h1 .ds-titulo-destaque { font-weight: 700; }
+
+/* Segmentos e funil no desenho do Portal. */
+html[data-ds='a'] .lmfn-seg { border-radius: 13px; background: var(--lmf-control-bg); border-color: var(--lmf-border); }
+html[data-ds='a'] .lmfn-seg button[aria-pressed='true'] { background: var(--ds-grad); color: #fff; box-shadow: 0 8px 18px -10px rgba(140, 96, 244, 0.9); }
+html[data-ds='a'] .lmfn-funil-faixa { border-radius: 12px; }
+html[data-ds='a'] .lmf-bar-fill { background: var(--ds-grad); }
+html[data-ds='a'] .lmf-kpi-icon { border-radius: 12px; background: var(--lmf-accent-soft); color: var(--lmf-accent-2); }
+
+/* ═══════════════════════════════════════════════════════════════════════
+ * B · CLARO REFINADO
+ * ═══════════════════════════════════════════════════════════════════════ */
+html[data-ds='b'] {
+  --ds-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ds-fonte: 'Geist', 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+  --background: #f7f7f8;
+  --foreground: #111114;
+  --card: #ffffff;
+  --card-foreground: #111114;
+  --popover: #ffffff;
+  --popover-foreground: #111114;
+  --primary: #6d28d9;
+  --primary-foreground: #ffffff;
+  --secondary: #f2f2f4;
+  --secondary-foreground: #18181b;
+  --muted: #f2f2f4;
+  --muted-foreground: #6b6b76;
+  --accent: #f4f0ff;
+  --accent-foreground: #4c1d95;
+  --destructive: #dc2626;
+  --destructive-foreground: #ffffff;
+  --border: #e8e8eb;
+  --input: #e4e4e8;
+  --ring: #7c3aed;
+  --radius: 0.75rem;
+  --sidebar: #fbfbfc;
+  --sidebar-foreground: #18181b;
+  --sidebar-primary: #6d28d9;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #f0f0f2;
+  --sidebar-accent-foreground: #111114;
+  --sidebar-border: #ececef;
+  --sidebar-ring: #7c3aed;
+  --chart-1: #6d28d9;
+  --chart-2: #a78bfa;
+  --chart-3: #0ea5e9;
+  --chart-4: #10b981;
+  --chart-5: #f59e0b;
+  font-family: var(--ds-fonte);
+  font-feature-settings: 'ss01', 'cv11';
+}
+
+html.dark[data-ds='b'] {
+  --background: #0a0a0b;
+  --foreground: #ededef;
+  --card: #111113;
+  --card-foreground: #ededef;
+  --popover: #141416;
+  --popover-foreground: #ededef;
+  --primary: #8b5cf6;
+  --secondary: #18181b;
+  --secondary-foreground: #ededef;
+  --muted: #18181b;
+  --muted-foreground: #8e8e98;
+  --accent: #1c1830;
+  --accent-foreground: #ddd6fe;
+  --border: #1f1f23;
+  --input: #26262b;
+  --ring: #a78bfa;
+  --sidebar: #0d0d0f;
+  --sidebar-foreground: #ededef;
+  --sidebar-primary: #8b5cf6;
+  --sidebar-accent: #18181b;
+  --sidebar-accent-foreground: #ededef;
+  --sidebar-border: #1c1c20;
+  --chart-1: #8b5cf6;
+  --chart-2: #c4b5fd;
+}
+
+html[data-ds='b'] body { letter-spacing: -0.005em; }
+html[data-ds='b'] h1, html[data-ds='b'] h2, html[data-ds='b'] h3 { letter-spacing: -0.022em; }
+
+/* Cartão: branco chapado, borda fina, sombra quase nenhuma; sobe 1px no hover. */
+html[data-ds='b'] [data-slot='card'] {
+  border-radius: 14px;
+  box-shadow: 0 1px 2px rgba(16, 16, 20, 0.04), 0 0 0 1px var(--border) !important;
+  border-color: transparent;
+}
+html.dark[data-ds='b'] [data-slot='card'] {
+  box-shadow: 0 0 0 1px var(--border), 0 1px 0 rgba(255, 255, 255, 0.03) inset !important;
+}
+
+/* Botão principal: roxo liso, sem degradê; o brilho é uma linha clara no topo. */
+html[data-ds='b'] [data-slot='button'][data-variant='default'].bg-primary:not([aria-pressed]) {
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0)) !important;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.2) inset, 0 1px 2px rgba(76, 29, 149, 0.4), 0 0 0 1px #5b21b6 !important;
+  border-radius: 9px;
+  transition: transform 0.15s var(--ds-ease), filter 0.15s;
+}
+html[data-ds='b'] [data-slot='button'][data-variant='default'].bg-primary:not([aria-pressed]):active { transform: scale(0.98); }
+
+/* ── Dashboard (B) ──────────────────────────────────────────────────── */
+html[data-ds='b'] .lmf {
+  --lmf-bg: transparent;
+  --lmf-surface: #ffffff;
+  --lmf-surface-2: #fafafa;
+  --lmf-accent: #6d28d9;
+  --lmf-accent-2: #7c3aed;
+  --lmf-accent-soft: #f4f4f5;
+  --lmf-text: #111114;
+  --lmf-muted: #6b6b76;
+  --lmf-faint: #a1a1aa;
+  --lmf-border: #e8e8eb;
+  --lmf-border-strong: #d8d8dd;
+  --lmf-radius: 14px;
+  --lmf-radius-sm: 9px;
+  --lmf-up: #059669;
+  --lmf-down: #dc2626;
+  --lmf-warn: #b45309;
+  --lmf-data: #6d28d9;
+  --lmf-data-muted: #ddd6fe;
+  --lmf-data-soft: #f5f3ff;
+  --lmf-funil: #6d28d9;
+  --lmf-shadow: 0 1px 2px rgba(16, 16, 20, 0.04);
+  --lmf-track: #f1f1f3;
+  --lmf-grid-line: #f0f0f2;
+  font-family: var(--ds-fonte);
+}
+html.dark[data-ds='b'] .lmf {
+  --lmf-surface: #111113;
+  --lmf-surface-2: #151517;
+  --lmf-accent: #a78bfa;
+  --lmf-accent-2: #8b5cf6;
+  --lmf-accent-soft: #18181b;
+  --lmf-text: #ededef;
+  --lmf-muted: #8e8e98;
+  --lmf-faint: #5c5c66;
+  --lmf-border: #1f1f23;
+  --lmf-border-strong: #2a2a30;
+  --lmf-up: #34d399;
+  --lmf-down: #f87171;
+  --lmf-warn: #fbbf24;
+  --lmf-data: #8b5cf6;
+  --lmf-data-muted: #3b2f63;
+  --lmf-data-soft: rgba(139, 92, 246, 0.12);
+  --lmf-funil: #7c3aed;
+  --lmf-data-fade: #2e1065;
+  --lmf-glass-from: #111113;
+  --lmf-glass-to: #111113;
+  --lmf-glass-top: transparent;
+  --lmf-shadow: none;
+  --lmf-track: #1c1c20;
+  --lmf-control-bg: #111113;
+  --lmf-tooltip-bg: rgba(20, 20, 22, 0.98);
+  --lmf-grid-line: #1c1c20;
+}
+html[data-ds='b'] .lmf .lmf-glass,
+html.dark[data-ds='b'] .lmf .lmf-glass {
+  background: var(--lmf-surface);
+  border: 1px solid var(--lmf-border);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: var(--lmf-shadow);
+  transition: border-color 0.2s ease, box-shadow 0.25s ease, transform 0.25s var(--ds-ease);
+}
+html[data-ds='b'] .lmf .lmf-glass::before { display: none; }
+html[data-ds='b'] .lmf .lmf-glass:hover {
+  border-color: var(--lmf-border-strong);
+  box-shadow: 0 1px 2px rgba(16, 16, 20, 0.04), 0 8px 24px -12px rgba(16, 16, 20, 0.12);
+}
+html.dark[data-ds='b'] .lmf .lmf-glass:hover { box-shadow: 0 8px 24px -12px rgba(0, 0, 0, 0.6); }
+
+html[data-ds='b'] .lmf .lmf-card-title { font-size: 13px; font-weight: 500; color: var(--lmf-muted); letter-spacing: -0.005em; }
+html[data-ds='b'] .lmfn-numero-valor {
+  font-size: 36px;
+  font-weight: 600;
+  letter-spacing: -0.035em;
+  line-height: 1.05;
+  color: var(--lmf-text);
+}
+html[data-ds='b'] .lmfn-numero { gap: 4px; }
+html[data-ds='b'] .lmfn-numero .lmf-kpi-delta { font-size: 12px; font-weight: 500; margin-top: 6px; }
+html[data-ds='b'] button.lmfn-numero:hover { border-color: var(--lmf-border-strong); }
+html[data-ds='b'] .lmf h1 { font-size: 26px; font-weight: 600; letter-spacing: -0.03em; }
+html[data-ds='b'] .ds-titulo-destaque { color: var(--lmf-text); }
+html[data-ds='b'] .lmfn-seg { background: #f1f1f3; border-color: transparent; border-radius: 9px; }
+html.dark[data-ds='b'] .lmfn-seg { background: #18181b; }
+html[data-ds='b'] .lmfn-seg button[aria-pressed='true'] { background: var(--lmf-surface); box-shadow: 0 1px 2px rgba(16, 16, 20, 0.08), 0 0 0 1px var(--lmf-border); }
+html[data-ds='b'] .lmfn-funil-faixa { border-radius: 8px; }
+html[data-ds='b'] .lmf-kpi-icon { background: var(--lmf-data-soft); color: var(--lmf-data); border-radius: 8px; }
+html[data-ds='b'] .lmfn-secao h2 { font-size: 15px; font-weight: 600; letter-spacing: -0.02em; }
+
+/* ═══════════════════════════════════════════════════════════════════════
+ * CASCA (menu lateral, barra do topo, cabeçalho das páginas)
+ * ═══════════════════════════════════════════════════════════════════════ */
+/* A: a casca fica transparente pro fundo vivo aparecer; menu e topo de vidro. */
+html[data-ds='a'] [data-ds-casca],
+html[data-ds='a'] [data-ds-miolo] { background: transparent; }
+html[data-ds='a'] [role='banner'] {
+  background: color-mix(in srgb, var(--background) 55%, transparent);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  border-bottom-color: var(--sidebar-border);
+  box-shadow: none;
+}
+html[data-ds='a'] [aria-label='Menu lateral'] {
+  margin: 12px 0 12px 12px;
+  border: 1px solid var(--sidebar-border);
+  border-radius: 24px;
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  box-shadow: 0 24px 60px -30px rgba(43, 33, 117, 0.35), inset 0 1px 0 var(--ds-anel-alto);
+}
+html.dark[data-ds='a'] [aria-label='Menu lateral'] {
+  box-shadow: 0 24px 60px -24px rgba(0, 0, 0, 0.75), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+html[data-ds] [aria-label='Menu lateral'] a[aria-current='page'] {
+  position: relative;
+  border-color: transparent !important;
+}
+html[data-ds='a'] [aria-label='Menu lateral'] a[aria-current='page'] {
+  background: linear-gradient(90deg, rgba(140, 96, 244, 0.26), rgba(140, 96, 244, 0.04)) !important;
+  color: var(--foreground) !important;
+  box-shadow: none !important;
+  border-radius: 13px;
+}
+html[data-ds='a'] [aria-label='Menu lateral'] a[aria-current='page']::before {
+  content: '';
+  position: absolute;
+  left: -8px;
+  top: 9px;
+  bottom: 9px;
+  width: 3px;
+  border-radius: 0 4px 4px 0;
+  background: linear-gradient(#c58ffa, #5b34d1);
+  box-shadow: 0 0 14px #8c60f4;
+}
+html[data-ds='a'] [aria-label='Menu lateral'] a[aria-current='page'] svg { color: #8c60f4 !important; }
+html.dark[data-ds='a'] [aria-label='Menu lateral'] a[aria-current='page'] svg { color: #c58ffa !important; }
+html[data-ds='a'] [aria-label='Menu lateral'] a { border-radius: 13px; transition: background 0.25s, color 0.25s; }
+
+/* B: casca neutra; item ativo é uma pílula cinza com o ícone roxo e um fio à esquerda. */
+html[data-ds='b'] [role='banner'] { box-shadow: none; background: var(--card); border-bottom-color: var(--border); }
+html[data-ds='b'] [aria-label='Menu lateral'] { border-right-color: var(--sidebar-border); }
+html[data-ds='b'] [aria-label='Menu lateral'] a { border-radius: 8px; }
+html[data-ds='b'] [aria-label='Menu lateral'] a[aria-current='page'] {
+  background: var(--sidebar-accent) !important;
+  background-image: none !important;
+  color: var(--foreground) !important;
+  box-shadow: inset 0 0 0 1px var(--sidebar-border) !important;
+}
+html[data-ds='b'] [aria-label='Menu lateral'] a[aria-current='page'] svg { color: var(--primary) !important; }
+html[data-ds='b'] [aria-label='Menu lateral'] a[aria-current='page']::before {
+  content: '';
+  position: absolute;
+  left: -6px;
+  top: 8px;
+  bottom: 8px;
+  width: 2px;
+  border-radius: 2px;
+  background: var(--primary);
+}
+
+/* Cabeçalho das páginas (BaseHeader). */
+html[data-ds='a'] [data-linha-do-titulo] h1 { font-size: 30px; line-height: 1.15; font-weight: 600; letter-spacing: -0.02em; }
+html[data-ds='a'] [data-linha-do-titulo] .w-1.h-8 {
+  background: linear-gradient(#c58ffa, #5b34d1) !important;
+  box-shadow: 0 0 14px #8c60f4;
+  height: 2.25rem;
+}
+html[data-ds='b'] [data-linha-do-titulo] h1 { font-size: 24px; line-height: 1.2; font-weight: 600; letter-spacing: -0.028em; }
+html[data-ds='b'] [data-linha-do-titulo] .w-1.h-8 { display: none; }
+
+/* ═══════════════════════════════════════════════════════════════════════
+ * MOVIMENTO (A e B) — só transform/opacity, uma vez ao abrir a página.
+ * Atraso em cascata: --ds-i = linha, --ds-j = coluna, --ds-k = cartão do número.
+ * ═══════════════════════════════════════════════════════════════════════ */
+html[data-ds] .lmfn-blocos .lmfn-coluna > :not(:has(.lmfn-numeros)),
+html[data-ds] .lmfn-numeros > *,
+html[data-ds] .lmfn-blocos > .lmfn-secao {
+  animation: ds-sobe 0.75s var(--ds-ease) both;
+  animation-delay: calc(var(--ds-i, 0) * 90ms + var(--ds-j, 0) * 60ms + var(--ds-k, 0) * 70ms + 60ms);
+}
+html[data-ds='b'] .lmfn-blocos .lmfn-coluna > :not(:has(.lmfn-numeros)),
+html[data-ds='b'] .lmfn-numeros > *,
+html[data-ds='b'] .lmfn-blocos > .lmfn-secao {
+  animation-name: ds-sobe-curto;
+  animation-duration: 0.5s;
+  animation-delay: calc(var(--ds-i, 0) * 50ms + var(--ds-j, 0) * 35ms + var(--ds-k, 0) * 40ms + 30ms);
+}
+@keyframes ds-sobe { from { opacity: 0; transform: translateY(18px); } }
+@keyframes ds-sobe-curto { from { opacity: 0; transform: translateY(6px); } }
+
+/* Funil se revela da esquerda (recorte, pra não espremer o texto); barra cresce. */
+html[data-ds] .lmfn-funil-faixa { animation: ds-revela 0.9s var(--ds-ease) both; animation-delay: 0.3s; }
+html[data-ds] .lmf-bar-fill { transform-origin: left center; animation: ds-cresce 0.9s var(--ds-ease) both; animation-delay: 0.3s; }
+@keyframes ds-revela { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+@keyframes ds-cresce { from { transform: scaleX(0); } }
+
+/* Ponto "ao vivo" pulsando. */
+.ds-ao-vivo {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #3ddc97;
+  box-shadow: 0 0 0 0 rgba(61, 220, 151, 0.7);
+  animation: ds-pulso 2s infinite;
+}
+@keyframes ds-pulso { 70% { box-shadow: 0 0 0 8px rgba(61, 220, 151, 0); } 100% { box-shadow: 0 0 0 0 rgba(61, 220, 151, 0); } }
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-ds] *,
+  html[data-ds] *::before,
+  html[data-ds] *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+ * SELETOR FLUTUANTE (só no rascunho)
+ * ═══════════════════════════════════════════════════════════════════════ */
+.ds-troca {
+  position: fixed;
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-50%);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px;
+  border-radius: 14px;
+  background: rgba(17, 17, 20, 0.86);
+  color: #fff;
+  font: 500 12.5px/1 'Geist', 'Inter', system-ui, sans-serif;
+  box-shadow: 0 18px 40px -16px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+.ds-troca-rotulo { padding: 0 8px 0 6px; color: rgba(255, 255, 255, 0.55); white-space: nowrap; }
+.ds-troca button {
+  border: 0;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.72);
+  padding: 8px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  white-space: nowrap;
+  font: inherit;
+  transition: background 0.2s, color 0.2s;
+}
+.ds-troca button:hover { color: #fff; background: rgba(255, 255, 255, 0.08); }
+.ds-troca button[aria-pressed='true'] { background: #fff; color: #111114; }
+@media (max-width: 640px) {
+  .ds-troca-rotulo { display: none; }
+  .ds-troca button { padding: 8px 9px; }
+}

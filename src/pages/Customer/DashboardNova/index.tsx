@@ -120,9 +120,9 @@ const DashboardNova: React.FC = () => {
               {linha.subtitulo && <p>{linha.subtitulo}</p>}
             </div>
           )}
-          <div className={`lmfn-linha${linha.principal ? ' lmfn-linha-principal' : ''}${linha.lateral ? ' lmfn-linha-lateral' : ''}`}>
-            {linha.colunas.map(coluna => (
-              <div key={coluna.join('-')} className="lmfn-coluna">
+          <div className={`lmfn-linha${linha.principal ? ' lmfn-linha-principal' : ''}${linha.lateral ? ' lmfn-linha-lateral' : ''}`} style={{ '--ds-i': i } as React.CSSProperties}>
+            {linha.colunas.map((coluna, j) => (
+              <div key={coluna.join('-')} className="lmfn-coluna" style={{ '--ds-j': j } as React.CSSProperties}>
                 {coluna.map(id => {
                   const Bloco = COMPONENTES[id];
                   return <Bloco key={id} {...ctx} nivelTitulo={nivelTitulo} />;
@@ -148,7 +148,8 @@ const DashboardNova: React.FC = () => {
         )}
         cabecalho={(
           <Cabecalho
-            nome={`${saudacao()}${primeiroNome ? `, ${primeiroNome}` : ''}`}
+            // RASCUNHO: o nome em degradê na proposta A (span sem efeito nas outras).
+            nome={primeiroNome ? <>{saudacao()}, <span className="ds-titulo-destaque">{primeiroNome}</span></> : saudacao()}
             visao={visao}
             scope={scope}
             carregando={pendente}

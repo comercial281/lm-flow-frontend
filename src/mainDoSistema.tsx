@@ -8,6 +8,7 @@ import { registerSW } from 'virtual:pwa-register';
 import { toast } from 'sonner';
 import "@evoapi/design-system/styles";
 import './styles/globals.css';
+import './styles/ds-propostas.css'; // RASCUNHO: propostas de design system (claude/ds-propostas)
 import { i18nReady } from './i18n/config'; // Configuração do i18n — carregamento de idioma é assíncrono (backend sob demanda), aguardado abaixo antes de montar o React
 import App from './App.tsx';
 import { consumeMasterSso } from './utils/masterSso';
