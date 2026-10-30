@@ -9,6 +9,8 @@ import { EmptyBlock, GlassCard, Skeleton, tooltipStyle } from '../base/primitive
 import { Heatmap } from '../base/Heatmap';
 import { isAvailable, type Unavailable } from '../base/types';
 import type { ContextoBloco } from '../usePodeAbrir';
+import { useProposta } from '@/components/rascunho/TrocaDeVisual';
+import { GraficoNovo, TrocaDeGrafico, useModoDoGrafico } from './GraficoNovo';
 
 const DIAS = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
 const DIAS_CURTOS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
@@ -78,6 +80,9 @@ const Destaque: React.FC<{ valor: string; legenda: string }> = ({ valor, legenda
 export const LeadsDiaSemana: React.FC<ContextoBloco> = ({ dados, carregando, visao, nivelTitulo }) => {
   const bloco = dados?.leads_by_weekday;
   const titulo = visao === 'corretor' ? 'Seus leads por dia da semana' : 'Leads por dia da semana';
+  // RASCUNHO: nas propostas de visual, curva com troca pra colunas.
+  const novo = useProposta() !== 'atual';
+  const [modo, setModo] = useModoDoGrafico('dia-da-semana');
   if (!isAvailable(bloco)) {
     return <SemDados titulo={titulo} carregando={carregando} temDados={!!dados} bloco={bloco} oQue="os leads por dia da semana" nivel={nivelTitulo} />;
   }
@@ -86,9 +91,12 @@ export const LeadsDiaSemana: React.FC<ContextoBloco> = ({ dados, carregando, vis
   const maior = Math.max(0, ...linhas.map(l => l.leads));
   const topo = maior > 0 ? linhas.findIndex(l => l.leads === maior) : -1;
   return (
-    <GlassCard title={titulo} titleAs={tituloEm(nivelTitulo)}>
+    <GlassCard title={titulo} titleAs={tituloEm(nivelTitulo)} action={novo ? <TrocaDeGrafico modo={modo} aoEscolher={setModo} /> : undefined}>
       <Destaque valor={dia ?? VAZIO} legenda={dia ? 'é o dia que mais chega lead no período' : 'Nenhum lead no período'} />
       <Grafico resumo={`${titulo}: ${linhas.map(l => `${l.nome} ${numero(l.leads)}`).join(', ')}`}>
+        {novo ? (
+          <GraficoNovo id="dia-da-semana" modo={modo} altura={200} destaque={topo} linhas={linhas.map(l => ({ x: l.nome, leads: l.leads }))} />
+        ) : (
         <ResponsiveContainer width="100%" height={190}>
           <BarChart data={linhas} accessibilityLayer={false}>
             <XAxis dataKey="nome" tick={eixo} tickLine={false} axisLine={false} />
@@ -102,6 +110,7 @@ export const LeadsDiaSemana: React.FC<ContextoBloco> = ({ dados, carregando, vis
             </Bar>
           </BarChart>
         </ResponsiveContainer>
+        )}
       </Grafico>
     </GlassCard>
   );
@@ -110,6 +119,8 @@ export const LeadsDiaSemana: React.FC<ContextoBloco> = ({ dados, carregando, vis
 export const LeadsHorario: React.FC<ContextoBloco> = ({ dados, carregando, nivelTitulo }) => {
   const bloco = dados?.leads_by_hour;
   const titulo = 'Leads por horário';
+  const novo = useProposta() !== 'atual';
+  const [modo, setModo] = useModoDoGrafico('horario');
   if (!isAvailable(bloco)) {
     return <SemDados titulo={titulo} carregando={carregando} temDados={!!dados} bloco={bloco} oQue="os leads por horário" nivel={nivelTitulo} />;
   }
@@ -120,12 +131,23 @@ export const LeadsHorario: React.FC<ContextoBloco> = ({ dados, carregando, nivel
     ? `${titulo}: nenhum lead no período`
     : `${titulo}: mais leads às ${pico.hour}h (${numero(pico.leads)}); ${porcentagem(fora, 0)} fora do horário comercial`;
   return (
-    <GlassCard title={titulo} titleAs={tituloEm(nivelTitulo)}>
+    <GlassCard title={titulo} titleAs={tituloEm(nivelTitulo)} action={novo ? <TrocaDeGrafico modo={modo} aoEscolher={setModo} /> : undefined}>
       <Destaque
         valor={fora === null ? VAZIO : porcentagem(fora, 0)}
         legenda={fora === null ? 'Nenhum lead no período' : 'dos leads chegaram fora do horário comercial (8h às 18h)'}
       />
       <Grafico resumo={resumo}>
+        {novo ? (
+          <GraficoNovo
+            id="horario"
+            modo={modo}
+            altura={200}
+            intervalo={3}
+            faixa={{ de: `${ABRE}h`, ate: `${FECHA}h` }}
+            destaque={pico && pico.leads > 0 ? bloco.hours.indexOf(pico) : -1}
+            linhas={linhas.map(l => ({ x: l.hora, leads: l.leads }))}
+          />
+        ) : (
         <ResponsiveContainer width="100%" height={190}>
           <AreaChart data={linhas} accessibilityLayer={false}>
             {/* A faixa do horário comercial é cinza neutro (não roxo): não pode se confundir com a área dos leads. */}
@@ -136,6 +158,7 @@ export const LeadsHorario: React.FC<ContextoBloco> = ({ dados, carregando, nivel
             <Area type="monotone" dataKey="leads" stroke="var(--lmf-data)" fill="var(--lmf-data-soft)" strokeWidth={2} />
           </AreaChart>
         </ResponsiveContainer>
+        )}
       </Grafico>
     </GlassCard>
   );
@@ -144,14 +167,25 @@ export const LeadsHorario: React.FC<ContextoBloco> = ({ dados, carregando, nivel
 export const LeadsSeisMeses: React.FC<ContextoBloco> = ({ dados, carregando, nivelTitulo }) => {
   const bloco = dados?.leads_6_months;
   const titulo = 'Leads nos últimos 6 meses';
+  const novo = useProposta() !== 'atual';
+  const [modo, setModo] = useModoDoGrafico('seis-meses');
   if (!isAvailable(bloco)) {
     return <SemDados titulo={titulo} carregando={carregando} temDados={!!dados} bloco={bloco} oQue="os leads dos últimos 6 meses" nivel={nivelTitulo} />;
   }
   const linhas = bloco.months.map(m => ({ mes: rotuloMes(m.month), leads: m.leads }));
   const algum = linhas.some(l => l.leads > 0);
   return (
-    <GlassCard title={titulo} titleAs={tituloEm(nivelTitulo)} subtitle="Leads que entraram no funil, por mês">
-      {algum ? (
+    <GlassCard
+      title={titulo}
+      titleAs={tituloEm(nivelTitulo)}
+      subtitle="Leads que entraram no funil, por mês"
+      action={novo && algum ? <TrocaDeGrafico modo={modo} aoEscolher={setModo} /> : undefined}
+    >
+      {algum && novo ? (
+        <Grafico resumo={`${titulo}: ${linhas.map(l => `${l.mes} ${numero(l.leads)}`).join(', ')}`}>
+          <GraficoNovo id="seis-meses" modo={modo} altura={220} destaque={linhas.length - 1} linhas={linhas.map(l => ({ x: l.mes, leads: l.leads }))} />
+        </Grafico>
+      ) : algum ? (
         <Grafico resumo={`${titulo}: ${linhas.map(l => `${l.mes} ${numero(l.leads)}`).join(', ')}`}>
           <ResponsiveContainer width="100%" height={210}>
             <BarChart data={linhas} accessibilityLayer={false}>
