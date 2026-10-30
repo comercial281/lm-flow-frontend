@@ -217,7 +217,7 @@ export function FlowStartNode({ data }: NodeProps) {
       data-testid="bloco-inicio"
       data-highlighted={highlighted ? 'true' : undefined}
       className={cn(
-        'rounded-lg border-2 bg-emerald-50 dark:bg-emerald-950/40 shadow-sm',
+        'fluxo-inicio border-2 bg-emerald-50 dark:bg-emerald-950/40',
         problem ? 'border-amber-500' : 'border-emerald-500',
         editing && 'ring-2 ring-primary',
         highlighted && HIGHLIGHT_CLASS,
@@ -266,10 +266,12 @@ export function FlowNodeCard({ id, data, selected }: NodeProps) {
     <div
       data-highlighted={highlighted ? 'true' : undefined}
       data-guide={guideMark?.state}
+      data-selecionado={selected || editing ? 'true' : undefined}
       className={cn(
-        'relative rounded-lg border bg-card shadow-sm transition-shadow',
+        'fluxo-bloco relative border bg-card',
         can.edit && 'cursor-pointer',
-        selected || editing ? 'ring-2 ring-primary' : problem ? 'border-amber-500' : 'border-border',
+        // Selecionado: halo roxo do construtor.css (data-selecionado), no lugar do anel duro.
+        !(selected || editing) && (problem ? 'border-amber-500' : 'border-border'),
         hidden && 'opacity-80',
         highlighted && HIGHLIGHT_CLASS,
       )}
@@ -294,7 +296,7 @@ export function FlowNodeCard({ id, data, selected }: NodeProps) {
         </span>
       )}
 
-      <div className="flex items-center justify-between gap-1 rounded-t-lg px-3 py-1.5 text-xs font-semibold text-white" style={{ backgroundColor: color }}>
+      <div className="fluxo-faixa flex items-center justify-between gap-1 px-3 text-xs font-semibold text-white" style={{ backgroundColor: color }}>
         {renaming ? (
           <Input
             aria-label="Nome do bloco"

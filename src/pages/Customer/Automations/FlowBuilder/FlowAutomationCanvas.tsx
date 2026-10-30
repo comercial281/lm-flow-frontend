@@ -74,6 +74,7 @@ import FlowCanvasCelular from './FlowCanvasCelular';
 import { cn } from '@/lib/utils';
 import Carregando from '@/components/base/Carregando';
 import EmptyState from '@/components/base/EmptyState';
+import '@/components/flowAutomations/construtor.css';
 
 // Canvas do construtor de fluxos. Fonte de verdade é o array `nodes` (árvore
 // de ponteiros); os Node/Edge do React Flow são SEMPRE derivados dele, nunca
@@ -963,7 +964,7 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
             )}
 
             {builderTools && (
-            <div className="absolute left-2 top-2 z-10 flex items-center gap-2">
+            <div className="fluxo-barra absolute left-2 top-2 z-10 flex items-center gap-2">
               <FlowBlocksMenu
                 open={blocksOpen}
                 onOpenChange={closeOrOpenBlocks}
