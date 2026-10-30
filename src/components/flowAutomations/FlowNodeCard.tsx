@@ -4,7 +4,7 @@ import { useRef, useState, type MouseEvent } from 'react';
 import { Input } from '@/components/ui/ds';
 import type { FlowAutomationNode } from '@/types/flowAutomations';
 import {
-  nodeColor, looseOutputs, NODE_WIDTH, TRIGGER_NODE_ID, branchHandles, handleColor, handleLabel, isBranching,
+  nodeColor, looseOutputs, NODE_WIDTH, TRIGGER_NODE_ID, branchHandles, handleColor, handleLabel, isBranching, outputSide,
   type OutputHandle,
 } from '@/lib/flowAutomationGraph';
 import { HIDDEN_BLOCK_NOTICE, blockGroup, blockLabel, isVisibleNode } from '@/features/flowAutomations/palette';
@@ -275,7 +275,10 @@ export function FlowNodeCard({ id, data, selected }: NodeProps) {
       )}
       style={{ width: NODE_WIDTH }}
     >
-      <Handle type="target" position={Position.Left} className="!bg-muted-foreground !w-3 !h-3" />
+      {/* A linha entra pela esquerda ou por cima (Organizar, 29/10/2026): quem
+          escolhe é o canvas, pela posição dos dois blocos (targetSide). */}
+      <Handle type="target" position={Position.Left} id="in" className="!bg-muted-foreground !w-3 !h-3" />
+      <Handle type="target" position={Position.Top} id="in-top" className="!bg-muted-foreground !w-3 !h-3 !opacity-0" />
       {guideMark && (
         <span
           className={cn(
@@ -358,13 +361,14 @@ export function FlowNodeCard({ id, data, selected }: NodeProps) {
       {!branching && (
         <Handle type="source" position={Position.Right} id="out" className="!bg-slate-400 !w-3 !h-3" />
       )}
-      {branching && branches.map((h, i) => (
+      {/* O que segue o caminho sai pela direita; o desvio ("Não", "Respondeu") desce. */}
+      {branching && branches.map(h => (
         <Handle
           key={h}
           type="source"
-          position={Position.Right}
+          position={outputSide(node, h) === 'bottom' ? Position.Bottom : Position.Right}
           id={h}
-          style={{ top: branches.length === 1 ? '50%' : i === 0 ? '35%' : '65%', backgroundColor: handleColor(node.kind, h) }}
+          style={{ backgroundColor: handleColor(node.kind, h) }}
           className="!w-3 !h-3"
         />
       ))}

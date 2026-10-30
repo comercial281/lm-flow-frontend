@@ -36,7 +36,8 @@ export function handleColor(kind: FlowNodeKind, handle: OutputHandle): string {
 }
 
 export const NODE_WIDTH = 260;
-const STEP_X = 320;
+// 100 px entre colunas: cabe o nome da linha ("Não respondeu") sem encostar no cartão.
+export const STEP_X = 360;
 const STEP_Y = 200;
 
 export interface Point {
@@ -44,45 +45,127 @@ export interface Point {
   y: number;
 }
 
-// Layout automático por profundidade/ordem na árvore — só usado pra nó sem
-// pos_x/pos_y salvo (mesma regra do Hub: posição salva sempre manda).
+export type OutputSide = 'right' | 'bottom';
+export type InputSide = 'left' | 'top';
+
+/**
+ * De que lado do cartão sai a linha (Organizar, 29/10/2026): o que segue o
+ * caminho do lead sai pela direita; o desvio desce. Na condição o "Não" desce;
+ * na espera com prazo, o "Respondeu" desce (o "Não respondeu" é a sequência).
+ * Espera "Sem limite" só tem o Respondeu, e ele segue reto.
+ */
+export function outputSide(node: Pick<FlowAutomationNode, 'kind' | 'config'>, handle: OutputHandle): OutputSide {
+  if (node.kind === 'condition' && handle === 'no') return 'bottom';
+  if (node.kind === 'wait_for_reply' && handle === 'yes' && branchHandles(node).includes('no')) return 'bottom';
+  return 'right';
+}
+
+/**
+ * Por onde a linha entra no bloco, pela posição dos dois (vale também pro fluxo
+ * arrumado à mão): descendo pro bloco logo embaixo, entra por cima; saindo pela
+ * direita pra um bloco mais embaixo e mais à frente, desce e entra por cima (não
+ * corre por trás da linha de baixo); o resto entra pela esquerda.
+ */
+export function targetSide(from: OutputSide, source: Point, target: Point): InputSide {
+  const below = target.y > source.y + STEP_Y / 2;
+  if (from === 'bottom') return below && Math.abs(target.x - source.x) < NODE_WIDTH / 2 ? 'top' : 'left';
+  return below && target.x > source.x + NODE_WIDTH ? 'top' : 'left';
+}
+
+interface LayoutOut { target: string; side: OutputSide; down: boolean }
+
+/**
+ * O desenho do Organizar (29/10/2026), usado também pra bloco sem pos_x/pos_y
+ * salvo (posição salva sempre manda). O caminho do lead corre reto da esquerda
+ * pra direita; o desvio desce pra uma linha nova; o "Não" da condição desce
+ * logo embaixo dela, então condições em cascata empilham numa coluna. A coluna
+ * de cada bloco é a do caminho mais longo até ele: o bloco onde vários caminhos
+ * chegam (o Recuperado do follow-up) fica depois do último.
+ */
 export function calculateLayout(nodes: FlowAutomationNode[], initialNodeId: string | null): Record<string, Point> {
   const byId = new Map(nodes.map(n => [n.id, n]));
-  const positions: Record<string, Point> = {};
-  const visited = new Set<string>();
-  let nextRow = 0;
+  const outsOf = (n: FlowAutomationNode): LayoutOut[] => {
+    const handles: OutputHandle[] = isBranching(n) ? branchHandles(n) : ['out'];
+    return handles.flatMap(h => {
+      const target = targetOf(n, h);
+      if (!target || !byId.has(target)) return [];
+      return [{ target, side: outputSide(n, h), down: n.kind === 'condition' && h === 'no' }];
+    });
+  };
+  // Ordem do desenho: o que desce, o que segue reto, os desvios.
+  const ordered = (n: FlowAutomationNode): LayoutOut[] => {
+    const outs = outsOf(n);
+    return [...outs.filter(o => o.down), ...outs.filter(o => !o.down && o.side === 'right'), ...outs.filter(o => !o.down && o.side !== 'right')];
+  };
 
-  function place(id: string | null, depth: number): number {
-    if (!id || visited.has(id) || !byId.has(id)) return nextRow;
-    visited.add(id);
-    const node = byId.get(id)!;
+  const hasIncoming = new Set(nodes.flatMap(n => outsOf(n).map(o => o.target)));
+  const roots = [
+    ...(initialNodeId && byId.has(initialNodeId) ? [initialNodeId] : []),
+    ...nodes.filter(n => n.id !== initialNodeId && !hasIncoming.has(n.id)).map(n => n.id),
+    ...nodes.map(n => n.id), // o que sobrar (só laço) entra por último
+  ];
 
-    if (isBranching(node)) {
-      const handles = branchHandles(node);
-      place(node.next_yes_node_id, depth + 1);
-      const row = nextRow;
-      positions[id] = { x: depth * STEP_X, y: row * STEP_Y };
-      if (handles.includes('no')) place(node.next_no_node_id, depth + 1);
-      if (!node.next_yes_node_id && !(handles.includes('no') && node.next_no_node_id)) nextRow += 1;
-      return row;
-    }
+  // Linha que volta pra trás (laço) não conta pra coluna, senão o desenho não
+  // acaba. A ordem de passagem é a do fluxo do Início (o solto vem depois) e,
+  // dentro dele, o que desce antes do que segue reto, e o desvio por último.
+  const backEdges = new Set<string>();
+  const onStack = new Set<string>();
+  const seen = new Set<string>();
+  const order: string[] = [];
+  const walk = (id: string, postOrder: string[]) => {
+    seen.add(id);
+    onStack.add(id);
+    [...ordered(byId.get(id)!)].reverse().forEach(o => {
+      if (onStack.has(o.target)) backEdges.add(`${id}>${o.target}`);
+      else if (!seen.has(o.target)) walk(o.target, postOrder);
+    });
+    onStack.delete(id);
+    postOrder.push(id);
+  };
+  roots.forEach(id => {
+    if (seen.has(id)) return;
+    const postOrder: string[] = [];
+    walk(id, postOrder);
+    order.push(...postOrder.reverse());
+  });
+  const forward = (id: string) => ordered(byId.get(id)!).filter(o => !backEdges.has(`${id}>${o.target}`));
+  const incoming = new Map<string, Array<LayoutOut & { from: string }>>();
+  order.forEach(id => forward(id).forEach(o => incoming.set(o.target, [...(incoming.get(o.target) ?? []), { ...o, from: id }])));
 
-    const row = nextRow;
-    positions[id] = { x: depth * STEP_X, y: row * STEP_Y };
-    nextRow += 1;
-    place(node.next_node_id, depth + 1);
-    return row;
+  // Coluna = caminho mais longo até o bloco (o "Não" da condição fica na mesma coluna).
+  const column: Record<string, number> = Object.fromEntries(nodes.map(n => [n.id, 0]));
+  const pending = new Map(nodes.map(n => [n.id, (incoming.get(n.id) ?? []).length]));
+  const ready = order.filter(id => pending.get(id) === 0);
+  while (ready.length) {
+    const id = ready.shift()!;
+    forward(id).forEach(o => {
+      column[o.target] = Math.max(column[o.target], column[id] + (o.down ? 0 : 1));
+      pending.set(o.target, pending.get(o.target)! - 1);
+      if (pending.get(o.target) === 0) ready.push(o.target);
+    });
   }
 
-  place(initialNodeId, 1);
-  // Nós órfãos (sem caminho a partir do gatilho) — empilha à parte, senão somem do canvas.
-  nodes.forEach(n => {
-    if (!visited.has(n.id)) {
-      positions[n.id] = { x: -STEP_X, y: nextRow * STEP_Y };
-      nextRow += 1;
-    }
+  // Linha: o bloco segue quem chega mais perto dele (a coluna mais à direita).
+  // Pela direita, na mesma linha; pelo "Não" da condição ou pelo desvio, na de
+  // baixo. Linha ocupada naquela coluna: a próxima livre embaixo.
+  const lane: Record<string, number> = {};
+  const taken = new Set<string>();
+  let lastLane = -1;
+  const freeFrom = (id: string, from: number) => {
+    let l = from;
+    while (taken.has(`${column[id]}:${l}`)) l += 1;
+    return l;
+  };
+  order.forEach(id => {
+    const placed = (incoming.get(id) ?? []).filter(o => o.from in lane);
+    const parent = placed.sort((a, b) => column[b.from] - column[a.from] || lane[b.from] - lane[a.from])[0];
+    const wanted = !parent ? lastLane + 1 : parent.side === 'right' && !parent.down ? lane[parent.from] : lane[parent.from] + 1;
+    lane[id] = freeFrom(id, wanted);
+    taken.add(`${column[id]}:${lane[id]}`);
+    lastLane = Math.max(lastLane, lane[id]);
   });
-  return positions;
+
+  return Object.fromEntries(nodes.map(n => [n.id, { x: column[n.id] * STEP_X, y: lane[n.id] * STEP_Y }]));
 }
 
 export function resolvedPositions(nodes: FlowAutomationNode[], initialNodeId: string | null): Record<string, Point> {
