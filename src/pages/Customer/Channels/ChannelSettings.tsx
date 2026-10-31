@@ -1,5 +1,5 @@
-import { useEffect, useState, useCallback, useMemo } from 'react';
-import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
+import { useParams, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import {
   Card,
   CardContent,
@@ -282,6 +282,7 @@ export default function ChannelSettings() {
   const [isSaving, setIsSaving] = useState(false);
   const [activeTab, setActiveTab] = useState('inbox_settings');
   const [searchParams] = useSearchParams();
+  const location = useLocation();
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [emailSignature, setEmailSignature] = useState('');
   const [isSavingSignature, setIsSavingSignature] = useState(false);
@@ -396,12 +397,19 @@ export default function ChannelSettings() {
   // canal → parear o WhatsApp. Precisa ser efeito e não estado inicial porque
   // `tabs` só existe depois que o inbox carrega — antes disso a aba pedida
   // ainda não está na lista e a troca seria descartada.
+  //
+  // ⚠️ A URL pede a aba UMA vez por navegação (`location.key`); depois, quem
+  // manda é o clique. Com `activeTab` nas dependências, o `?tab=configuration`
+  // que fica no endereço puxava de volta a cada troca e o gestor não saía de
+  // Configuração pra marcar os Colaboradores do número recém-criado.
+  const abaPedidaAtendida = useRef<string | null>(null);
   useEffect(() => {
     const pedida = searchParams.get('tab');
-    if (!pedida || pedida === activeTab) return;
+    if (!pedida || abaPedidaAtendida.current === location.key) return;
     if (!tabs.some(tab => tab.key === pedida)) return;
+    abaPedidaAtendida.current = location.key;
     setActiveTab(pedida);
-  }, [searchParams, tabs, activeTab]);
+  }, [searchParams, tabs, location.key]);
 
   // A aba inicial é a primeira que ESTA pessoa tem.
   //
