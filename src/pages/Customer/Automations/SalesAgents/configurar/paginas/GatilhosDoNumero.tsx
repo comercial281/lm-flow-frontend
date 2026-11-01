@@ -7,9 +7,9 @@
 // agente por "todo lead" sem ninguém ver.
 // ⚠️ "Só alguns" sem condição completa NÃO grava: a linha em branco mora só na tela (como no agente),
 // senão o número ficaria sem lead nenhum. O cartão fica "aberto" até outra escolha.
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import BotoesDeEscolha from '@/components/base/BotoesDeEscolha';
-import type { SalesAgent, AgentNumber } from '@/services/salesAgents/salesAgentsService';
+import type { SalesAgent, AgentNumber, SalesAgentTrigger } from '@/services/salesAgents/salesAgentsService';
 import { estadoDosGatilhos, gatilhosDoEstado, type EstadoDosGatilhos } from '@/features/salesAgents/gatilhosDoNumero';
 import { restricaoDosGatilhos } from '@/features/salesAgents/situacao';
 import { TriggersSection } from '../blocos/TriggersSection';
@@ -23,32 +23,43 @@ const OPCOES: { valor: EstadoDosGatilhos; rotulo: string }[] = [
   { valor: 'proprios', rotulo: 'Só alguns' },
 ];
 
-/** Os outros agentes LIGADOS que atendem o mesmo número (só agente ligado conta pra divisão). */
+/** Os outros agentes LIGADOS que atendem o mesmo número com ele LIGADO (número desligado não divide). */
 export function agentesQueDividem(numero: AgentNumber, agent: SalesAgent, outros: SalesAgent[]): SalesAgent[] {
   return outros.filter((o) => o.id !== agent.id && o.enabled && !o.absorbed_into_id
-    && (o.numbers ?? []).some((n) => String(n.inbox_id) === String(numero.inbox_id)));
+    && (o.numbers ?? []).some((n) => n.enabled !== false && String(n.inbox_id) === String(numero.inbox_id)));
 }
 
 function CartaoDoNumero({ agent, numero, mudar }: { agent: SalesAgent; numero: AgentNumber; mudar: NumerosDoAgente['mudar'] }) {
-  const doServidor = estadoDosGatilhos(numero);
-  const [aberto, setAberto] = useState(doServidor === 'proprios');
+  // ⚠️ O ÚLTIMO VALOR ENVIADO, não o do render: o blur da palavra grava antes do clique em "Os do agente",
+  // e o agente só volta relido depois. Comparar com o servidor velho deixava a palavra gravada.
+  // Zera quando o servidor devolve o número (a releitura é a verdade de novo).
+  const enviado = useRef<{ v: SalesAgentTrigger[] | null } | null>(null);
+  useEffect(() => { enviado.current = null; }, [numero.triggers]);
+  const atuais = enviado.current ? enviado.current.v : numero.triggers;
+  const doServidor = estadoDosGatilhos({ triggers: atuais });
+  const gravarTriggers = (v: SalesAgentTrigger[] | null) => { enviado.current = { v }; return mudar(numero.id, { triggers: v }); };
+  const [aberto, setAberto] = useState(estadoDosGatilhos(numero) === 'proprios');
   // Escolheu outra opção: a palavra pendente do bloco não pode gravar ao desmontar (ressuscitaria o que saiu).
   const escolheuOutra = useRef(false);
   const estado: EstadoDosGatilhos = aberto ? 'proprios' : doServidor;
   const nome = numero.owner_name ?? numero.inbox_name;
   const triggers = useMemo(() => numero.triggers ?? [], [numero.triggers]);
+  const herda = numero.triggers === null || numero.triggers === undefined;
   const doNumero = useMemo(() => ({ ...agent, triggers }) as SalesAgent, [agent, triggers]);
 
   const escolher = async (novo: EstadoDosGatilhos) => {
     escolheuOutra.current = novo !== 'proprios';
     setAberto(novo === 'proprios');
-    const alvo = gatilhosDoEstado(novo, numero.triggers);
+    // Lido AGORA (não do render): o blur que acabou de gravar não passou por um render ainda.
+    const agora = enviado.current ? enviado.current.v : numero.triggers;
+    const estadoAgora = estadoDosGatilhos({ triggers: agora });
+    const alvo = gatilhosDoEstado(novo, agora);
     if (novo === 'proprios') {
       // Sem condição completa não há o que gravar: a linha nasce na tela.
-      if (doServidor !== 'proprios' && alvo && alvo.length > 0) await mudar(numero.id, { triggers: alvo });
+      if (estadoAgora !== 'proprios' && alvo && alvo.length > 0) await gravarTriggers(alvo);
       return;
     }
-    if (doServidor !== novo) await mudar(numero.id, { triggers: alvo });
+    if (estadoAgora !== novo) await gravarTriggers(alvo);
   };
 
   const regra = restricaoDosGatilhos(agent);
@@ -68,8 +79,8 @@ function CartaoDoNumero({ agent, numero, mudar }: { agent: SalesAgent; numero: A
       </div>
       {frase && <p className="text-[13px] text-muted-foreground">{frase}</p>}
       {estado === 'proprios' && (
-        <TriggersSection agent={doNumero} nome={`Condições de ${nome}`} semModo escolheuTodos={escolheuOutra}
-          onSave={(p) => { if (p.triggers) void mudar(numero.id, { triggers: p.triggers }); }} />
+        <TriggersSection agent={doNumero} nome={`Condições de ${nome}`} semModo ultimaFica herdaDoAgente={herda} escolheuTodos={escolheuOutra}
+          onSave={(p) => { if (p.triggers) void gravarTriggers(p.triggers); }} />
       )}
     </div>
   );

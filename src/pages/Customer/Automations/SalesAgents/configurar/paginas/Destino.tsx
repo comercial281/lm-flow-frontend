@@ -122,7 +122,8 @@ export default function Destino({ agent, inboxes, gravar, aoChaveGerada }: Props
   const continuaGravado: ContinueAt = agent.handoff_continue_at ?? 'corretor_number';
   const [servicoAberto, setServicoAberto] = useState(false);
   const [numeroDeAtendimento, setNumeroDeAtendimento] = useState('');
-  const [mensagemDigitada, setMensagemDigitada] = useState('');
+  // Nulo = a pessoa ainda não digitou (vale a salva); '' = apagou de propósito (não ressuscita a salva).
+  const [mensagemDigitada, setMensagemDigitada] = useState<string | null>(null);
   const [faltou, setFaltou] = useState<string | null>(null);
   const continua: ContinueAt = servicoAberto ? 'service_number' : continuaGravado;
   const numeroSalvo = agent.handoff_service_inbox_id ? String(agent.handoff_service_inbox_id) : '';
@@ -142,12 +143,12 @@ export default function Destino({ agent, inboxes, gravar, aoChaveGerada }: Props
     if (!mensagem.trim()) { setFaltou(FALTA_MENSAGEM); return; }
     setFaltou(null);
     void gravar({ handoff_continue_at: 'service_number', handoff_service_inbox_id: numero, handoff_arrival_message: mensagem })
-      .then((ok) => { if (ok) { setServicoAberto(false); setNumeroDeAtendimento(''); setMensagemDigitada(''); } });
+      .then((ok) => { if (ok) { setServicoAberto(false); setNumeroDeAtendimento(''); setMensagemDigitada(null); } });
   };
   const escolherNumeroDeAtendimento = (id: string) => {
     setNumeroDeAtendimento(id);
     if (!id) return;
-    gravarAtendimento(id, mensagemDigitada || mensagemSalva);
+    gravarAtendimento(id, mensagemDigitada ?? mensagemSalva);
   };
   const gravarMensagem = (texto: string) => {
     setMensagemDigitada(texto);

@@ -13,6 +13,7 @@ import { toast } from 'sonner';
 import { Badge, Button } from '@/components/ui/ds';
 import { Secao } from '@/components/base/Secao';
 import Aviso from '@/components/base/Aviso';
+import { propertiesService } from '@/services/properties/propertiesService';
 import { campanhasService, type ItemDeCampanha, type TipoDoImovel } from '@/services/campanhas/campanhasService';
 import type { SalesAgent, SalesAgentOpening } from '@/services/salesAgents/salesAgentsService';
 import { motivoEscrito } from '@/features/salesAgents/erroDoServidor';
@@ -27,10 +28,13 @@ type Campo = 'greeting' | 'intent_question' | 'image_url' | 'audio_url';
 
 const nomeDe = (it: ItemDeCampanha) => it.label || it.ad_title || it.campaign_name || it.match_value || 'Sem nome';
 
-function vende(it: ItemDeCampanha): string {
+function vende(it: ItemDeCampanha, nomes: Record<string, string>): string {
   if (it.sells_scope === 'properties') {
     const n = it.property_ids.length;
-    return n > 0 ? `${n} ${n === 1 ? 'imóvel' : 'imóveis'}` : 'não diz';
+    if (n === 0) return 'não diz';
+    const achados = it.property_ids.map((id) => nomes[String(id)]).filter(Boolean);
+    // Nome do imóvel quando o cadastro responde; senão só a conta.
+    return achados.length === n ? achados.join(', ') : `${n} ${n === 1 ? 'imóvel' : 'imóveis'}`;
   }
   if (it.sells_scope === 'listing_kind') return it.sells_listing_kind ? `tipo ${TIPOS[it.sells_listing_kind]}` : 'um tipo de imóvel';
   if (it.sells_scope === 'catalog') return 'o catálogo';
@@ -55,6 +59,9 @@ export default function ComecoPorCampanha({ agent, gravar }: { agent: SalesAgent
   const [itens, setItens] = useState<ItemDeCampanha[] | null>(null);
   const [falhou, setFalhou] = useState(false);
   const [aberta, setAberta] = useState<string | null>(null);
+  const [nomes, setNomes] = useState<Record<string, string>>({});
+  // ⚠️ Uma criação de linha só em voo por campanha: o blur e o fim do upload podem vir juntos.
+  const criando = useRef(new Map<string, Promise<string>>());
   // Sempre a lista mais nova: a linha pode demorar a criar, e a IA muda enquanto isso.
   const aberturas = useRef<SalesAgentOpening[]>(agent.openings ?? []);
   aberturas.current = agent.openings ?? [];
@@ -68,16 +75,35 @@ export default function ComecoPorCampanha({ agent, gravar }: { agent: SalesAgent
     return () => { vivo = false; };
   }, [agent.id]);
 
+  // Nomes dos imóveis que as campanhas vendem (leitura de fundo; falhou: a linha só conta quantos).
+  const temImoveis = (itens ?? []).some((i) => i.sells_scope === 'properties' && i.property_ids.length > 0);
+  useEffect(() => {
+    if (!temImoveis) return;
+    let vivo = true;
+    propertiesService.list({ per_page: 100 })
+      .then((r) => { if (vivo) setNomes(Object.fromEntries((r.data ?? []).map((p) => [String(p.id), p.title]))); })
+      .catch(() => undefined);
+    return () => { vivo = false; };
+  }, [temImoveis]);
+
   const gravarCampo = async (it: ItemDeCampanha, campo: Campo, valor: string | null) => {
     const texto = valor && valor.trim() ? valor : null;
     let ref = refDe(it);
     if (!ref) {
       // Campanha sem linha: sem nada a gravar não se cria linha à toa.
       if (!texto || it.kind === 'form' || !it.match_kind || !it.match_value) return;
+      let promessa = criando.current.get(it.key);
+      if (!promessa) {
+        promessa = campanhasService.criarLinha({ match_kind: it.match_kind, match_value: it.match_value }).then((l) => String(l.id));
+        criando.current.set(it.key, promessa);
+        // Criou: a linha passa a valer na lista. Falhou: libera uma nova tentativa.
+        promessa.then(
+          (id) => setItens((l) => (l ?? []).map((x) => (x.key === it.key ? { ...x, link_id: id } : x))),
+          () => { criando.current.delete(it.key); },
+        );
+      }
       try {
-        const linha = await campanhasService.criarLinha({ match_kind: it.match_kind, match_value: it.match_value });
-        ref = { kind: 'link', id: String(linha.id) };
-        setItens((l) => (l ?? []).map((x) => (x.key === it.key ? { ...x, link_id: String(linha.id) } : x)));
+        ref = { kind: 'link', id: await promessa };
       } catch (e) {
         toast.error(motivoEscrito(e) ?? 'Não deu pra criar a linha da campanha. Tente de novo.');
         return;
@@ -94,6 +120,7 @@ export default function ComecoPorCampanha({ agent, gravar }: { agent: SalesAgent
   };
 
   const regrasAntigas = (agent.openings ?? []).filter((o) => !o.ref).length;
+  const semFicha = (it: ItemDeCampanha) => it.kind === 'form' && !it.form_config_id;
 
   return (
     <Secao titulo="Começo por campanha"
@@ -124,17 +151,20 @@ export default function ComecoPorCampanha({ agent, gravar }: { agent: SalesAgent
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="min-w-0">
                   <p className="truncate text-sm font-semibold">{nome}</p>
-                  <p className="text-[13px] text-muted-foreground">Vende: {vende(it)} · <LinkParaCampanhas>editar em Campanhas</LinkParaCampanhas></p>
+                  <p className="text-[13px] text-muted-foreground">Vende: {vende(it, nomes)} · <LinkParaCampanhas>editar em Campanhas</LinkParaCampanhas></p>
                 </div>
-                <Button type="button" variant="outline" aria-expanded={aberto} onClick={() => setAberta(aberto ? null : it.key)}>
-                  {aberto ? 'Fechar' : 'Abrir'}
-                </Button>
+                {!semFicha(it) && (
+                  <Button type="button" variant="outline" aria-expanded={aberto} onClick={() => setAberta(aberto ? null : it.key)}>
+                    {aberto ? 'Fechar' : 'Abrir'}
+                  </Button>
+                )}
               </div>
+              {semFicha(it) && <p className="text-[13px] text-muted-foreground">Este formulário ainda não tem ficha em Campanhas.</p>}
               <div className="flex flex-wrap gap-1.5">
                 <Badge variant="outline">{regra?.greeting ? 'Boas-vindas própria' : 'Boas-vindas padrão'}</Badge>
                 <Badge variant="outline">{regra?.image_url ? 'Com print' : 'Sem print'}</Badge>
                 <Badge variant="outline">{regra?.audio_url ? 'Com áudio' : 'Sem áudio'}</Badge>
-                <Badge variant="outline">{regra?.intent_question ? 'Intenção: texto próprio' : 'Intenção: automática'}</Badge>
+                <Badge variant="outline">{regra?.intent_question ? 'Intenção: texto próprio' : it.audience_intents.length === 1 ? 'Intenção: não pergunta' : 'Intenção: automática'}</Badge>
               </div>
               {aberto && (
                 <div className="grid gap-4 md:grid-cols-2">
@@ -160,7 +190,7 @@ export default function ComecoPorCampanha({ agent, gravar }: { agent: SalesAgent
       </div>
       {regrasAntigas > 0 && (
         <p className="text-[13px] text-muted-foreground">
-          {regrasAntigas === 1 ? 'Há 1 regra antiga' : `Há ${regrasAntigas} regras antigas`} por origem, formulário ou palavra. Elas continuam valendo e não aparecem na lista.
+          {regrasAntigas === 1 ? 'Há 1 regra antiga' : `Há ${regrasAntigas} regras antigas`} por origem, formulário ou palavra. {regrasAntigas === 1 ? 'Ela continua valendo e não aparece' : 'Elas continuam valendo e não aparecem'} na lista.
         </p>
       )}
     </Secao>

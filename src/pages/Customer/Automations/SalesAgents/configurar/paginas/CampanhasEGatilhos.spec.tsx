@@ -13,6 +13,9 @@ vi.mock('@/services/leadAds/leadAdsFormsService', () => ({ leadAdsFormsService: 
 vi.mock('@/services/pipelines/pipelinesService', () => ({
   pipelinesService: { getPipelines: vi.fn().mockResolvedValue({ data: [] }), getPipelineStages: vi.fn() },
 }));
+vi.mock('@/services/properties/propertiesService', () => ({
+  propertiesService: { list: vi.fn().mockResolvedValue({ data: [{ id: 'p1', title: 'Residencial Teste A' }, { id: 'p2', title: 'Residencial Teste B' }], meta: {} }) },
+}));
 vi.mock('@/services/campanhas/campanhasService', () => ({
   campanhasService: { lista: vi.fn(), criarLinha: vi.fn() },
 }));
@@ -106,6 +109,60 @@ describe('Gatilhos por número', () => {
     expect(salesAgentsService.atualizarNumero).toHaveBeenCalledWith('ia-1', 'n2', { triggers: [{ type: 'keyword', value: 'oferta', match_type: 'contains' }] });
   });
 
+  it('tirar a última condição de "Só alguns" não grava lista vazia e explica', async () => {
+    await abrir(agente());
+    const bloco = screen.getByRole('group', { name: 'Condições de Ana' });
+    await userEvent.click(within(bloco).getByRole('button', { name: 'Remover condição' }));
+    expect(salesAgentsService.atualizarNumero).not.toHaveBeenCalled();
+    expect(screen.getByText('Pra tirar a última condição, escolha Os do agente ou Todo lead do número.')).toBeInTheDocument();
+    expect(within(grupo('Gatilhos de Ana')).getByRole('radio', { name: 'Só alguns' })).toHaveAttribute('aria-checked', 'true');
+  });
+
+  it('com mais de uma condição a lixeira ainda grava a lista que sobra', async () => {
+    await abrir(agenteDeTeste({ numbers: [numero('n1', 'Ana', [forma, { type: 'tag', value: 'vip' }])] }));
+    const bloco = screen.getByRole('group', { name: 'Condições de Ana' });
+    await userEvent.click(within(bloco).getAllByRole('button', { name: 'Remover condição' })[0]);
+    expect(salesAgentsService.atualizarNumero).toHaveBeenCalledWith('ia-1', 'n1', { triggers: [{ type: 'tag', value: 'vip' }] });
+  });
+
+  it('número em "Os do agente" aberto em "Só alguns" não diz que atende todo lead', async () => {
+    await abrir(agente());
+    await userEvent.click(within(grupo('Gatilhos de Bia')).getByRole('radio', { name: 'Só alguns' }));
+    const bloco = screen.getByRole('group', { name: 'Condições de Bia' });
+    expect(within(bloco).getByText('Sem nenhuma condição própria, o número continua com os gatilhos do agente.')).toBeInTheDocument();
+    expect(within(bloco).queryByText(/atende todo lead do número/)).toBeNull();
+  });
+
+  it('palavra digitada e clique direto em "Os do agente": grava a palavra e DEPOIS o nulo, em ordem', async () => {
+    await abrir(agente());
+    await userEvent.click(within(grupo('Gatilhos de Bia')).getByRole('radio', { name: 'Só alguns' }));
+    const bloco = screen.getByRole('group', { name: 'Condições de Bia' });
+    await userEvent.click(within(bloco).getByRole('button', { name: /Adicionar condição/ }));
+    await userEvent.type(within(bloco).getByPlaceholderText('palavra (ex: fluxoimob)'), 'oferta');
+    await userEvent.click(within(grupo('Gatilhos de Bia')).getByRole('radio', { name: 'Os do agente' }));
+    await waitFor(() => expect(salesAgentsService.atualizarNumero).toHaveBeenCalledTimes(2));
+    const chamadas = vi.mocked(salesAgentsService.atualizarNumero).mock.calls.map((c) => c[2]);
+    expect(chamadas).toEqual([{ triggers: [{ type: 'keyword', value: 'oferta', match_type: 'contains' }] }, { triggers: null }]);
+  });
+
+  it('as escritas do número andam em fila: a segunda só começa quando a primeira (e a releitura) terminou', async () => {
+    let liberar: () => void = () => undefined;
+    vi.mocked(salesAgentsService.atualizarNumero).mockImplementationOnce(() => new Promise((r) => { liberar = () => r({ warnings: [] } as never); }));
+    await abrir(agente());
+    await userEvent.click(within(grupo('Gatilhos de Bia')).getByRole('radio', { name: 'Todo lead do número' }));
+    await userEvent.click(within(grupo('Gatilhos de Caio')).getByRole('radio', { name: 'Os do agente' }));
+    expect(salesAgentsService.atualizarNumero).toHaveBeenCalledTimes(1);
+    liberar();
+    await waitFor(() => expect(salesAgentsService.atualizarNumero).toHaveBeenCalledTimes(2));
+  });
+
+  it('número desligado do outro agente não divide', async () => {
+    vi.mocked(salesAgentsService.list).mockResolvedValue([agenteDeTeste({ id: 'ia-2', name: 'Agente B', numbers: [{ ...numero('x1', 'Ana', null, 'i-n1'), enabled: false }] })]);
+    await abrir(agente());
+    await waitFor(() => expect(salesAgentsService.list).toHaveBeenCalled());
+    expect(screen.queryByText(/a mesma campanha não fica em dois agentes/)).toBeNull();
+  });
+
   it('mostra os avisos que o servidor devolveu na resposta do número', async () => {
     vi.mocked(salesAgentsService.atualizarNumero).mockResolvedValue({ warnings: ['A campanha X já é do Agente B neste número.'] } as never);
     await abrir(agente());
@@ -132,10 +189,17 @@ describe('Gatilhos do agente', () => {
     expect(gravar).toHaveBeenCalledWith({ trigger_match_mode: 'all' });
   });
 
-  it('"Todos os leads" limpa as condições e "Só alguns" abre sem gravar', async () => {
+  it('"Todos os leads" limpa as condições', async () => {
     const { gravar } = await abrir(agenteDeTeste({ triggers: [{ type: 'tag', value: 'vip' }] }));
     await userEvent.click(within(grupo('Quem ela atende')).getByRole('radio', { name: 'Todos os leads' }));
     expect(gravar).toHaveBeenCalledWith({ triggers: [] });
+  });
+
+  it('"Só alguns" abre as condições sem gravar nada', async () => {
+    const { gravar } = await abrir(agenteDeTeste({ triggers: [] }));
+    await userEvent.click(within(grupo('Quem ela atende')).getByRole('radio', { name: 'Só alguns' }));
+    expect(gravar).not.toHaveBeenCalled();
+    expect(screen.getAllByRole('button', { name: /Adicionar condição/ }).length).toBeGreaterThan(0);
   });
 
   it('a palavra antiga mostra a frase e "Tirar essa regra" grava nulo', async () => {
@@ -168,13 +232,48 @@ describe('Começo por campanha', () => {
     await abrir(agente(), itens);
     expect(campanhasService.lista).toHaveBeenCalledWith({ salesAgentId: 'ia-1' });
     const bloco = await screen.findByRole('region', { name: 'Campanha Teste' });
-    expect(within(bloco).getByText(/Vende: 2 imóveis/)).toBeInTheDocument();
+    expect(await within(bloco).findByText(/Vende: Residencial Teste A, Residencial Teste B/)).toBeInTheDocument();
     expect(within(bloco).getByRole('link', { name: /Campanhas/ })).toHaveAttribute('href', '/automations/origem');
     expect(within(bloco).getByText('Boas-vindas padrão')).toBeInTheDocument();
     expect(within(bloco).getByText('Sem print')).toBeInTheDocument();
     expect(within(bloco).getByText('Sem áudio')).toBeInTheDocument();
     expect(within(bloco).getByText('Intenção: automática')).toBeInTheDocument();
     expect(within(screen.getByRole('region', { name: 'Formulário Teste' })).getByText(/Vende: não diz/)).toBeInTheDocument();
+  });
+
+  it('formulário sem ficha não tem Abrir e diz o que falta', async () => {
+    await abrir(agente(), [item({ key: 'form:x', kind: 'form', label: 'Formulário Sem Ficha', link_id: null, form_config_id: null, sells_scope: null, property_ids: [] })]);
+    const bloco = await screen.findByRole('region', { name: 'Formulário Sem Ficha' });
+    expect(within(bloco).queryByRole('button', { name: 'Abrir' })).toBeNull();
+    expect(within(bloco).getByText('Este formulário ainda não tem ficha em Campanhas.')).toBeInTheDocument();
+  });
+
+  it('dois disparos juntos criam a linha uma vez só', async () => {
+    let criada: (v: unknown) => void = () => undefined;
+    vi.mocked(campanhasService.criarLinha).mockImplementation(() => new Promise((r) => { criada = r; }));
+    const { gravar } = await abrir(agente(), itens);
+    const bloco = await screen.findByRole('region', { name: 'Sem Linha' });
+    await userEvent.click(within(bloco).getByRole('button', { name: 'Abrir' }));
+    await userEvent.type(within(bloco).getByLabelText('Boas-vindas'), 'Oi!');
+    await userEvent.tab();
+    await userEvent.type(within(bloco).getByLabelText('Pergunta de intenção'), 'Qual?');
+    await userEvent.tab();
+    expect(campanhasService.criarLinha).toHaveBeenCalledTimes(1);
+    criada({ id: 'l9' });
+    await waitFor(() => expect(gravar).toHaveBeenCalledTimes(2));
+  });
+
+  it('a regra antiga concorda no singular e no plural', async () => {
+    const { unmount } = await abrir(agente(), itens);
+    expect(await screen.findByText(/Há 1 regra antiga por origem, formulário ou palavra\. Ela continua valendo e não aparece na lista\./)).toBeInTheDocument();
+    unmount();
+    await abrir(agente({ openings: [{ label: 'A' }, { label: 'B' }] }), itens);
+    expect(await screen.findByText(/Há 2 regras antigas.*Elas continuam valendo e não aparecem na lista\./)).toBeInTheDocument();
+  });
+
+  it('público de uma intenção só mostra "Intenção: não pergunta"', async () => {
+    await abrir(agente(), [item({ audience_intents: ['moradia'] })]);
+    expect(await screen.findByText('Intenção: não pergunta')).toBeInTheDocument();
   });
 
   it('resume o que a campanha tem de próprio', async () => {

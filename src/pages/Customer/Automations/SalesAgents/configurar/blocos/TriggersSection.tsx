@@ -37,6 +37,7 @@ const MODOS_DE_COMBINAR: { valor: SalesAgentTriggerMatchMode; rotulo: string }[]
 
 /** As campanhas e anúncios que já têm linha em Campanhas (só a linha entra num gatilho), mais as marcadas que sumiram. */
 function opcoesDeCampanha(itens: ItemDeCampanha[], marcadas: string[] = []) {
+  // (lista carregada: as marcadas que não estão nela viram "apagadas"; sem a lista, ninguém é dado como apagado)
   const vistas = new Set<string>();
   const opcoes: { id: string; rotulo: string; marcada: boolean; orfa: boolean }[] = [];
   for (const it of itens) {
@@ -98,14 +99,43 @@ function juntarComAsLocais(local: Linha[], salvas: SalesAgentTrigger[]): Linha[]
   });
 }
 
-export function TriggersSection({ agent, onSave, escolheuTodos, nome, semModo }: {
+/** A lista de campanhas de um gatilho de campanha. Calculada uma vez por render (e só com a lista carregada). */
+function ListaDeCampanhas({ marcadas, campanhas, aoMudar }: {
+  marcadas: string[]; campanhas: ItemDeCampanha[] | null | 'falhou'; aoMudar: (ids: string[]) => void;
+}) {
+  const carregada = Array.isArray(campanhas);
+  const opcoes = useMemo(() => (carregada ? opcoesDeCampanha(campanhas, marcadas) : []), [carregada, campanhas, marcadas]);
+  if (campanhas === 'falhou') return <span className="text-xs text-muted-foreground">Não deu pra carregar a lista de campanhas. Recarregue a página.</span>;
+  if (!carregada) return <span className="text-xs text-muted-foreground">Carregando as campanhas...</span>;
+  return (
+    <div className="flex flex-col gap-1">
+      {opcoes.map((o) => (
+        <label key={o.id} className="flex items-center gap-2 text-sm cursor-pointer">
+          <Checkbox aria-label={o.rotulo} checked={o.marcada}
+            onCheckedChange={() => aoMudar(o.marcada ? marcadas.filter((x) => x !== o.id) : [...marcadas, o.id])} />
+          <span>{o.rotulo}</span>
+          {o.orfa && <span className="text-xs text-muted-foreground">(não está mais cadastrada)</span>}
+        </label>
+      ))}
+      {opcoes.length === 0 && <span className="text-xs text-muted-foreground">Ainda não há campanha com linha em Campanhas.</span>}
+    </div>
+  );
+}
+
+const FRASE_ULTIMA_CONDICAO = 'Pra tirar a última condição, escolha Os do agente ou Todo lead do número.';
+
+export function TriggersSection({ agent, onSave, escolheuTodos, nome, semModo, ultimaFica, herdaDoAgente }: {
   agent: SalesAgent;
   onSave: (patch: Partial<SalesAgent>) => void;
   /** O nome do grupo de condições (um por número, na página Campanhas e gatilhos). */
   nome?: string;
   /** Esconde o "Qualquer um / Todos": o modo é do agente, não do número. */
   semModo?: boolean;
-  /** Ligado pelo Canal quando a pessoa escolhe "Todos os leads" (o que desmonta o bloco). */
+  /** No número, a lista nunca fica vazia por aqui: vazia significa "todo lead", outra escolha. A lixeira da última condição só avisa. */
+  ultimaFica?: boolean;
+  /** O número ainda usa os gatilhos do agente (servidor nulo): sem condição própria, ele NÃO atende todo lead. */
+  herdaDoAgente?: boolean;
+  /** Ligado pela página Campanhas e gatilhos quando a pessoa escolhe "Todos os leads" (o que desmonta o bloco). */
   escolheuTodos?: { readonly current: boolean };
 }) {
   // ⚠️ Gravação na hora (06/10/2026): `onSave` grava no servidor. Escolha de lista,
@@ -163,11 +193,12 @@ export function TriggersSection({ agent, onSave, escolheuTodos, nome, semModo }:
 
 
   // Campanhas e anúncios com linha, pro gatilho de campanha. Leitura de fundo: sem acesso, a lista só vem vazia.
-  const [campanhas, setCampanhas] = useState<ItemDeCampanha[]>([]);
+  const [campanhas, setCampanhas] = useState<ItemDeCampanha[] | null | 'falhou'>(null);
+  const [avisoUltima, setAvisoUltima] = useState(false);
   const hasCampaignTrigger = triggers.some((t) => t.type === 'campaign');
   useEffect(() => {
     if (!hasCampaignTrigger) return;
-    campanhasService.lista().then(setCampanhas).catch(() => setCampanhas([]));
+    campanhasService.lista().then(setCampanhas).catch(() => setCampanhas('falhou'));
   }, [hasCampaignTrigger]);
 
   useEffect(() => {
@@ -211,9 +242,17 @@ export function TriggersSection({ agent, onSave, escolheuTodos, nome, semModo }:
     setLista(trocar(i, { ...triggers[i], ...patch }));
   };
   const sairDoCampo = () => { if (digitando.current) commit(lista); };
-  const remove = (i: number) => commit(lista.filter((_, idx) => idx !== i));
+  const remove = (i: number) => {
+    const proximas = lista.filter((_, idx) => idx !== i);
+    if (ultimaFica && paraOServidor(proximas).length === 0 && completas(agent.triggers ?? []).length > 0) { setAvisoUltima(true); return; }
+    setAvisoUltima(false);
+    commit(proximas);
+  };
   const add = () => commit([...lista, { t: newTrigger('keyword'), salva: null }]);
   const semCondicaoNoServidor = completas(agent.triggers ?? []).length === 0;
+  const fraseSemCondicao = herdaDoAgente
+    ? 'Sem nenhuma condição própria, o número continua com os gatilhos do agente.'
+    : 'Sem nenhuma condição, ela atende todo lead do número.';
 
   const matchMode = agent.trigger_match_mode ?? 'any';
 
@@ -222,9 +261,9 @@ export function TriggersSection({ agent, onSave, escolheuTodos, nome, semModo }:
       {/* ⚠️ "Só alguns" aberto sem condição completa no servidor: ela AINDA atende
           todo lead. Em destaque, pra tela não parecer que já está filtrando. */}
       {semCondicaoNoServidor ? (
-        <div className="mb-2"><Aviso tom="atencao"><p>Sem nenhuma condição, ela atende todo lead do número.</p></Aviso></div>
+        <div className="mb-2"><Aviso tom="atencao"><p>{fraseSemCondicao}</p></Aviso></div>
       ) : (
-        <p className="mb-2 text-sm text-muted-foreground">Sem nenhuma condição, ela atende todo lead do número.</p>
+        <p className="mb-2 text-sm text-muted-foreground">{fraseSemCondicao}</p>
       )}
 
       {triggers.length > 1 && !semModo && (
@@ -325,22 +364,8 @@ export function TriggersSection({ agent, onSave, escolheuTodos, nome, semModo }:
                   A IA só entra na conversa do lead que veio de uma das campanhas ou anúncios marcados. A lista é a de
                   Campanhas: só entra aqui a campanha que já tem linha lá.
                 </div>
-                <div className="flex flex-col gap-1">
-                  {opcoesDeCampanha(campanhas, t.campaign_link_ids).map((o) => (
-                    <label key={o.id} className="flex items-center gap-2 text-sm cursor-pointer">
-                      <Checkbox
-                        aria-label={o.rotulo}
-                        checked={o.marcada}
-                        onCheckedChange={() => update(i, { campaign_link_ids: o.marcada ? (t.campaign_link_ids ?? []).filter((x) => x !== o.id) : [...(t.campaign_link_ids ?? []), o.id] })}
-                      />
-                      <span>{o.rotulo}</span>
-                      {o.orfa && <span className="text-xs text-amber-600">(não está mais cadastrada)</span>}
-                    </label>
-                  ))}
-                  {opcoesDeCampanha(campanhas, t.campaign_link_ids).length === 0 && (
-                    <span className="text-xs text-muted-foreground">Ainda não há campanha com linha em Campanhas.</span>
-                  )}
-                </div>
+                <ListaDeCampanhas marcadas={t.campaign_link_ids ?? []} campanhas={campanhas}
+                  aoMudar={(ids) => update(i, { campaign_link_ids: ids })} />
               </div>
             )}
 
@@ -381,6 +406,8 @@ export function TriggersSection({ agent, onSave, escolheuTodos, nome, semModo }:
           </div>
         ))}
       </div>
+
+      {avisoUltima && <p className="mt-2 text-sm text-muted-foreground">{FRASE_ULTIMA_CONDICAO}</p>}
 
       <Button size="sm" variant="outline" onClick={add} className="mt-2">
         <Plus className="h-4 w-4 mr-1" /> Adicionar condição

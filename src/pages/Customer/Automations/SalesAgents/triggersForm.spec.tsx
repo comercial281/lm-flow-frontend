@@ -152,6 +152,14 @@ describe('gatilho de campanha', () => {
     expect(await screen.findByText('(não está mais cadastrada)')).toBeInTheDocument();
   });
 
+  it('lista que falhou não marca toda campanha como apagada', async () => {
+    const { campanhasService } = await import('@/services/campanhas/campanhasService');
+    vi.mocked(campanhasService.lista).mockRejectedValueOnce(new Error('x'));
+    render(<HarnessCampanha ids={['l1']} />);
+    expect(await screen.findByText(/Não deu pra carregar a lista de campanhas/)).toBeInTheDocument();
+    expect(screen.queryByText('(não está mais cadastrada)')).toBeNull();
+  });
+
   it('o seletor do tipo tem "Veio destas campanhas"', async () => {
     render(<HarnessCampanha />);
     expect(await screen.findByText('Veio destas campanhas')).toBeInTheDocument();

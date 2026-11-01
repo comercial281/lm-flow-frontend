@@ -111,7 +111,7 @@ describe('Destino', () => {
   });
 
   describe('Onde o atendimento continua', () => {
-    const inboxes = [{ id: 'inbox-1', name: 'Número da IA', oficial: false }, { id: 'inbox-9', name: 'Atendimento Central', oficial: false }];
+    const inboxes = [{ id: 'inbox-1', name: 'Número da IA', oficial: false }, { id: 'inbox-9', name: 'Atendimento Central', oficial: false }, { id: 'inbox-8', name: 'Atendimento Norte', oficial: false }];
     const abrirCom = async (agent: SalesAgent) => {
       const gravar = gravarDeTeste('destino');
       const r = render(<Destino agent={agent} inboxes={inboxes} gravar={gravar} irPara={vi.fn()} diagnostico={null} />);
@@ -152,7 +152,7 @@ describe('Destino', () => {
       await userEvent.click(screen.getByRole('radio', { name: 'Num número de atendimento' }));
       expect(gravar).not.toHaveBeenCalled();
       const opcoes = within(screen.getByLabelText('Número de atendimento')).getAllByRole('option').map((o) => o.textContent);
-      expect(opcoes).toEqual(['Escolha o número', 'Atendimento Central']); // o número da própria IA não é "outro" número
+      expect(opcoes).toEqual(['Escolha o número', 'Atendimento Central', 'Atendimento Norte']); // o número da própria IA não é "outro" número
       await userEvent.selectOptions(screen.getByLabelText('Número de atendimento'), 'inbox-9');
       expect(gravar).not.toHaveBeenCalled();
       expect(screen.getByText(MENSAGEM)).toBeInTheDocument();
@@ -183,6 +183,15 @@ describe('Destino', () => {
       expect(screen.getByRole('radio', { name: 'Num número de atendimento' })).toHaveAttribute('aria-checked', 'true');
       await userEvent.clear(screen.getByLabelText('Mensagem de chegada'));
       await userEvent.tab();
+      expect(gravar).not.toHaveBeenCalled();
+      expect(screen.getByText(MENSAGEM)).toBeInTheDocument();
+    });
+
+    it('apagar a mensagem e trocar o número não ressuscita a mensagem salva', async () => {
+      const { gravar } = await abrirCom(consultora({ handoff_continue_at: 'service_number', handoff_service_inbox_id: 'inbox-9', handoff_arrival_message: 'Oi!' }));
+      await userEvent.clear(screen.getByLabelText('Mensagem de chegada'));
+      await userEvent.tab();
+      await userEvent.selectOptions(screen.getByLabelText('Número de atendimento'), 'inbox-8');
       expect(gravar).not.toHaveBeenCalled();
       expect(screen.getByText(MENSAGEM)).toBeInTheDocument();
     });
