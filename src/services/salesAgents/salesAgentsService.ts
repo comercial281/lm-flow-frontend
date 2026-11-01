@@ -1013,9 +1013,9 @@ export interface RehearsalContext {
  * servidor respeita.
  */
 export type RehearsalRequest =
-  | { step: 'turn'; state: RehearsalState | null; message: string; context?: RehearsalContext; seed?: { history: TestHistoryItem[]; hours_ago?: number }; honor_triggers?: boolean }
+  | { step: 'turn'; state: RehearsalState | null; message: string; context?: RehearsalContext; seed?: { history: TestHistoryItem[]; hours_ago?: number }; honor_triggers?: boolean; inbox_id?: string }
   | { step: 'advance'; state: RehearsalState; hours: number | null; honor_triggers?: boolean }
-  | { step: 'load'; phone: string };
+  | { step: 'load'; phone: string; inbox_id?: string };
 
 /** Um formulário do gatilho da IA, pro cenário "Preencheu o formulário". */
 export interface RehearsalForm {
@@ -1365,9 +1365,9 @@ export const salesAgentsService = {
   },
 
   /** Os formulários do gatilho da IA com as respostas do último lead de cada um. Só lê. */
-  async rehearsalForms(id: string): Promise<RehearsalForm[]> {
+  async rehearsalForms(id: string, inboxId?: string): Promise<RehearsalForm[]> {
     try {
-      const res = await api.post(`${BASE}/${id}/rehearsal`, { step: 'forms' });
+      const res = await api.post(`${BASE}/${id}/rehearsal`, { step: 'forms', ...(inboxId ? { inbox_id: inboxId } : {}) });
       return ((res.data as { data: { forms?: RehearsalForm[] } }).data.forms) ?? [];
     } catch (err) {
       const axiosErr = err as { response?: { data?: { error?: { message?: string } } } };

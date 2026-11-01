@@ -1,11 +1,9 @@
-// Repasse · Agendamento (onda 3). Só com o objetivo "Agendar visita" (senão o
-// aviso com "Mudar o objetivo"). Duração em botões, antecedência, janela (com a
-// Agenda de Visitas ligada, vale a da Agenda), as 2 regras, a AVALIAÇÃO NO GOOGLE
-// (que agora sai só depois de visita realizada: onda 1, §6.9) e o "Quando propor"
-// (`playbook.vars.lead_pronto`, que morava escondido no roteiro).
+// A agenda da visita (era a página Agendamento, onda 3; vira bloco do Modo operante na
+// Tarefa 71). Quem decide se aparece é o Modo operante: só no Leva até a visita. Duração em
+// botões, antecedência, janela (com a Agenda de Visitas ligada, vale a da Agenda), a regra do
+// mesmo dia, a AVALIAÇÃO NO GOOGLE (só depois de visita realizada: onda 1, §6.9) e o
+// "Quando propor" (`playbook.vars.lead_pronto`, que morava escondido no roteiro).
 import { useEffect, useState } from 'react';
-import { Lock } from 'lucide-react';
-import { Button } from '@/components/ui/ds';
 import { Secao, Secoes } from '@/components/base/Secao';
 import BotoesDeEscolha from '@/components/base/BotoesDeEscolha';
 import LinhaComChave from '@/components/base/LinhaComChave';
@@ -14,12 +12,12 @@ import { salesAgentsService, type PlaybookVars, type VisitConfig } from '@/servi
 import TextoNaHora from '../TextoNaHora';
 import JanelaDaSemana from './JanelaDaSemana';
 import Aviso from '@/components/base/Aviso';
-import { agendamentoTravado, type PropsDaPagina } from '../paginas';
+import type { PropsDaPagina } from '../paginas';
 
 const DURACOES = [30, 45, 60, 90];
 const rotuloDuracao = (m: number) => (m === 60 ? '1 hora' : m === 90 ? '1h30' : `${m} min`);
 
-export default function Agendamento({ agent, gravar, irPara }: PropsDaPagina) {
+export default function BlocoDaAgenda({ agent, gravar }: PropsDaPagina) {
   const agendaLigada = useAgendaLigada().ligada === true;
   const [padraoDoPronto, setPadraoDoPronto] = useState<string | undefined>();
   useEffect(() => {
@@ -27,17 +25,6 @@ export default function Agendamento({ agent, gravar, irPara }: PropsDaPagina) {
     salesAgentsService.playbook(agent.id).then((p) => { if (vivo) setPadraoDoPronto(p.slot_defaults?.lead_pronto); }).catch(() => {});
     return () => { vivo = false; };
   }, [agent.id]);
-
-  if (agendamentoTravado(agent)) {
-    return (
-      <div className="flex flex-col items-center gap-3 rounded-2xl border-[1.5px] border-dashed border-border bg-card p-10 text-center">
-        <Lock className="h-7 w-7 text-muted-foreground" aria-hidden />
-        <b>Ela não agenda visita</b>
-        <p className="text-sm text-muted-foreground">Em Modo operante, ela está como "Filtra e passa".</p>
-        <Button type="button" onClick={() => irPara('modo')}>Mudar o modo operante</Button>
-      </div>
-    );
-  }
 
   const c: VisitConfig = agent.visit_config ?? {};
   const gravarVisita = (p: Partial<VisitConfig>) =>

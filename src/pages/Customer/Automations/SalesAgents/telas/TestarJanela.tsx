@@ -22,6 +22,7 @@ import { CENARIOS_DO_TESTAR } from '@/features/salesAgents/cenariosDeTeste';
 import {
   AVANCOS_DA_JANELA, avisoDoModelo, juntarTravas, linhaDoCard, oQueAconteceria, painelDoEnsaio, rotuloDaPergunta,
 } from '@/features/salesAgents/ensaio';
+import { vozDoNumero } from '@/features/salesAgents/fichas';
 import { fraseDoObjetivo } from '@/features/salesAgents/resumoDosPassos';
 import { cn } from '@/lib/utils';
 import TestMediaBubble from '../TestMediaBubble';
@@ -50,7 +51,9 @@ export default function TestarJanela({ agent, aoFechar, ritmo = 1 }: { agent: Sa
   const { travas, linhas: acoes } = oQueAconteceria(e.ficha);
   const linhas = [...acoes, ...(card ? [card] : [])];
   const modelo = avisoDoModelo(e.ficha?.test_model ?? agent.test_model, agent.model);
-  const nomeVisto = (agent.lead_facing_name ?? '').trim() || agent.name;
+  const numeroDoTeste = e.numeros.find((n) => n.inbox_id === e.inboxId) ?? agent.numbers?.[0];
+  const nomeDaVoz = numeroDoTeste ? vozDoNumero(numeroDoTeste, agent.house_voice).name : agent.house_voice?.name;
+  const nomeVisto = (nomeDaVoz ?? agent.lead_facing_name ?? '').trim() || agent.name;
   const cartoes = [LIVRE, ...CENARIOS_DO_TESTAR];
   const cenarioAtual = CENARIOS_DO_TESTAR.find((c) => c.id === e.cenario);
   const comGatilho = temGatilho(agent);
@@ -152,6 +155,17 @@ export default function TestarJanela({ agent, aoFechar, ritmo = 1 }: { agent: Sa
                 ))}
               </dl>
               {notaDoFormulario && <p className="text-xs text-muted-foreground">{notaDoFormulario}</p>}
+            </div>
+          )}
+
+          {e.numeros.length > 0 && (
+            <div className="space-y-2">
+              <h3 className={TITULO}>Testar como</h3>
+              <Seletor aria-label="Testar como" className="h-10 w-full" value={e.inboxId} disabled={aguardando}
+                onChange={(ev) => e.escolherNumero(ev.target.value)}>
+                {e.numeros.map((n) => <option key={n.inbox_id} value={n.inbox_id}>{n.owner_name ? `${n.owner_name} · ${n.inbox_name}` : n.inbox_name}</option>)}
+              </Seletor>
+              <p className="text-xs text-muted-foreground">A voz, os gatilhos e a agenda são do número. Trocar recomeça o teste.</p>
             </div>
           )}
 

@@ -133,4 +133,9 @@ export interface PropsDaPagina {
    * a casca marca "pronta" na IA aberta. Só o Destino usa.
    */
   aoChaveGerada?: () => void;
+  /**
+   * Devolve à casca a IA relida do servidor. Quem grava por API própria (os números do agente)
+   * relê com `get` e chama isto: nunca guarda cópia (armadilha 2 do Configurar). Só Números e usuários usa.
+   */
+  aoSalvo?: (a: SalesAgent) => void;
 }

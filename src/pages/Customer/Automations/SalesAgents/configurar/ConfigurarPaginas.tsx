@@ -98,7 +98,7 @@ export default function ConfigurarPaginas({ agent, inboxes, aoSalvo, diagnostico
   return (
     <PaginasComTrilho rotulo="Páginas da configuração" grupos={grupos} atual={atual} aoIr={irPara} emCard>
       <Pagina key={atual} agent={agent} inboxes={inboxes} gravar={gravarNaPagina} irPara={irPara} diagnostico={diagnostico}
-        aoChaveGerada={aoChaveGerada} />
+        aoChaveGerada={aoChaveGerada} aoSalvo={aoSalvo} />
     </PaginasComTrilho>
   );
 }

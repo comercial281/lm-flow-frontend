@@ -9,22 +9,15 @@ vi.mock('@/services/salesAgents/salesAgentsService', async (orig) => {
   const real = await orig<typeof import('@/services/salesAgents/salesAgentsService')>();
   return { ...real, salesAgentsService: { ...real.salesAgentsService, playbook: vi.fn().mockResolvedValue({ slot_defaults: { lead_pronto: 'já disse a faixa de valor' } }) } };
 });
-import Agendamento from './Agendamento';
+import BlocoDaAgenda from './BlocoDaAgenda';
 
-const abrir = (extra = {}, irPara = vi.fn()) => {
+const abrir = (extra = {}) => {
   const gravar = gravarDeTeste('modo');
-  render(<><Agendamento agent={agenteDeTeste({ job: 'leva_visita', reach: 'visit', ...extra })} inboxes={[]} gravar={gravar} irPara={irPara} diagnostico={null} aoChaveGerada={vi.fn()} /><button>fora</button></>);
-  return { gravar, irPara };
+  render(<><BlocoDaAgenda agent={agenteDeTeste({ job: 'leva_visita', reach: 'visit', ...extra })} inboxes={[]} gravar={gravar} irPara={vi.fn()} diagnostico={null} aoChaveGerada={vi.fn()} /><button>fora</button></>);
+  return { gravar };
 };
 
-describe('Agendamento', () => {
-  it('sem visita: cadeado e "Mudar o modo operante"', async () => {
-    const { irPara } = abrir({ job: 'filtra_passa', reach: 'qualify' });
-    expect(screen.getByText('Ela não agenda visita')).toBeInTheDocument();
-    await userEvent.click(screen.getByRole('button', { name: 'Mudar o modo operante' }));
-    expect(irPara).toHaveBeenCalledWith('modo');
-  });
-
+describe('BlocoDaAgenda', () => {
   it('duração em botões; antecedência grava ao sair, como subchave', async () => {
     const { gravar } = abrir();
     await userEvent.click(screen.getByRole('radio', { name: '45 min' }));

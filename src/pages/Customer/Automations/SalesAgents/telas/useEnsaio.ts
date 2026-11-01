@@ -11,7 +11,7 @@ import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { useAuthStore } from '@/store/authStore';
 import {
-  salesAgentsService, type RehearsalForm, type RehearsalOutcome, type RehearsalState, type SalesAgent, type TestHistoryItem,
+  salesAgentsService, type AgentNumber, type RehearsalForm, type RehearsalOutcome, type RehearsalState, type SalesAgent, type TestHistoryItem,
 } from '@/services/salesAgents/salesAgentsService';
 import { CENARIOS_DO_TESTAR, type CenarioDeTeste } from '@/features/salesAgents/cenariosDeTeste';
 import {
@@ -26,6 +26,12 @@ export function primeiroNome(nome: string | null | undefined): string {
 /** Sem gatilho ela atende todo lead: o interruptor nem aparece. */
 export function temGatilho(agent: SalesAgent): boolean {
   return (agent.triggers?.length ?? 0) > 0 || !!agent.trigger_keyword?.trim();
+}
+
+/** Os números em que o Testar pode "ser" o atendimento: só os ligados. Com menos de 2, não há o que escolher. */
+export function numerosDoTestar(agent: SalesAgent): AgentNumber[] {
+  const lista = (agent.numbers ?? []).filter((n) => n.enabled);
+  return lista.length > 1 ? lista : [];
 }
 
 export function temGatilhoDeFormulario(agent: SalesAgent): boolean {
@@ -51,6 +57,12 @@ type ItemDoLead = Extract<ItemDaConversa, { tipo: 'lead' }>;
 export function useEnsaio(agent: SalesAgent, ritmo = 1) {
   const nomeDeQuemTesta = primeiroNome(useAuthStore((s) => s.currentUser?.display_name || s.currentUser?.name));
   const comFormulario = temGatilhoDeFormulario(agent);
+  // Vários números: o Testar roda "como" um deles (a voz, a agenda e os gatilhos são do número).
+  // Com um só, nada muda e `inbox_id` nem viaja.
+  const numeros = numerosDoTestar(agent);
+  const [numeroEscolhido, setNumeroEscolhido] = useState('');
+  const inboxId = numeros.length ? (numeros.some((n) => n.inbox_id === numeroEscolhido) ? numeroEscolhido : numeros[0].inbox_id) : '';
+  const comNumero = inboxId ? { inbox_id: inboxId } : {};
   const [ensaio, setEnsaio] = useState<RehearsalState | null>(null);
   const [itens, setItens] = useState<ItemDaConversa[]>([]);
   // O último turno com ficha: avançar o tempo não apaga o painel da direita.
@@ -137,7 +149,7 @@ export function useEnsaio(agent: SalesAgent, ritmo = 1) {
     const pontinhos = setTimeout(() => { if (aberta.current) setDigitando(true); }, RESPIRO_MS * ritmo);
     try {
       const r = await salesAgentsService.rehearsal(agent.id, {
-        step: 'turn', state: ensaio, message: texto, honor_triggers: respeitarGatilho,
+        step: 'turn', state: ensaio, message: texto, honor_triggers: respeitarGatilho, ...(!ensaio ? comNumero : {}),
         context: {
           contact_name: nome.trim() || nomeDeQuemTesta, source: origem.trim(), interest: interesse.trim(),
           form_answers: respostas, property_code: codigo, ...(adReferral ? { ad_referral: adReferral } : {}),
@@ -186,7 +198,7 @@ export function useEnsaio(agent: SalesAgent, ritmo = 1) {
     if (fone.length < 10) { toast.error('Digite o telefone com DDD.'); return; }
     setCarregando(true);
     try {
-      const r = await salesAgentsService.rehearsal(agent.id, { step: 'load', phone: fone });
+      const r = await salesAgentsService.rehearsal(agent.id, { step: 'load', phone: fone, ...comNumero });
       setEnsaio(r.state);
       setFicha(r.turn.outcome);
       setSemente(null);
@@ -243,7 +255,7 @@ export function useEnsaio(agent: SalesAgent, ritmo = 1) {
       aplicar(c);
       setLendoFormularios(true);
       try {
-        lista = await salesAgentsService.rehearsalForms(agent.id);
+        lista = await (inboxId ? salesAgentsService.rehearsalForms(agent.id, inboxId) : salesAgentsService.rehearsalForms(agent.id));
       } catch (e) {
         lista = [];
         avisarErro(e);
@@ -277,6 +289,15 @@ export function useEnsaio(agent: SalesAgent, ritmo = 1) {
     aplicar(c, f);
   };
 
+  // Trocar o número recomeça o teste em conversa livre: a voz, os gatilhos e os formulários são do número.
+  const escolherNumero = (id: string) => {
+    if (ocupado || carregando || id === inboxId) return;
+    setNumeroEscolhido(id);
+    setFormularios(null);
+    setFormulario('');
+    aplicar(null);
+  };
+
   const formularioAtual = (formularios ?? []).find((x) => x.form_id === formulario) ?? null;
 
   return {
@@ -284,5 +305,6 @@ export function useEnsaio(agent: SalesAgent, ritmo = 1) {
     imovel, setImovel, telefone, setTelefone, carregando, cenario, fimDoChat,
     respeitarGatilho, setRespeitarGatilho, comFormulario, formularios, formularioAtual, lendoFormularios,
     enviar, avancar, carregar, escolherCenario, escolherFormulario, recomecar,
+    numeros, inboxId, escolherNumero,
   };
 }
