@@ -5,6 +5,7 @@ import { type SalesAgent, type SalesAgentTrigger, type SalesAgentTriggerType, ty
 import { pipelinesService } from '@/services/pipelines/pipelinesService';
 import { leadAdsFormsService, type LeadAdsFormConfig } from '@/services/leadAds/leadAdsFormsService';
 import { formOptions, formTriggerNotice, toggleForm } from '@/features/salesAgents/formTrigger';
+import { campanhasService, type ItemDeCampanha } from '@/services/campanhas/campanhasService';
 import { Seletor } from '@/components/base/Seletor';
 import BotoesDeEscolha from '@/components/base/BotoesDeEscolha';
 import { emBranco } from '@/features/salesAgents/situacao';
@@ -21,17 +22,31 @@ const TRIGGER_TYPES: { value: SalesAgentTriggerType; label: string }[] = [
   { value: 'keyword', label: 'Contém/é igual a palavra' },
   { value: 'origin', label: 'Origem do lead' },
   { value: 'form', label: 'Veio de um destes formulários' },
+  { value: 'campaign', label: 'Veio destas campanhas' },
   { value: 'property', label: 'Imóvel (código / form)' },
   { value: 'pipeline_stage', label: 'Coluna de funil' },
   { value: 'tag', label: 'Tem a etiqueta' },
 ];
 
-// "Todas as condições" (E) ou "Qualquer uma" (OU). A palavra antiga, se houver,
-// tem a frase dela no Canal (fraseDaPalavraAntiga): aqui não se fala dela.
+// "Qualquer um" (OU) ou "Todos" (E). A palavra antiga, se houver, tem a frase dela na página
+// Campanhas e gatilhos (fraseDaPalavraAntiga): aqui não se fala dela.
 const MODOS_DE_COMBINAR: { valor: SalesAgentTriggerMatchMode; rotulo: string }[] = [
-  { valor: 'all', rotulo: 'Todas as condições' },
-  { valor: 'any', rotulo: 'Qualquer uma' },
+  { valor: 'any', rotulo: 'Qualquer um' },
+  { valor: 'all', rotulo: 'Todos' },
 ];
+
+/** As campanhas e anúncios que já têm linha em Campanhas (só a linha entra num gatilho), mais as marcadas que sumiram. */
+function opcoesDeCampanha(itens: ItemDeCampanha[], marcadas: string[] = []) {
+  const vistas = new Set<string>();
+  const opcoes: { id: string; rotulo: string; marcada: boolean; orfa: boolean }[] = [];
+  for (const it of itens) {
+    if (it.kind === 'form' || !it.link_id || vistas.has(it.link_id)) continue;
+    vistas.add(it.link_id);
+    opcoes.push({ id: it.link_id, rotulo: it.label || it.ad_title || it.campaign_name || it.match_value || 'Sem nome', marcada: marcadas.includes(it.link_id), orfa: false });
+  }
+  marcadas.filter((id) => !vistas.has(id)).forEach((id) => opcoes.push({ id, rotulo: 'Campanha apagada', marcada: true, orfa: true }));
+  return opcoes;
+}
 
 function newTrigger(type: SalesAgentTriggerType): SalesAgentTrigger {
   switch (type) {
@@ -83,9 +98,13 @@ function juntarComAsLocais(local: Linha[], salvas: SalesAgentTrigger[]): Linha[]
   });
 }
 
-export function TriggersSection({ agent, onSave, escolheuTodos }: {
+export function TriggersSection({ agent, onSave, escolheuTodos, nome, semModo }: {
   agent: SalesAgent;
   onSave: (patch: Partial<SalesAgent>) => void;
+  /** O nome do grupo de condições (um por número, na página Campanhas e gatilhos). */
+  nome?: string;
+  /** Esconde o "Qualquer um / Todos": o modo é do agente, não do número. */
+  semModo?: boolean;
   /** Ligado pelo Canal quando a pessoa escolhe "Todos os leads" (o que desmonta o bloco). */
   escolheuTodos?: { readonly current: boolean };
 }) {
@@ -143,6 +162,14 @@ export function TriggersSection({ agent, onSave, escolheuTodos }: {
   }, [hasFormTrigger]);
 
 
+  // Campanhas e anúncios com linha, pro gatilho de campanha. Leitura de fundo: sem acesso, a lista só vem vazia.
+  const [campanhas, setCampanhas] = useState<ItemDeCampanha[]>([]);
+  const hasCampaignTrigger = triggers.some((t) => t.type === 'campaign');
+  useEffect(() => {
+    if (!hasCampaignTrigger) return;
+    campanhasService.lista().then(setCampanhas).catch(() => setCampanhas([]));
+  }, [hasCampaignTrigger]);
+
   useEffect(() => {
     pipelinesService.getPipelines({ include_items: false })
       .then((res: unknown) => {
@@ -191,7 +218,7 @@ export function TriggersSection({ agent, onSave, escolheuTodos }: {
   const matchMode = agent.trigger_match_mode ?? 'any';
 
   return (
-    <div className="pt-2 border-t border-sidebar-border">
+    <div role={nome ? 'group' : undefined} aria-label={nome} className="pt-2 border-t border-sidebar-border">
       {/* ⚠️ "Só alguns" aberto sem condição completa no servidor: ela AINDA atende
           todo lead. Em destaque, pra tela não parecer que já está filtrando. */}
       {semCondicaoNoServidor ? (
@@ -200,7 +227,7 @@ export function TriggersSection({ agent, onSave, escolheuTodos }: {
         <p className="mb-2 text-sm text-muted-foreground">Sem nenhuma condição, ela atende todo lead do número.</p>
       )}
 
-      {triggers.length > 1 && (
+      {triggers.length > 1 && !semModo && (
         <div className="mb-3 flex flex-wrap items-center gap-3">
           <span className="text-sm text-muted-foreground">Atender quando</span>
           <BotoesDeEscolha rotulo="Combinar condições" valor={matchMode} opcoes={MODOS_DE_COMBINAR}
@@ -281,7 +308,7 @@ export function TriggersSection({ agent, onSave, escolheuTodos }: {
                 </div>
                 {matchMode === 'any' && triggers.some((o) => o.type === 'origin' || o.type === 'pipeline' || o.type === 'property') && (
                   <div className="text-xs text-amber-600">
-                    Atenção: com "Qualquer uma", a condição de origem/funil/imóvel desta lista
+                    Atenção: com "Qualquer um", a condição de origem/funil/imóvel desta lista
                     continua deixando a IA entrar nos leads das outras campanhas. Para valer só estes
                     formulários, remova aquela condição.
                   </div>
@@ -289,6 +316,31 @@ export function TriggersSection({ agent, onSave, escolheuTodos }: {
                 {formTriggerNotice(t.form_ids, formConfigs.length) && (
                   <div className="text-xs text-amber-600">{formTriggerNotice(t.form_ids, formConfigs.length)}</div>
                 )}
+              </div>
+            )}
+
+            {t.type === 'campaign' && (
+              <div className="w-full space-y-1">
+                <div className="text-xs text-muted-foreground">
+                  A IA só entra na conversa do lead que veio de uma das campanhas ou anúncios marcados. A lista é a de
+                  Campanhas: só entra aqui a campanha que já tem linha lá.
+                </div>
+                <div className="flex flex-col gap-1">
+                  {opcoesDeCampanha(campanhas, t.campaign_link_ids).map((o) => (
+                    <label key={o.id} className="flex items-center gap-2 text-sm cursor-pointer">
+                      <Checkbox
+                        aria-label={o.rotulo}
+                        checked={o.marcada}
+                        onCheckedChange={() => update(i, { campaign_link_ids: o.marcada ? (t.campaign_link_ids ?? []).filter((x) => x !== o.id) : [...(t.campaign_link_ids ?? []), o.id] })}
+                      />
+                      <span>{o.rotulo}</span>
+                      {o.orfa && <span className="text-xs text-amber-600">(não está mais cadastrada)</span>}
+                    </label>
+                  ))}
+                  {opcoesDeCampanha(campanhas, t.campaign_link_ids).length === 0 && (
+                    <span className="text-xs text-muted-foreground">Ainda não há campanha com linha em Campanhas.</span>
+                  )}
+                </div>
               </div>
             )}
 

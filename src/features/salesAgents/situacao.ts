@@ -142,6 +142,8 @@ function descricao(t: SalesAgentTrigger): string {
       return 'lead de anúncio';
     case 'form':
       return (t.form_ids ?? []).length === 1 ? 'lead do formulário escolhido' : 'lead dos formulários escolhidos';
+    case 'campaign':
+      return (t.campaign_link_ids ?? []).length === 1 ? 'lead da campanha escolhida' : 'lead das campanhas escolhidas';
     case 'property':
       return t.mode === 'code' ? `lead do imóvel ${(t.code ?? '').trim().toUpperCase()}` : 'lead que veio de um imóvel';
     case 'pipeline':

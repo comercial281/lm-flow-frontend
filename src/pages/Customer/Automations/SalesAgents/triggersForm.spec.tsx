@@ -10,6 +10,16 @@ vi.mock('@/services/pipelines/pipelinesService', () => ({
   pipelinesService: { getPipelines: vi.fn().mockResolvedValue({ data: [] }), getPipelineStages: vi.fn() },
 }));
 
+vi.mock('@/services/campanhas/campanhasService', () => ({
+  campanhasService: {
+    lista: vi.fn().mockResolvedValue([
+      { key: 'campaign:Campanha Teste', kind: 'campaign', label: 'Campanha Teste', link_id: 'l1', form_config_id: null },
+      { key: 'ad:9', kind: 'ad', label: null, link_id: 'l2', form_config_id: null, ad_title: 'Anúncio Teste', match_value: '9' },
+      { key: 'campaign:Sem Linha', kind: 'campaign', label: 'Sem Linha', link_id: null, form_config_id: null },
+    ]),
+  },
+}));
+
 import { TriggersSection } from './configurar/blocos/TriggersSection';
 import type { SalesAgent } from '@/services/salesAgents/salesAgentsService';
 
@@ -117,5 +127,33 @@ describe('palavra digitada e o bloco some', () => {
     rerender(<TriggersSection agent={comPalavra([])} onSave={onSave} escolheuTodos={escolheuTodos} />);
     unmount();
     expect(onSave).not.toHaveBeenCalled();
+  });
+});
+
+describe('gatilho de campanha', () => {
+  function HarnessCampanha({ ids = [] as string[] }) {
+    const [agent, setAgent] = useState({ id: 'a1', triggers: [{ type: 'campaign', campaign_link_ids: ids }], trigger_match_mode: 'any' } as unknown as SalesAgent);
+    return <TriggersSection agent={agent} onSave={(p) => setAgent((a) => ({ ...a, ...p }))} />;
+  }
+
+  it('lista só as campanhas e anúncios com linha, marca e desmarca', async () => {
+    render(<HarnessCampanha />);
+    const campanha = await screen.findByRole('checkbox', { name: 'Campanha Teste' });
+    expect(await screen.findByRole('checkbox', { name: 'Anúncio Teste' })).toBeInTheDocument();
+    expect(screen.queryByRole('checkbox', { name: 'Sem Linha' })).toBeNull();
+    fireEvent.click(campanha);
+    await waitFor(() => expect(screen.getByRole('checkbox', { name: 'Campanha Teste' })).toBeChecked());
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Campanha Teste' }));
+    await waitFor(() => expect(screen.getByRole('checkbox', { name: 'Campanha Teste' })).not.toBeChecked());
+  });
+
+  it('campanha marcada que sumiu da lista aparece como não cadastrada', async () => {
+    render(<HarnessCampanha ids={['l-velha']} />);
+    expect(await screen.findByText('(não está mais cadastrada)')).toBeInTheDocument();
+  });
+
+  it('o seletor do tipo tem "Veio destas campanhas"', async () => {
+    render(<HarnessCampanha />);
+    expect(await screen.findByText('Veio destas campanhas')).toBeInTheDocument();
   });
 });

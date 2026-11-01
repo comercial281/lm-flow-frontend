@@ -10291,7 +10291,7 @@ Reestruturação da IA, fase 6, Tarefa 70 (o molde; as Tarefas 71 a 74 enchem as
 
 **O que aparece na tela:** *IA Vendedora → Configurar* cai de 15 páginas pra 8, num índice só (sem grupos): **Modo operante · Números e usuários · Público-alvo e produto · Campanhas e gatilhos · Condução · Materiais · Destino · Funil e follow-up**. Página larga (`max-w-6xl`), índice de `lg:w-52` à esquerda com a página atual acesa e bolinha âmbar na que tem pendência, título e frase em cima, a área numa caixa e, no pé, **← Anterior** e **Próxima →** com o nome da página vizinha (a primeira não tem Anterior, a última não tem Próxima). O menu do LM Flow recolhe em Configurar, Ensinar e no Novo agente. **No celular (abaixo de 768 px)** o índice vira uma fileira de pílulas que quebra linha, e tudo fica numa coluna, sem rolar pro lado. O Ensinar usa a mesma moldura e ganhou o mesmo pé.
 
-**O que é casca hoje:** (Modo operante e Números e usuários foram enchidos na Tarefa 71, seção abaixo.) `PublicoEProduto`, `Conducao` e `FunilEFollowup` (em `configurar/paginas/`) empilham as páginas antigas que ainda cabem nos campos da página nova (Agendamento, Horário, Intenção, Qualificação + Personalidade + Restrições, Funil + Follow-up). `CampanhasEGatilhos` e `Materiais` só dizem que os blocos entram na próxima entrega. O Destino é o de sempre. Canal, Identidade, Objetivo, Critério, Abertura e Catálogo ficaram no repositório, sem uso, até as Tarefas 71 a 74 reaproveitarem ou apagarem (os specs delas usam `gravarDeTeste('legado')`).
+**O que é casca hoje:** (Modo operante e Números e usuários foram enchidos na Tarefa 71, seção abaixo.) `PublicoEProduto`, `Conducao` e `FunilEFollowup` (em `configurar/paginas/`) empilham as páginas antigas que ainda cabem nos campos da página nova (Agendamento, Horário, Intenção, Qualificação + Personalidade + Restrições, Funil + Follow-up). `Materiais` só diz que os blocos entram na próxima entrega (`CampanhasEGatilhos` e o Destino foram feitos na Tarefa 73). Canal, Identidade, Objetivo, Critério, Abertura e Catálogo ficaram no repositório, sem uso, até as Tarefas 71 a 74 reaproveitarem ou apagarem (os specs delas usam `gravarDeTeste('legado')`).
 
 **Endereços antigos (o `?pagina=` cai na página nova; `PAGINA_ANTIGA` em `configurar/paginas.ts`):**
 - `canal`, `horario` e `identidade` vão pra `numeros`; `abertura`, `personalidade`, `qualificacao` e `restricoes` pra `conducao`; `intencao` e `catalogo` pra `publico`; `objetivo`, `criterio` e `agendamento` pra `modo`; `followup` pra `funil`. `destino` e `funil` seguem.
@@ -10364,6 +10364,29 @@ Fase 6, tela 3 do protótipo `agentes.html`. As três páginas deixam de ser cas
 2. Voltar o frontend pra antes disso devolve Intenção/Catálogo, que gravam `locacao_enabled` e `tipo_venda` (escondidos).
 
 Código: `configurar/paginas/{PublicoEProduto,Conducao,FunilEFollowup,Abertura,Qualificacao,Personalidade,Restricoes}.tsx`, `features/salesAgents/{intencao,marcas}.ts`.
+
+### Campanhas e gatilhos e Destino (Tarefa 73, 01/11/2026)
+
+Fase 6 (e fases 2, 4 e 5), tela 3 do protótipo `agentes.html`. A página Campanhas e gatilhos deixa de ser casca e o Destino é refeito.
+
+**O que aparece na tela:**
+- **Campanhas e gatilhos**, três blocos. *Gatilhos do agente*: **Todos os leads** · **Só alguns** (grupo "Quem ela atende"), as condições, **Qualquer um** · **Todos** (`trigger_match_mode`) e, se o agente ainda tem a palavra antiga (`trigger_keyword`), a frase do que ela faz com **Tirar essa regra**. O tipo de condição ganhou **Veio destas campanhas** (`{type: 'campaign', campaign_link_ids}`; só campanha e anúncio com linha em Campanhas entram na lista). *Gatilhos por número*: um cartão por número do agente com **Os do agente** · **Todo lead do número** · **Só alguns**, e a frase fixa "No mesmo número, a mesma campanha não fica em dois agentes. Lead sem gatilho fica com o corretor." quando outro agente LIGADO divide o número. *Começo por campanha*: uma linha por campanha que chega na IA (`campanhasService.lista({salesAgentId})`) com o que vende e o link **editar em Campanhas** (`/automations/origem`), quatro selos (Boas-vindas própria/padrão · Com/Sem print · Com/Sem áudio · Intenção: texto próprio/automática) e **Abrir** com boas-vindas, print, áudio e pergunta de intenção. Vazio = o padrão da IA.
+- **Destino**: *Quem recebe* tem quatro cartões, **Roleta** · **Corretor fixo** · **Fica com o dono do número** · **Sistema do cliente**. *Onde o atendimento continua* só aparece com Roleta e Corretor fixo: **No número do corretor** · **Neste número** · **Num número de atendimento** (pede o número e a **Mensagem de chegada**, com `{nome}`, até 1000). *Depois que ela passa*: texto fixo (15 minutos sem resposta o responsável recebe "lead esperando", 1 hora o gerente também, e a IA segura a conversa). *Resumo junto* segue.
+
+**Decisões (não reabrir sem o dono pedir):**
+1. **Nulo contra lista vazia** (`features/salesAgents/gatilhosDoNumero.ts`): `triggers: null` num número = herda os do agente; `[]` = todo lead. `estadoDosGatilhos` lê, `gatilhosDoEstado` devolve o que gravar. **Voltar pra "Os do agente" grava `null`, nunca `[]`.** "Só alguns" sem condição completa NÃO grava (a linha em branco mora na tela; o cartão fica aberto até outra escolha).
+2. **Gatilho de número grava pela API própria dos números** (`useNumerosDoAgente.mudar`, que relê o agente); gatilho do agente, modo, palavra antiga e `openings` pelo `gravar`. O aviso do número dividido que o servidor devolve (`warnings`) aparece num aviso (toast) logo depois de gravar.
+3. **O modo "Qualquer um / Todos" é do agente**: o editor de condições do número não mostra o seletor (`semModo`).
+4. **Começo por campanha grava `openings` inteiro**, uma entrada por campanha com `ref: {kind: 'form' | 'link', id}` (formulário = id da ficha; campanha e anúncio = id da linha). As regras antigas (sem `ref`, por origem, formulário ou palavra) ficam intocadas; a entrada que fica só com o `ref` sai da lista. **Campanha sem linha** cria a linha antes (`criarLinha` com o par tipo + valor, sem imóvel) e grava o `ref` `link`; sem texto não cria nada. O bloco só existe com `campaign_links.read` (gerente e diretor; corretor não vê e a lista nem é pedida).
+5. **Destino sem trava de persona**: "Fica com o dono do número" grava `{handoff_target: 'number_owner', handoff_user_id: null, handoff_roleta_config_id: null}` no clique, sem `persona_kind`. Desabilitado (com a frase de sem dono) quando nenhum número tem dono.
+6. **Número de atendimento nunca grava pela metade**: o servidor exige número E mensagem de chegada. Escolher o cartão, o número ou digitar a mensagem espera o outro; só os dois gravam juntos. Mensagem vazia não grava e mostra "Escreva a mensagem de chegada: é ela que avisa o lead do número novo." Os números oferecidos são os do cliente que não são do próprio agente (o servidor recusa dono inválido e a frase dele aparece). `handoff_continue_at` nulo lê **No número do corretor**.
+
+**Armadilhas:**
+1. **`VariacaoDaCampanha` morreu** (janela de variação por campanha); as variações viraram o Começo por campanha, uma por linha de Campanhas.
+2. **Voltar o frontend** pra antes disso devolve a casca (sem gatilhos por número) e o Destino travado pela persona.
+3. A tela de Campanhas (Tarefa 77) ainda não existe: o link **editar em Campanhas** vai pro endereço dos Formulários (`/automations/origem`), que é onde ela vai morar.
+
+Código: `configurar/paginas/{CampanhasEGatilhos,GatilhosDoNumero,ComecoPorCampanha,Destino}.tsx`, `configurar/blocos/TriggersSection.tsx`, `features/salesAgents/gatilhosDoNumero.ts`.
 
 ### IA Vendedora · Materiais (Tarefa 74, 01/11/2026)
 
