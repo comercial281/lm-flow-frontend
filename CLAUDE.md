@@ -10364,3 +10364,29 @@ Fase 6, tela 3 do protótipo `agentes.html`. As três páginas deixam de ser cas
 2. Voltar o frontend pra antes disso devolve Intenção/Catálogo, que gravam `locacao_enabled` e `tipo_venda` (escondidos).
 
 Código: `configurar/paginas/{PublicoEProduto,Conducao,FunilEFollowup,Abertura,Qualificacao,Personalidade,Restricoes}.tsx`, `features/salesAgents/{intencao,marcas}.ts`.
+
+### IA Vendedora · Materiais (Tarefa 74, 01/11/2026)
+
+Fase 6, tela 3 do protótipo `agentes.html`, página **Materiais** do Configurar. Spec: `docs/superpowers/ia-reestruturacao/specs/2026-10-31-fase-6-tela-design.md` (Materiais e Localização como pino).
+
+**O que aparece na tela:**
+- **Da casa**: os materiais enviáveis sem imóvel ligado, cada um com o **Quando mandar** (ou "Sem "quando mandar": ela usa o próprio juízo.") e o botão **Editar**. **+ Material da casa** abre **Subir arquivo** ou **Colar um link** (nome e endereço); o arquivo ou link nasce enviável e a janela do "quando mandar" abre na hora, porque material sem regra fica mudo na prática.
+- **De cada imóvel**: um grupo por imóvel (nome, tipo e código). Linhas: **Book** (só se o cadastro tem book; chave `send_property_book_enabled` e a regra `book_send_rule` na janela "Quando ela manda o book"), **Fotos e vídeo** (chave `rich_media_enabled`, "quando" fixo no código), **Tour virtual** (só com `virtual_tour_url`, sem chave), **Localização** (chave `location_pin_enabled`) e os materiais ligados ao imóvel (`property_codes`), com **+ Material deste imóvel**. Material ligado a vários imóveis aparece em todos. O texto da seção avisa que as chaves de Book, Fotos e vídeo e Localização valem pra todos os imóveis.
+- **Quais imóveis**: o principal (`default_property_code`), os com material, os das campanhas do agente (`campanhasService.lista` + `property_ids`, até 30) e, pelo seletor **Ver outro imóvel**, os que a pessoa foi buscando. O seletor só acrescenta o imóvel à lista da página (estado local, não grava nada no agente). Código de material que o cadastro não achou aparece só com o material e a frase "não está entre os imóveis do cadastro".
+- **Localização como pino**: a linha explica por que o pino não sai quando é revenda, leilão ou locação ("Só empreendimento manda o pino..."), quando a restrição "Endereço exato" da Condução está ligada (com o botão **Abrir Condução**), quando falta o ponto no mapa e quando falta bairro ou cidade. Nesses casos a chave some.
+- **Janela do material** ("Quando ela manda"): Quando mandar, Quando não mandar, Mensagem junto e Uma vez só, com Salvar.
+
+**Decisões (não reabrir sem o dono pedir):**
+1. **A chave do pino é `location_pin_enabled` (C33)**, não o `rich_media_enabled`: "Fotos e vídeo" desligado não tira o pino. A página `materiais` grava só esses quatro campos (`rich_media_enabled`, `send_property_book_enabled`, `book_send_rule`, `location_pin_enabled`).
+2. **O pino segue a regra de privacidade de 03/10** (alfinete exato só pra empreendimento) e a restrição "endereço exato". `pinoPode` (`features/salesAgents/materiais.ts`) só espelha a regra do servidor pra explicar na tela; quem decide é o servidor (`Property#public_coordinates?`).
+3. **A janela do material salva sem `send_topics`.** O assunto continua gravado no servidor e saiu da tela. O vínculo com o imóvel é o `property_codes` de hoje (lista de códigos), nunca um `property_id`.
+4. **Material de outro imóvel não aparece**: o servidor tirou o "resgate" de arquivo restrito; a tela só lista o que tem o código do imóvel.
+5. **Upload**: `uploadFileDocument` (com a mesma validação do `docUpload`) e depois `updateDocument({ sendable: true })`, porque o upload não marca enviável. Link: `criarLink` (já nasce enviável). Em "Material deste imóvel" os dois ainda recebem `property_codes: [código]` pelo `updateDocument`.
+6. **"Ver outro imóvel"** é um seletor simples dos 100 imóveis ativos (a dúvida 2 do plano J falava em "a busca"; fica pra quando houver reclamação de carteira grande).
+
+**Armadilhas:**
+1. As três chaves aparecem em cada grupo mas são do agente: virar uma vira todas. Não trocar por chave por imóvel sem coluna nova.
+2. `ImovelDaPagina` sem `id` é o código que o cadastro não achou (a tela depende disso pra não desenhar as linhas do cadastro).
+3. Voltar o frontend pra antes desta tarefa devolve a casca da página Materiais; o servidor não muda.
+
+Código: `configurar/paginas/{Materiais,JanelaDoMaterial}.tsx`, `features/salesAgents/materiais.ts` (com specs).
