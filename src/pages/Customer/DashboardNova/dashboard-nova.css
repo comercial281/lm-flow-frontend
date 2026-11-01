@@ -145,12 +145,18 @@ button.lmfn-funil-faixa:hover { filter: brightness(1.08); }
 /* ═══ Vidro violeta (30/10/2026) ═══════════════════════════════════════════
  * Os quatro números: rótulo em até duas linhas (mesma altura em todos, número
  * alinhado), número grande que conta ao abrir (NumeroQueConta), orbe roxo no
- * canto só no escuro (no claro virava mancha), variação em selo. */
-.lmfn-numero { min-height: 168px; justify-content: space-between; overflow: hidden; }
+ * canto só no escuro (no claro virava mancha), variação em selo.
+ * O número fica em altura fixa e a variação desce pro pé: selo e "sem base"
+ * têm alturas diferentes e, com space-between, desalinhavam os números.
+ * O selo leva só seta e número; "vs. período anterior" vai fora, em cinza,
+ * e quebra de linha em cartão estreito (o selo inteiro estourava a borda). */
+.lmfn-numero { min-height: 168px; overflow: hidden; }
 .lmfn-numero > * { position: relative; z-index: 1; }
 .lmfn-numero .lmf-card-title { font-size: 10.5px; letter-spacing: 0.12em; line-height: 1.45; min-height: 2.9em; }
 .lmfn-numero .lmfn-numero-valor { font-size: 44px; font-weight: 700; letter-spacing: -0.03em; line-height: 1; margin-top: 18px; }
-.lmfn-numero .lmf-kpi-delta:not(.lmf-flat) { white-space: nowrap; padding: 5px 10px; border-radius: 99px; background: color-mix(in srgb, currentColor 14%, transparent); font-weight: 600; }
+.lmfn-numero .lmf-kpi-delta { flex-wrap: wrap; gap: 4px 6px; margin-top: auto; padding-top: 12px; font-size: 12px; }
+.lmfn-numero .lmf-kpi-delta-selo { white-space: nowrap; padding: 2px 7px; border-radius: 99px; background: color-mix(in srgb, currentColor 12%, transparent); font-size: 11.5px; font-weight: 600; line-height: 1.5; font-variant-numeric: tabular-nums; }
+.lmfn-numero .lmf-kpi-delta-sufixo { color: var(--lmf-muted); }
 .lmfn-orbe { display: none; }
 .dark .lmfn-numero .lmfn-orbe {
   display: block;
