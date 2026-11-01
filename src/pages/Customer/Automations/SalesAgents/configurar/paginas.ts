@@ -11,7 +11,6 @@
  */
 import { Compass, Filter, Megaphone, Paperclip, Send, Target, UserRound, Users, type LucideIcon } from 'lucide-react';
 import type { HealthReport, SalesAgent } from '@/services/salesAgents/salesAgentsService';
-import { lerEscolhas } from '@/features/salesAgents/tresEscolhas';
 import { pendenciasDasPaginas } from '@/features/salesAgents/pendencias';
 import type { InboxOption } from '../configuracao/comum';
 import type { Gravar } from './useGravarNaHora';
@@ -107,7 +106,7 @@ type Lido = Parameters<typeof pendenciasDasPaginas>[0];
  */
 export function agendamentoTravado(agent: Lido & Partial<Pick<SalesAgent, 'job'>>): boolean {
   if (agent.job) return agent.job !== 'leva_visita';
-  return lerEscolhas(agent).alcance !== 'visit';
+  return agent.booking_enabled === false; // como o servidor (`job_value`)
 }
 
 /** Sem `?pagina=`: a primeira com pendência na ordem do índice, senão Modo operante. */

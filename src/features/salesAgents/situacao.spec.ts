@@ -281,3 +281,27 @@ describe('ocultar avisos', () => {
     expect(situacaoDaIa(agente, null).tipo).toBe('parada');
   });
 });
+
+describe('Tarefa 70: um aviso só quando o servidor já diz a mesma coisa', () => {
+  const sem = { persona_kind: 'assistant' as const, lead_facing_name: 'Bia', house_voice: { kind: 'corretor' as const }, handoff_target: 'number_owner' as const,
+    numbers: [{ id: 'n', inbox_id: 'i', phone: null, inbox_name: 'Ana', enabled: true, connected: true, voice: null, triggers: null, position: 0, owner_user_id: null, owner_name: null }] };
+  const item = (key: string, status: 'warning' | 'error' = 'error') => ({ key, label: key, status, detail: `servidor: ${key}` });
+
+  it('corretor sem dono: com o item do servidor, só ele (Corrigir em Números e usuários)', () => {
+    const p = pendenciasDaIa(agenteDeTeste(sem), { status: 'error', items: [item('corretor_owner')] } as never);
+    expect(p.filter((x) => x.chave === 'corretor_owner' || x.chave === 'corretor_sem_dono_do_numero')).toEqual([
+      expect.objectContaining({ chave: 'corretor_owner', detalhe: 'servidor: corretor_owner', corrigir: { tela: 'configurar', pagina: 'numeros' } }),
+    ]);
+  });
+
+  it('sem Diagnóstico, o aviso da tela aparece', () => {
+    expect(pendenciasDaIa(agenteDeTeste(sem)).map((x) => x.chave)).toContain('corretor_sem_dono_do_numero');
+  });
+
+  it('o Corrigir dos itens do servidor leva à página nova', () => {
+    const p = pendenciasDaIa(agenteDeTeste({ persona_kind: 'assistant', lead_facing_name: 'Bia' }), { status: 'warning', items: ['visit_agenda', 'reuniao_sem_endereco', 'split_without_trigger', 'split_crossing'].map((k) => item(k, 'warning')) } as never);
+    expect(p.map((x) => [x.chave, x.corrigir?.pagina])).toEqual([
+      ['visit_agenda', 'modo'], ['reuniao_sem_endereco', 'modo'], ['split_without_trigger', 'campanhas'], ['split_crossing', 'campanhas'],
+    ]);
+  });
+});

@@ -86,6 +86,22 @@ const CORRIGIR_DO_ITEM: Record<string, Corrigir> = {
   triggers: PAGINA('campanhas'),
   conflict: PAGINA('campanhas'),
   client_system: PAGINA('destino'),
+  // Avisos do servidor (HealthCheck) que a reestruturação (Tarefa 70) mapeia pras páginas novas.
+  corretor_owner: PAGINA('numeros'),
+  visit_agenda: PAGINA('modo'),
+  reuniao_sem_endereco: PAGINA('modo'),
+  split_without_trigger: PAGINA('campanhas'),
+  split_crossing: PAGINA('campanhas'),
+};
+
+/**
+ * Pendência da tela → o item do servidor que diz a MESMA coisa. Com o item no Diagnóstico
+ * aparece um aviso só, o do servidor (com o Corrigir acima); sem Diagnóstico, o da tela.
+ * O `podeLigar` não usa isto: a trava de ligar segue com o texto da tela.
+ */
+const ALIAS_DO_SERVIDOR: Record<string, string> = {
+  corretor_sem_dono_do_numero: 'corretor_owner',
+  reuniao_sem_endereco: 'reuniao_sem_endereco',
 };
 
 /** Os gatilhos que o servidor de fato avalia: a lista + a palavra-chave antiga, se a lista não tiver gatilho de palavra. */
@@ -231,7 +247,6 @@ const TITULO_NO_PAINEL: Record<string, string> = {
   destino_cvcrm_desconectado: 'Conexão com o CVCRM',
   perguntas_vazias: 'Perguntas antes de passar',
   filtra_sem_obrigatoria: 'Pergunta obrigatória',
-  visita_sem_agenda: 'Agenda da visita',
   reuniao_sem_endereco: 'Endereço do escritório',
   corretor_sem_dono_do_numero: 'Dono do número',
   continua_sem_mensagem: 'Onde o atendimento continua',
@@ -284,7 +299,7 @@ export function pendenciasDaIa(agent: AgenteLido, diagnostics?: HealthReport | n
   // Painel (é pendência de Identidade e trava o Ligar, mas não para quem já atende).
   for (const p of daPagina) {
     const titulo = TITULO_NO_PAINEL[p.chave];
-    if (!titulo || lista.some((x) => x.chave === p.chave)) continue;
+    if (!titulo || lista.some((x) => x.chave === p.chave || x.chave === ALIAS_DO_SERVIDOR[p.chave])) continue;
     const herda = sistemaGrave && DESTINO_DO_SISTEMA.includes(p.chave);
     lista.push({ chave: p.chave, titulo, detalhe: p.frase, grave: p.impedeLigar || herda, corrigir: PAGINA(p.pagina) });
   }

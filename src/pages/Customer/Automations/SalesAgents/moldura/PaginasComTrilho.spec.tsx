@@ -69,6 +69,17 @@ describe('PaginasComTrilho: o molde do Configurar', () => {
     expect(screen.getByRole('navigation', { name: 'Páginas' }).className).toMatch(/lg:sticky/);
   });
 
+  it('emCard: título, frase e blocos moram num Card só; o pé fica fora dele', () => {
+    const { container } = render(<PaginasComTrilho rotulo="Páginas" grupos={seguidas} atual="b" aoIr={vi.fn()} emCard><p>bloco</p></PaginasComTrilho>);
+    const card = container.querySelector('[data-slot="card"]') as HTMLElement;
+    expect(container.querySelectorAll('[data-slot="card"]')).toHaveLength(1);
+    expect(within(card).getByRole('heading', { name: 'Números e usuários' })).toBeInTheDocument();
+    expect(within(card).getByText('Frase B')).toBeInTheDocument();
+    expect(within(card).getByText('bloco')).toBeInTheDocument();
+    expect(within(card).queryByRole('button', { name: /Próxima/ })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Próxima → Condução' })).toBeInTheDocument();
+  });
+
   it('moldura larga (max-w-6xl) e índice de lg:w-52', () => {
     const { container } = desenhar('b');
     expect((container.firstChild as HTMLElement).className).toMatch(/max-w-6xl/);

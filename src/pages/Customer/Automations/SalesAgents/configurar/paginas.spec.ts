@@ -73,6 +73,32 @@ describe('paginas (Configurar em 8 páginas)', () => {
     expect(() => conferirCamposDaPagina('modo', ['reach'])).toThrow(/reach/);
   });
 
+  // Tudo o que o passo a passo gravava tem página, ou saiu da tela de propósito (CAMPOS_ESCONDIDOS),
+  // ou mudou de dono: o nome do agente vive no Renomear do "⋯".
+  it('nada do passo a passo ficou sem página', () => {
+    const antes = [
+      'name', 'persona_kind', 'lead_facing_name', 'transfer_config.voice', 'handoff_target', 'handoff_roleta_config_id',
+      'handoff_user_id', 'reaction_enabled', 'reaction_emojis', 'reaction_max_per_conversation', 'reach', 'booking_enabled',
+      'handoff_webhook_url', 'transfer_config.mode', 'transfer_config.min_temperature', 'transfer_config.briefing_enabled', 'transfer_config.early_handoff',
+      'pipeline_move_enabled', 'pipeline_id', 'pipeline_stage_map', 'crm_policy.cold', 'ask_google_review', 'google_review_link',
+      'greeting', 'intent_question', 'playbook.intent_question_mode', 'playbook.vars.caminhos_intencao', 'playbook.vars.fora_dos_caminhos', 'default_origin', 'opening_image_url', 'opening_audio_url',
+      'openings', 'qualification_questions', 'transfer_config.required_questions', 'ai_limits.address', 'ai_limits.discount',
+      'ai_limits.price', 'ai_limits.iptu', 'ai_limits.custom', 'visit_duration_minutes', 'visit_config.days', 'visit_config.start',
+      'visit_config.end', 'visit_config.min_advance_hours', 'visit_config.max_advance_days', 'visit_config.same_day_requires_human',
+      'locacao_enabled', 'playbook.vars.tipo_venda', 'default_property_code',
+      'catalog_search_enabled', 'cross_sell_enabled', 'rich_media_enabled', 'send_property_book_enabled', 'book_send_rule',
+      'inbox_id', 'triggers', 'trigger_match_mode', 'trigger_keyword', 'active_hours', 'out_of_hours_reply', 'out_of_hours_message',
+      'message_split_enabled', 'audio_enabled', 'audio_mode', 'audio_voice_id', 'followup_enabled', 'followup_only',
+      'followup_min_days', 'followup_max_days', 'followup_action', 'followup_stage_id', 'followup_return_stage_id',
+      'followup_flow_id', 'followup_pipeline_ids', 'followup_hours', 'reengagement_enabled', 'reengagement_first_hours',
+      'reengagement_second_hours',
+    ];
+    const escondidos: readonly string[] = CAMPOS_ESCONDIDOS;
+    const agora = new Set(todos());
+    const sumiu = antes.filter((c) => c !== 'name' && !agora.has(c) && !escondidos.some((e) => c === e || c.startsWith(`${e}.`)));
+    expect(sumiu).toEqual([]);
+  });
+
   it('cada ?pagina= antigo cai na página nova (seção 3 da spec)', () => {
     const esperado: Record<string, PaginaId> = {
       canal: 'numeros', horario: 'numeros', identidade: 'numeros',

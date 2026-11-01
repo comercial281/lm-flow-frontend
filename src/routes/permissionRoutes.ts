@@ -104,6 +104,7 @@ export const ROUTE_PERMISSIONS: readonly RoutePermission[] = [
   { path: '/channels', resource: 'channels', action: 'read' },
   { path: '/channels/new', resource: 'channels', action: 'create' },
   { path: '/channels/:id/settings', resource: 'channels', action: 'read' },
+  { path: '/channels/:id/oficial', resource: 'channels', action: 'read' },
   { path: '/settings/email-template-editor', resource: 'message_templates', action: 'create' },
   { path: '/reports', resource: 'reports', action: 'read' },
   { path: '/dashboard', resource: 'dashboard', action: 'read' },

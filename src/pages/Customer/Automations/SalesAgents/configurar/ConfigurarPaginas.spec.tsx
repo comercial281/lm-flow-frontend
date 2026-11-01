@@ -1,7 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useLocation, useNavigate, useNavigationType } from 'react-router-dom';
 import type { SalesAgent } from '@/services/salesAgents/salesAgentsService';
 import { agenteDeTeste } from '@/test/salesAgents/agenteDeTeste';
 
@@ -42,7 +42,8 @@ import { esquecerSalvos } from './useGravarNaHora';
 
 function Endereco() {
   const voltar = useNavigate();
-  return <><output aria-label="endereço">{useLocation().search}</output><button type="button" onClick={() => voltar(-1)}>voltar do navegador</button></>;
+  const tipo = useNavigationType();
+  return <><output aria-label="endereço">{useLocation().search}</output><output aria-label="tipo de navegação">{tipo}</output><button type="button" onClick={() => voltar(-1)}>voltar do navegador</button></>;
 }
 
 // Sem pendência nenhuma além das que cada teste põe.
@@ -60,6 +61,7 @@ function abrir(agent: SalesAgent, url = '/ia-vendedora?ia=ia-1&tela=configurar',
   );
 }
 
+const tipoDeNavegacao = () => screen.getByLabelText('tipo de navegação').textContent;
 const endereco = () => screen.getByLabelText('endereço').textContent;
 
 beforeEach(() => { update.mockReset(); get.mockReset(); esquecerSalvos(); (window as unknown as { erro?: string }).erro = undefined; });
@@ -97,8 +99,7 @@ describe('ConfigurarPaginas', () => {
     abrir(completa({ inbox_id: null }), '/ia-vendedora?ia=ia-1&tela=configurar&pagina=objetivo');
     expect(screen.getByText('página modo')).toBeInTheDocument();
     expect(endereco()).toBe('?ia=ia-1&tela=configurar&pagina=modo');
-    await userEvent.click(screen.getByRole('button', { name: 'voltar do navegador' }));
-    expect(endereco()).toBe('?ia=ia-1&tela=configurar&pagina=modo');
+    expect(tipoDeNavegacao()).toBe('REPLACE');
   });
 
   it('cada endereço antigo abre a página nova certa', () => {
@@ -150,6 +151,7 @@ describe('ConfigurarPaginas', () => {
     expect(screen.getByText('página conducao')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /^Condução/ })).toHaveAttribute('aria-current', 'page');
     expect(endereco()).toBe('?ia=ia-1&tela=configurar&pagina=conducao');
+    expect(tipoDeNavegacao()).toBe('PUSH');
     await userEvent.click(screen.getByRole('button', { name: 'voltar do navegador' }));
     expect(endereco()).toBe('?ia=ia-1&tela=configurar&pagina=modo');
   });
@@ -159,6 +161,7 @@ describe('ConfigurarPaginas', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Próxima → Números e usuários' }));
     expect(screen.getByText('página numeros')).toBeInTheDocument();
     expect(endereco()).toBe('?ia=ia-1&tela=configurar&pagina=numeros');
+    expect(tipoDeNavegacao()).toBe('PUSH');
     await userEvent.click(screen.getByRole('button', { name: 'voltar do navegador' }));
     expect(endereco()).toBe('?ia=ia-1&tela=configurar&pagina=modo');
   });
@@ -175,6 +178,13 @@ describe('ConfigurarPaginas', () => {
   it('pendência aparece como bolinha com texto pro leitor de tela, na página nova', () => {
     abrir(completa({ persona_kind: 'broker', number_owner_id: null, handoff_target: 'number_owner' }), '/ia-vendedora?ia=ia-1&tela=configurar&pagina=modo');
     expect(screen.getByRole('button', { name: /Números e usuários.*tem pendência/ })).toBeInTheDocument();
+  });
+
+  it('a área é UM Card com título e frase dentro; a página entrega blocos, não caixa', () => {
+    abrir(completa(), '/ia-vendedora?ia=ia-1&tela=configurar&pagina=destino');
+    const card = screen.getByRole('heading', { level: 1, name: 'Destino' }).closest('[data-slot="card"]')!;
+    expect(card).not.toBeNull();
+    expect(within(card as HTMLElement).getByText('página destino')).toBeInTheDocument();
   });
 
   it('o índice é o único sticky e tem rolagem própria só se passar da tela', () => {

@@ -16,7 +16,8 @@ import type { ReactNode } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import { Lock } from 'lucide-react';
 import { BaseHeader } from '@/components/base';
-import { Button } from '@/components/ui/ds';
+import { Button, Card } from '@/components/ui/ds';
+import { DentroDaCaixa } from '@/components/base/Secao';
 import { useCelular } from '@/hooks/useCelular';
 import { cn } from '@/lib/utils';
 
@@ -40,11 +41,17 @@ export interface PaginasComTrilhoProps<Id extends string> {
   aoIr: (id: Id) => void;
   /** A página aberta. */
   children: ReactNode;
+  /**
+   * Molde do Configurar (Tarefa 70): título, frase e blocos moram num `Card` só, com os blocos
+   * separados por linha. A página entrega BLOCOS (`Secoes`/`Secao`), nunca caixa própria.
+   * Sem isto (Ensinar, até a Tarefa 75), título e frase ficam fora e a página traz a caixa dela.
+   */
+  emCard?: boolean;
 }
 
 const NAV_LATERAL = 'flex shrink-0 flex-col gap-4 lg:sticky lg:top-6 lg:w-52 lg:self-start lg:max-h-[calc(100dvh-9rem)] lg:overflow-y-auto';
 
-export default function PaginasComTrilho<Id extends string>({ rotulo, grupos, atual, aoIr, children }: PaginasComTrilhoProps<Id>) {
+export default function PaginasComTrilho<Id extends string>({ rotulo, grupos, atual, aoIr, children, emCard = false }: PaginasComTrilhoProps<Id>) {
   const celular = useCelular();
   const grupoAtual = grupos.find((g) => g.itens.some((i) => i.id === atual)) ?? grupos[0];
   const todas = grupos.flatMap((g) => g.itens);
@@ -100,11 +107,24 @@ export default function PaginasComTrilho<Id extends string>({ rotulo, grupos, at
         ))}
       </nav>
       <div className="flex min-w-0 flex-1 flex-col gap-5">
-        <header className="space-y-1">
-          {!umGrupo && <p className="text-xs font-semibold uppercase tracking-[0.06em] text-muted-foreground">{grupoAtual.rotulo}</p>}
-          <BaseHeader title={info.titulo} subtitle={info.frase} />
-        </header>
-        {children}
+        {emCard ? (
+          <Card className="gap-0 overflow-hidden py-0">
+            <header className="space-y-1 border-b border-border px-5 py-6 sm:px-8">
+              <BaseHeader title={info.titulo} subtitle={info.frase} />
+            </header>
+            <DentroDaCaixa.Provider value>
+              <div className="divide-y divide-border px-5 sm:px-8">{children}</div>
+            </DentroDaCaixa.Provider>
+          </Card>
+        ) : (
+          <>
+            <header className="space-y-1">
+              {!umGrupo && <p className="text-xs font-semibold uppercase tracking-[0.06em] text-muted-foreground">{grupoAtual.rotulo}</p>}
+              <BaseHeader title={info.titulo} subtitle={info.frase} />
+            </header>
+            {children}
+          </>
+        )}
         {(anterior || proxima) && (
           <footer className="flex flex-wrap items-stretch justify-between gap-2.5">
             {anterior && vizinha(anterior, 'anterior')}

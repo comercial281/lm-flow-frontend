@@ -126,7 +126,8 @@ export function pendenciasDasPaginas(agent: Lido): PendenciaDaPagina[] {
   }
 
   // --- Reestruturação (Tarefa 70) ---------------------------------------------
-  const job = agent.job ?? (lerEscolhas(agent).alcance === 'visit' ? 'leva_visita' : 'filtra_passa');
+  // Sem `job` gravado, como o servidor (`job_value`): agendar visita é `booking_enabled != false`.
+  const job = agent.job ?? (agent.booking_enabled === false ? 'filtra_passa' : 'leva_visita');
   const passos = agent.next_steps ?? (job === 'leva_visita' ? ['visita'] : []);
 
   // Filtra e passa entrega quando as obrigatórias estão respondidas. Como o servidor,
@@ -134,19 +135,10 @@ export function pendenciasDasPaginas(agent: Lido): PendenciaDaPagina[] {
   if (job === 'filtra_passa' && textos(agent.transfer_config?.required_questions).length === 0 && textos(agent.qualification_questions).length === 0) {
     lista.push({ chave: 'filtra_sem_obrigatoria', pagina: 'conducao', frase: FRASE_FILTRA_SEM_OBRIGATORIA, impedeLigar: true });
   }
-  // Leva até a visita marca na agenda de um corretor. No sistema do cliente não há corretor
-  // da casa; sem dono de número, a agenda não tem de quem ser.
-  if (job === 'leva_visita' && passos.includes('visita') && agent.handoff_target === 'webhook'
-    && (agent.numbers?.length ?? 0) > 0 && !agent.numbers!.some((n) => n.owner_user_id)) {
-    lista.push({
-      chave: 'visita_sem_agenda', pagina: 'modo', impedeLigar: false,
-      frase: 'Leva até a visita marca na agenda de um corretor, e o lead vai para o sistema do cliente. Escolha um corretor fixo ou o dono do número.',
-    });
-  }
   if (passos.includes('reuniao') && !(agent.house_voice?.office_address ?? '').trim()) {
     lista.push({
       chave: 'reuniao_sem_endereco', pagina: 'modo', impedeLigar: false,
-      frase: 'A reunião no escritório está nos próximos passos, mas falta o endereço do escritório: ela não é oferecida.',
+      frase: 'A reunião no escritório está nos próximos passos, mas falta o endereço do escritório na ficha da casa: ela não é oferecida.',
     });
   }
   // Voz Corretor em número ligado sem dono: a ficha do número, ou a da casa quando ele herda.
@@ -155,14 +147,16 @@ export function pendenciasDasPaginas(agent: Lido): PendenciaDaPagina[] {
   if (semDono && !lista.some((p) => p.chave === 'persona_sem_dono')) {
     lista.push({
       chave: 'corretor_sem_dono_do_numero', pagina: 'numeros', impedeLigar: true,
-      frase: `O número ${semDono.inbox_name || 'sem nome'} não tem corretor dono. Escolha o dono em Integrações → WhatsApp ou use outra voz.`,
+      // A frase do servidor (`SalesAgentNumber.missing_owner_message`), palavra por palavra.
+      frase: `${semDono.inbox_name ? `O número ${semDono.inbox_name}` : 'Este número'} está com a voz Corretor e não tem corretor dono. Escolha o dono em Integrações → WhatsApp ou use outra voz.`,
     });
   }
   if (agent.handoff_continue_at === 'service_number') {
     if (!(agent.handoff_arrival_message ?? '').trim()) {
       lista.push({ chave: 'continua_sem_mensagem', pagina: 'destino', impedeLigar: true, frase: 'Escreva a mensagem de chegada: é ela que avisa o lead do número novo.' });
     } else if (!agent.handoff_service_inbox_id) {
-      lista.push({ chave: 'continua_sem_mensagem', pagina: 'destino', impedeLigar: true, frase: 'Escolha o número de atendimento onde a conversa continua.' });
+      // Dado parado (o número de atendimento foi apagado depois): o servidor só confere quando os campos mudam, nunca ao ligar.
+      lista.push({ chave: 'continua_sem_mensagem', pagina: 'destino', impedeLigar: false, frase: 'Escolha o número de atendimento onde a conversa continua.' });
     }
   }
 
@@ -212,7 +206,7 @@ export function podeLigar(agent: AgenteQueLiga, outros: OutroAgente[] = []): { p
       if (atendeTodoLead(agent, meu) || atendeTodoLead(outro, dele)) {
         return {
           pode: false, pagina: 'campanhas',
-          motivo: `Pra dividir o número ${meu.inbox_name} com o agente ${outro.name}, os dois precisam de gatilhos.`,
+          motivo: `Pra dividir o número ${meu.inbox_name || 'sem nome'} com o agente ${outro.name}, os dois precisam de gatilhos.`,
         };
       }
     }

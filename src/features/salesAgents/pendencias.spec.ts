@@ -144,22 +144,18 @@ describe('pendenciasDasPaginas: o que a reestruturação acrescenta', () => {
     expect(chaves(a)).not.toContain('conducao:filtra_sem_obrigatoria');
   });
 
-  it('visita sem agenda: Leva até a visita com o lead indo pro sistema do cliente e sem dono de número', () => {
-    const a = completo({
-      job: 'leva_visita', next_steps: ['visita'], handoff_target: 'webhook', handoff_webhook_system: 'cvcrm', handoff_cvcrm_connected: true,
-      numbers: [numero({ owner_user_id: null, owner_name: null })],
-    });
-    expect(pendenciasDasPaginas(a)).toContainEqual(expect.objectContaining({ chave: 'visita_sem_agenda', pagina: 'modo', impedeLigar: false }));
-    expect(chaves(completo({ job: 'leva_visita', next_steps: ['visita'], numbers: [numero()] }))).not.toContain('modo:visita_sem_agenda');
-    expect(chaves(completo({ job: 'filtra_passa', handoff_target: 'webhook', handoff_webhook_system: 'cvcrm', handoff_cvcrm_connected: true, numbers: [numero({ owner_user_id: null })] })))
-      .not.toContain('modo:visita_sem_agenda');
+  it('sem trabalho gravado, o trabalho segue o servidor: agendar visita é booking_enabled != false (não o reach)', () => {
+    const base = { job: null, qualification_questions: [], transfer_config: { required_questions: [] } } as Partial<SalesAgent>;
+    expect(chaves(completo({ ...base, booking_enabled: false, reach: 'visit' }))).toContain('conducao:filtra_sem_obrigatoria');
+    expect(chaves(completo({ ...base, booking_enabled: true, reach: 'qualify' }))).not.toContain('conducao:filtra_sem_obrigatoria');
+    expect(chaves(completo({ ...base, booking_enabled: undefined, reach: 'qualify' }))).not.toContain('conducao:filtra_sem_obrigatoria');
   });
 
   it('reunião nos próximos passos sem endereço do escritório avisa em Modo operante', () => {
     const sem = completo({ next_steps: ['visita', 'reuniao'], house_voice: { kind: 'consultora', name: 'Ana', gender: 'ela' } });
     expect(pendenciasDasPaginas(sem)).toContainEqual(expect.objectContaining({
       chave: 'reuniao_sem_endereco', pagina: 'modo', impedeLigar: false,
-      frase: 'A reunião no escritório está nos próximos passos, mas falta o endereço do escritório: ela não é oferecida.',
+      frase: 'A reunião no escritório está nos próximos passos, mas falta o endereço do escritório na ficha da casa: ela não é oferecida.',
     }));
     const com = completo({ next_steps: ['reuniao'], house_voice: { kind: 'consultora', office_address: 'Rua A, 10' } });
     expect(chaves(com)).not.toContain('modo:reuniao_sem_endereco');
@@ -168,7 +164,12 @@ describe('pendenciasDasPaginas: o que a reestruturação acrescenta', () => {
 
   it('voz Corretor num número sem dono impede ligar, em Números e usuários', () => {
     const casa = completo({ house_voice: { kind: 'corretor' }, handoff_target: 'number_owner', numbers: [numero({ owner_user_id: null, owner_name: null })] });
-    expect(pendenciasDasPaginas(casa)).toContainEqual(expect.objectContaining({ chave: 'corretor_sem_dono_do_numero', pagina: 'numeros', impedeLigar: true }));
+    expect(pendenciasDasPaginas(casa)).toContainEqual(expect.objectContaining({
+      chave: 'corretor_sem_dono_do_numero', pagina: 'numeros', impedeLigar: true,
+      frase: 'O número Ana está com a voz Corretor e não tem corretor dono. Escolha o dono em Integrações → WhatsApp ou use outra voz.',
+    }));
+    const semNome = completo({ house_voice: { kind: 'corretor' }, handoff_target: 'number_owner', numbers: [numero({ inbox_name: '', owner_user_id: null })] });
+    expect(pendenciasDasPaginas(semNome)[0].frase).toMatch(/^Este número está com a voz Corretor/);
     const propria = completo({ numbers: [numero({ voice: { kind: 'corretor' }, owner_user_id: null }), numero({ id: 'n2', inbox_id: 'inbox-2', owner_user_id: 'u1' })] });
     expect(chaves(propria)).toContain('numeros:corretor_sem_dono_do_numero');
     // a corretora com ficha própria de outra voz não depende de dono; número desligado não conta.
@@ -176,6 +177,12 @@ describe('pendenciasDasPaginas: o que a reestruturação acrescenta', () => {
       .not.toContain('numeros:corretor_sem_dono_do_numero');
     expect(chaves(completo({ house_voice: { kind: 'corretor' }, handoff_target: 'number_owner', numbers: [numero({ enabled: false, owner_user_id: null })] })))
       .not.toContain('numeros:corretor_sem_dono_do_numero');
+  });
+
+  it('número de atendimento apagado depois (dado parado) só avisa: o servidor não confere ao ligar', () => {
+    const a = completo({ handoff_target: 'roleta', handoff_roleta_config_id: 'r1', handoff_continue_at: 'service_number', handoff_service_inbox_id: null, handoff_arrival_message: 'Oi {nome}' });
+    expect(pendenciasDasPaginas(a)).toContainEqual(expect.objectContaining({ chave: 'continua_sem_mensagem', pagina: 'destino', impedeLigar: false }));
+    expect(podeLigar(a).pode).toBe(true);
   });
 
   it('número de atendimento sem mensagem de chegada impede ligar, em Destino', () => {
@@ -198,6 +205,11 @@ describe('podeLigar com o número dividido', () => {
     expect(podeLigar(dividido(), [outro()])).toEqual({
       pode: false, pagina: 'campanhas', motivo: 'Pra dividir o número Ana com o agente Agente B, os dois precisam de gatilhos.',
     });
+  });
+
+  it('número sem nome não vira "null" no motivo', () => {
+    const a = dividido({ numbers: [numero({ inbox_name: '' })] });
+    expect(podeLigar(a, [outro()]).motivo).toBe('Pra dividir o número sem nome com o agente Agente B, os dois precisam de gatilhos.');
   });
 
   it('o outro desligado não conta', () => {
