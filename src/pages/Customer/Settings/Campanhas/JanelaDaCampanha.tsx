@@ -27,11 +27,18 @@ import type { Intencao } from '@/services/salesAgents/salesAgentsService';
 import { motivoEscrito } from '@/features/salesAgents/erroDoServidor';
 import { fraseDaIntencao, INTENCOES, ROTULO_DA_INTENCAO } from '@/features/salesAgents/intencao';
 import {
-  CAMPOS_DA_CONDICAO, TETO_DA_OBSERVACAO, condicaoDaLinha, condicaoEmEdicao, condicaoParaGravar, dinheiro,
+  CAMPOS_DA_CONDICAO, TETO_DA_OBSERVACAO, condicaoDaLinha, condicaoEmEdicao, condicaoParaGravar, dinheiro, dinheiroNoCampo,
   type CampoDaCondicao, type CondicaoEmEdicao,
 } from '@/features/campanhas/condicaoDaCampanha';
 import { MAX_DE_IMOVEIS, TIPOS_DE_IMOVEL, nomeDoItem } from '@/features/campanhas/itensDeCampanha';
 import { donoEmTexto, fraseDeMover, opcoesDaTela } from '@/features/campanhas/qualIaAtende';
+
+/** O que o servidor escreveu no 409 ("esta campanha sai da IA X"), com maiúscula e ponto. Vazio = monta pelo rótulo. */
+function fraseDoServidor(msg?: string | null): string | null {
+  const t = (msg ?? '').trim();
+  if (!t) return null;
+  return `${t.charAt(0).toUpperCase()}${t.slice(1)}${/[.!?]$/.test(t) ? '' : '.'}`;
+}
 
 export interface ResultadoDoSalvar { config?: LeadAdsFormConfig; linha?: LinhaDeCampanha }
 
@@ -49,6 +56,8 @@ export interface JanelaDaCampanhaProps {
   aoFechar: () => void;
   aoSalvar?: (r: ResultadoDoSalvar) => void;
   aoMudarIa?: (item: ItemDeCampanha, donos: IaDaCampanha[]) => void;
+  /** O anúncio ganhou linha ao escolher a IA: a lista guarda o id, pra reabrir não criar de novo (o servidor recusa em dobro). */
+  aoCriarLinha?: (item: ItemDeCampanha, linkId: string) => void;
   aoApagar?: () => void;
 }
 
@@ -59,12 +68,15 @@ function Bloco({ titulo, children }: { titulo: string; children: ReactNode }) {
 }
 
 export default function JanelaDaCampanha({
-  tipo, item, config = null, entrada, montarEntrada, opcoesDeIa, aoFechar, aoSalvar, aoMudarIa, aoApagar,
+  tipo, item, config = null, entrada, montarEntrada, opcoesDeIa, aoFechar, aoSalvar, aoMudarIa, aoCriarLinha, aoApagar,
 }: JanelaDaCampanhaProps) {
   const can = useCan();
   const recurso = tipo === 'form' ? 'lead_ads_form_configs' : 'campaign_links';
   // C26: a permissão de mexer na IA da campanha é a da própria campanha (não a de editar a IA).
-  const podeEditar = can(recurso, tipo === 'form' && !config ? 'create' : 'update');
+  // Anúncio sem linha: criar a linha pede `campaign_links.create` (o servidor exige), além de editar.
+  const precisaCriar = tipo === 'whats' && !item.link_id;
+  const podeCriar = !precisaCriar || can('campaign_links', 'create');
+  const podeEditar = can(recurso, tipo === 'form' && !config ? 'create' : 'update') && podeCriar;
   const podeApagar = !!aoApagar && !!config && can('lead_ads_form_configs', 'delete');
 
   const [ids, setIds] = useState<string[]>(item.property_ids.map(String));
@@ -119,9 +131,9 @@ export default function JanelaDaCampanha({
     try {
       const c: CondicaoDaOferta = await campanhasService.condicaoDoTexto(textoDoAnuncio);
       setCond((atual) => ({
-        down_payment_from: c.down_payment_from != null ? String(c.down_payment_from) : atual.down_payment_from,
-        installment_from: c.installment_from != null ? String(c.installment_from) : atual.installment_from,
-        min_income: c.min_income != null ? String(c.min_income) : atual.min_income,
+        down_payment_from: c.down_payment_from != null ? dinheiroNoCampo(c.down_payment_from) : atual.down_payment_from,
+        installment_from: c.installment_from != null ? dinheiroNoCampo(c.installment_from) : atual.installment_from,
+        min_income: c.min_income != null ? dinheiroNoCampo(c.min_income) : atual.min_income,
         payment_terms: c.payment_terms || atual.payment_terms,
         note: c.note ? c.note.slice(0, TETO_DA_OBSERVACAO) : atual.note,
       }));
@@ -180,8 +192,9 @@ export default function JanelaDaCampanha({
     if (!item.match_kind || !item.match_value) return null;
     const criada = await campanhasService.criarLinha({ match_kind: item.match_kind, match_value: item.match_value, label: item.label });
     setLinkId(String(criada.id));
+    aoCriarLinha?.(item, String(criada.id));
     return { kind: 'campaign_link', id: String(criada.id) };
-  }, [tipo, config, linkId, item.match_kind, item.match_value, item.label]);
+  }, [tipo, config, linkId, item, aoCriarLinha]);
 
   const aplicarDonos = (r: { holders: IaDaCampanha[]; left_empty: string[]; warning: string | null }) => {
     setDonos(r.holders);
@@ -201,7 +214,7 @@ export default function JanelaDaCampanha({
       const r = await campanhasService.escolherIa({
         ref, sales_agent_id: o.opcao.sales_agent_id, number_id: o.opcao.number_id, ...(confirmar ? { confirm_move: true } : {}),
       });
-      if (!r.ok) { setMovendo({ chave, frase: fraseDeMover(r.conflicts, opcoesDeIa ?? []) }); return; }
+      if (!r.ok) { setMovendo({ chave, frase: fraseDoServidor(r.message) ?? fraseDeMover(r.conflicts, opcoesDeIa ?? []) }); return; }
       aplicarDonos(r);
       setEscolhida('');
       toast.success('IA da campanha gravada');
@@ -248,10 +261,14 @@ export default function JanelaDaCampanha({
         </DialogHeader>
 
         {!podeEditar && (
-          <Aviso tom="neutro" compacto>Você pode ver esta campanha, mas não mudar. Quem edita é o gerente ou o administrador.</Aviso>
+          <Aviso tom="neutro" compacto>
+            {!podeCriar
+              ? 'Este anúncio ainda não tem linha em Campanhas, e criar a linha pede a permissão de criar campanha. Peça pro gerente ou administrador.'
+              : 'Você pode ver esta campanha, mas não mudar. Quem edita é o gerente ou o administrador.'}
+          </Aviso>
         )}
 
-        <fieldset disabled={!podeEditar} className="m-0 grid min-w-0 gap-5 border-0 p-0 py-2">
+        <fieldset disabled={!podeEditar || salvando} className="m-0 grid min-w-0 gap-5 border-0 p-0 py-2">
           <Bloco titulo="O que esta campanha vende">
             <BotoesDeEscolha<EscopoDaOferta>
               rotulo="O que vende" semNome valor={escopo} desabilitado={!podeEditar}
@@ -311,7 +328,7 @@ export default function JanelaDaCampanha({
             <GradeDaJanela>
               {CAMPOS_DA_CONDICAO.map(({ campo, rotulo, dinheiro: eDinheiro }) => (
                 <CampoDaJanela key={campo} rotulo={rotulo} htmlFor={`cond_${campo}`} colunas={campo === 'payment_terms' ? 4 : 2}>
-                  <Input id={`cond_${campo}`} inputMode={eDinheiro ? 'numeric' : undefined} value={cond[campo]}
+                  <Input id={`cond_${campo}`} inputMode={eDinheiro ? 'decimal' : undefined} value={cond[campo]}
                     placeholder={placeholder(campo, eDinheiro)} onChange={(e) => mudaCond(campo, e.target.value)} />
                 </CampoDaJanela>
               ))}
@@ -325,9 +342,16 @@ export default function JanelaDaCampanha({
             </GradeDaJanela>
             {umSo || escopo === 'catalog' || escopo === 'listing_kind' ? (
               <ul className="grid gap-1 text-xs text-muted-foreground" aria-label="O que a IA vai usar">
-                {linhasDeCondicao.map((l) => (
-                  <li key={l.campo}><b className="font-medium text-foreground/80">{l.rotulo}:</b> {l.valor} <span>({l.de})</span></li>
-                ))}
+                {linhasDeCondicao.map((l) => {
+                  // Catálogo e tipo não fixam imóvel: o vazio vem do imóvel que a conversa escolher, não do corretor.
+                  const doEscolhido = !umSo && l.de === 'o corretor simula';
+                  return (
+                    <li key={l.campo}>
+                      <b className="font-medium text-foreground/80">{l.rotulo}:</b>{' '}
+                      {doEscolhido ? 'vem do imóvel que a conversa escolher' : <>{l.valor} <span>({l.de})</span></>}
+                    </li>
+                  );
+                })}
               </ul>
             ) : null}
           </Bloco>
@@ -392,12 +416,12 @@ export default function JanelaDaCampanha({
             )}
             {avisoDaIa && <Aviso tom="atencao" compacto>{avisoDaIa}</Aviso>}
             {ficouSemIa.length > 0 && <Aviso tom="atencao" compacto>Ficou sem IA: {ficouSemIa.join(', ')}.</Aviso>}
-            <p className="text-xs text-muted-foreground">Esta escolha vale na hora, sem esperar o Salvar.</p>
+            {podeMexerNaIa && <p className="text-xs text-muted-foreground">Esta escolha vale na hora, sem esperar o Salvar.</p>}
           </Bloco>
         )}
 
         {tipo === 'form' && entrada && (
-          <fieldset disabled={!podeEditar} className="m-0 grid min-w-0 gap-5 border-0 p-0">
+          <fieldset disabled={!podeEditar || salvando} className="m-0 grid min-w-0 gap-5 border-0 p-0">
             {entrada}
           </fieldset>
         )}

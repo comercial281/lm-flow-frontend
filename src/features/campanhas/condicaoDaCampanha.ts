@@ -20,7 +20,11 @@ export const CAMPOS_DA_CONDICAO: { campo: CampoDaCondicao; rotulo: string; dinhe
 
 type Parcial = Partial<CondicaoDaOferta> | null | undefined;
 
-export const dinheiro = (n: number) => `R$ ${Number(n).toLocaleString('pt-BR')}`;
+/** Número em pt-BR: ponto de milhar, vírgula nos centavos (899,90; 15.000). Só mostra casas quando há centavos. */
+export const numeroEmPtBr = (n: number) =>
+  Number(n).toLocaleString('pt-BR', { minimumFractionDigits: Number.isInteger(Number(n)) ? 0 : 2, maximumFractionDigits: 2 });
+
+export const dinheiro = (n: number) => `R$ ${numeroEmPtBr(n)}`;
 
 const preenchido = (v: unknown) => (typeof v === 'string' ? v.trim() !== '' : v != null);
 
@@ -63,15 +67,17 @@ export const vazioDaCondicao = (): CondicaoEmEdicao => ({
 });
 
 const textoDe = (v: unknown) => (v == null ? '' : String(v));
+/** O número que o servidor guardou, do jeito que a pessoa digita em pt-BR (nunca "899.9" cru no campo). */
+export const dinheiroNoCampo = (v: number | null | undefined) => (v == null || !Number.isFinite(Number(v)) ? '' : numeroEmPtBr(Number(v)));
 
 export function condicaoEmEdicao(c: Parcial): CondicaoEmEdicao {
   return {
-    down_payment_from: textoDe(c?.down_payment_from), installment_from: textoDe(c?.installment_from),
-    min_income: textoDe(c?.min_income), payment_terms: textoDe(c?.payment_terms), note: textoDe(c?.note),
+    down_payment_from: dinheiroNoCampo(c?.down_payment_from), installment_from: dinheiroNoCampo(c?.installment_from),
+    min_income: dinheiroNoCampo(c?.min_income), payment_terms: textoDe(c?.payment_terms), note: textoDe(c?.note),
   };
 }
 
-/** "R$ 1.500" ou "1500,50" -> número; vazio ou sem dígito -> nulo. */
+/** Lê pt-BR de verdade: ponto é milhar, vírgula é centavos ("R$ 1.500,50" -> 1500.5; "15.000" -> 15000). */
 export function numeroDoCampo(texto: string): number | null {
   const limpo = texto.replace(/R\$/gi, '').replace(/\s/g, '').replace(/\./g, '').replace(',', '.');
   if (!/\d/.test(limpo)) return null;
@@ -79,14 +85,16 @@ export function numeroDoCampo(texto: string): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
-/** O que vai pro servidor. Tudo vazio = nulo (a campanha não tem condição própria). */
-export function condicaoParaGravar(c: CondicaoEmEdicao): CondicaoDaOferta | null {
-  const out: CondicaoDaOferta = {
+/**
+ * O que vai pro servidor. Sem condição vai o objeto com as chaves nulas, NUNCA `null`: o servidor descarta o `null`
+ * (`permit(offer_condition: {})`) e a condição antiga ficaria; com as chaves nulas ele normaliza pra `{}` (sem condição).
+ */
+export function condicaoParaGravar(c: CondicaoEmEdicao): CondicaoDaOferta {
+  return {
     down_payment_from: numeroDoCampo(c.down_payment_from),
     installment_from: numeroDoCampo(c.installment_from),
     min_income: numeroDoCampo(c.min_income),
     payment_terms: c.payment_terms.trim() || null,
     note: c.note.trim().slice(0, TETO_DA_OBSERVACAO) || null,
   };
-  return Object.values(out).every((v) => v == null) ? null : out;
 }

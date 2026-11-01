@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { condicaoDaLinha, condicaoParaGravar, resumoDaCondicao, vazioDaCondicao, TETO_DA_OBSERVACAO } from './condicaoDaCampanha';
+import { numeroDoCampo, condicaoEmEdicao, condicaoDaLinha, condicaoParaGravar, resumoDaCondicao, vazioDaCondicao, TETO_DA_OBSERVACAO, dinheiro } from './condicaoDaCampanha';
 
 const imovel = { down_payment_from: 500, installment_from: 1000, min_income: 5000, payment_terms: 'Sinal + mensais' };
 
@@ -23,6 +23,13 @@ describe('condicaoDaLinha', () => {
   });
 });
 
+describe('dinheiro', () => {
+  it('mostra duas casas quando há centavos', () => {
+    expect(dinheiro(899.9)).toBe('R$ 899,90');
+    expect(dinheiro(1500)).toBe('R$ 1.500');
+  });
+});
+
 describe('resumoDaCondicao', () => {
   it('vazia mostra "A do imóvel"', () => {
     expect(resumoDaCondicao(null)).toEqual(['A do imóvel']);
@@ -35,8 +42,23 @@ describe('resumoDaCondicao', () => {
 });
 
 describe('condicaoParaGravar', () => {
-  it('tudo vazio vira nulo (sem condição)', () => {
-    expect(condicaoParaGravar(vazioDaCondicao())).toBeNull();
+  it('tudo vazio vai com as chaves nulas, nunca null (o servidor descarta o null e a condição antiga ficaria)', () => {
+    expect(condicaoParaGravar(vazioDaCondicao())).toEqual({
+      down_payment_from: null, installment_from: null, min_income: null, payment_terms: null, note: null,
+    });
+  });
+  it.each([899.9, 1500.5, 15000, 300])('volta completa: %s sai do servidor, passa pelo campo e volta igual', (v) => {
+    const campo = condicaoEmEdicao({ installment_from: v });
+    expect(condicaoParaGravar(campo).installment_from).toBe(v);
+  });
+  it('o campo mostra pt-BR (vírgula nos centavos, ponto no milhar)', () => {
+    const c = condicaoEmEdicao({ installment_from: 899.9, down_payment_from: 15000, min_income: 1500.5 });
+    expect(c).toMatchObject({ installment_from: '899,90', down_payment_from: '15.000', min_income: '1.500,50' });
+  });
+  it('lê pt-BR: ponto é milhar, vírgula é centavos', () => {
+    expect(numeroDoCampo('R$ 1.500,50')).toBe(1500.5);
+    expect(numeroDoCampo('15.000')).toBe(15000);
+    expect(numeroDoCampo('899,9')).toBe(899.9);
   });
   it('converte dinheiro digitado e corta a observação no teto', () => {
     const r = condicaoParaGravar({ ...vazioDaCondicao(), down_payment_from: 'R$ 1.500', installment_from: '900', note: 'a'.repeat(400) });

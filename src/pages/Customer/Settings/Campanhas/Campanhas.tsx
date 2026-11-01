@@ -58,10 +58,20 @@ export default function Campanhas() {
   useEffect(() => {
     if (!temImoveis) return;
     let vivo = true;
-    propertiesService.list({ per_page: 100 })
-      .then((r) => { if (vivo) setNomes(Object.fromEntries((r.data ?? []).map((p) => [String(p.id), p.title]))); })
-      .catch(() => undefined);
+    (async () => {
+      const achados: Record<string, string> = {};
+      try {
+        const r = await propertiesService.list({ per_page: 100 });
+        (r.data ?? []).forEach((p) => { achados[String(p.id)] = p.title; });
+      } catch { /* sem nomes: a linha só conta */ }
+      // Imóvel fora dos 100 primeiros: busca pelo id os nomes que faltam.
+      const faltam = [...new Set((itens ?? []).flatMap((i) => (i.sells_scope === 'properties' ? i.property_ids.map(String) : [])))]
+        .filter((id) => !achados[id]).slice(0, 30);
+      await Promise.all(faltam.map((id) => propertiesService.get(id).then((p) => { if (p?.title) achados[id] = p.title; }).catch(() => undefined)));
+      if (vivo) setNomes(achados);
+    })();
     return () => { vivo = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [temImoveis]);
 
   const anuncios = useMemo(() => (itens ?? []).filter((i) => i.kind !== 'form'), [itens]);
@@ -113,6 +123,7 @@ export default function Campanhas() {
           opcoesDeIa={opcoesDeIa}
           aoFechar={() => setAberto(null)}
           aoSalvar={() => void carregar()}
+          aoCriarLinha={(it, id) => setItens((l) => (l ?? []).map((x) => (x.key === it.key ? { ...x, link_id: id } : x)))}
           aoMudarIa={(it, donos) => setItens((l) => (l ?? []).map((x) => (x.key === it.key ? { ...x, agents: donos } : x)))}
         />
       )}
@@ -128,7 +139,7 @@ export default function Campanhas() {
       cabecalhoExtra={podeConectar ? (
         <Button asChild variant="outline" size="sm"><Link to="/settings/facebook">Conectar o Meta</Link></Button>
       ) : undefined}
-      campanhas={{ itens: itens ?? [], opcoesDeIa, nomes, aoMudar: () => void carregar() }}
+      campanhas={{ itens: itens ?? [], listaPronta: itens !== null && !erro, listaFalhou: erro, opcoesDeIa, nomes, aoMudar: () => void carregar() }}
     />
   );
 }

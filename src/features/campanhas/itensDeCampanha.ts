@@ -36,10 +36,10 @@ export function vendeEmTexto(it: ItemDeCampanha, nomes: Record<string, string> =
   if (semOferta(it)) return null;
   if (it.sells_scope === 'catalog') return 'Todo o catálogo';
   if (it.sells_scope === 'listing_kind') return it.sells_listing_kind ? `Todo o tipo ${TIPOS_DE_IMOVEL[it.sells_listing_kind]}` : 'Um tipo inteiro';
-  const achados = it.property_ids.map((id) => nomes[String(id)]).filter(Boolean);
   const n = it.property_ids.length;
-  if (achados.length === n && n === 1) return achados[0];
-  if (achados.length) return `${achados[0]} +${n - 1}`;
+  const achados = it.property_ids.map((id) => nomes[String(id)]).filter(Boolean);
+  // Só afirma o nome quando TODOS os imóveis têm nome conhecido; senão conta (nunca um nome que não é o primeiro).
+  if (achados.length === n) return n === 1 ? achados[0] : `${achados[0]} +${n - 1}`;
   return `${n} ${n === 1 ? 'imóvel' : 'imóveis'}`;
 }
 

@@ -51,7 +51,7 @@ beforeEach(() => {
   Object.values(forms).forEach((f) => f.mockReset());
   props.get.mockReset().mockImplementation(async (id: string) => IMOVEIS[id]);
   props.list.mockReset().mockResolvedValue({ data: [Object.assign({}, IMOVEIS.p1), Object.assign({}, IMOVEIS.p2)] });
-  permissoes.tem = new Set(['campaign_links.update', 'lead_ads_form_configs.update', 'lead_ads_form_configs.create']);
+  permissoes.tem = new Set(['campaign_links.update', 'campaign_links.create', 'lead_ads_form_configs.update', 'lead_ads_form_configs.create']);
 });
 
 describe('JanelaDaCampanha · o que vende', () => {
@@ -199,8 +199,8 @@ describe('JanelaDaCampanha · qual IA atende', () => {
     expect(screen.getByText(/mas não mudar/)).toBeInTheDocument();
   });
 
-  it('só com campaign_links.update o anúncio já edita a IA', () => {
-    permissoes.tem = new Set(['campaign_links.update']);
+  it('só com campaign_links.update e create o anúncio já edita a IA', () => {
+    permissoes.tem = new Set(['campaign_links.update', 'campaign_links.create']);
     abrir({ opcoesDeIa: opcoes });
     expect(screen.getByLabelText('Pôr numa IA')).toBeInTheDocument();
   });
@@ -291,5 +291,70 @@ describe('JanelaDaCampanha · Excluir ficha', () => {
     abrir({ tipo: 'form', config: ficha(), aoApagar: vi.fn(), item: item({ kind: 'form', form_config_id: 'cfg-1' }) });
     expect(screen.getByRole('button', { name: 'Salvar' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Excluir ficha' })).toBeNull();
+  });
+});
+
+describe('JanelaDaCampanha · rodada 1', () => {
+  it('centavos do servidor: o campo mostra pt-BR e Salvar grava o mesmo número (899,90 não vira 8999)', async () => {
+    camp.condicaoDoTexto.mockResolvedValue({ down_payment_from: 15000, installment_from: 899.9, min_income: 1500.5, payment_terms: null, note: null });
+    camp.atualizarLinha.mockResolvedValue({ id: 'l1' });
+    abrir({ item: item({ link_id: 'l1', sells_scope: 'catalog' }) });
+    fireEvent.click(screen.getByRole('button', { name: 'Preencher com o texto do anúncio' }));
+    await waitFor(() => expect(screen.getByLabelText('Parcela a partir de')).toHaveValue('899,90'));
+    expect(screen.getByLabelText('Entrada a partir de')).toHaveValue('15.000');
+    expect(screen.getByLabelText('Entrada a partir de')).toHaveAttribute('inputmode', 'decimal');
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+    await waitFor(() => expect(camp.atualizarLinha).toHaveBeenCalled());
+    expect(camp.atualizarLinha.mock.calls[0][1].offer_condition).toMatchObject({ down_payment_from: 15000, installment_from: 899.9, min_income: 1500.5 });
+  });
+
+  it('condição que já tinha centavos abre em pt-BR e salva igual', async () => {
+    camp.atualizarLinha.mockResolvedValue({ id: 'l1' });
+    abrir({ item: item({ link_id: 'l1', sells_scope: 'catalog', offer_condition: { down_payment_from: null, installment_from: 899.9, min_income: null, payment_terms: null, note: null } }) });
+    expect(screen.getByLabelText('Parcela a partir de')).toHaveValue('899,90');
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+    await waitFor(() => expect(camp.atualizarLinha).toHaveBeenCalled());
+    expect(camp.atualizarLinha.mock.calls[0][1].offer_condition.installment_from).toBe(899.9);
+  });
+
+  it('apagar a condição manda as chaves nulas, não null (o servidor descartaria o null)', async () => {
+    camp.atualizarLinha.mockResolvedValue({ id: 'l1' });
+    abrir({ item: item({ link_id: 'l1', sells_scope: 'catalog', offer_condition: { down_payment_from: 300, installment_from: null, min_income: null, payment_terms: null, note: null } }) });
+    fireEvent.change(screen.getByLabelText('Entrada a partir de'), { target: { value: '' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+    await waitFor(() => expect(camp.atualizarLinha).toHaveBeenCalled());
+    expect(camp.atualizarLinha.mock.calls[0][1].offer_condition).toEqual({ down_payment_from: null, installment_from: null, min_income: null, payment_terms: null, note: null });
+  });
+
+  it('catálogo: campo vazio diz que vem do imóvel que a conversa escolher, não do corretor', () => {
+    abrir({ item: item({ sells_scope: 'catalog' }) });
+    expect(screen.getAllByText(/vem do imóvel que a conversa escolher/).length).toBe(4);
+    expect(screen.queryByText(/o corretor simula/)).toBeNull();
+  });
+
+  it('o 409 usa a frase que o servidor mandou', async () => {
+    camp.escolherIa.mockResolvedValueOnce({ ok: false, moveNeeded: true, message: 'esta campanha sai da IA Dos Fundos', conflicts: [{ sales_agent_id: 'a1', number_id: null }] });
+    abrir({ tipo: 'form', config: ficha(), opcoesDeIa: opcoes, item: item({ kind: 'form', form_config_id: 'cfg-1' }) });
+    fireEvent.change(screen.getByLabelText('Pôr numa IA'), { target: { value: 'b1|n1' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Pôr' }));
+    expect(await screen.findByText('Esta campanha sai da IA Dos Fundos.')).toBeInTheDocument();
+  });
+
+  it('anúncio sem linha e sem campaign_links.create: só leitura, explicando', () => {
+    permissoes.tem = new Set(['campaign_links.update']);
+    abrir({ opcoesDeIa: opcoes });
+    expect(screen.getByText(/criar a linha pede a permissão de criar campanha/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Salvar' })).toBeNull();
+    expect(screen.queryByText(/vale na hora/)).toBeNull();
+  });
+
+  it('escolher a IA num anúncio sem linha avisa a lista do id da linha criada', async () => {
+    camp.criarLinha.mockResolvedValue({ id: 'l9' });
+    camp.escolherIa.mockResolvedValue({ ok: true, holders: [], left_empty: [], warning: null });
+    const aoCriarLinha = vi.fn();
+    abrir({ opcoesDeIa: opcoes, aoCriarLinha });
+    fireEvent.change(screen.getByLabelText('Pôr numa IA'), { target: { value: 'a1|' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Pôr' }));
+    await waitFor(() => expect(aoCriarLinha).toHaveBeenCalledWith(expect.objectContaining({ key: 'campaign:Campanha A' }), 'l9'));
   });
 });

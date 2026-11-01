@@ -121,6 +121,9 @@ export interface LeadAdsFormsProps {
   cabecalhoExtra?: ReactNode;
   campanhas?: {
     itens: ItemDeCampanha[];
+    /** A lista do servidor chegou. Sem ela o cartão não afirma "0 leads" nem "Nenhuma IA". */
+    listaPronta?: boolean;
+    listaFalhou?: boolean;
     opcoesDeIa?: OpcaoDeIa[];
     nomes?: Record<string, string>;
     /** Mudou algo que a lista de Campanhas mostra: recarregar. */
@@ -1188,6 +1191,11 @@ export default function LeadAdsForms({ titulo = 'Formulários', subtitulo = 'Pra
                     )}
                     {campanhas && (() => {
                       const item = itemDaFicha(cfg, configDisplayName(cfg), campanhas.itens.find(i => i.form_config_id === cfg.id));
+                      if (campanhas.listaPronta === false) {
+                        return campanhas.listaFalhou
+                          ? <p className="mt-3 text-xs text-muted-foreground">Não deu pra carregar o resumo das campanhas. Recarregue a página.</p>
+                          : null;
+                      }
                       return (
                         <div className="mt-3">
                           <p className="mb-2 text-xs text-muted-foreground">{contagemDeLeads(item.leads_count)}</p>
@@ -1286,7 +1294,7 @@ export default function LeadAdsForms({ titulo = 'Formulários', subtitulo = 'Pra
           item={editing
             ? itemDaFicha(editing, configDisplayName(editing), campanhas?.itens.find(i => i.form_config_id === editing.id))
             : itemEmBranco({ key: `form:${form.form_id}`, kind: 'form', label: form.form_name })}
-          opcoesDeIa={campanhas?.opcoesDeIa}
+          opcoesDeIa={campanhas?.listaPronta === false ? undefined : campanhas?.opcoesDeIa}
           montarEntrada={montarEntrada}
           aoFechar={() => setModalOpen(false)}
           aoSalvar={aposSalvarJanela}
