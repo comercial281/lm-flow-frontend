@@ -83,7 +83,7 @@ describe('MinhaFicha', () => {
     await userEvent.clear(campo);
     await userEvent.type(campo, 'Bia');
     await userEvent.tab();
-    expect(await screen.findByText('Este número não é seu.')).toBeInTheDocument();
+    expect(await screen.findByText('Nome: Este número não é seu.')).toBeInTheDocument();
     expect(screen.getByLabelText('Nome')).toHaveValue('Caio');
   });
 
@@ -91,5 +91,79 @@ describe('MinhaFicha', () => {
     svc.minhasFichas.mockResolvedValue([]);
     abrir();
     expect(await screen.findByText('Painel')).toBeInTheDocument();
+  });
+
+  it('digitar de novo durante a gravação pendente mantém o texto novo (sucesso)', async () => {
+    svc.minhasFichas.mockResolvedValue([ficha('n1')]);
+    let resolver: (f: unknown) => void = () => {};
+    svc.gravarMinhaFicha.mockReturnValue(new Promise((r) => { resolver = r; }));
+    abrir();
+    const campo = await screen.findByLabelText('Nome');
+    await userEvent.clear(campo);
+    await userEvent.type(campo, 'Bia');
+    await userEvent.tab();
+    await userEvent.click(campo);
+    await userEvent.type(campo, 'na');
+    resolver(ficha('n1', { voice: { kind: 'corretor', name: 'Bia' } }));
+    await waitFor(() => expect(svc.gravarMinhaFicha).toHaveBeenCalledTimes(1));
+    await new Promise((r) => setTimeout(r, 10));
+    expect(screen.getByLabelText('Nome')).toHaveValue('Biana');
+  });
+
+  it('falha com outra coisa digitada depois: não reverte o texto novo', async () => {
+    svc.minhasFichas.mockResolvedValue([ficha('n1')]);
+    let rejeitar: (e: unknown) => void = () => {};
+    svc.gravarMinhaFicha.mockReturnValue(new Promise((_, r) => { rejeitar = r; }));
+    abrir();
+    const campo = await screen.findByLabelText('Nome');
+    await userEvent.clear(campo);
+    await userEvent.type(campo, 'Bia');
+    await userEvent.tab();
+    await userEvent.click(campo);
+    await userEvent.type(campo, 'na');
+    rejeitar({ response: { status: 422, data: { error: { message: 'Nome inválido.' } } } });
+    expect(await screen.findByText('Nome: Nome inválido.')).toBeInTheDocument();
+    expect(screen.getByLabelText('Nome')).toHaveValue('Biana');
+  });
+
+  it('Enter grava', async () => {
+    svc.minhasFichas.mockResolvedValue([ficha('n1')]);
+    svc.gravarMinhaFicha.mockResolvedValue(ficha('n1'));
+    abrir();
+    const campo = await screen.findByLabelText('Como se apresenta');
+    await userEvent.type(campo, 'aqui é o Caio{Enter}');
+    await waitFor(() => expect(svc.gravarMinhaFicha).toHaveBeenCalledWith('n1', { intro: 'aqui é o Caio' }));
+  });
+
+  it('apresentação em branco manda o campo vazio (volta pra ficha da casa)', async () => {
+    svc.minhasFichas.mockResolvedValue([ficha('n1', { voice: { kind: 'corretor', intro: 'oi' } })]);
+    svc.gravarMinhaFicha.mockResolvedValue(ficha('n1'));
+    abrir();
+    const campo = await screen.findByLabelText('Como se apresenta');
+    await userEvent.clear(campo);
+    await userEvent.tab();
+    await waitFor(() => expect(svc.gravarMinhaFicha).toHaveBeenCalledWith('n1', { intro: '' }));
+  });
+
+  it('ele ou ela que falha mostra o erro daquele campo; gravar outro campo não apaga', async () => {
+    svc.minhasFichas.mockResolvedValue([ficha('n1')]);
+    svc.gravarMinhaFicha
+      .mockRejectedValueOnce({ response: { status: 403, data: { error: { message: 'Sem acesso.' } } } })
+      .mockResolvedValueOnce(ficha('n1'));
+    abrir();
+    await userEvent.click(await screen.findByRole('radio', { name: 'Ele' }));
+    expect(await screen.findByText('Ele ou ela: Sem acesso.')).toBeInTheDocument();
+    const campo = screen.getByLabelText('Nome');
+    await userEvent.clear(campo);
+    await userEvent.type(campo, 'Bia');
+    await userEvent.tab();
+    await waitFor(() => expect(svc.gravarMinhaFicha).toHaveBeenCalledTimes(2));
+    expect(screen.getByText('Ele ou ela: Sem acesso.')).toBeInTheDocument();
+  });
+
+  it('erro ao ler a página mostra aviso, sem redirecionar', async () => {
+    svc.minhasFichas.mockRejectedValue(new Error('rede'));
+    abrir();
+    expect(await screen.findByText('Não consegui abrir sua ficha')).toBeInTheDocument();
   });
 });

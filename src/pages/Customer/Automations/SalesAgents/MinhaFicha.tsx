@@ -2,7 +2,7 @@
 // o nome, "ele ou ela" e como se apresenta. A voz (quem fala) é do gestor. Grava na hora, no
 // padrão das telas da IA: texto ao sair do campo, escolha no clique; se o servidor recusa, o campo
 // volta ao valor anterior e a frase do servidor aparece como veio.
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { BaseHeader, Carregando, EmptyState, Pagina } from '@/components/base';
 import BotoesDeEscolha from '@/components/base/BotoesDeEscolha';
@@ -12,42 +12,62 @@ import { motivoDaFalha } from '@/features/salesAgents/erroDoServidor';
 import { previaDaApresentacao, ROTULO_DA_VOZ, vozDoNumero } from '@/features/salesAgents/fichas';
 import { useMinhasFichas } from '@/features/salesAgents/useMinhasFichas';
 
+const ROTULO_DO_CAMPO = { name: 'Nome', gender: 'Ele ou ela', intro: 'Como se apresenta' } as const;
 const GENEROS = [{ valor: 'ela' as const, rotulo: 'Ela' }, { valor: 'ele' as const, rotulo: 'Ele' }];
 
-/** Campo de uma linha que grava ao sair e volta ao valor anterior se a gravação falhar. */
+/**
+ * Campo de uma linha que grava ao sair. A resposta do servidor nunca sobrescreve o que a pessoa
+ * digitou depois do blur: o valor mostrado já é o enviado, então no sucesso nada muda; na falha
+ * volta ao anterior só se o campo ainda tem o valor que falhou. Sincroniza com o servidor
+ * (Desfazer, outra aba) só sem gravação em voo e sem a pessoa editando.
+ */
 function CampoDaFicha({ id, rotulo, salvo, placeholder, maxLength, ajuda, aoGravar }: {
   id: string; rotulo: string; salvo: string; placeholder?: string; maxLength?: number; ajuda?: string;
   aoGravar: (texto: string) => Promise<boolean>;
 }) {
   const [valor, setValor] = useState(salvo);
-  const [base, setBase] = useState(salvo);
-  if (salvo !== base) { setBase(salvo); setValor(salvo); }
+  const editando = useRef(false);
+  const emVoo = useRef(0);
+
+  useEffect(() => {
+    if (editando.current || emVoo.current > 0) return;
+    setValor(salvo);
+  }, [salvo]);
+
+  const mudar = (v: string) => { editando.current = true; setValor(v); };
 
   const sair = async () => {
-    if (valor.trim() === salvo.trim()) { setValor(salvo); return; }
-    if (!(await aoGravar(valor.trim()))) setValor(salvo);
+    editando.current = false;
+    const enviado = valor.trim();
+    if (enviado === salvo.trim()) { if (emVoo.current === 0) setValor(salvo); return; }
+    const anterior = salvo;
+    emVoo.current += 1;
+    let ok = false;
+    try { ok = await aoGravar(enviado); } finally { emVoo.current -= 1; }
+    if (!ok) setValor((atual) => (atual.trim() === enviado ? anterior : atual));
   };
   return (
-    <CampoTexto id={id} rotulo={rotulo} valor={valor} aoMudar={setValor} onBlur={() => { void sair(); }}
+    <CampoTexto id={id} rotulo={rotulo} valor={valor} aoMudar={mudar} onBlur={() => { void sair(); }}
       placeholder={placeholder} maxLength={maxLength} ajuda={ajuda}
       onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); (e.target as HTMLInputElement).blur(); } }} />
   );
 }
 
 function Cartao({ ficha, aoSalvar }: { ficha: Ficha; aoSalvar: (f: Ficha) => void }) {
-  const [erro, setErro] = useState<string | null>(null);
+  const [erros, setErros] = useState<Partial<Record<keyof CamposDaMinhaFicha, string>>>({});
   const propria = ficha.voice ?? {};
   const voz = vozDoNumero(ficha, ficha.house_voice);
   const casa = ficha.house_voice ?? {};
   const rotuloDoNumero = ficha.inbox_name || ficha.phone || 'sem nome';
 
   const gravar = async (campos: CamposDaMinhaFicha): Promise<boolean> => {
-    setErro(null);
+    const campo = Object.keys(campos)[0] as keyof CamposDaMinhaFicha;
+    setErros((e) => { const { [campo]: _, ...resto } = e; return resto; });
     try {
       aoSalvar(await salesAgentsService.gravarMinhaFicha(ficha.id, campos));
       return true;
     } catch (e) {
-      setErro(motivoDaFalha(e, 'Não consegui salvar a ficha.'));
+      setErros((atuais) => ({ ...atuais, [campo]: motivoDaFalha(e, 'Não consegui salvar a ficha.') }));
       return false;
     }
   };
@@ -84,7 +104,9 @@ function Cartao({ ficha, aoSalvar }: { ficha: Ficha; aoSalvar: (f: Ficha) => voi
         <p className="text-sm">{previaDaApresentacao(voz)}</p>
       </div>
 
-      {erro && <p role="alert" className="text-sm text-destructive">{erro}</p>}
+      {(Object.keys(erros) as (keyof CamposDaMinhaFicha)[]).map((campo) => (
+        <p key={campo} role="alert" className="text-sm text-destructive">{ROTULO_DO_CAMPO[campo]}: {erros[campo]}</p>
+      ))}
     </section>
   );
 }
