@@ -299,9 +299,9 @@ describe('Tarefa 70: um aviso só quando o servidor já diz a mesma coisa', () =
   });
 
   it('o Corrigir dos itens do servidor leva à página nova', () => {
-    const p = pendenciasDaIa(agenteDeTeste({ persona_kind: 'assistant', lead_facing_name: 'Bia' }), { status: 'warning', items: ['visit_agenda', 'reuniao_sem_endereco', 'split_without_trigger', 'split_crossing'].map((k) => item(k, 'warning')) } as never);
+    const p = pendenciasDaIa(agenteDeTeste({ persona_kind: 'assistant', lead_facing_name: 'Bia' }), { status: 'warning', items: ['visit_agenda', 'reuniao_sem_endereco', 'split_without_trigger', 'split_trigger_crossing'].map((k) => item(k, 'warning')) } as never);
     expect(p.map((x) => [x.chave, x.corrigir?.pagina])).toEqual([
-      ['visit_agenda', 'modo'], ['reuniao_sem_endereco', 'modo'], ['split_without_trigger', 'campanhas'], ['split_crossing', 'campanhas'],
+      ['visit_agenda', 'modo'], ['reuniao_sem_endereco', 'modo'], ['split_without_trigger', 'campanhas'], ['split_trigger_crossing', 'campanhas'],
     ]);
   });
 });

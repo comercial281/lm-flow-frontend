@@ -91,7 +91,7 @@ const CORRIGIR_DO_ITEM: Record<string, Corrigir> = {
   visit_agenda: PAGINA('modo'),
   reuniao_sem_endereco: PAGINA('modo'),
   split_without_trigger: PAGINA('campanhas'),
-  split_crossing: PAGINA('campanhas'),
+  split_trigger_crossing: PAGINA('campanhas'),
 };
 
 /**
