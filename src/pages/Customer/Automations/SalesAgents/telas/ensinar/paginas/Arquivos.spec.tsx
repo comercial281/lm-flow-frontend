@@ -2,6 +2,7 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { agenteDeTeste } from '@/test/salesAgents/agenteDeTeste';
+import { gravarDeTeste } from '@/test/salesAgents/gravarDeTeste';
 import type { SalesAgentDocument } from '@/services/salesAgents/salesAgentsService';
 import type { Arquivos as ArquivosDaIa } from '../useArquivos';
 
@@ -19,12 +20,13 @@ import Arquivos from './Arquivos';
 
 const D = (id: string, extra: Partial<SalesAgentDocument> = {}) => ({ id, title: `Arquivo ${id}`, status: 'ready', sendable: true, learnable: true, send_once: false, send_when: 'quando pedir', send_when_not: '', send_caption: '', send_mode: 'file', media_kind: 'document', source_type: 'file', size_label: '1 MB', char_count: 10, send_topics: [], property_codes: [], created_at: new Date().toISOString(), ...extra }) as SalesAgentDocument;
 
-function abrir(docs: SalesAgentDocument[], extra: Partial<ArquivosDaIa> = {}) {
+function abrir(docs: SalesAgentDocument[], extra: Partial<ArquivosDaIa> = {}, prova: string | null = null) {
   const a: ArquivosDaIa = { docs, estado: 'pronto', carregar: vi.fn().mockResolvedValue(undefined), apagar: vi.fn().mockResolvedValue(true),
     reprocessar: vi.fn().mockResolvedValue(undefined), aoCriar: vi.fn().mockResolvedValue(undefined), ...extra };
   const confirmar = vi.fn().mockResolvedValue(true);
-  const r = render(<Arquivos agent={agenteDeTeste()} gravar={vi.fn()} licoes={{} as never} arquivos={a} irPara={vi.fn()} confirmar={confirmar} />);
-  return { a, confirmar, container: r.container };
+  const gravar = gravarDeTeste('ensinar');
+  const r = render(<Arquivos agent={agenteDeTeste({ social_proof: prova })} gravar={gravar} licoes={{} as never} arquivos={a} irPara={vi.fn()} confirmar={confirmar} />);
+  return { a, confirmar, gravar, container: r.container };
 }
 
 const S = vi.mocked(salesAgentsService);
@@ -32,36 +34,28 @@ const S = vi.mocked(salesAgentsService);
 describe('Arquivos', () => {
   beforeEach(() => { vi.clearAllMocks(); });
 
-  it('cartão com selos e o "quando"', () => {
-    abrir([D('a')]);
+  it('cartão com selo de aprende e a ligação com imóveis; o "quando mandar" não mora aqui (é Materiais)', () => {
+    abrir([D('a', { property_codes: ['AB01'] })]);
     expect(screen.getByText('Arquivo a')).toBeInTheDocument();
     expect(screen.getByText('Aprende')).toBeInTheDocument();
-    expect(screen.getByText('Manda pro lead')).toBeInTheDocument();
-    expect(screen.getByText(/Manda quando pedir/)).toBeInTheDocument();
+    expect(screen.getByText('Ligado a AB01')).toBeInTheDocument();
+    expect(screen.queryByText(/Manda quando pedir/)).not.toBeInTheDocument();
+    expect(screen.queryByText('Falta dizer quando mandar')).not.toBeInTheDocument();
   });
 
-  it('manda sem "quando" vira pendência no cartão', () => {
-    abrir([D('a', { send_when: '' })]);
-    expect(screen.getByText('Falta dizer quando mandar')).toBeInTheDocument();
-  });
-
-  it('selos de envio e de leitura', () => {
+  it('selos de leitura', () => {
     abrir([
-      D('l', { send_mode: 'link' }),
-      D('b', { send_mode: 'blocked' }),
       D('p', { status: 'pending' }),
       D('n', { status: 'no_text' }),
       D('f', { status: 'failed', error_message: 'arquivo corrompido' }),
       D('t', { source_type: 'text', size_label: null, char_count: 1234, sendable: false }),
     ]);
-    expect(screen.getByText('Vai como link')).toBeInTheDocument();
-    expect(screen.getByText('Grande demais')).toBeInTheDocument();
     expect(screen.getByText('Lendo o arquivo…')).toBeInTheDocument();
     expect(screen.getByText('Sem texto pra aprender')).toBeInTheDocument();
     expect(screen.getByText('Falhou: arquivo corrompido')).toBeInTheDocument();
     expect(screen.getByText('1.234 caracteres')).toBeInTheDocument();
     // "Aprende" só com o arquivo lido (pronto); o pendente, o sem texto e o que falhou não.
-    expect(screen.getAllByText('Aprende')).toHaveLength(3);
+    expect(screen.getAllByText('Aprende')).toHaveLength(1);
   });
 
   it('espera longa avisa em âmbar', () => {
@@ -121,7 +115,8 @@ describe('Arquivos', () => {
     expect(screen.getByRole('dialog', { name: 'Como ela usa este arquivo' })).toBeInTheDocument();
     // Miolo da janela: grupos com título.
     expect(screen.getByRole('group', { name: 'Arquivo' })).toBeInTheDocument();
-    expect(screen.getByRole('group', { name: 'Quando mandar' })).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Imóveis' })).toBeInTheDocument();
+    expect(screen.queryByRole('group', { name: 'Quando mandar' })).not.toBeInTheDocument();
     // X da casa no topo da janela.
     expect(screen.getByRole('button', { name: 'Fechar' })).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
@@ -129,39 +124,27 @@ describe('Arquivos', () => {
     expect(S.updateDocument).not.toHaveBeenCalled();
   });
 
-  it('as chaves da janela só gravam no Salvar, com o mesmo pacote de hoje', async () => {
-    const { a } = abrir([D('a', { send_topics: ['planta'], property_codes: ['AP1', 'AP2'], send_caption: 'segue' })]);
+  it('a janela não tem mais o envio (foi pra Materiais) e o Salvar manda só nome, aprende e imóveis', async () => {
+    const { a } = abrir([D('a', { property_codes: ['AP1', 'AP2'] })]);
     await userEvent.click(screen.getByRole('button', { name: /Como ela usa: Arquivo a/ }));
-    await userEvent.click(screen.getByRole('switch', { name: 'No máximo uma vez por conversa' }));
+    expect(screen.queryByLabelText('Em que situação mandar')).not.toBeInTheDocument();
+    expect(screen.queryByRole('switch', { name: 'Ela pode mandar pro lead' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Ver como chega/ })).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole('switch', { name: 'Ela aprende com o conteúdo' }));
     expect(S.updateDocument).not.toHaveBeenCalled();
-    await userEvent.clear(screen.getByLabelText('Em que situação mandar'));
-    await userEvent.type(screen.getByLabelText('Em que situação mandar'), '  quando pedir a planta  ');
     await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
-    expect(S.updateDocument).toHaveBeenCalledWith('ia-1', 'a', {
-      title: 'Arquivo a', sendable: true, learnable: false, send_once: true,
-      send_when: 'quando pedir a planta', send_when_not: '', send_caption: 'segue',
-      send_topics: ['planta'], property_codes: ['AP1', 'AP2'],
-    });
+    expect(S.updateDocument).toHaveBeenCalledWith('ia-1', 'a', { title: 'Arquivo a', learnable: false, property_codes: ['AP1', 'AP2'] });
     expect(a.carregar).toHaveBeenCalled();
   });
 
-  it('desligar "Ela pode mandar pro lead" esconde as perguntas de envio', async () => {
+  it('"Ligado a imóveis" grava property_codes sem espaço nem vazio', async () => {
     abrir([D('a')]);
     await userEvent.click(screen.getByRole('button', { name: /Como ela usa: Arquivo a/ }));
-    expect(screen.getByLabelText('Em que situação mandar')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Ver como chega no meu WhatsApp/ })).toBeInTheDocument();
-    await userEvent.click(screen.getByRole('switch', { name: 'Ela pode mandar pro lead' }));
-    expect(screen.queryByLabelText('Em que situação mandar')).not.toBeInTheDocument();
-    expect(S.updateDocument).not.toHaveBeenCalled();
-  });
-
-  it('arquivo bloqueado não tem "Ver como chega" e explica por quê', async () => {
-    abrir([D('a', { send_mode: 'blocked', size_label: '90 MB' })]);
-    await userEvent.click(screen.getByRole('button', { name: /Como ela usa: Arquivo a/ }));
-    expect(screen.queryByRole('button', { name: /Ver como chega no meu WhatsApp/ })).not.toBeInTheDocument();
-    expect(screen.getByText(/Arquivo grande demais \(90 MB\)/)).toBeInTheDocument();
+    await userEvent.type(screen.getByLabelText('Ligado a imóveis'), ' ab01 , AB02,, ');
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+    await waitFor(() => expect(S.updateDocument).toHaveBeenCalled());
+    expect(S.updateDocument).toHaveBeenCalledWith('ia-1', 'a', expect.objectContaining({ property_codes: ['ab01', 'AB02'] }));
   });
 
   it('arquivo sem texto avisa dentro da janela', async () => {
@@ -188,15 +171,14 @@ describe('Arquivos', () => {
     await waitFor(() => expect(a.reprocessar).toHaveBeenCalledWith(expect.objectContaining({ id: 'p' })));
   });
 
-  it('subir arquivo: relê, avisa a contagem e abre a janela do arquivo novo', async () => {
-    S.uploadFileDocument.mockResolvedValue(D('novo', { title: 'Planta.pdf', send_when: '' }));
+  it('subir arquivo: relê e avisa a contagem, sem janela de envio', async () => {
+    S.uploadFileDocument.mockResolvedValue(D('novo', { title: 'Planta.pdf' }));
     const { a } = abrir([]);
     const arquivo = new File(['x'], 'Planta.pdf', { type: 'application/pdf' });
     await userEvent.upload(screen.getByLabelText('Escolher arquivo'), arquivo);
-    expect(await screen.findByRole('dialog', { name: 'Como ela usa este arquivo' })).toBeInTheDocument();
+    await waitFor(() => expect(a.aoCriar).toHaveBeenCalled());
     expect(S.uploadFileDocument).toHaveBeenCalledWith('ia-1', arquivo, undefined, expect.any(Function));
-    expect(a.aoCriar).toHaveBeenCalled();
-    expect(screen.getByLabelText('Nome')).toHaveValue('Planta.pdf');
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
   it('arquivo grande demais solto na área nem sobe', async () => {
@@ -219,5 +201,37 @@ describe('Arquivos', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     expect(S.createTextDocument).toHaveBeenCalledWith('ia-1', 'Formas de pagamento', 'Aceitamos FGTS na entrada.');
     expect(a.aoCriar).toHaveBeenCalled();
+  });
+
+  it('a prova social mora na mesma página: um caso por linha', () => {
+    abrir([D('a')], {}, '300 famílias\nNota 4,9');
+    expect(screen.getByText('300 famílias')).toBeInTheDocument();
+    expect(screen.getByText('Nota 4,9')).toBeInTheDocument();
+  });
+
+  it('adicionar caso grava o texto inteiro com o novo no fim (só social_proof)', async () => {
+    const { gravar } = abrir([], {}, 'A');
+    await userEvent.type(screen.getByLabelText('Novo caso'), 'B');
+    await userEvent.click(screen.getByRole('button', { name: 'Adicionar' }));
+    expect(gravar).toHaveBeenCalledWith({ social_proof: 'A\nB' });
+  });
+
+  it('excluir o único caso grava vazio (null), depois de confirmar', async () => {
+    const { gravar, confirmar } = abrir([], {}, 'A');
+    await userEvent.click(screen.getByRole('button', { name: 'Ações do caso 1' }));
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Excluir' }));
+    expect(confirmar).toHaveBeenCalledWith(expect.objectContaining({ titulo: 'Excluir caso' }));
+    await waitFor(() => expect(gravar).toHaveBeenCalledWith({ social_proof: null }));
+  });
+
+  it('editar caso grava a lista com o texto trocado', async () => {
+    const { gravar } = abrir([], {}, 'A\nB');
+    await userEvent.click(screen.getByRole('button', { name: 'Ações do caso 2' }));
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Editar' }));
+    const campo = screen.getByLabelText('Editar caso');
+    await userEvent.clear(campo);
+    await userEvent.type(campo, 'B2');
+    await userEvent.click(screen.getByRole('button', { name: 'Pronto' }));
+    expect(gravar).toHaveBeenCalledWith({ social_proof: 'A\nB2' });
   });
 });

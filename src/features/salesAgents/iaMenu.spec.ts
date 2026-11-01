@@ -36,8 +36,8 @@ describe('iaMenu (onda 3)', () => {
 
   it('a página só fica no endereço em Configurar e Ensinar', () => {
     expect(paramsDaIa('ia-1', 'configurar', 'destino')).toEqual({ ia: 'ia-1', tela: 'configurar', pagina: 'destino' });
-    expect(paramsDaIa('ia-1', 'ensinar', 'regras')).toEqual({ ia: 'ia-1', tela: 'ensinar', pagina: 'regras' });
-    expect(paramsDaIa('ia-1', 'visao-geral', 'regras')).toEqual({ ia: 'ia-1' });
+    expect(paramsDaIa('ia-1', 'ensinar', 'exemplos')).toEqual({ ia: 'ia-1', tela: 'ensinar', pagina: 'exemplos' });
+    expect(paramsDaIa('ia-1', 'visao-geral', 'exemplos')).toEqual({ ia: 'ia-1' });
     expect(paramsDaIa('ia-1', 'visao-geral')).toEqual({ ia: 'ia-1' });
   });
 
@@ -46,8 +46,9 @@ describe('iaMenu (onda 3)', () => {
   });
 
   it('a página pedida depende da tela (o endereço do Ensinar sobrevive à normalização)', () => {
-    const p = new URLSearchParams('ia=ia-1&tela=ensinar&pagina=regras');
-    expect(paginaPedida(p, 'ensinar')).toBe('regras');
+    const p = new URLSearchParams('ia=ia-1&tela=ensinar&pagina=exemplos');
+    expect(paginaPedida(p, 'ensinar')).toBe('exemplos');
+    expect(paginaPedida(new URLSearchParams('ia=ia-1&tela=ensinar&pagina=regras'), 'ensinar')).toBe('licoes');
     expect(paginaPedida(p, 'configurar')).toBeNull();
     expect(paginaPedida(new URLSearchParams('pagina=destino'), 'ensinar')).toBeNull();
     expect(paginaPedida(new URLSearchParams('pagina=destino'), 'configurar')).toBe('destino');

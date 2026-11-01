@@ -155,6 +155,13 @@ describe('Números e usuários · tirar e adicionar', () => {
     await vi.waitFor(() => expect(screen.queryByRole('article', { name: 'Bia' })).toBeNull());
   });
 
+  it('a confirmação de tirar avisa que as conversas ficam com o corretor (C57)', async () => {
+    abrir();
+    await userEvent.click(cartao('Bia').getByRole('button', { name: 'Tirar número' }));
+    const janela = within(await screen.findByRole('dialog'));
+    expect(janela.getByText(/As conversas que esta IA atendia por este número ficam com o corretor\./)).toBeInTheDocument();
+  });
+
   it('+ Adicionar número cria pelo criarNumero só com o número escolhido (a ficha vem da casa)', async () => {
     abrir();
     servico.criarNumero.mockResolvedValue({ ...numero({ id: 'n3', inbox_id: 'inbox-3' }), warnings: [] });

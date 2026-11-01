@@ -10379,7 +10379,9 @@ Fase 6 (e fases 2, 4 e 5), tela 3 do protótipo `agentes.html`. A página Campan
 3. **O modo "Qualquer um / Todos" é do agente**: o editor de condições do número não mostra o seletor (`semModo`).
 4. **Começo por campanha grava `openings` inteiro**, uma entrada por campanha com `ref: {kind: 'form' | 'link', id}` (formulário = id da ficha; campanha e anúncio = id da linha). As regras antigas (sem `ref`, por origem, formulário ou palavra) ficam intocadas; a entrada que fica só com o `ref` sai da lista. **Campanha sem linha** cria a linha antes (`criarLinha` com o par tipo + valor, sem imóvel) e grava o `ref` `link`; sem texto não cria nada. O bloco só existe com `campaign_links.read` (gerente e diretor; corretor não vê e a lista nem é pedida).
 5. **Destino sem trava de persona**: "Fica com o dono do número" grava `{handoff_target: 'number_owner', handoff_user_id: null, handoff_roleta_config_id: null}` no clique, sem `persona_kind`. Desabilitado (com a frase de sem dono) quando nenhum número tem dono.
-6. **Número de atendimento nunca grava pela metade**: o servidor exige número E mensagem de chegada. Escolher o cartão, o número ou digitar a mensagem espera o outro; só os dois gravam juntos. Mensagem vazia não grava e mostra "Escreva a mensagem de chegada: é ela que avisa o lead do número novo." Os números oferecidos são os do cliente que não são do próprio agente (o servidor recusa dono inválido e a frase dele aparece). `handoff_continue_at` nulo lê **No número do corretor**.
+6. **Número de atendimento nunca grava pela metade**: o servidor exige número E mensagem de chegada. Escolher o cartão, o número ou digitar a mensagem espera o outro; só os dois gravam juntos. Mensagem vazia não grava e mostra "Escreva a mensagem de chegada: é ela que avisa o lead do número novo." Os números oferecidos são os do cliente que não são do próprio agente; a tela não filtra por dono (o `InboxOption` não traz): o servidor recusa número com dono ("Este número tem dono. Escolha um número sem dono pra continuar o atendimento.") e a tela mostra a frase que ele devolver. Apagar a mensagem não ressuscita a salva ao trocar o número. `handoff_continue_at` nulo lê **No número do corretor**.
+
+7. **Rodada 1 da T73:** no NÚMERO, "Só alguns" nunca grava lista vazia: tirar a última condição só mostra "Pra tirar a última condição, escolha Os do agente ou Todo lead do número." As escritas de número andam numa fila por agente (`useNumerosDoAgente`), e o cartão compara com o ÚLTIMO valor enviado, não com o do render (o blur da palavra grava antes do clique em "Os do agente"). Formulário sem ficha em Campanhas não tem Abrir. A linha da campanha é criada uma vez só, mesmo com blur e upload juntos. "Vende:" mostra os nomes dos imóveis (cai pra contagem se o cadastro não responde).
 
 **Armadilhas:**
 1. **`VariacaoDaCampanha` morreu** (janela de variação por campanha); as variações viraram o Começo por campanha, uma por linha de Campanhas.
@@ -10413,3 +10415,30 @@ Fase 6, tela 3 do protótipo `agentes.html`, página **Materiais** do Configurar
 3. Voltar o frontend pra antes desta tarefa devolve a casca da página Materiais; o servidor não muda.
 
 Código: `configurar/paginas/{Materiais,JanelaDoMaterial}.tsx`, `features/salesAgents/materiais.ts` (com specs).
+
+## IA Vendedora · Ensinar em 5 páginas (desde 01/11/2026)
+
+Reestruturação da IA, fase 6, Tarefa 75. Spec: `docs/superpowers/ia-reestruturacao/specs/2026-10-31-fase-6-tela-design.md` (seção 4).
+
+**O que aparece na tela:** *IA Vendedora → Ensinar* tem 5 páginas, nesta ordem: **Lições · Exemplos · Regras e objeções da casa · Conhecimentos de fábrica · Arquivos e prova social** (`?pagina=licoes|exemplos|casa|conhecimentos|arquivos`; sem página abre Lições).
+- **Lições:** cada lição é um cartão "Quando" / "Ela" com chave, tema e selo de origem (Sugestão, Correção de conversa, Escrita pela equipe). Lição nova pelos dois campos (os dois obrigatórios) e tema opcional. Filtro por tema (abas) e por origem. O contador vem do servidor: "N valendo de M · cabem até 40", "N pausadas" e, quando houver, o aviso "N fora por tamanho". Nada sai calado.
+- **Exemplos:** balões com o lead, o certo, o errado riscado (`bad_content`) e "Por quê" (`why`, até 200). O errado e o porquê só existem no exemplo bom; "Mover pra Não responda assim" limpa os dois (o servidor recusa no ruim). Contador "cabem até 20" (bons e ruins somados). As conversas reais seguem.
+- **Regras e objeções da casa** (no lugar das Instruções): regras até 30 linhas de 200 letras; objeções até 10 (objeção até 200 + resposta até 600). Grava na hora.
+- **Conhecimentos de fábrica:** um cartão por tópico, com a marca que liga. A chave põe/tira o tópico de `factory_knowledge_off`; sem marca ligada a chave fica apagada. "Ler o texto" abre só leitura, com o pé "Escrito pela Leal Mídia · conferido nas fontes oficiais em <data> · revisado a cada 180 dias · o documento da imobiliária vale mais.".
+- **Arquivos e prova social:** os arquivos que ela consulta (sem o envio, que foi pra Materiais) e, embaixo, os casos de prova social. O arquivo ganhou "Ligado a imóveis" (grava `property_codes`; o servidor normaliza em maiúsculas).
+
+**Decisões:**
+1. **Endereços antigos** caem no destino novo e o endereço é reescrito: `instrucoes` → `casa`, `regras` → `licoes`, `prova` → `arquivos` (`paginaDoEnsinarDaUrl` em `ensinar/paginas.ts`).
+2. **Apresentação nas Regras da casa (C30):** a tela recusa ANTES de gravar com a frase do servidor, "Regras da casa não aceita apresentação: quem a IA é fica na ficha, em Números e usuários." (`features/salesAgents/regrasDaCasa.ts`, espelho de `SalesAgent::HOUSE_RULE_IDENTITY_RE`). Se o servidor recusar, a gravação mostra a frase que veio. Valor em reais ou código de imóvel só avisa ("Condição e imóvel moram no cadastro ou na campanha."), não trava.
+3. **Instruções saíram:** `Instrucoes.tsx` gravava `instructions`, que é campo escondido (a página inicial recusava toda gravação, calada). `gravarDeTeste('ensinar')` roda a régua de campo de verdade (só `CAMPOS_DE_ENSINAR`, e campo escondido estoura) em todo spec do Ensinar, pra essa classe de quebra não se esconder de novo.
+4. **Selo de origem:** cada origem tem o seu (`ROTULO_DA_ORIGEM`). A lição com origem `correcao` deixou de aparecer como "Escrita à mão".
+5. **A bolinha do trilho** é "fora por tamanho" do servidor (Lições e Exemplos). Saiu a pendência "arquivo sem quando mandar" (foi pra Materiais).
+6. **Tirar número (C57):** a confirmação em *Números e usuários* avisa "As conversas que esta IA atendia por este número ficam com o corretor."
+7. "Ler o texto" é só leitura de propósito (pedido do Tony, 31/10): o cliente lê e desliga, nunca edita.
+
+**Armadilhas:**
+1. Os limites (40 regras, 20 exemplos, teto de caracteres) são do servidor; a tela só mostra o que ele conta (`meta.counter`). Não recontar no front.
+2. Errado e porquê no `bad_example` voltam 422; ao mover, mandar `bad_content: null, why: null` junto.
+3. O texto do conhecimento de fábrica é o mesmo pra todos os clientes (mora no `public`); não há edição.
+
+Código: `telas/ensinar/paginas/{Licoes,Exemplos,RegrasDaCasa,ConhecimentosDeFabrica,JanelaDoConhecimento,Arquivos,JanelaDoArquivo}.tsx`, `features/salesAgents/regrasDaCasa.ts` (com specs).

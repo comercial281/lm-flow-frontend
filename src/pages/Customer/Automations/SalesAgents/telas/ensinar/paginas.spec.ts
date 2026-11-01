@@ -1,24 +1,37 @@
 import { describe, expect, it } from 'vitest';
-import { arquivosSemQuando, casosDe, conversasReais, paginaDoEnsinarDaUrl, regrasForaDoLimite, textoDosCasos } from './paginas';
-import type { SalesAgentDocument, SalesAgentLesson } from '@/services/salesAgents/salesAgentsService';
-
-const licao = (p: Partial<SalesAgentLesson>) => ({ id: 'x', kind: 'rule', content: 'c', context: null, enabled: true, created_at: '', origin: 'equipe', in_use: true, ...p }) as SalesAgentLesson;
+import {
+  GRUPOS_DO_ENSINAR, PAGINAS_DO_ENSINAR, PAGINA_INICIAL_DO_ENSINAR, ROTULO_DA_ORIGEM, TEMAS,
+  casosDe, conversasReais, paginaDoEnsinarDaUrl, textoDosCasos,
+} from './paginas';
 
 describe('registro do Ensinar', () => {
-  it('lê a página do endereço; desconhecida ou da cadeia do objeto vira null', () => {
-    expect(paginaDoEnsinarDaUrl(new URLSearchParams('pagina=regras'))).toBe('regras');
+  it('são 5 páginas, na ordem da seção 4 da spec', () => {
+    expect(GRUPOS_DO_ENSINAR.flatMap((g) => g.paginas)).toEqual(['licoes', 'exemplos', 'casa', 'conhecimentos', 'arquivos']);
+    expect(Object.keys(PAGINAS_DO_ENSINAR)).toHaveLength(5);
+    expect(PAGINAS_DO_ENSINAR.casa.titulo).toBe('Regras e objeções da casa');
+    expect(PAGINAS_DO_ENSINAR.arquivos.titulo).toBe('Arquivos e prova social');
+    expect(PAGINA_INICIAL_DO_ENSINAR).toBe('licoes');
+  });
+
+  it('lê a página do endereço; os endereços antigos caem no destino novo', () => {
+    expect(paginaDoEnsinarDaUrl(new URLSearchParams('pagina=casa'))).toBe('casa');
+    expect(paginaDoEnsinarDaUrl(new URLSearchParams('pagina=instrucoes'))).toBe('casa');
+    expect(paginaDoEnsinarDaUrl(new URLSearchParams('pagina=regras'))).toBe('licoes');
+    expect(paginaDoEnsinarDaUrl(new URLSearchParams('pagina=prova'))).toBe('arquivos');
+  });
+
+  it('desconhecida, vazia ou da cadeia do objeto vira null', () => {
     expect(paginaDoEnsinarDaUrl(new URLSearchParams('pagina=destino'))).toBeNull();
     expect(paginaDoEnsinarDaUrl(new URLSearchParams('pagina=constructor'))).toBeNull();
+    expect(paginaDoEnsinarDaUrl(new URLSearchParams('pagina=toString'))).toBeNull();
     expect(paginaDoEnsinarDaUrl(new URLSearchParams(''))).toBeNull();
   });
 
-  it('regra fora do limite = ligada e não valendo (pausada não conta)', () => {
-    expect(regrasForaDoLimite([licao({ in_use: false }), licao({ in_use: false, enabled: false }), licao({ kind: 'good_example', in_use: false })])).toBe(1);
-  });
-
-  it('arquivo que manda sem "quando" é pendência', () => {
-    const d = (p: Partial<SalesAgentDocument>) => ({ sendable: true, send_when: 'x', ...p }) as SalesAgentDocument;
-    expect(arquivosSemQuando([d({ send_when: '  ' }), d({ send_when: null }), d({ sendable: false, send_when: null }), d({})])).toBe(2);
+  it('cada tema e cada origem tem rótulo próprio, sem travessão', () => {
+    expect(Object.keys(TEMAS)).toEqual(['preco', 'tom', 'objecao', 'visita', 'documento', 'abertura', 'outro']);
+    expect(ROTULO_DA_ORIGEM.sugestao).not.toBe(ROTULO_DA_ORIGEM.correcao);
+    expect(new Set(Object.values(ROTULO_DA_ORIGEM)).size).toBe(3);
+    [...Object.values(TEMAS), ...Object.values(ROTULO_DA_ORIGEM)].forEach((t) => expect(t).not.toMatch(/[—–]/));
   });
 
   it('conversas reais espelham o servidor: resposta vazia sai, texto solto vale, reply só sem resposta', () => {

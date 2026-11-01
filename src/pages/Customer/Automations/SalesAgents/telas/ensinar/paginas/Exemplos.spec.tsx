@@ -1,15 +1,16 @@
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { agenteDeTeste } from '@/test/salesAgents/agenteDeTeste';
 import type { Licoes } from '../useLicoes';
 import Exemplos from './Exemplos';
 
-const L = (id: string, kind: string, extra = {}) => ({ id, kind, content: `resp ${id}`, context: `lead ${id}`, enabled: true, created_at: '2026-10-10T12:00:00Z', origin: 'equipe', in_use: true, ...extra });
+const L = (id: string, kind: string, extra = {}) => ({ id, kind, content: `resp ${id}`, context: `lead ${id}`, enabled: true, created_at: '2026-10-10T12:00:00Z', origin: 'equipe', topic: null, bad_content: null, why: null, in_use: true, ...extra });
 
 function abrir(licoes: object[], conversas = [{ lead: 'Tem varanda?', resposta: 'Tem sim!' }], extra: Partial<Licoes> = {}) {
-  const l: Licoes = { licoes: licoes as never, limites: { per_kind: 12, conversations: 1 }, estado: 'pronto', carregar: vi.fn(),
+  const l: Licoes = { licoes: licoes as never, limites: { per_kind: 40, conversations: 1 }, estado: 'pronto', carregar: vi.fn(),
+    contadores: { regras: { valendo: 0, pausadas: 0, fora_por_tamanho: 0, cabem: 40 }, exemplos: { valendo: licoes.length, pausadas: 0, fora_por_tamanho: 0, cabem: 20 } },
     criar: vi.fn().mockResolvedValue(true), atualizar: vi.fn().mockResolvedValue(true), apagar: vi.fn().mockResolvedValue(true), ...extra };
   const gravar = vi.fn().mockResolvedValue(true);
   const confirmar = vi.fn().mockResolvedValue(true);
@@ -88,7 +89,7 @@ describe('Exemplos', () => {
     await userEvent.clear(resp);
     await userEvent.type(resp, 'nova');
     await userEvent.click(screen.getByRole('button', { name: 'Salvar exemplo' }));
-    expect(l.atualizar).toHaveBeenCalledWith('a', { content: 'nova', context: 'lead a' });
+    expect(l.atualizar).toHaveBeenCalledWith('a', { content: 'nova', context: 'lead a', bad_content: null, why: null });
   });
 
   it('editar conversa real grava a lista com o item trocado', async () => {
@@ -176,5 +177,54 @@ describe('Exemplos', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Novo exemplo' }));
     expect(screen.getByLabelText('O que o lead disse')).toHaveAttribute('maxLength', '4000');
     expect(screen.getByLabelText('Como ela deve responder')).toHaveAttribute('maxLength', '4000');
+  });
+
+  it('balão com o lead, o certo, o errado riscado e o porquê', () => {
+    abrir([L('a', 'good_example', { bad_content: 'R$ 389 mil.', why: 'Responde o preço e volta com pergunta.' })], []);
+    const cartao = within(screen.getByText('resp a').closest('li') as HTMLElement);
+    expect(cartao.getByText('lead a')).toBeInTheDocument();
+    expect(cartao.getByText('resp a')).toBeInTheDocument();
+    expect(cartao.getByText('R$ 389 mil.')).toHaveClass('line-through');
+    expect(cartao.getByText('Por quê')).toBeInTheDocument();
+    expect(cartao.getByText('Responde o preço e volta com pergunta.')).toBeInTheDocument();
+  });
+
+  it('sem errado nem porquê, o balão não mostra essas linhas', () => {
+    abrir([L('a', 'good_example')], []);
+    expect(screen.queryByText('Por quê')).not.toBeInTheDocument();
+  });
+
+  it('exemplo ruim solto mostra só o errado', async () => {
+    abrir([L('b', 'bad_example', { why: 'não deveria existir' })], []);
+    await userEvent.click(screen.getByRole('tab', { name: /Não responda assim/ }));
+    expect(screen.getByText('resp b')).toBeInTheDocument();
+    expect(screen.queryByText('Por quê')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('O jeito errado')).not.toBeInTheDocument();
+  });
+
+  it('novo exemplo bom grava o errado e o porquê (até 200)', async () => {
+    const { l } = abrir([], []);
+    await userEvent.click(screen.getByRole('button', { name: 'Novo exemplo' }));
+    expect(screen.getByLabelText('Por quê')).toHaveAttribute('maxLength', '200');
+    await userEvent.type(screen.getByLabelText('O que o lead disse'), 'Achei caro.');
+    await userEvent.type(screen.getByLabelText('Como ela deve responder'), 'Entendo, usa o FGTS na entrada.');
+    await userEvent.type(screen.getByLabelText('O jeito errado'), 'Não tem desconto.');
+    await userEvent.type(screen.getByLabelText('Por quê'), 'Acolhe antes de falar de condição.');
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar exemplo' }));
+    expect(l.criar).toHaveBeenCalledWith('good_example', 'Entendo, usa o FGTS na entrada.', 'Achei caro.',
+      { bad_content: 'Não tem desconto.', why: 'Acolhe antes de falar de condição.' });
+  });
+
+  it('mover um bom com errado e porquê limpa os dois (o servidor recusa no ruim)', async () => {
+    const { l } = abrir([L('a', 'good_example', { bad_content: 'x', why: 'y' })], []);
+    await userEvent.click(screen.getByRole('button', { name: /Ações do exemplo/ }));
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Mover pra Não responda assim' }));
+    expect(l.atualizar).toHaveBeenCalledWith('a', { kind: 'bad_example', bad_content: null, why: null });
+  });
+
+  it('o contador mostra "cabem até 20" e o que ficou fora por tamanho', () => {
+    abrir([L('a', 'good_example')], [], { contadores: { regras: { valendo: 0, pausadas: 0, fora_por_tamanho: 0, cabem: 40 }, exemplos: { valendo: 19, pausadas: 1, fora_por_tamanho: 2, cabem: 20 } } });
+    expect(screen.getByText('19 valendo de 22 · cabem até 20')).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent('2 fora por tamanho');
   });
 });

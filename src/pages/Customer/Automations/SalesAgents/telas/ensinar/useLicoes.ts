@@ -12,29 +12,36 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import {
   LIMITES_PADRAO, salesAgentsService,
-  type LimitesDasLicoes, type SalesAgentLesson, type SalesAgentLessonKind,
+  type ContadorDasLicoes, type ContadoresDasLicoes, type LimitesDasLicoes, type SalesAgentLesson, type SalesAgentLessonKind,
 } from '@/services/salesAgents/salesAgentsService';
 import { motivoEscrito } from '@/features/salesAgents/erroDoServidor';
 import { TEMPO_DO_DESFAZER_MS, TOAST_SALVO } from '../../configurar/useGravarNaHora';
 
 export type EstadoDaLista = 'carregando' | 'pronto' | 'erro';
-type Patch = Partial<Pick<SalesAgentLesson, 'content' | 'context' | 'enabled' | 'kind'>>;
+type Patch = Partial<Pick<SalesAgentLesson, 'content' | 'context' | 'enabled' | 'kind' | 'topic' | 'bad_content' | 'why'>>;
+type Extras = Partial<Pick<SalesAgentLesson, 'topic' | 'bad_content' | 'why'>>;
 
 export interface Licoes {
   licoes: SalesAgentLesson[];
   limites: LimitesDasLicoes;
+  /** Quantas valem, estão pausadas e ficaram fora por tamanho: a conta é do servidor. */
+  contadores: ContadoresDasLicoes;
   estado: EstadoDaLista;
   carregar: () => Promise<void>;
-  criar: (kind: SalesAgentLessonKind, content: string, context?: string) => Promise<boolean>;
+  criar: (kind: SalesAgentLessonKind, content: string, context?: string, extras?: Extras) => Promise<boolean>;
   atualizar: (id: string, patch: Patch, desfazivel?: boolean) => Promise<boolean>;
   apagar: (id: string) => Promise<boolean>;
 }
+
+const SEM_LICAO: ContadorDasLicoes = { valendo: 0, pausadas: 0, fora_por_tamanho: 0, cabem: 0 };
+const CONTADORES_VAZIOS: ContadoresDasLicoes = { regras: { ...SEM_LICAO, cabem: 40 }, exemplos: { ...SEM_LICAO, cabem: 20 } };
 
 const falhou = (e: unknown) => { toast.error(motivoEscrito(e) ?? 'Não deu pra salvar. Tente de novo.'); return false; };
 
 export function useLicoes(agentId: string): Licoes {
   const [licoes, setLicoes] = useState<SalesAgentLesson[]>([]);
   const [limites, setLimites] = useState<LimitesDasLicoes>(LIMITES_PADRAO);
+  const [contadores, setContadores] = useState<ContadoresDasLicoes>(CONTADORES_VAZIOS);
   const [estado, setEstado] = useState<EstadoDaLista>('carregando');
   const vigente = useRef(agentId);
   vigente.current = agentId;
@@ -52,6 +59,7 @@ export function useLicoes(agentId: string): Licoes {
       if (!valeAinda()) return;
       setLicoes(r.licoes);
       setLimites(r.limites);
+      if (r.contadores) setContadores(r.contadores);
       setEstado('pronto');
     } catch {
       if (valeAinda()) setEstado('erro');
@@ -64,9 +72,10 @@ export function useLicoes(agentId: string): Licoes {
     void carregar();
   }, [carregar]);
 
-  const criar = useCallback<Licoes['criar']>(async (kind, content, context) => {
+  const criar = useCallback<Licoes['criar']>(async (kind, content, context, extras) => {
     try {
-      await salesAgentsService.createLesson(agentId, kind, content, context);
+      if (extras && Object.keys(extras).length) await salesAgentsService.createLesson(agentId, kind, content, context, extras);
+      else await salesAgentsService.createLesson(agentId, kind, content, context);
       await carregar();
       return true;
     } catch (e) { return falhou(e); }
@@ -98,5 +107,5 @@ export function useLicoes(agentId: string): Licoes {
     } catch (e) { return falhou(e); }
   }, [agentId, carregar]);
 
-  return { licoes, limites, estado, carregar, criar, atualizar, apagar };
+  return { licoes, limites, contadores, estado, carregar, criar, atualizar, apagar };
 }

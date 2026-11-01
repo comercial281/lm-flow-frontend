@@ -93,7 +93,7 @@ export default function NumerosEUsuarios(props: PropsDaPagina) {
     const unico = numeros.length === 1;
     const sim = await confirmar({
       titulo: 'Tirar este número do agente?',
-      descricao: `A IA para de atender nele. O número e as conversas continuam no LM Flow.${unico ? ' É o único número: sem ele a IA não tem onde atender.' : ''}`,
+      descricao: `A IA para de atender nele. O número e as conversas continuam no LM Flow. As conversas que esta IA atendia por este número ficam com o corretor.${unico ? ' É o único número: sem ele a IA não tem onde atender.' : ''}`,
       rotuloDaAcao: 'Tirar', destrutivo: true,
     });
     if (sim) await tirar(n.id);
