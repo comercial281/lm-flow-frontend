@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { SalesAgent } from '@/services/salesAgents/salesAgentsService';
-import { personaParaPatch, roletaDoNumero, lerEscolhas, novaIaRascunho, PERGUNTAS_SUGERIDAS } from './tresEscolhas';
+import { personaParaPatch, roletaDoNumero, lerEscolhas } from './tresEscolhas';
 
 const ia = (extra: Partial<SalesAgent> = {}) =>
   ({ transfer_config: {}, booking_enabled: true, handoff_target: 'inbox_roleta', handoff_roleta_config_id: null, handoff_user_id: null, ...extra }) as SalesAgent;
@@ -16,20 +16,6 @@ describe('lerEscolhas', () => {
   it('sem coluna, deriva da voz e do agendar visita', () => {
     expect(lerEscolhas(ia({ transfer_config: { voice: 'first_person' } }))).toMatchObject({ persona: 'broker', alcance: 'visit' });
     expect(lerEscolhas(ia({ booking_enabled: false }))).toMatchObject({ persona: 'assistant', alcance: 'qualify' });
-  });
-});
-
-describe('novaIaRascunho', () => {
-  // A roleta do número não existe: nasce em "Uma roleta".
-  it('nasce desligada, sem número, assistente, só qualifica, em "Uma roleta", com as 4 perguntas obrigatórias e follow-up de 3', () => {
-    const p = novaIaRascunho();
-    expect(p).toMatchObject({
-      enabled: false, inbox_id: null, persona_kind: 'assistant', reach: 'qualify', booking_enabled: false,
-      handoff_target: 'roleta', handoff_roleta_config_id: null, followup_max_attempts: 3, out_of_hours_reply: true,
-      transfer_config: { mode: 'checklist', required_questions: PERGUNTAS_SUGERIDAS },
-    });
-    expect(p.qualification_questions).toEqual(PERGUNTAS_SUGERIDAS);
-    expect(PERGUNTAS_SUGERIDAS).toHaveLength(4);
   });
 });
 

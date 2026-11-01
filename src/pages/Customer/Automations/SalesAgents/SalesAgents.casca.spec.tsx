@@ -68,13 +68,6 @@ vi.mock('./telas/TestarJanela', () => ({
 }));
 vi.mock('./telas/TelaMotor', () => marcador('motor'));
 vi.mock('./telas/TelaDiagnostico', () => marcador('diagnostico'));
-const duplicada = vi.hoisted(() => ({ copia: null as null | Record<string, unknown> }));
-vi.mock('@/components/salesAgents/DuplicateAgentDialog', () => ({
-  default: ({ onDuplicated }: { onDuplicated: (c: unknown) => void }) => (
-    <button type="button" onClick={() => onDuplicated(duplicada.copia)}>confirmar cópia</button>
-  ),
-}));
-
 import SalesAgents from './SalesAgents';
 
 const ia = (id: string, name: string, extra: Record<string, unknown> = {}) =>
@@ -215,23 +208,6 @@ describe('IA Vendedora · casca', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Ensinar' }));
     expect(await screen.findByText('tela ensinar · IA Demo')).toBeInTheDocument();
     await waitFor(() => expect(endereco()).toBe('?ia=ia-2&tela=ensinar'));
-  });
-
-  it('Duplicar abre a cópia em Configurar, sem voltar pra IA original', async () => {
-    duplicada.copia = ia('ia-3', 'IA de Vendas (cópia)', { enabled: false });
-    // A recarga da lista fica pendente: a cópia já tem de ser a IA aberta.
-    let soltar: (v: unknown) => void = () => {};
-    list.mockResolvedValueOnce([ia('ia-1', 'IA de Vendas'), ia('ia-2', 'IA Demo', { inbox_id: null })])
-      .mockReturnValueOnce(new Promise((res) => { soltar = res; }))
-      .mockResolvedValue([ia('ia-1', 'IA de Vendas'), ia('ia-2', 'IA Demo', { inbox_id: null }), duplicada.copia]);
-    abrir('/ia-vendedora?ia=ia-1');
-    await screen.findByText('tela visao-geral · IA de Vendas');
-    await userEvent.click(screen.getByRole('button', { name: 'Mais ações' }));
-    await userEvent.click(await screen.findByRole('menuitem', { name: /Duplicar esta IA/ }));
-    await userEvent.click(await screen.findByRole('button', { name: 'confirmar cópia' }));
-    expect(await screen.findByText('tela configurar · IA de Vendas (cópia)')).toBeInTheDocument();
-    soltar([ia('ia-1', 'IA de Vendas'), ia('ia-2', 'IA Demo', { inbox_id: null }), duplicada.copia]);
-    await waitFor(() => expect(endereco()).toBe('?ia=ia-3&tela=configurar'));
   });
 
   it('ao trocar de IA, o selo não herda o veredito da anterior enquanto o Diagnóstico novo não chega', async () => {

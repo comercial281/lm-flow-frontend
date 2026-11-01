@@ -1,6 +1,6 @@
 // Barra de topo da IA Vendedora (onda 3, 06/10/2026, decisão 4): seletor da IA +
 // só a BOLINHA do veredito · Painel ▾ · Configurar · Ensinar · botão Testar ·
-// chave Ligada · "⋯" (Duplicar, Excluir e, só pra equipe, Motor e Diagnóstico; o
+// chave Ligada · "⋯" (Renomear, Excluir e, só pra equipe, Motor e Diagnóstico; o
 // Motor também pra quem tem `ia_playbook`).
 // O menu lateral do LM Flow não muda: isto é navegação DENTRO da página.
 //
@@ -8,7 +8,8 @@
 // número, corretor sem dono do número, sistema do cliente sem chave). Travada,
 // fica desabilitada com o motivo no `title`, e um clique leva à página que
 // corrige. Desligar nunca trava.
-import { Bot, ChevronDown, Copy, Gauge, Users, Smartphone, Stethoscope, Trash2 } from 'lucide-react';
+import { useState } from 'react';
+import { Bot, ChevronDown, Gauge, Pencil, Users, Smartphone, Stethoscope, Trash2 } from 'lucide-react';
 import {
   Button, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from '@/components/ui/ds';
@@ -19,6 +20,7 @@ import { GRUPOS, itensDoGrupo, telaInfo, type TelaId } from '@/features/salesAge
 import { situacaoDaIa, type Situacao } from '@/features/salesAgents/situacao';
 import { PAGINAS, type PaginaId } from './configurar/paginas';
 import SeloSituacao from './SeloSituacao';
+import RenomearAgente from './RenomearAgente';
 
 export interface IaBarraProps {
   agents: SalesAgent[];
@@ -27,7 +29,8 @@ export interface IaBarraProps {
   situacao: Situacao | null;
   tela: TelaId;
   insights: boolean;
-  podeCriar: boolean;
+  /** `sales_agents.update`: Renomear no "⋯". */
+  podeEditar: boolean;
   podeExcluir: boolean;
   /** Equipe da Leal Mídia: vê o Diagnóstico no "⋯". */
   equipe: boolean;
@@ -37,7 +40,8 @@ export interface IaBarraProps {
   aoTrocarIa: (id: string) => void;
   /** "Todos os agentes": volta à página de agentes. */
   aoTodos: () => void;
-  aoDuplicar: () => void;
+  /** A IA que o Renomear gravou (a casca atualiza a barra e a lista). */
+  aoSalvo: (a: SalesAgent) => void;
   aoExcluir: () => void;
   aoTestar: () => void;
   aoLigar: (ligar: boolean) => Promise<boolean | void>;
@@ -46,12 +50,13 @@ export interface IaBarraProps {
 }
 
 export default function IaBarra({
-  agents, selecionada, situacao, tela, insights, podeCriar, podeExcluir, equipe, verMotor,
-  aoIr, aoTrocarIa, aoTodos, aoDuplicar, aoExcluir, aoTestar, aoLigar, travaDoLigar, aoCorrigirLigar,
+  agents, selecionada, situacao, tela, insights, podeEditar, podeExcluir, equipe, verMotor,
+  aoIr, aoTrocarIa, aoTodos, aoSalvo, aoExcluir, aoTestar, aoLigar, travaDoLigar, aoCorrigirLigar,
 }: IaBarraProps) {
   const grupoAtual = telaInfo(tela).grupo;
   const travada = !!selecionada && !selecionada.enabled && !!travaDoLigar;
-  const temMais = podeCriar || podeExcluir || verMotor || equipe;
+  const [renomeando, setRenomeando] = useState(false);
+  const temMais = podeEditar || podeExcluir || verMotor || equipe;
 
   return (
     <div className="flex flex-wrap items-center gap-x-5 gap-y-2 border-b bg-card px-4 py-2 sm:px-6">
@@ -127,13 +132,13 @@ export default function IaBarra({
                 <BotaoMaisAcoes />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                {podeCriar && <DropdownMenuItem onSelect={aoDuplicar}><Copy className="h-4 w-4" aria-hidden /> Duplicar esta IA</DropdownMenuItem>}
-                {podeCriar && (verMotor || equipe) && <DropdownMenuSeparator />}
+                {podeEditar && <DropdownMenuItem onSelect={() => setRenomeando(true)}><Pencil className="h-4 w-4" aria-hidden /> Renomear</DropdownMenuItem>}
+                {podeEditar && (verMotor || equipe) && <DropdownMenuSeparator />}
                 {verMotor && <DropdownMenuItem onSelect={() => aoIr('motor')}><Gauge className="h-4 w-4" aria-hidden /> Motor</DropdownMenuItem>}
                 {equipe && <DropdownMenuItem onSelect={() => aoIr('diagnostico')}><Stethoscope className="h-4 w-4" aria-hidden /> Diagnóstico</DropdownMenuItem>}
                 {podeExcluir && (
                   <>
-                    {(podeCriar || verMotor || equipe) && <DropdownMenuSeparator />}
+                    {(podeEditar || verMotor || equipe) && <DropdownMenuSeparator />}
                     <DropdownMenuItem variant="destructive" onSelect={aoExcluir}>
                       <Trash2 className="h-4 w-4" aria-hidden /> Excluir IA
                     </DropdownMenuItem>
@@ -143,6 +148,9 @@ export default function IaBarra({
             </DropdownMenu>
           )}
         </div>
+      )}
+      {renomeando && selecionada && (
+        <RenomearAgente agent={selecionada} aoSalvo={aoSalvo} aoFechar={() => setRenomeando(false)} />
       )}
     </div>
   );

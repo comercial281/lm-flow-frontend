@@ -13,7 +13,7 @@
  * produto, opção "a"): roleta e corretor fixo ficam travados nela.
  */
 import type {
-  AlcanceDaIa, PersonaDaIa, PersonaGravavel, SalesAgent, SalesAgentHandoffTarget, SalesAgentPayload,
+  AlcanceDaIa, PersonaDaIa, PersonaGravavel, SalesAgent, SalesAgentHandoffTarget,
 } from '@/services/salesAgents/salesAgentsService';
 import type { RoletaConfig } from '@/services/roletaConfig/roletaConfigService';
 import { speaksAsBroker, toggleVoice } from './handoffVoice';
@@ -39,46 +39,6 @@ export function lerEscolhas(agent: Lido): Escolhas {
     ? (agent.reach as AlcanceDaIa)
     : agent.booking_enabled === false ? 'qualify' : 'visit';
   return { persona, alcance, destino: agent.handoff_target ?? 'inbox_roleta' };
-}
-
-/**
- * O modelo de partida da IA nova. As quatro perguntas são o BANT de antes dito em
- * português (ninguém usava o bloco BANT; as perguntas obrigatórias antes de passar
- * são o que mais funciona hoje), e já nascem obrigatórias no cenário recomendado.
- */
-export const PERGUNTAS_SUGERIDAS = [
-  'Qual faixa de investimento você tem em mente?',
-  'A decisão é só sua ou mais alguém participa?',
-  'O que está fazendo você procurar um imóvel agora?',
-  'Em quanto tempo pretende se mudar ou fechar negócio?',
-];
-
-/**
- * "Nova IA" cria um RASCUNHO desligado e sem número (é o que a Visão geral chama de
- * rascunho) e abre o Configurar. Substitui o "+" que criava a IA calada e abria o
- * assistente. Aviso fora do horário ligado (o lead de madrugada não fica no vácuo).
- * O `followup_max_attempts: 3` é sobra inofensiva: desde 06/10/2026 a IA não
- * escreve o follow-up, só entrega o lead, e o servidor ignora o teto fora de 'ai'.
- *
- * Sem `followup_action` de propósito (06/10/2026): o servidor dá à IA nova
- * "Entregar pro follow-up" apontando pro Follow-up padrão do cliente (ou "Mover o
- * card", se ele não existir). Mandar daqui seria uma segunda verdade.
- */
-export function novaIaRascunho(): SalesAgentPayload {
-  return {
-    name: 'Nova IA',
-    enabled: false,
-    inbox_id: null,
-    persona_kind: 'assistant',
-    reach: 'qualify',
-    booking_enabled: false,
-    handoff_target: 'roleta',
-    handoff_roleta_config_id: null,
-    qualification_questions: [...PERGUNTAS_SUGERIDAS],
-    transfer_config: { mode: 'checklist', required_questions: [...PERGUNTAS_SUGERIDAS] },
-    followup_max_attempts: 3,
-    out_of_hours_reply: true,
-  };
 }
 
 /** A roleta ATIVA ligada ao número da IA (régua da rotina `ia:destino_sem_inbox_roleta`). */

@@ -2,7 +2,7 @@
 //
 // Barra de topo (`IaBarra`) com o seletor da IA, o selo do veredito e os menus
 // Painel ▾ · Configurar · Ensinar, o botão Testar (janela por cima), a chave Ligada
-// e o "⋯" (Motor e Diagnóstico só pra equipe), no modelo do Meu site.
+// e o "⋯" (Renomear, Excluir; Motor e Diagnóstico só pra equipe), no modelo do Meu site.
 // O endereço diz a IA e a tela (`?ia=<id>&tela=<id>`), com `replace`: o Voltar
 // do navegador sai da página em vez de percorrer as telas. Cada tela mora em
 // `telas/`; o Configurar são as páginas de `configurar/` (onda 3), que gravam na
@@ -14,7 +14,6 @@ import { BaseHeader, Pagina } from '@/components/base';
 import Carregando from '@/components/base/Carregando';
 import EmptyState from '@/components/base/EmptyState';
 import { toast } from 'sonner';
-import DuplicateAgentDialog from '@/components/salesAgents/DuplicateAgentDialog';
 import { salesAgentsService, type HealthReport, type SalesAgent } from '@/services/salesAgents/salesAgentsService';
 import { useClientToggle } from '@/contexts/TenantFeaturesContext';
 import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
@@ -59,7 +58,6 @@ export default function SalesAgents() {
   const [selected, setSelected] = useState<SalesAgent | null>(null);
   const [inboxes, setInboxes] = useState<InboxOption[]>([]);
   const [loading, setLoading] = useState(true);
-  const [duplicating, setDuplicating] = useState<SalesAgent | null>(null);
   const [loadFailure, setLoadFailure] = useState<LoadFailure | null>(null);
   const [diagnostico, setDiagnostico] = useState<{ id: string; report: HealthReport } | null>(null);
   const [conferindo, setConferindo] = useState(false);
@@ -197,7 +195,7 @@ export default function SalesAgents() {
   const trava = selected ? podeLigar(selected) : null;
   const travaDoLigar = trava && !trava.pode && trava.motivo && trava.pagina ? { motivo: trava.motivo, pagina: trava.pagina } : null;
 
-  // ⚠️ Trocar de IA, de tela, criar ou duplicar com uma edição pela metade pergunta
+  // ⚠️ Trocar de IA ou de tela com uma edição pela metade pergunta
   // antes; senão a edição some calada. Os botões da barra não são links, e a guarda
   // do menu lateral (useGuardaDeSaida) não os pega.
   // Onda 3 + Ensinar novo (11/10): nenhuma tela da IA marca pendência; a guarda fica pra quem ainda marcar.
@@ -255,14 +253,14 @@ export default function SalesAgents() {
             situacao={situacao}
             tela={tela}
             insights={insightsLiberado}
-            podeCriar={podeCriar}
+            podeEditar={pode('sales_agents', 'update')}
             podeExcluir={pode('sales_agents', 'delete')}
             equipe={isSuper}
             verMotor={verMotor}
             aoIr={(t) => void guardar(() => irPara(t))}
             aoTrocarIa={(id) => void guardar(() => trocarIa(id))}
             aoTodos={() => void guardar(voltarAosAgentes)}
-            aoDuplicar={() => void guardar(() => { if (selected) setDuplicating(selected); })}
+            aoSalvo={aoSalvo}
             aoExcluir={() => selected && void deleteAgent(selected)}
             aoTestar={() => setTestandoIa(selected?.id ?? null)}
             aoLigar={ligar}
@@ -328,27 +326,6 @@ export default function SalesAgents() {
         )}
       </Pagina>
       {dialogoDeConfirmacao}
-      {duplicating && (
-        <DuplicateAgentDialog
-          agent={duplicating}
-          inboxes={inboxes}
-          onClose={() => setDuplicating(null)}
-          onDuplicated={(copy) => {
-            // A cópia vira a IA aberta, em Configurar: é lá que se confere antes
-            // de ligar.
-            // ⚠️ A cópia entra na lista ANTES de o endereço apontar pra ela: sem
-            // isso a resolução do endereço não acha o id e volta pra IA original.
-            setDuplicating(null);
-            // ...e vira a `selected` já: `loadAgents` abaixo liga o loading e a
-            // resolução do endereço fica parada — sem isto, Configurar mostraria
-            // (e salvaria em) a IA ORIGINAL enquanto o endereço aponta pra cópia.
-            setAgents((prev) => [...prev.filter((a) => a.id !== copy.id), copy]);
-            setSelected(copy);
-            setSearchParams(paramsDaIa(copy.id, 'configurar'), { replace: true });
-            loadAgents();
-          }}
-        />
-      )}
     </>
   );
 }

@@ -41,6 +41,7 @@ import {
   Tutorials,
   NumeroOficial,
 } from './lazyPages';
+import NovoAgente from '@/pages/Customer/Automations/SalesAgents/agentes/NovoAgente';
 import RedirecionaAssistente from '@/pages/Customer/Automations/SalesAgents/RedirecionaAssistente';
 import PrivateRoute from './PrivateRoute';
 import AcademiaRoute from './AcademiaRoute';
@@ -613,6 +614,16 @@ const AppRouter = () => {
               element={
                 <PermissionRoute resource="sales_agents" action="read">
                   <SalesAgents />
+                </PermissionRoute>
+              }
+            />
+
+            {/* Novo agente em 4 passos (fase 6): só quem pode criar agente. */}
+            <Route
+              path="/ia-vendedora/novo"
+              element={
+                <PermissionRoute resource="sales_agents" action="create">
+                  <NovoAgente />
                 </PermissionRoute>
               }
             />

@@ -10246,7 +10246,7 @@ Reestruturação da IA, fase 6, Tarefa 68 (a página de agentes; o fluxo do Novo
 1. **Revê a decisão 2 da casca (05/10).** Antes, sem `ia` a casca abria a última IA do navegador (`lmflow:ia-vendedora:ultima`). Agora a página de agentes é a entrada (decisão do Tony em 28/10): com vários agentes, abrir direto num deles escondia os outros e o quadro com os números do mês. A chave do `localStorage` não é mais lida nem gravada.
 2. Sem `ia` a casca não abre nem reescreve nada (nem `?tela=` solto: `?tela=testar` sem IA mostra a página, sem janela armada). `?agent=` do assistente segue abrindo em Configurar. IA do endereço que não existe mais cai na primeira.
 3. Os números de 30 dias vêm de `GET /sales_agents/summaries`, lidos **uma vez** ao abrir a página. Falha tira só o rodapé (sem aviso vermelho). Número sem conversa não vem em `numbers` do resumo: conta como 0.
-4. *+ Novo agente* só com `sales_agents.create` e leva a `/ia-vendedora/novo` (a tela é da Tarefa 69; até lá a rota não existe). A criação de rascunho por *Nova IA* saiu da casca; `novaIaRascunho` fica pro fluxo novo.
+4. *+ Novo agente* só com `sales_agents.create` e leva a `/ia-vendedora/novo` (a tela é a Tarefa 69, abaixo). A criação de rascunho por *Nova IA* saiu da casca; o `novaIaRascunho` foi apagado na Tarefa 69.
 5. Agente juntado a outro (`absorbed_into_id`) não aparece na página nem no seletor (a casca filtra ao ler a lista). A contagem por marca vem pronta do servidor (`catalog_marks`); a tela só mostra.
 6. Toda a conta de texto do quadro mora em `src/features/salesAgents/quadroDoAgente.ts` (`quadroDoAgente(agent, resumo, contagem)`); os componentes só desenham.
 
@@ -10254,4 +10254,32 @@ Reestruturação da IA, fase 6, Tarefa 68 (a página de agentes; o fluxo do Novo
 1. A barra da IA só aparece com `ia` no endereço; na página de agentes não há barra.
 2. O alternador de visão à mão é régua do build: o ícone `LayoutGrid` no menu da barra dispara a trava (`alternadorAMao`). O *Todos os agentes* usa `Users`.
 3. O quadro mostra a situação sem o Diagnóstico (1 chamada por agente seria pesada): o selo é o da configuração; o veredito completo continua dentro do agente.
+
+---
+
+## IA Vendedora · Novo agente em 4 passos, Renomear e a saída do Duplicar (desde 01/11/2026)
+
+Reestruturação da IA, fase 6, Tarefa 69. Spec: `docs/superpowers/ia-reestruturacao/specs/2026-10-31-fase-6-tela-design.md` (seções 2 e 8).
+
+**O que aparece na tela:** `/ia-vendedora/novo` (só com `sales_agents.create`), tela cheia com a trilha *1 · Modo operante · 2 · Números e usuários · 3 · Quem fala · 4 · Produto*, *Voltar* e *Seguir*.
+1. *Qual o modo operante?* em dois cartões (*Filtra e passa*, *Leva até a visita*) e o campo *Nome do agente*. O *Seguir* só liga com modo e nome.
+2. *Em quais números ele atende?*: um quadradinho por número conectado. Número que já tem agente mostra o nome dele ao lado. Marcado um número onde há agente LIGADO sem gatilho: *pra dividir este número, o agente X vai precisar de gatilhos; ele não muda até você ligar este*.
+3. *Quem fala, por padrão?*: a ficha da casa (Corretor, Consultora, Dono ou gerente), *Nome*, *Como se apresenta* e *Ele ou ela*.
+4. *O que ele vende?*: Venda, Locação, Leilão, Empreendimento, cada uma com *N no cadastro*. Vêm marcadas as que têm imóvel; as sem imóvel vêm desmarcadas. Sem nenhuma marcada, não cria. *Criar agente desligado* abre o agente em Configurar (`?ia=<novo>&tela=configurar`).
+
+No *⋯* da barra entra *Renomear* (janela com *Nome do agente*, grava só o `name` no Salvar; nome vazio não grava) e sai *Duplicar esta IA*.
+
+**Decisões (não reabrir sem o dono pedir):**
+1. **O Duplicar sai da tela** (spec fase 6). Saíram `DuplicateAgentDialog`, `duplicateAgent.ts` e o `novaIaRascunho` (e a lista de 4 perguntas sugeridas, que só ele usava). O MCP do servidor segue com o `Duplicator`; o `salesAgentsService.duplicate` ficou no serviço, sem uso na tela.
+2. **Criar é `create` UMA vez + `criarNumero` por número.** O agente nasce `enabled: false`, `next_steps: ['visita']`, com a ficha da casa e as marcas. O número não vai no corpo do agente.
+3. **Número que falha não desfaz nada** (o agente já existe): abre em `?ia=<novo>&tela=configurar&pagina=numeros` com aviso dizendo qual número não entrou. `create` que falha fica na tela, sem criar número.
+4. **C11:** o agente salva e nasce desligado mesmo sem pergunta obrigatória; quem recusa é o ligar, depois (*Filtra e passa precisa de pelo menos uma pergunta obrigatória.*).
+5. **Número dividido (seção 8):** só agente ligado conta. Desligado ou rascunho não gera aviso. Gatilho vale o do número ou, se o número herda, o do agente.
+6. **As marcas do passo 4** partem da contagem `catalog_marks` do primeiro agente da lista (a contagem é da conta toda). Conta sem agente nenhum: nada vem marcado, a pessoa escolhe.
+7. Toda a conta mora em `features/salesAgents/novoAgente.ts` (`payloadDoNovo`, `avisoDoNumero`, `podeSeguir`); a tela só desenha. O Renomear é `RenomearAgente.tsx`, chamado pela `IaBarra` (que recebe `aoSalvo` e `podeEditar`; `podeCriar` saiu da barra).
+
+**Armadilhas:**
+1. A página `numeros` do Configurar ainda não existe como `PaginaId` (vem com a página de números); até lá o endereço cai na página padrão do Configurar. O texto do aviso já manda ligar o número lá.
+2. O servidor recusa agente sem marca (*Marque pelo menos um…*): por isso o passo 4 não deixa criar sem marca, em vez de mandar `serves` vazio.
+3. O catálogo "cartão à mão" e "Nenhum…" solto da régua do build pegam a tela nova: usar `Card` e frase sem "Nenhum".
 
