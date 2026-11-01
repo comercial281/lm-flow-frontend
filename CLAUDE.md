@@ -10530,6 +10530,7 @@ Configurações > Campanhas, no mesmo endereço de antes (`/automations/origem`,
 - Os specs de `LeadAdsForms.*` renderizam a tela sozinha e só mockam `leadAdsFormsService`: a janela não pode chamar `campanhasService` sem a lista de opções vir de cima.
 - Servidor sem as chaves de Campanhas: `opcoesDeIa` falha em silêncio e o bloco "Qual IA atende" some; o resto da janela segue.
 - A régua da casa (`conferir-padrao`, glossário) barra "apagar": o botão se chama **Excluir ficha** (o enunciado e o protótipo diziam "Apagar ficha"), e a mensagem de "Nenhum…" solto também: a janela diz "Sem IA nesta campanha.".
+- **Dinheiro da condição é pt-BR nos dois sentidos.** O servidor guarda número com centavos (899.9). O campo mostra "899,90" e `numeroDoCampo` lê pt-BR: ponto é milhar, vírgula é centavos; sem vírgula, UM ponto com 1 ou 2 dígitos no fim é decimal (teclado de celular). Nunca `String(valor)` no campo: o "899.9" lido como milhar gravava 8.999 (a IA passaria esse preço pro lead). Apagar a condição manda o objeto com as chaves nulas, nunca `null` (o `permit(offer_condition: {})` descarta o nulo e a condição antiga ficava).
 
 Código: `pages/Customer/Settings/Campanhas/{Campanhas,LinhaDaCampanha,JanelaDaCampanha}.tsx`, `features/campanhas/{condicaoDaCampanha,qualIaAtende,itensDeCampanha}.ts` (com specs), `LeadAdsForms.tsx` (parte Formulários) e `Origem.tsx`.
 
