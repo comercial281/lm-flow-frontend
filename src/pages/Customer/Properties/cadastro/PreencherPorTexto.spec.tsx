@@ -58,7 +58,7 @@ describe('Preencher pelo texto: a condição de pagamento', () => {
     await abrirEPreencher();
     await userEvent.click(screen.getByRole('button', { name: /^Preencher$/ }));
     await waitFor(() => expect(p.setF).toHaveBeenCalled());
-    expect(p.setF.mock.calls[0][0]).toEqual({ down_payment_from: 12000, installment_from: 890, min_income: 3500, payment_terms: 'Entrada em 24x' });
+    expect(p.setF.mock.calls[0][0]).toEqual({ down_payment_from: 12000, installment_from: 890, min_income: 3500 });
   });
 });
 

@@ -18,9 +18,13 @@ const CAMPOS = [
 export function GradeDeComposicao({ form: f, setF }: Pick<PropsDaSecao, 'form' | 'setF'>) {
   const travados = useContext(CamposTravadosContext);
   const base = useId();
+  // Terreno não tem vaga: sem campo e sem caixinha.
+  const semVagaNoTipo = f.property_type === 'lot' || f.property_type === 'terreno';
+  // O campo só trava pela caixinha (ou ao abrir um imóvel salvo com 0); digitar 0 não trava no ato.
+  const [bloqueado, setBloqueado] = useState(f.parking_spaces === 0);
   return (
     <div className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-3">
-      {CAMPOS.map(({ label, key }) => {
+      {CAMPOS.filter(c => !(semVagaNoTipo && c.key === 'parking_spaces')).map(({ label, key }) => {
         const travado = campoTravado(key, travados);
         if (key === 'parking_spaces') {
           // Vazio = não informado, 0 = sem vaga: o campo trava no 0 e volta ao vazio ao desmarcar.
@@ -29,9 +33,9 @@ export function GradeDeComposicao({ form: f, setF }: Pick<PropsDaSecao, 'form' |
             <div key={key} title={dicaSe(travado)}>
               <UILabel htmlFor={`${base}-${key}`}>{label}</UILabel>
               <Input id={`${base}-${key}`} type="number" value={f.parking_spaces ?? ''} onChange={e => setF({ parking_spaces: numeroOuNulo(e.target.value) })}
-                min={0} disabled={travado || semVaga} className="mt-1" />
+                min={0} disabled={travado || (semVaga && bloqueado)} className="mt-1" />
               <label className="mt-1 flex cursor-pointer items-center gap-2">
-                <Checkbox checked={semVaga} disabled={travado} onCheckedChange={v => setF({ parking_spaces: v === true ? 0 : null })} />
+                <Checkbox checked={semVaga} disabled={travado} onCheckedChange={v => { setBloqueado(v === true); setF({ parking_spaces: v === true ? 0 : null }); }} />
                 <span className="text-sm">Sem vaga</span>
               </label>
             </div>

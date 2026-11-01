@@ -10472,9 +10472,10 @@ Cadastro do imóvel (`/properties/new` e a edição). Segue com **Salvar** (não
 - **Condições e argumentos**: seção nova logo depois de "Detalhes da venda", nos três tipos (e no índice). Cinco blocos: *Condição* (Entrada a partir de, Parcela a partir de, Renda mínima, em dinheiro como os outros valores; Fluxo de pagamento até 300 letras), *Pra quem serve* (os 4 caminhos de fábrica; a frase de como a IA pergunta é a `fraseDaIntencao(lista, 'deste imóvel')`), *O que nunca prometer* (até 6 linhas de 150), *Fato de urgência* (o fato até 150 letras e "Vale até") e *Objeções deste imóvel* (até 10, objeção e resposta).
 - **Finalidade** da revenda são duas caixinhas, "À venda" e "Para alugar" (uma, outra ou as duas). Temporada saiu da tela; imóvel `season` abre com "Para alugar" marcado e continua `season` enquanto só essa caixinha ficar. Nenhuma marcada: "Marque À venda, Para alugar ou os dois." e o Salvar não segue (seção Básico).
 - **Sem vaga** ao lado do campo Vagas: marcado grava 0 e trava o campo; desmarcado volta ao vazio (não informado). Imóvel com 0 abre marcado.
+- Terreno não mostra Vagas nem Sem vaga. Digitar 0 no campo não trava; só a caixinha trava (e o imóvel salvo com 0 abre travado). Rascunho com fato de urgência sem data também é barrado, com a frase do servidor.
 - **Aceita permuta** (revenda, em Detalhes da venda): Sim, Não, A conversar, Não informado.
 - **Fase não informada**: opção nova em "Fase da obra"; empreendimento novo nasce nela, sem "Previsão de entrega". O selo da lista de Imóveis diz "Fase não informada" e não mostra "· entrega". O que o público vê (filtro de fase do site, selo do portal e da ficha) não mostra essa fase.
-- **Preencher a partir de um texto** traz também entrada, parcela, renda mínima e fluxo (só campo vazio). Pra quem serve, nunca prometer, urgência e objeções ficam com o time.
+- **Preencher a partir de um texto** traz também entrada, parcela e renda mínima quando o texto diz (só campo vazio; o servidor devolve no `parse_text`). Fluxo, pra quem serve, nunca prometer, urgência e objeções ficam com o time.
 
 **Decisões**
 1. Fato de urgência sem data: a tela usa a frase do servidor (C31), "Fato de urgência precisa da data em que deixa de valer.", embaixo do campo e como erro do Salvar (seção Condições). Não existe outra frase.

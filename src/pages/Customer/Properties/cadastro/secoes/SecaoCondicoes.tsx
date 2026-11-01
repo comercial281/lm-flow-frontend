@@ -53,7 +53,7 @@ export default function SecaoCondicoes({ form: f, setF }: PropsDaSecao) {
     <div className="mt-4 space-y-6">
       <p className="text-sm text-muted-foreground">
         Vale pra qualquer IA da imobiliária e também quando ela oferece este imóvel como alternativa pra outro lead.
-        O Preencher com IA traz entrada, parcela, renda mínima e fluxo quando o material diz. O resto é decisão do time: a IA não preenche.
+        O Preencher a partir de um texto traz entrada, parcela e renda mínima quando o texto diz. O resto é decisão do time: a IA não preenche.
       </p>
 
       <section aria-labelledby="cond-condicao">

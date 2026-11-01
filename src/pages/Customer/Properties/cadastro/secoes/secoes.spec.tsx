@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -206,5 +207,35 @@ describe('seções novas', () => {
     expect(screen.queryByText('Previsão de entrega')).toBeNull();
     rerender(<SecaoObra form={{ ...form, listing_kind: 'development', stage: 'launch' }} setF={vi.fn()} editando={null} />);
     expect(screen.getByText('Previsão de entrega')).toBeInTheDocument();
+  });
+
+  it('Digitar 0 no campo de vagas não trava; terreno não mostra Vagas', async () => {
+    function Vivo({ inicial }: { inicial: Partial<PropertyFormData> }) {
+      const [f, setFo] = useState({ ...form, listing_kind: 'resale', ...inicial } as PropertyFormData);
+      return <SecaoComposicao form={f} setF={m => setFo(p => ({ ...p, ...(typeof m === 'function' ? m(p) : m) }))} editando={null} />;
+    }
+    const { unmount } = render(<Vivo inicial={{ parking_spaces: null }} />);
+    await userEvent.type(screen.getByLabelText('Vagas'), '0');
+    expect(screen.getByLabelText('Vagas')).toBeEnabled();
+    unmount();
+    render(<Vivo inicial={{ property_type: 'lot' }} />);
+    expect(screen.queryByLabelText('Vagas')).toBeNull();
+    expect(screen.queryByRole('checkbox', { name: 'Sem vaga' })).toBeNull();
+  });
+
+  it('temporada: desmarcar e remarcar Para alugar continua temporada', async () => {
+    function Vivo() {
+      const [t, setT] = useState('season');
+      return <SecaoBasico form={{ ...form, listing_kind: 'resale', transaction_type: t }} setF={m => setT((m as { transaction_type: string }).transaction_type)} editando={null} />;
+    }
+    render(<Vivo />);
+    const alugar = screen.getByRole('checkbox', { name: 'Para alugar' });
+    await userEvent.click(alugar);
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Para alugar' }));
+    expect(screen.getByRole('checkbox', { name: 'Para alugar' })).toBeChecked();
+    await userEvent.click(screen.getByRole('checkbox', { name: 'À venda' }));
+    await userEvent.click(screen.getByRole('checkbox', { name: 'À venda' }));
+    // voltou a só aluguel: segue temporada (nada mudou para 'rent')
+    expect(screen.getByRole('checkbox', { name: 'À venda' })).not.toBeChecked();
   });
 });

@@ -178,7 +178,7 @@ function Cadastro() {
   const criar = async (rascunho: boolean) => {
     // Rascunho só exige o título: o servidor aceita rascunho sem preço. O Link pro
     // lead inválido o servidor recusa até no rascunho, então ele também barra.
-    const erros = errosDoCadastro(form, travados).filter(e => !rascunho || e.secao === 'basico' || e.secao === 'midia');
+    const erros = errosDoCadastro(form, travados).filter(e => !rascunho || e.secao === 'basico' || e.secao === 'midia' || e.secao === 'condicoes');
     if (erros.length) { irParaErro(erros[0]); return; }
     setSalvando(true);
     try {

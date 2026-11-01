@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 import { Checkbox, Input, Label as UILabel } from '@/components/ui/ds';
 import { Seletor } from '@/components/base/Seletor';
 import { opcoesDeTipoDeImovel } from '@/services/properties/propertiesService';
@@ -63,7 +64,11 @@ function FinalidadeEmMarcas({ valor, aoMudar, desabilitado }: {
   desabilitado: boolean;
 }) {
   const marcas = marcasDaFinalidade(valor);
-  const trocar = (parte: Partial<typeof marcas>) => aoMudar(finalidadeDasMarcas({ ...marcas, ...parte }, valor));
+  // Temporada não aparece na tela: lembra que o imóvel abriu assim pra não virar aluguel comum calado.
+  const eraTemporada = useRef(false);
+  if (valor === 'season') eraTemporada.current = true;
+  const trocar = (parte: Partial<typeof marcas>) =>
+    aoMudar(finalidadeDasMarcas({ ...marcas, ...parte }, eraTemporada.current ? 'season' : valor));
   return (
     <div title={dicaSe(desabilitado)}>
       <p className="mb-1 block text-sm font-medium">Finalidade</p>
