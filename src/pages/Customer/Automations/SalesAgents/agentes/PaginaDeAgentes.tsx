@@ -7,6 +7,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { salesAgentsService, type ResumoDoAgente, type SalesAgent } from '@/services/salesAgents/salesAgentsService';
+import EmptyState from '@/components/base/EmptyState';
 import QuadroDoAgente from './QuadroDoAgente';
 
 export default function PaginaDeAgentes({ agents, podeCriar }: { agents: SalesAgent[]; podeCriar: boolean }) {
@@ -20,12 +21,14 @@ export default function PaginaDeAgentes({ agents, podeCriar }: { agents: SalesAg
     return () => { vivo = false; };
   }, []);
 
-  // Agente juntado a outro (fase 2) é "não existe mais".
-  const visiveis = agents.filter((a) => !a.absorbed_into_id);
+  // O agente juntado (fase 2) já é filtrado pela casca, ao ler a lista.
+  if (agents.length === 0 && !podeCriar) {
+    return <EmptyState title="Ainda não há agente de IA por aqui." description="Peça ao gestor da conta pra criar um." />;
+  }
 
   return (
     <div className="grid grid-cols-[repeat(auto-fill,minmax(320px,1fr))] gap-4">
-      {visiveis.map((a) => <QuadroDoAgente key={a.id} agent={a} resumo={resumos.get(a.id) ?? null} />)}
+      {agents.map((a) => <QuadroDoAgente key={a.id} agent={a} resumo={resumos.get(a.id) ?? null} />)}
       {podeCriar && (
         <Link
           to="/ia-vendedora/novo"

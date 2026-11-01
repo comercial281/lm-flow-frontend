@@ -29,17 +29,17 @@ export default function QuadroDoAgente({ agent, resumo }: { agent: SalesAgent; r
       </span>
       <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
         {linhas.map(([rotulo, valor]) => (
-          <span key={rotulo} className="contents">
+          <div key={rotulo} className="contents">
             <dt className="text-muted-foreground">{rotulo}</dt>
             <dd className="text-foreground">{valor}</dd>
-          </span>
+          </div>
         ))}
       </dl>
       {(q.rodape || q.pendencia) && (
         <span className="flex flex-wrap gap-2 border-t pt-3 text-xs">
           {q.rodape && <span className="rounded-full bg-muted px-2.5 py-0.5 text-muted-foreground">{q.rodape}</span>}
           {q.pendencia && (
-            <span className="rounded-full bg-amber-500/10 px-2.5 py-0.5 text-amber-700 dark:text-amber-400">Falta resolver: {q.pendencia}</span>
+            <span className="rounded-full bg-amber-500/10 px-2.5 py-0.5 text-amber-700 dark:text-amber-400">Falta: {q.pendencia}</span>
           )}
         </span>
       )}

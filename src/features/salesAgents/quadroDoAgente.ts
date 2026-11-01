@@ -60,6 +60,10 @@ export function quadroDoAgente(
     proximoPasso: passos.length ? passos.join(' ou ') : 'Nenhum',
     produto: marcas.length ? marcas.map((m) => `${MARCAS[m]} (${contagem?.[m] ?? 0})`).join(', ') : 'Ainda não escolhido',
     rodape,
-    pendencia: pendenciasDaIa(agent)[0]?.titulo ?? null,
+    // Agente sem número nenhum (ligado ou não) tem a pendência própria do quadro;
+    // as outras usam o título que a `situacao.ts` devolve (não há texto mais curto).
+    pendencia: numeros.length === 0 && !agent.inbox_id
+      ? 'ligar um número'
+      : pendenciasDaIa(agent)[0]?.titulo ?? null,
   };
 }

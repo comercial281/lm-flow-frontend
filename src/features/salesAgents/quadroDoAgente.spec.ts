@@ -71,9 +71,12 @@ describe('quadroDoAgente', () => {
     expect(q.produto).toBe('Empreendimento (2)');
   });
 
-  it('pendência: a primeira, ou nula', () => {
-    expect(quadroDoAgente(agente({ enabled: false, inbox_id: null }), null).pendencia).toBeNull();
-    const sem = quadroDoAgente(agente({ enabled: true, inbox_id: null }), null);
-    expect(typeof sem.pendencia).toBe('string');
+  it('sem número nenhum, ligado ou não, o quadro pede "ligar um número"', () => {
+    expect(quadroDoAgente(agente({ enabled: false, inbox_id: null }), null).pendencia).toBe('ligar um número');
+    expect(quadroDoAgente(agente({ enabled: true, inbox_id: null }), null).pendencia).toBe('ligar um número');
+  });
+
+  it('com número e nada pendente, a pendência é nula', () => {
+    expect(quadroDoAgente(agente({ numbers: NUMEROS }), null).pendencia).toBeNull();
   });
 });

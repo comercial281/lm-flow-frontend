@@ -155,6 +155,22 @@ describe('IA Vendedora · casca', () => {
     expect(endereco()).toBe('');
   });
 
+  it('agente juntado some da página e do seletor; o desligado aparece', async () => {
+    list.mockResolvedValue([
+      ia('ia-1', 'IA de Vendas'),
+      ia('ia-2', 'IA Juntada', { absorbed_into_id: 'ia-1' }),
+      ia('ia-3', 'IA Parada', { enabled: false }),
+    ]);
+    abrir('/ia-vendedora');
+    expect(await screen.findByRole('link', { name: /IA Parada/ })).toBeInTheDocument();
+    expect(screen.queryByText('IA Juntada')).toBeNull();
+    await userEvent.click(screen.getByRole('link', { name: /IA de Vendas/ }));
+    await screen.findByText('tela configurar · IA de Vendas');
+    await userEvent.click(screen.getByRole('button', { name: /IA de Vendas/ }));
+    await screen.findByRole('menuitem', { name: /IA Parada/ });
+    expect(screen.queryByRole('menuitem', { name: /IA Juntada/ })).toBeNull();
+  });
+
   it('o seletor não tem mais "Nova IA"', async () => {
     abrir('/ia-vendedora?ia=ia-1');
     await screen.findByText('tela visao-geral · IA de Vendas');

@@ -45,12 +45,6 @@ describe('PaginaDeAgentes', () => {
     await screen.findByText(/74 conversas em 30 dias/);
   });
 
-  it('agente juntado não aparece', async () => {
-    abrir([ag('ag-1', 'Agente A'), ag('ag-2', 'Agente B', { absorbed_into_id: 'ag-1' })]);
-    expect(screen.queryByText('Agente B')).toBeNull();
-    await screen.findByText(/74 conversas/);
-  });
-
   it('clicar leva a ?ia=<id>&tela=configurar, sem pagina', async () => {
     abrir([ag('ag-1', 'Agente A')]);
     await userEvent.click(screen.getByRole('link', { name: /Agente A/ }));
@@ -90,5 +84,11 @@ describe('PaginaDeAgentes', () => {
     abrir([ag('ag-1', 'Agente A')], false);
     expect(screen.queryByText('+ Novo agente')).toBeNull();
     await screen.findByText(/74 conversas/);
+  });
+
+  it('conta sem agente e sem permissão de criar: frase curta, sem grade vazia', () => {
+    abrir([], false);
+    expect(screen.getByText(/Ainda não há agente de IA por aqui/)).toBeInTheDocument();
+    expect(screen.queryByRole('link')).toBeNull();
   });
 });
