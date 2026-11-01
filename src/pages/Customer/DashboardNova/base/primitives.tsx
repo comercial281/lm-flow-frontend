@@ -54,7 +54,8 @@ export const Skeleton: React.FC<{ height?: number; className?: string }> = ({ he
   <div className={`lmf-skeleton ${className}`} style={{ height }} />
 );
 
-/** Delta com seta. `null` = não havia base de comparação (dividir por zero não é -100%). */
+/** Delta com seta. `null` = não havia base de comparação (dividir por zero não é -100%).
+ *  Seta e número no selo; o complemento fica fora dele e pode descer de linha. */
 export const Delta: React.FC<{ value: number | null; suffix?: string }> = ({ value, suffix = 'vs. período anterior' }) => {
   if (value === null || value === undefined || Number.isNaN(value)) {
     return <span className="lmf-kpi-delta lmf-flat">sem base de comparação</span>;
@@ -63,7 +64,8 @@ export const Delta: React.FC<{ value: number | null; suffix?: string }> = ({ val
   const arrow = value > 0 ? '▲' : value < 0 ? '▼' : '■';
   return (
     <span className={`lmf-kpi-delta ${tone}`}>
-      {arrow} {Math.abs(value).toLocaleString('pt-BR', { maximumFractionDigits: 1 })}% {suffix}
+      <span className="lmf-kpi-delta-selo">{arrow} {Math.abs(value).toLocaleString('pt-BR', { maximumFractionDigits: 1 })}%</span>
+      {suffix && <span className="lmf-kpi-delta-sufixo">{suffix}</span>}
     </span>
   );
 };
