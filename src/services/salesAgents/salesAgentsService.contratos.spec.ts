@@ -70,12 +70,19 @@ describe('quadros, conhecimento de fábrica e link', () => {
     expect(get).toHaveBeenCalledWith('/sales_agents/a1/factory_knowledge');
   });
 
-  it('criarLink pede o link do imóvel pelo código', async () => {
-    get.mockResolvedValue({ data: { data: { link: 'https://x/AbC', message: 'Oi', number: '5511900000001', property: { id: 'p1', code: 'AB01', title: 'Residencial Teste' } } } });
-    const r = await salesAgentsService.criarLink('a1', { property_code: 'AB01' });
-    expect(get).toHaveBeenCalledWith('/sales_agents/a1/property_link', { params: { property_code: 'AB01' } });
-    expect(r.link).toBe('https://x/AbC');
-    expect(r.property?.code).toBe('AB01');
+  it('criarLink cria o documento do tipo url, enviável, no endereço dos documentos', async () => {
+    post.mockResolvedValue({ data: { data: { id: 'd1', source_type: 'url' } } });
+    const r = await salesAgentsService.criarLink('a1', { title: 'Tabela de preços', url: 'https://exemplo.com/tabela', sendWhen: 'Quando pedir a tabela' });
+    expect(post).toHaveBeenCalledWith('/sales_agents/a1/documents', {
+      title: 'Tabela de preços', source_type: 'url', source_url: 'https://exemplo.com/tabela', sendable: true, send_when: 'Quando pedir a tabela',
+    });
+    expect(r.id).toBe('d1');
+  });
+
+  it('criarLink sem regras de envio não manda send_when', async () => {
+    post.mockResolvedValue({ data: { data: { id: 'd1' } } });
+    await salesAgentsService.criarLink('a1', { title: 'Tabela', url: 'https://exemplo.com/t' });
+    expect(post).toHaveBeenCalledWith('/sales_agents/a1/documents', { title: 'Tabela', source_type: 'url', source_url: 'https://exemplo.com/t', sendable: true });
   });
 });
 

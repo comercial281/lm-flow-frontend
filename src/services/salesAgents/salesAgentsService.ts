@@ -121,13 +121,6 @@ export interface CamposDaMinhaFicha {
   intro?: string;
 }
 
-export interface LinkDoImovel {
-  link: string;
-  message: string;
-  number: string | null;
-  property: { id: string; code: string; title: string } | null;
-}
-
 export interface RegraDaCasa { objecao: string; resposta: string }
 
 export type ActiveHoursMode = 'always' | 'outside_business' | 'custom';
@@ -1638,10 +1631,16 @@ export const salesAgentsService = {
     return (res.data as { data?: ConhecimentoDeFabrica[] }).data ?? [];
   },
 
-  /** O link de WhatsApp de um imóvel (código curto no lugar do UUID). */
-  async criarLink(agentId: string, params: { property_code: string; conversation_id?: string; inbox_id?: string }): Promise<LinkDoImovel> {
-    const res = await api.get(`${BASE}/${agentId}/property_link`, { params });
-    return (res.data as { data: LinkDoImovel }).data;
+  /** "+ Material da casa" por link: um documento do tipo `url`, que a IA pode mandar ao lead. */
+  async criarLink(
+    agentId: string,
+    link: { title: string; url: string; sendWhen?: string; sendWhenNot?: string },
+  ): Promise<SalesAgentDocument> {
+    const body: Record<string, unknown> = { title: link.title, source_type: 'url', source_url: link.url, sendable: true };
+    if (link.sendWhen !== undefined) body.send_when = link.sendWhen;
+    if (link.sendWhenNot !== undefined) body.send_when_not = link.sendWhenNot;
+    const res = await api.post(`${BASE}/${agentId}/documents`, body);
+    return (res.data as { data: SalesAgentDocument }).data;
   },
 
   // --- Minha ficha (o corretor dono do número) ---
