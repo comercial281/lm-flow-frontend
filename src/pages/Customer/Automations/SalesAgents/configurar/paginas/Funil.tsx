@@ -1,4 +1,4 @@
-// Repasse · Funil (onda 3). Chave "Mover o card", o funil e os 6 MOMENTOS em
+// Funil e follow-up · Funil (onda 3; bloco da página na Tarefa 72). Chave "Mover o card", o funil e os 6 MOMENTOS em
 // fileira (esquerda → direita, na ordem em que acontecem), com a coluna embaixo de
 // cada um. "Não mover" deixa o card onde está. Ela nunca puxa o card de volta.
 // Abaixo de `md` vira 2 por linha (spec §3.1; protótipo).

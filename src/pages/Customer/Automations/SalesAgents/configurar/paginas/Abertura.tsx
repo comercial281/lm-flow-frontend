@@ -1,37 +1,20 @@
-// Introdução · Abertura (onda 3). Primeira mensagem (Automática / Com texto de
-// base), imagem e áudio de abertura, de onde o lead veio quando ela não sabe, e
-// as variações por campanha em tabela (Editar abre a janela).
+// Condução · Abertura (onda 3; bloco da Condução na Tarefa 72, 01/11/2026). Primeira mensagem
+// (Automática / Com texto de base), imagem e áudio de abertura e de onde o lead veio quando ela
+// não sabe. As variações por campanha (`openings`) saíram daqui: moram em Campanhas e gatilhos.
 //
 // ⚠️ "Com texto de base": o texto é MODELO, não literal (roteiro de hoje; o "texto
 // exato" foi cortado pelo dono em 05/10). Vale quando o lead escreve primeiro.
 import { useEffect, useRef, useState } from 'react';
-import { Plus } from 'lucide-react';
-import { Button } from '@/components/ui/ds';
 import { Secao, Secoes } from '@/components/base/Secao';
 import BotoesDeEscolha from '@/components/base/BotoesDeEscolha';
-import type { SalesAgentOpening } from '@/services/salesAgents/salesAgentsService';
 import { CampoDeMidia } from '../CampoDeMidia';
 import TextoNaHora from '../TextoNaHora';
-import VariacaoDaCampanha from './VariacaoDaCampanha';
 import type { PropsDaPagina } from '../paginas';
 
 type Modo = 'auto' | 'base';
 
-function etiquetas(v: SalesAgentOpening): string[] {
-  const e: string[] = [];
-  if ((v.form_ids ?? []).length) e.push('Formulário');
-  if ((v.origins ?? []).length) e.push('Origem');
-  (v.keywords ?? []).forEach((k) => e.push(`Palavra "${k}"`));
-  if (v.greeting) e.push('Texto próprio');
-  if (v.image_url) e.push('Imagem');
-  if (v.audio_url) e.push('Áudio');
-  return e;
-}
-
 export default function Abertura({ agent, gravar }: PropsDaPagina) {
   const [modo, setModo] = useState<Modo>(agent.greeting ? 'base' : 'auto');
-  const [editando, setEditando] = useState<number | null>(null);
-  const variacoes = agent.openings ?? [];
 
   // ⚠️ "Automática" SEMPRE grava o null (o gravar não manda nada se já estava
   // vazio): o texto que acabou de ser digitado pode não ter chegado na IA lida
@@ -44,14 +27,9 @@ export default function Abertura({ agent, gravar }: PropsDaPagina) {
     if (modoAnterior.current === 'base' && modo === 'auto') void gravar({ greeting: null });
     modoAnterior.current = modo;
   }, [modo, gravar]);
-  const novaVariacao = async () => {
-    const nova: SalesAgentOpening = { label: 'Nova campanha', origins: [], form_ids: [], keywords: [] };
-    if (await gravar({ openings: [...variacoes, nova] })) setEditando(variacoes.length);
-  };
-
   return (
     <Secoes>
-      <Secao titulo="Primeira mensagem" descricao="Como ela abre a conversa com quem veio do anúncio. Lead de formulário recebe a mensagem da automação.">
+      <Secao titulo="Abertura" descricao="A boas-vindas padrão: como ela abre a conversa com quem veio do anúncio. Se um fluxo falou antes, ela lê e continua. Lead de formulário recebe a mensagem da automação.">
         <BotoesDeEscolha<Modo> rotulo="Primeira mensagem" valor={modo}
           opcoes={[{ valor: 'auto', rotulo: 'Automática' }, { valor: 'base', rotulo: 'Com texto de base' }]} aoEscolher={setModo} />
         {modo === 'base' && (
@@ -68,24 +46,6 @@ export default function Abertura({ agent, gravar }: PropsDaPagina) {
             aoMudar={(url) => void gravar({ opening_audio_url: url })} />
         </div>
       </Secao>
-
-      <Secao titulo="Variações por campanha" descricao="Abertura diferente pra um anúncio ou formulário específico. A primeira que bater vale.">
-        <ul className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-background">
-          {variacoes.map((v, i) => (
-            <li key={i} className="flex flex-wrap items-center gap-2 px-3.5 py-3">
-              <b className="flex-1 text-sm">{v.label || 'Sem nome'}</b>
-              {etiquetas(v).map((e) => <span key={e} className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-semibold text-primary">{e}</span>)}
-              <Button type="button" variant="ghost" size="sm" aria-label={`Editar ${v.label || 'variação'}`} onClick={() => setEditando(i)}>Editar</Button>
-            </li>
-          ))}
-          <li className="px-2 py-1.5">
-            <Button type="button" variant="ghost" className="text-primary" aria-label="Nova variação" onClick={() => void novaVariacao()}>
-              <Plus className="mr-1 h-4 w-4" aria-hidden /> Nova variação
-            </Button>
-          </li>
-        </ul>
-      </Secao>
-      {editando !== null && <VariacaoDaCampanha agent={agent} indice={editando} gravar={gravar} aoFechar={() => setEditando(null)} />}
     </Secoes>
   );
 }

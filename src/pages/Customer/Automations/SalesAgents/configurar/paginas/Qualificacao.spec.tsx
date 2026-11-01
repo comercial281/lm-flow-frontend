@@ -37,10 +37,10 @@ describe('Qualificação', () => {
     expect(gravar.mock.calls[1][0].qualification_questions).toEqual(['Quartos', 'Renda', 'Vai financiar?']);
   });
 
-  it('fora do critério das obrigatórias, avisa e leva ao Critério', async () => {
-    const { irPara } = abrir(agenteDeTeste({ transfer_config: { mode: 'temperatura' } }));
-    await userEvent.click(screen.getByRole('button', { name: 'Abrir Modo operante' }));
-    expect(irPara).toHaveBeenCalledWith('modo');
+  it('explica as travas em uma linha, sem mandar trocar o critério (ele não existe mais)', () => {
+    abrir(agenteDeTeste({ transfer_config: { mode: 'temperatura' } }));
+    expect(screen.getByText('Nunca pergunta o que o formulário já respondeu; uma pergunta por mensagem; no máximo 2 vezes a mesma.')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Abrir Modo operante' })).toBeNull();
   });
 
   it('editar uma linha e clicar em "Obrigatória" de outra grava com o texto NOVO', async () => {

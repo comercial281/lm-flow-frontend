@@ -1,4 +1,4 @@
-// Conversa · Qualificação (onda 3). UMA lista de perguntas (as de situação do
+// Condução · O que descobrir (onda 3; bloco da Condução na Tarefa 72). UMA lista de perguntas (as de situação do
 // roteiro entraram nela pela rotina da onda 2), na ordem em que ela pergunta,
 // "Obrigatória" por linha, arrastar pra reordenar (com Subir/Descer pra quem usa
 // teclado), adicionar embaixo. Grava `qualification_questions` + as obrigatórias
@@ -17,7 +17,6 @@ import { Secao, Secoes } from '@/components/base/Secao';
 import { perguntasDoAgente, perguntasParaPatch, type Pergunta } from '@/features/salesAgents/perguntas';
 import { cn } from '@/lib/utils';
 import { useTextoNaHora } from '../TextoNaHora';
-import Aviso from '@/components/base/Aviso';
 import type { PropsDaPagina } from '../paginas';
 
 const ULTIMA = 'Pelo menos uma pergunta precisa ser obrigatória. Sem nenhuma marcada, todas valem.';
@@ -60,7 +59,7 @@ function Linha({ id, indice, total, pergunta, aoTexto, aoObrigatoria, aoMover, a
 
 type Item = Pergunta & { id: string };
 
-export default function Qualificacao({ agent, gravar, irPara }: PropsDaPagina) {
+export default function Qualificacao({ agent, gravar }: PropsDaPagina) {
   // ⚠️ A lista mais recente mora num ref, atualizado de forma síncrona a cada
   // escrita: o blur do texto grava e o clique seguinte (Obrigatória, Subir, ...)
   // roda antes do agente voltar do servidor; com a lista da render ele desfaria a
@@ -122,7 +121,7 @@ export default function Qualificacao({ agent, gravar, irPara }: PropsDaPagina) {
 
   return (
     <Secoes>
-      <Secao titulo="Perguntas" descricao="O que ela precisa descobrir, uma por vez, nesta ordem. As obrigatórias seguram o repasse até serem respondidas. Arraste pra reordenar.">
+      <Secao titulo="O que descobrir" descricao="O que ela precisa descobrir, uma por vez, nesta ordem. As obrigatórias seguram o repasse até serem respondidas. Arraste pra reordenar.">
         <DndContext sensors={sensores} collisionDetection={closestCenter} onDragEnd={soltar}>
           <SortableContext items={ids} strategy={verticalListSortingStrategy}>
             <ol className="space-y-2">
@@ -139,12 +138,7 @@ export default function Qualificacao({ agent, gravar, irPara }: PropsDaPagina) {
             onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); adicionar(); } }} className="h-11 min-w-[12rem] flex-1 text-base md:text-base" />
           <Button type="button" variant="outline" className="h-11" disabled={!nova.trim()} onClick={adicionar}>Adicionar</Button>
         </div>
-        {agent.transfer_config?.mode !== 'checklist' && (
-          <Aviso tom="neutro">
-            <p>As obrigatórias só seguram o lead com o critério "Perguntas obrigatórias respondidas".</p>
-            <Button type="button" size="sm" variant="outline" className="mt-2" onClick={() => irPara('modo')}>Abrir Modo operante</Button>
-          </Aviso>
-        )}
+        <p className="text-sm text-muted-foreground">Nunca pergunta o que o formulário já respondeu; uma pergunta por mensagem; no máximo 2 vezes a mesma.</p>
       </Secao>
     </Secoes>
   );

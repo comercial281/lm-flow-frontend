@@ -1,4 +1,4 @@
-// Conversa · Restrições (onda 3). O que ela nunca informa sozinha: 4 etiquetas
+// Condução · Restrições (onda 3; bloco da Condução na Tarefa 72). O que ela nunca informa sozinha: 4 etiquetas
 // fixas (subchaves de `ai_limits`) + as próprias (`ai_limits.custom`), que entram
 // pelo campo e saem com "Tirar". Se o lead pedir, ela diz que o corretor confirma.
 import { Secao, Secoes } from '@/components/base/Secao';
@@ -28,7 +28,7 @@ export default function Restricoes({ agent, gravar }: PropsDaPagina) {
 
   return (
     <Secoes>
-      <Secao titulo="O que ela não informa" descricao="Se o lead pedir, ela diz que o corretor confirma. Clique pra ligar ou desligar.">
+      <Secao titulo="Restrições" descricao="O que ela nunca informa sozinha. Se o lead pedir, ela diz que o corretor confirma. Clique pra ligar ou desligar.">
         <EtiquetasDeEscolha rotulo="O que ela não informa" opcoes={[...FIXAS]} escolhidas={escolhidas}
           aoMudar={(l) => void trocarFixas(l)} proprias={proprias}
           aoTirarPropria={(t) => void trocarProprias(proprias.filter((x) => x !== t))}

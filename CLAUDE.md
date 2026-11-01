@@ -10342,3 +10342,25 @@ Fase 6, tela 3 do protótipo `agentes.html`. As duas primeiras páginas do Confi
 4. **Voltar o frontend** pra antes disso devolve Objetivo, Critério e Canal, que gravam campos agora escondidos.
 
 Código: `configurar/paginas/{ModoOperante,BlocoDaAgenda,NumerosEUsuarios,FichaDaVoz,Horario}.tsx`, `configurar/useNumerosDoAgente.ts`, `features/salesAgents/{modoOperante,fichas}.ts`, `telas/{TestarJanela.tsx,useEnsaio.ts}`.
+
+### Público-alvo e produto, Condução, Funil e follow-up (Tarefa 72, 01/11/2026)
+
+Fase 6, tela 3 do protótipo `agentes.html`. As três páginas deixam de ser casca.
+
+**O que aparece na tela:**
+- **Público-alvo e produto**: *Produto* (as 4 marcas Venda · Locação · Leilão · Empreendimento com "N no cadastro" e a linha "Conhecimentos de fábrica ligados: ..."), *Imóvel principal* (com Consultar o cadastro e Oferecer outras opções), *Público-alvo* (as 4 caixinhas Moradia · Investimento · Primeiro imóvel · Trocar de imóvel, a frase de como ela pergunta, quando perguntar e a pergunta própria) e *Lead fora do perfil do imóvel* (Passa pro corretor · Encerra com educação · Segue atendendo).
+- **Condução**: Abertura (boas-vindas, origem, imagem e áudio; sem variações por campanha) · O que descobrir (com "Nunca pergunta o que o formulário já respondeu; uma pergunta por mensagem; no máximo 2 vezes a mesma.") · Formato das respostas (várias mensagens, áudio, curtidas) · Restrições.
+- **Funil e follow-up**: a chave **Esta IA só faz follow-up** (`followup_only`) no alto, depois o Funil e a linha do tempo.
+
+**Decisões (não reabrir sem o dono pedir):**
+1. A tela manda só `serves` (nunca `locacao_enabled`); a última marca não desmarca. A contagem vem de `agent.catalog_marks`.
+2. `features/salesAgents/marcas.ts` é ESPELHO da tabela da fase 3 (a lista muda na hora); depois de gravar vale o que o servidor devolve (`conhecimentosDeFabrica`). Desligado no Ensinar (`factory_knowledge_off`) sai da lista do espelho.
+3. As 4 caixinhas mexem só no `ativo` dos caminhos de fábrica em `playbook.vars.caminhos_intencao`; caminho próprio não aparece e nunca é apagado. A frase só conta os 4 de fábrica. `features/salesAgents/intencao.ts` (`fraseDaIntencao(lista, origem)`) serve às Tarefas 77 e 78.
+4. Lead fora do perfil grava `playbook.vars.fora_dos_caminhos`. Saíram a janela de editar caminho, Tipo de venda e "Também atende locação"; `Intencao.tsx` e `Catalogo.tsx` foram apagados. Fotos e vídeo e Book ficam pra Materiais (Tarefa 74).
+5. O botão do "O que descobrir" que mandava pro Modo operante trocar o critério saiu (o critério não existe mais).
+
+**Armadilhas:**
+1. `VariacaoDaCampanha.tsx` ficou sem uso até a Tarefa 73 (Campanhas e gatilhos).
+2. Voltar o frontend pra antes disso devolve Intenção/Catálogo, que gravam `locacao_enabled` e `tipo_venda` (escondidos).
+
+Código: `configurar/paginas/{PublicoEProduto,Conducao,FunilEFollowup,Abertura,Qualificacao,Personalidade,Restricoes}.tsx`, `features/salesAgents/{intencao,marcas}.ts`.
