@@ -108,10 +108,14 @@ export function paramsDaIa(ia: string | null, tela: TelaId, pagina?: string | nu
   return params;
 }
 
-export function iaInicial(ids: string[], doEndereco: string | null, ultima: string | null): string | null {
-  if (doEndereco && ids.includes(doEndereco)) return doEndereco;
-  if (ultima && ids.includes(ultima)) return ultima;
-  return ids[0] ?? null;
+/**
+ * A IA que o endereço abre. Sem `ia` no endereço, nenhuma: a entrada é a página de
+ * agentes (Tarefa 68; a "última IA usada" saiu). IA do endereço que não existe mais
+ * (excluída, juntada) cai na primeira.
+ */
+export function iaInicial(ids: string[], doEndereco: string | null): string | null {
+  if (!doEndereco) return null;
+  return ids.includes(doEndereco) ? doEndereco : (ids[0] ?? null);
 }
 
 export function itensDoGrupo(grupo: GrupoId, opts: { insights: boolean }): TelaInfo[] {

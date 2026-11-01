@@ -8,7 +8,7 @@
 // número, corretor sem dono do número, sistema do cliente sem chave). Travada,
 // fica desabilitada com o motivo no `title`, e um clique leva à página que
 // corrige. Desligar nunca trava.
-import { Bot, ChevronDown, Copy, Gauge, Plus, Smartphone, Stethoscope, Trash2 } from 'lucide-react';
+import { Bot, ChevronDown, Copy, Gauge, Users, Smartphone, Stethoscope, Trash2 } from 'lucide-react';
 import {
   Button, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from '@/components/ui/ds';
@@ -35,7 +35,8 @@ export interface IaBarraProps {
   verMotor: boolean;
   aoIr: (tela: TelaId) => void;
   aoTrocarIa: (id: string) => void;
-  aoCriar: () => void;
+  /** "Todos os agentes": volta à página de agentes. */
+  aoTodos: () => void;
   aoDuplicar: () => void;
   aoExcluir: () => void;
   aoTestar: () => void;
@@ -46,7 +47,7 @@ export interface IaBarraProps {
 
 export default function IaBarra({
   agents, selecionada, situacao, tela, insights, podeCriar, podeExcluir, equipe, verMotor,
-  aoIr, aoTrocarIa, aoCriar, aoDuplicar, aoExcluir, aoTestar, aoLigar, travaDoLigar, aoCorrigirLigar,
+  aoIr, aoTrocarIa, aoTodos, aoDuplicar, aoExcluir, aoTestar, aoLigar, travaDoLigar, aoCorrigirLigar,
 }: IaBarraProps) {
   const grupoAtual = telaInfo(tela).grupo;
   const travada = !!selecionada && !selecionada.enabled && !!travaDoLigar;
@@ -70,12 +71,8 @@ export default function IaBarra({
                 <SeloSituacao compacto situacao={a.id === selecionada?.id && situacao ? situacao : situacaoDaIa(a, null)} />
               </DropdownMenuItem>
             ))}
-            {podeCriar && (
-              <>
-                {agents.length > 0 && <DropdownMenuSeparator />}
-                <DropdownMenuItem onSelect={aoCriar}><Plus className="mr-2 h-4 w-4" aria-hidden /> Nova IA</DropdownMenuItem>
-              </>
-            )}
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onSelect={aoTodos}><Users className="mr-2 h-4 w-4" aria-hidden /> Todos os agentes</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
         {situacao && <SeloSituacao soPonto situacao={situacao} />}

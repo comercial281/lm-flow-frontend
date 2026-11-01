@@ -52,10 +52,10 @@ describe('roteiro da IA na tela do cliente', () => {
 // mesmo pra criar e editar). O que os testes dele protegiam (PATCH só do que
 // mudou, jsonb mesclado sobre o salvo) mora em patchDoPasso.spec.ts e
 // camposDaIa.spec.ts.
+// A criação de agente saiu da casca (Tarefa 68: o "+ Novo agente" leva ao fluxo de 4 passos, Tarefa 69).
+// O `novaIaRascunho` fica pra esse fluxo; o `?agent=` do assistente segue abrindo a IA.
 describe('Nova IA', () => {
-  it('cria o rascunho pelo serviço, e o ?agent= de link antigo continua abrindo a IA', () => {
-    const tela = fonteDaIaVendedora();
-    expect(tela).toContain('salesAgentsService.create(novaIaRascunho())');
+  it('o ?agent= de link antigo continua abrindo a IA', () => {
     expect(read('src/features/salesAgents/iaMenu.ts')).toContain("params.get('agent')");
   });
 });

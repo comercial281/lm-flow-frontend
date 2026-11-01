@@ -17,7 +17,7 @@ function abrir(extra: Partial<IaBarraProps> = {}) {
   const props: IaBarraProps = {
     agents: [VENDAS, DEMO], selecionada: VENDAS, situacao: { tipo: 'atendendo', frase: 'Atendendo' },
     tela: 'visao-geral', insights: true, podeCriar: true, podeExcluir: true, equipe: false, verMotor: false,
-    aoIr: vi.fn(), aoTrocarIa: vi.fn(), aoCriar: vi.fn(), aoDuplicar: vi.fn(), aoExcluir: vi.fn(),
+    aoIr: vi.fn(), aoTrocarIa: vi.fn(), aoTodos: vi.fn(), aoDuplicar: vi.fn(), aoExcluir: vi.fn(),
     aoTestar: vi.fn(), aoLigar: vi.fn().mockResolvedValue(undefined), travaDoLigar: null, aoCorrigirLigar: vi.fn(),
     ...extra,
   };

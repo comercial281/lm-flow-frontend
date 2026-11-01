@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { GRUPOS, itensDoGrupo, paginaPedida, paramsDaIa, pediuTestar, telaDaUrl } from './iaMenu';
+import { GRUPOS, iaInicial, itensDoGrupo, paginaPedida, paramsDaIa, pediuTestar, telaDaUrl } from './iaMenu';
 
 const url = (s: string) => new URLSearchParams(s);
 const CLIENTE = { insights: true, equipe: false, motor: false };
@@ -53,5 +53,19 @@ describe('iaMenu (onda 3)', () => {
     expect(paginaPedida(new URLSearchParams('pagina=destino'), 'configurar')).toBe('destino');
     const certo = paramsDaIa('ia-1', 'ensinar', paginaPedida(p, 'ensinar'));
     expect(new URLSearchParams(certo).toString()).toBe(p.toString());
+  });
+});
+
+describe('iaInicial (Tarefa 68)', () => {
+  const ids = ['ia-1', 'ia-2'];
+  it('sem IA no endereço não escolhe nenhuma (a entrada é a página de agentes)', () => {
+    expect(iaInicial(ids, null)).toBeNull();
+  });
+  it('IA do endereço que existe vale', () => {
+    expect(iaInicial(ids, 'ia-2')).toBe('ia-2');
+  });
+  it('IA do endereço que não existe mais cai na primeira; sem nenhuma, nula', () => {
+    expect(iaInicial(ids, 'excluida')).toBe('ia-1');
+    expect(iaInicial([], 'excluida')).toBeNull();
   });
 });

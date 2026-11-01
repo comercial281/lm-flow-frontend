@@ -6657,7 +6657,7 @@ O que ainda usa o serviço antigo no frontend:
 
 **Decisões (não reabrir sem o dono pedir):**
 1. Endereço `/ia-vendedora?ia=<id>&tela=<id>`, sempre com `replace` (o Voltar sai da página). Sem `tela`, Visão geral. Fonte única das telas: `src/features/salesAgents/iaMenu.ts`. ⚠️ Revista em 06/10/2026: no Configurar, trocar de PÁGINA (`&pagina=<id>`) empurra no histórico, e o Voltar volta à página anterior; o resto (IA, tela, a página gravada ao abrir sem `pagina`) continua com `replace`. Ver *IA Vendedora · Configurar pela ordem da conversa (06/10/2026)*.
-2. Com várias IAs, abre a última usada neste navegador (`localStorage` `lmflow:ia-vendedora:ultima`, com `try/catch`); senão, a primeira.
+2. Com várias IAs, abre a última usada neste navegador (`localStorage` `lmflow:ia-vendedora:ultima`, com `try/catch`); senão, a primeira. ⚠️ Revista em 01/11/2026 (Tarefa 68): sem `ia` no endereço, abre a página de agentes e a última IA saiu. Ver *IA Vendedora · Página de agentes e Novo agente*.
 3. Veredito único (`src/features/salesAgents/situacao.ts`): *Atendendo* · *Parada: <motivo>* · *Atendendo com restrição: só …* · *Desligada* · *Rascunho* (na entrega 1, desligada e sem número). Calculado da IA + `GET /sales_agents/:id/diagnostics`, espelhando o `SalesAgents::TriggerGate` (quem ela atende) e o `SalesAgents::HealthCheck`. Só os itens `inbox`, `mode`, `credentials` e `api_key` do Diagnóstico param a IA; os outros erros viram pendência.
 4. Gatilho que restringe aparece no selo (laranja) e como pendência, mesmo com a linha *Gatilhos* do Diagnóstico verde (o servidor não mudou).
 5. Follow-up ligado com máximo 0 vira a pendência laranja *Follow-up sem limite de tentativas*. As IAs que já estão assim continuam iguais. ⚠️ Revista em 06/10/2026: o *Máximo de tentativas* saiu da tela e a pendência virou *O que ela faz quando o lead some* (IA ainda em "A IA escreve"). Ver *Follow-up padrão de 30 dias (06/10/2026)*.
@@ -10233,3 +10233,25 @@ Ensaio de 29/10 (turnos reais do 4.5 reenviados ao 5.5): "termina com pergunta" 
 **Voltar versão:** voltar o modelo de uma IA é escolher outro no Motor, e o 4.5 só vale até 30/11. Voltar o backend pra antes do #543 com IA no 5.5 deixa a IA muda: antes, voltar as IAs pro 4.5.
 
 Código: `configurar/opcoes.ts` (`MODELOS`). No backend: `AnthropicService`, `SalesAgents::ResponseSchema`, `ConversationRunner.awaits_lead?`, `Responder::CONTINUE_SEED`.
+
+---
+
+## IA Vendedora · Página de agentes e Novo agente (desde 01/11/2026)
+
+Reestruturação da IA, fase 6, Tarefa 68 (a página de agentes; o fluxo do Novo agente é a Tarefa 69). Spec: `docs/superpowers/ia-reestruturacao/specs/2026-10-31-fase-6-tela-design.md`.
+
+**O que aparece na tela:** `/ia-vendedora` sem `ia` no endereço abre *Agentes de IA*: uma grade de quadros (um por agente, no visual do `CartaoDeLink` de Integrações) e, no fim, o quadro tracejado *+ Novo agente*. O quadro mostra as iniciais, o nome, *N números · nome de cada usuário*, o selo da situação, *Modo operante*, *Quem fala* (*Cada usuário, como ele mesmo* quando todos os números falam como Corretor), *Próximo passo* (*Visita ou Reunião por vídeo*), *Produto* (*Empreendimento (10)*) e, no rodapé, *74 conversas em 30 dias · 46 passadas · corretor responde em 4 min* e a primeira pendência. Clicar abre o agente em *Configurar* (`?ia=<id>&tela=configurar`, sem `pagina`: cai na primeira página com pendência). O nome ▾ da barra troca de agente direto e ganhou *Todos os agentes* (volta à página); *Nova IA* saiu do seletor.
+
+**Decisões (não reabrir sem o dono pedir):**
+1. **Revê a decisão 2 da casca (05/10).** Antes, sem `ia` a casca abria a última IA do navegador (`lmflow:ia-vendedora:ultima`). Agora a página de agentes é a entrada (decisão do Tony em 28/10): com vários agentes, abrir direto num deles escondia os outros e o quadro com os números do mês. A chave do `localStorage` não é mais lida nem gravada.
+2. Sem `ia` a casca não abre nem reescreve nada (nem `?tela=` solto: `?tela=testar` sem IA mostra a página, sem janela armada). `?agent=` do assistente segue abrindo em Configurar. IA do endereço que não existe mais cai na primeira.
+3. Os números de 30 dias vêm de `GET /sales_agents/summaries`, lidos **uma vez** ao abrir a página. Falha tira só o rodapé (sem aviso vermelho). Número sem conversa não vem em `numbers` do resumo: conta como 0.
+4. *+ Novo agente* só com `sales_agents.create` e leva a `/ia-vendedora/novo` (a tela é da Tarefa 69; até lá a rota não existe). A criação de rascunho por *Nova IA* saiu da casca; `novaIaRascunho` fica pro fluxo novo.
+5. Agente juntado a outro (`absorbed_into_id`) não aparece na página nem no seletor (a casca filtra ao ler a lista). A contagem por marca vem pronta do servidor (`catalog_marks`); a tela só mostra.
+6. Toda a conta de texto do quadro mora em `src/features/salesAgents/quadroDoAgente.ts` (`quadroDoAgente(agent, resumo, contagem)`); os componentes só desenham.
+
+**Armadilhas:**
+1. A barra da IA só aparece com `ia` no endereço; na página de agentes não há barra.
+2. O alternador de visão à mão é régua do build: o ícone `LayoutGrid` no menu da barra dispara a trava (`alternadorAMao`). O *Todos os agentes* usa `Users`.
+3. O quadro mostra a situação sem o Diagnóstico (1 chamada por agente seria pesada): o selo é o da configuração; o veredito completo continua dentro do agente.
+
