@@ -44,6 +44,7 @@ import SecaoTipologias from './secoes/SecaoTipologias';
 import SecaoValores from './secoes/SecaoValores';
 import SecaoComposicao from './secoes/SecaoComposicao';
 import SecaoDetalhesDaVenda from './secoes/SecaoDetalhesDaVenda';
+import SecaoCondicoes from './secoes/SecaoCondicoes';
 import SecaoCaracteristicas from './secoes/SecaoCaracteristicas';
 import SecaoMidia from './secoes/SecaoMidia';
 import SecaoDescricao from './secoes/SecaoDescricao';
@@ -277,6 +278,7 @@ function Cadastro() {
       case 'valores': return <SecaoValores {...props} />;
       case 'composicao': return <SecaoComposicao {...props} />;
       case 'detalhesVenda': return <SecaoDetalhesDaVenda {...props} />;
+      case 'condicoes': return <SecaoCondicoes {...props} />;
       case 'caracteristicas': return <SecaoCaracteristicas {...props} />;
       case 'midia':
         return <SecaoMidia {...props} arquivos={arquivos} aoMudarArquivos={setArquivos} enviando={enviandoMidia || salvando} aoGerenciarFotos={() => void gerenciarFotos()}

@@ -50,6 +50,18 @@ describe('campoVazio', () => {
   });
 });
 
+describe('Preencher pelo texto: a condição de pagamento', () => {
+  it('os 4 números da condição entram; pra quem serve, nunca prometer e urgência não', async () => {
+    servico.parseText.mockResolvedValue({ down_payment_from: 12000, installment_from: 890, min_income: 3500, payment_terms: 'Entrada em 24x',
+      serves_intents: ['moradia'], never_promise: ['x'], urgency_fact: 'y' });
+    const p = montar(novo('development'));
+    await abrirEPreencher();
+    await userEvent.click(screen.getByRole('button', { name: /^Preencher$/ }));
+    await waitFor(() => expect(p.setF).toHaveBeenCalled());
+    expect(p.setF.mock.calls[0][0]).toEqual({ down_payment_from: 12000, installment_from: 890, min_income: 3500, payment_terms: 'Entrada em 24x' });
+  });
+});
+
 describe('Preencher pelo texto só preenche vazio', () => {
   it('não troca o preço digitado, preenche quartos e o tipo de fábrica', async () => {
     servico.parseText.mockResolvedValue({ sale_price: 500000, bedrooms: 3, property_type: 'house' });

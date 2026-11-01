@@ -10463,3 +10463,28 @@ O corretor dono de um número muda, só no número dele, o nome, "ele ou ela" e 
 - Voltar o frontend sozinho é seguro (a tela some); o servidor é o `own_fichas_controller` do backend (#65 do plano).
 
 Código: `MinhaFicha.tsx`, `features/salesAgents/useMinhasFichas.ts` (com specs), rota em `routes/index.tsx` e `routes/permissionRoutes.ts`.
+
+## Imóveis · Condições e argumentos, Aceita permuta, Sem vaga e fase não informada (Tarefa 78, 01/11/2026)
+
+Cadastro do imóvel (`/properties/new` e a edição). Segue com **Salvar** (não grava na hora). Spec: fases 3 e 4 da reestruturação da IA.
+
+**O que aparece na tela**
+- **Condições e argumentos**: seção nova logo depois de "Detalhes da venda", nos três tipos (e no índice). Cinco blocos: *Condição* (Entrada a partir de, Parcela a partir de, Renda mínima, em dinheiro como os outros valores; Fluxo de pagamento até 300 letras), *Pra quem serve* (os 4 caminhos de fábrica; a frase de como a IA pergunta é a `fraseDaIntencao(lista, 'deste imóvel')`), *O que nunca prometer* (até 6 linhas de 150), *Fato de urgência* (o fato até 150 letras e "Vale até") e *Objeções deste imóvel* (até 10, objeção e resposta).
+- **Finalidade** da revenda são duas caixinhas, "À venda" e "Para alugar" (uma, outra ou as duas). Temporada saiu da tela; imóvel `season` abre com "Para alugar" marcado e continua `season` enquanto só essa caixinha ficar. Nenhuma marcada: "Marque À venda, Para alugar ou os dois." e o Salvar não segue (seção Básico).
+- **Sem vaga** ao lado do campo Vagas: marcado grava 0 e trava o campo; desmarcado volta ao vazio (não informado). Imóvel com 0 abre marcado.
+- **Aceita permuta** (revenda, em Detalhes da venda): Sim, Não, A conversar, Não informado.
+- **Fase não informada**: opção nova em "Fase da obra"; empreendimento novo nasce nela, sem "Previsão de entrega". O selo da lista de Imóveis diz "Fase não informada" e não mostra "· entrega". O que o público vê (filtro de fase do site, selo do portal e da ficha) não mostra essa fase.
+- **Preencher a partir de um texto** traz também entrada, parcela, renda mínima e fluxo (só campo vazio). Pra quem serve, nunca prometer, urgência e objeções ficam com o time.
+
+**Decisões**
+1. Fato de urgência sem data: a tela usa a frase do servidor (C31), "Fato de urgência precisa da data em que deixa de valer.", embaixo do campo e como erro do Salvar (seção Condições). Não existe outra frase.
+2. `FASES` ganhou `unknown` ("Fase não informada") e `FASES_DO_PUBLICO` é a lista sem ela; `rotuloDaFase` já reconhece o valor, então o recuo "Pronto para morar" só vale pra fase desconhecida de verdade. `seloDaFase` não põe entrega em `ready` nem em `unknown`; `payloadDoFormulario` zera a previsão nos dois.
+3. `finalidade.ts` (`marcasDaFinalidade`, `finalidadeDasMarcas`) guarda a regra das duas caixinhas; a tela só desenha.
+4. Os campos de condição do imóvel têm o mesmo nome do servidor (`down_payment_from`, `installment_from`, `min_income`, `payment_terms`, `serves_intents`, `never_promise`, `objections`, `urgency_fact`, `urgency_until`). A trava do site (`feed.locked_fields`) vale também pra eles.
+
+**Armadilhas**
+- Texto escrito no campo "nova linha" de Nunca prometer só entra com **Pôr** (ou Enter): sem isso o Salvar não leva.
+- Teste de cadastro de empreendimento que dependia de nascer em "Na planta" precisa escolher a fase antes (nasce `unknown`).
+- Voltar o backend pra antes da fase 3 faz o código antigo ler `stage = 9` como fase nula (ver o diário do backend); a tela segue inofensiva.
+
+Código: `features/properties/cadastro/finalidade.ts`, `pages/Customer/Properties/cadastro/secoes/SecaoCondicoes.tsx`, mudanças em `SecaoBasico`, `SecaoComposicao`, `SecaoDetalhesDaVenda`, `SecaoObra`, `PreencherPorTexto`, `listingKind.ts`, `formularioDoCadastro.ts`, `secoesDoCadastro.ts` (com specs).

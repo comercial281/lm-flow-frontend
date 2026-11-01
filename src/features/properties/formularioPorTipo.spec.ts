@@ -3,7 +3,7 @@ import { formularioNovo, payloadDoFormulario } from './formularioPorTipo';
 
 describe('formulário por tipo', () => {
   it('empreendimento nasce venda e na planta; revenda nasce pronto', () => {
-    expect(formularioNovo('development')).toMatchObject({ listing_kind: 'development', transaction_type: 'sale', stage: 'launch' });
+    expect(formularioNovo('development')).toMatchObject({ listing_kind: 'development', transaction_type: 'sale', stage: 'unknown' });
     expect(formularioNovo('resale')).toMatchObject({ listing_kind: 'resale', stage: 'ready' });
   });
 

@@ -10,7 +10,7 @@ export type Ocupacao = 'vacant' | 'occupied' | 'rented';
 export type Contagem = { development: number; resale: number; auction: number };
 
 const TIPOS: ListingKind[] = ['development', 'resale', 'auction'];
-export type Stage = 'pre_launch' | 'launch' | 'in_construction' | 'ready';
+export type Stage = 'pre_launch' | 'launch' | 'in_construction' | 'ready' | 'unknown';
 export type Tom = 'ok' | 'alerta' | 'neutro' | 'info' | 'marca';
 
 /** Cor de cada tom nos selos e pílulas (situação do imóvel, status do proprietário). */
@@ -95,7 +95,12 @@ export const FASES: { valor: Stage; rotulo: string }[] = [
   { valor: 'launch', rotulo: 'Na planta' },
   { valor: 'in_construction', rotulo: 'Em obra' },
   { valor: 'ready', rotulo: 'Pronto para morar' },
+  // Empreendimento novo nasce assim: a IA não afirma fase nem entrega (Tarefa 78, 01/11/2026).
+  { valor: 'unknown', rotulo: 'Fase não informada' },
 ];
+
+/** As fases que o público escolhe nos filtros do site: "não informada" é coisa do cadastro. */
+export const FASES_DO_PUBLICO = FASES.filter(f => f.valor !== 'unknown');
 
 export function rotuloDaFase(stage: string): string {
   return FASES.find(f => f.valor === stage)?.rotulo ?? 'Pronto para morar';
@@ -138,7 +143,8 @@ export function anosDaPrevisao(hoje: number, salvo?: string): string[] {
 
 export function seloDaFase(stage: string, entrega?: string | null): string {
   const fase = rotuloDaFase(stage);
-  const quando = stage !== 'ready' ? mesAno(entrega) : null;
+  // Pronto não tem entrega a prometer; fase não informada não afirma entrega.
+  const quando = stage !== 'ready' && stage !== 'unknown' ? mesAno(entrega) : null;
   return quando ? `${fase} · entrega ${quando}` : fase;
 }
 

@@ -3,7 +3,7 @@
 import type { ListingKind } from '../listingKind';
 
 export type SecaoId = 'basico' | 'construtora' | 'proprietario' | 'localizacao' | 'obra' | 'tipologias' | 'valores'
-  | 'composicao' | 'detalhesVenda' | 'caracteristicas' | 'midia' | 'descricao' | 'equipe' | 'comissao'
+  | 'composicao' | 'detalhesVenda' | 'condicoes' | 'caracteristicas' | 'midia' | 'descricao' | 'equipe' | 'comissao'
   | 'dadosInternos' | 'ondeDivulgar';
 
 export interface Secao { id: SecaoId; titulo: string }
@@ -11,18 +11,18 @@ export interface Secao { id: SecaoId; titulo: string }
 const TITULO: Record<SecaoId, string> = {
   basico: 'Básico', construtora: 'Construtora', proprietario: 'Proprietário', localizacao: 'Localização',
   obra: 'Obra', tipologias: 'Tipologias e valores', valores: 'Valores', composicao: 'Composição',
-  detalhesVenda: 'Detalhes da venda', caracteristicas: 'Características', midia: 'Fotos e vídeos',
+  detalhesVenda: 'Detalhes da venda', condicoes: 'Condições e argumentos', caracteristicas: 'Características', midia: 'Fotos e vídeos',
   descricao: 'Descrição', equipe: 'Equipe', comissao: 'Comissão', dadosInternos: 'Dados internos',
   ondeDivulgar: 'Onde divulgar',
 };
 
 const ORDEM: Record<ListingKind, SecaoId[]> = {
-  development: ['basico', 'construtora', 'localizacao', 'obra', 'tipologias', 'detalhesVenda', 'caracteristicas',
+  development: ['basico', 'construtora', 'localizacao', 'obra', 'tipologias', 'detalhesVenda', 'condicoes', 'caracteristicas',
     'midia', 'descricao', 'equipe', 'comissao'],
-  resale: ['basico', 'proprietario', 'localizacao', 'valores', 'composicao', 'detalhesVenda', 'caracteristicas',
+  resale: ['basico', 'proprietario', 'localizacao', 'valores', 'composicao', 'detalhesVenda', 'condicoes', 'caracteristicas',
     'midia', 'descricao', 'equipe', 'comissao', 'dadosInternos'],
   // Leilão = seções da revenda; a ocupação e a avaliação moram em Valores.
-  auction: ['basico', 'proprietario', 'localizacao', 'valores', 'composicao', 'detalhesVenda', 'caracteristicas',
+  auction: ['basico', 'proprietario', 'localizacao', 'valores', 'composicao', 'detalhesVenda', 'condicoes', 'caracteristicas',
     'midia', 'descricao', 'equipe', 'comissao', 'dadosInternos'],
 };
 

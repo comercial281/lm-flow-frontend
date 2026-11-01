@@ -6,6 +6,7 @@ import { paraCampoMes, tipoDoImovel } from '../listingKind';
 import { payloadDoFormulario } from '../formularioPorTipo';
 import type { SecaoId } from './secoesDoCadastro';
 import { campoTravado } from './travasDoSite';
+import { AVISO_SEM_FINALIDADE } from './finalidade';
 
 export interface ErroDoCadastro { secao: SecaoId; mensagem: string }
 
@@ -113,6 +114,17 @@ export function formularioDoImovel(p: Property): PropertyFormData {
     owner_id: p.owner_id ?? null,
     accepts_financing: p.accepts_financing ?? null,
     accepts_fgts: p.accepts_fgts ?? null,
+    accepts_swap: p.accepts_swap ?? null,
+    // Condições e argumentos (fase 4): imóvel antigo vem sem eles.
+    down_payment_from: p.down_payment_from ?? null,
+    installment_from: p.installment_from ?? null,
+    min_income: p.min_income ?? null,
+    payment_terms: p.payment_terms ?? '',
+    serves_intents: p.serves_intents ?? [],
+    never_promise: p.never_promise ?? [],
+    objections: p.objections ?? [],
+    urgency_fact: p.urgency_fact ?? '',
+    urgency_until: p.urgency_until ?? '',
     mcmv: p.mcmv ?? null,
     building_standard: p.building_standard ?? null,
     total_units: p.total_units ?? null,
@@ -146,12 +158,26 @@ export function errosDoCadastro(form: PropertyFormData, travados: readonly strin
     erros.push({ secao: form.listing_kind === 'development' ? 'tipologias' : 'valores',
       mensagem: 'Informe o Valor de venda (obrigatório para imóveis à venda).' });
   }
+  // Revenda sem nenhuma marca de finalidade: o servidor não tem o que gravar.
+  if (form.listing_kind === 'resale' && !campoTravado('transaction_type', travados) && !form.transaction_type) {
+    erros.push({ secao: 'basico', mensagem: AVISO_SEM_FINALIDADE });
+  }
+  // Fato de urgência sem data: a mesma frase que o servidor devolveria.
+  if (!campoTravado('urgency_fact', travados) && avisoDaUrgencia(form)) erros.push({ secao: 'condicoes', mensagem: AVISO_URGENCIA_SEM_DATA });
   // Chave de destino próprio ligada sem responsável: o servidor recusa o cadastro inteiro.
   const destino = leadDestinationWarning(form);
   if (destino) erros.push({ secao: 'equipe', mensagem: destino });
   // O servidor recusa o cadastro inteiro com um link que não abre no navegador.
   if (!linkProLeadValido(form.lead_link_url)) erros.push({ secao: 'midia', mensagem: AVISO_LINK_PRO_LEAD });
   return erros;
+}
+
+/** A frase do servidor (Property#validate_condicoes). A tela não inventa outra. */
+export const AVISO_URGENCIA_SEM_DATA = 'Fato de urgência precisa da data em que deixa de valer.';
+
+/** Fato escrito e sem data: o servidor recusa o cadastro inteiro. */
+export function avisoDaUrgencia(form: Pick<PropertyFormData, 'urgency_fact' | 'urgency_until'>): string | null {
+  return form.urgency_fact?.trim() && !form.urgency_until ? AVISO_URGENCIA_SEM_DATA : null;
 }
 
 /** Mesma regra do servidor: vazio vale; senão, http(s) com um domínio de verdade e sem espaço. */

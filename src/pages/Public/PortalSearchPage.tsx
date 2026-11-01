@@ -9,7 +9,7 @@ import PaginaManutencao from './PaginaManutencao';
 import { opcaoDoTipo, opcoesDeTipo } from '@/features/siteBuilder/public/tiposDeImovel';
 import { opcoesDePreco, precoDaFaixa } from '@/features/siteBuilder/public/faixasDePreco';
 import { opcaoDoTexto } from '@/features/siteBuilder/public/filtros';
-import { FASES } from '@/features/properties/listingKind';
+import { FASES_DO_PUBLICO } from '@/features/properties/listingKind';
 import { usePortalTracking } from './usePortalTracking';
 import { useIconeDaAba } from '@/features/siteBuilder/public/useIconeDaAba';
 import { ehOrdem, resolverLista, type Ordem } from '@/features/siteBuilder/public/listaConfig';
@@ -177,7 +177,7 @@ export default function PortalSearchPage() {
               <Select value={filters.parking ?? ''} onChange={v => update({ parking: v })} label="Vagas" options={MAIS_DE} />
               {/* Fase é de empreendimento, e Alugar não tem empreendimento. */}
               {filters.tab !== 'rent' && (
-                <Select value={filters.stage ?? ''} onChange={v => update({ stage: v })} label="Fase" options={FASES.map(x => [x.valor, x.rotulo])} />
+                <Select value={filters.stage ?? ''} onChange={v => update({ stage: v })} label="Fase" options={FASES_DO_PUBLICO.map(x => [x.valor, x.rotulo])} />
               )}
             </div>
 

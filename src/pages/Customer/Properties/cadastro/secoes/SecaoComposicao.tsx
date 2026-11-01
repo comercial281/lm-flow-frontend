@@ -1,5 +1,5 @@
 import { useContext, useEffect, useId, useState } from 'react';
-import { Input, Label as UILabel } from '@/components/ui/ds';
+import { Checkbox, Input, Label as UILabel } from '@/components/ui/ds';
 import { campoTravado, CamposTravadosContext, dicaSe } from '@/features/properties/cadastro/travasDoSite';
 import { numeroOuNulo, type PropsDaSecao } from './tipos';
 
@@ -22,6 +22,21 @@ export function GradeDeComposicao({ form: f, setF }: Pick<PropsDaSecao, 'form' |
     <div className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-3">
       {CAMPOS.map(({ label, key }) => {
         const travado = campoTravado(key, travados);
+        if (key === 'parking_spaces') {
+          // Vazio = não informado, 0 = sem vaga: o campo trava no 0 e volta ao vazio ao desmarcar.
+          const semVaga = f.parking_spaces === 0;
+          return (
+            <div key={key} title={dicaSe(travado)}>
+              <UILabel htmlFor={`${base}-${key}`}>{label}</UILabel>
+              <Input id={`${base}-${key}`} type="number" value={f.parking_spaces ?? ''} onChange={e => setF({ parking_spaces: numeroOuNulo(e.target.value) })}
+                min={0} disabled={travado || semVaga} className="mt-1" />
+              <label className="mt-1 flex cursor-pointer items-center gap-2">
+                <Checkbox checked={semVaga} disabled={travado} onCheckedChange={v => setF({ parking_spaces: v === true ? 0 : null })} />
+                <span className="text-sm">Sem vaga</span>
+              </label>
+            </div>
+          );
+        }
         return (
           <div key={key} title={dicaSe(travado)}>
             <UILabel htmlFor={`${base}-${key}`}>{label}</UILabel>

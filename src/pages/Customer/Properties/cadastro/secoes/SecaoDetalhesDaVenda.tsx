@@ -1,9 +1,17 @@
 import { Label as UILabel, Checkbox } from '@/components/ui/ds';
 import { Seletor } from '@/components/base/Seletor';
-import type { PadraoDoImovel } from '@/services/properties/propertiesService';
+import type { AceitaTroca, PadraoDoImovel } from '@/services/properties/propertiesService';
 import { useCampoTravado } from '@/features/properties/cadastro/travasDoSite';
-import { CampoSimNao } from './campos';
+import { CampoSimNao, Pilulas } from './campos';
 import { CLASSE_SELETOR, type PropsDaSecao } from './tipos';
+
+type TrocaNaTela = AceitaTroca | 'nulo';
+const PERMUTA: { valor: TrocaNaTela; rotulo: string }[] = [
+  { valor: 'sim', rotulo: 'Sim' },
+  { valor: 'nao', rotulo: 'Não' },
+  { valor: 'a_conversar', rotulo: 'A conversar' },
+  { valor: 'nulo', rotulo: 'Não informado' },
+];
 
 const PADROES: { valor: PadraoDoImovel; rotulo: string }[] = [
   { valor: 'economic', rotulo: 'Econômico' },
@@ -22,6 +30,10 @@ export default function SecaoDetalhesDaVenda({ form: f, setF }: PropsDaSecao) {
       <CampoSimNao rotulo="Aceita financiamento" valor={f.accepts_financing} desabilitado={financiamentoTravado} aoMudar={v => setF({ accepts_financing: v })} />
       <CampoSimNao rotulo="Aceita FGTS" valor={f.accepts_fgts} aoMudar={v => setF({ accepts_fgts: v })} />
       <CampoSimNao rotulo="Minha Casa Minha Vida" valor={f.mcmv} aoMudar={v => setF({ mcmv: v })} />
+      {revenda && (
+        <Pilulas rotulo="Aceita permuta" valor={(f.accepts_swap ?? 'nulo') as TrocaNaTela} opcoes={PERMUTA}
+          aoMudar={v => setF({ accepts_swap: v === 'nulo' ? null : v })} />
+      )}
       <div className="max-w-xs">
         <UILabel htmlFor="campo-padrao">Padrão</UILabel>
         <Seletor id="campo-padrao" value={f.building_standard ?? ''}

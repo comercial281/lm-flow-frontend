@@ -326,6 +326,11 @@ export interface AiExtractResult {
   parking_spaces?: number | null;
   useful_area_m2?: number | null;
   total_area_m2?: number | null;
+  /** A condição de pagamento que o material traz (fase 4). Pra quem serve, nunca prometer, urgência e objeções ficam com o time. */
+  down_payment_from?: number | null;
+  installment_from?: number | null;
+  min_income?: number | null;
+  payment_terms?: string | null;
   address_neighborhood?: string | null;
   address_city?: string | null;
   address_state?: string | null;
