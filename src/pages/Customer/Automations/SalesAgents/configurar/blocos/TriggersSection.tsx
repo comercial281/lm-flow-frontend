@@ -248,7 +248,7 @@ export function TriggersSection({ agent, onSave, escolheuTodos, nome, semModo, u
     setAvisoUltima(false);
     commit(proximas);
   };
-  const add = () => commit([...lista, { t: newTrigger('keyword'), salva: null }]);
+  const add = () => { setAvisoUltima(false); commit([...lista, { t: newTrigger('keyword'), salva: null }]); };
   const semCondicaoNoServidor = completas(agent.triggers ?? []).length === 0;
   const fraseSemCondicao = herdaDoAgente
     ? 'Sem nenhuma condição própria, o número continua com os gatilhos do agente.'

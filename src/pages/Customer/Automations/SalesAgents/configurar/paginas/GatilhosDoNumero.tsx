@@ -37,7 +37,15 @@ function CartaoDoNumero({ agent, numero, mudar }: { agent: SalesAgent; numero: A
   useEffect(() => { enviado.current = null; }, [numero.triggers]);
   const atuais = enviado.current ? enviado.current.v : numero.triggers;
   const doServidor = estadoDosGatilhos({ triggers: atuais });
-  const gravarTriggers = (v: SalesAgentTrigger[] | null) => { enviado.current = { v }; return mudar(numero.id, { triggers: v }); };
+  // Gravação que falhou não relê o agente: o "último enviado" volta pro do servidor, senão a
+  // próxima escolha compara com um valor que nunca foi gravado e não reenvia.
+  const gravarTriggers = async (v: SalesAgentTrigger[] | null) => {
+    const marca = { v };
+    enviado.current = marca;
+    const ok = await mudar(numero.id, { triggers: v });
+    if (!ok && enviado.current === marca) enviado.current = null;
+    return ok;
+  };
   const [aberto, setAberto] = useState(estadoDosGatilhos(numero) === 'proprios');
   // Escolheu outra opção: a palavra pendente do bloco não pode gravar ao desmontar (ressuscitaria o que saiu).
   const escolheuOutra = useRef(false);

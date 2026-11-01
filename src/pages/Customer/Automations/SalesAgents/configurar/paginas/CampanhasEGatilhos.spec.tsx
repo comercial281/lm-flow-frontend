@@ -97,6 +97,18 @@ describe('Gatilhos por número', () => {
     expect(salesAgentsService.atualizarNumero).toHaveBeenCalledWith('ia-1', 'n3', { triggers: null });
   });
 
+  it('gravação do número que falha volta pro valor do servidor: clicar de novo reenvia', async () => {
+    vi.mocked(salesAgentsService.atualizarNumero).mockRejectedValueOnce(new Error('falhou'));
+    await abrir(agente());
+    const opcao = () => within(grupo('Gatilhos de Caio')).getByRole('radio', { name: 'Os do agente' });
+    await userEvent.click(opcao());
+    await waitFor(() => expect(within(grupo('Gatilhos de Caio')).getByRole('radio', { name: 'Todo lead do número' }))
+      .toHaveAttribute('aria-checked', 'true'));
+    await userEvent.click(opcao());
+    await waitFor(() => expect(salesAgentsService.atualizarNumero).toHaveBeenCalledTimes(2));
+    expect(salesAgentsService.atualizarNumero).toHaveBeenLastCalledWith('ia-1', 'n3', { triggers: null });
+  });
+
   it('"Só alguns" abre as condições sem gravar, e a condição completa grava no número', async () => {
     await abrir(agente());
     await userEvent.click(within(grupo('Gatilhos de Bia')).getByRole('radio', { name: 'Só alguns' }));
