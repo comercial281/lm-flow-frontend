@@ -28,6 +28,7 @@ import {
   CadastroDoImovel,
   FotosDoImovel,
   GestaoDeProprietarios,
+  MinhaFichaDaIa,
   FichaDoProprietario,
   Visits,
   Tarefas,
@@ -624,6 +625,16 @@ const AppRouter = () => {
               element={
                 <PermissionRoute resource="sales_agents" action="create">
                   <NovoAgente />
+                </PermissionRoute>
+              }
+            />
+
+            {/* Minha ficha da IA (01/11/2026): o corretor dono do número. Sem número, a própria tela leva pra Dashboard. */}
+            <Route
+              path="/ia-vendedora/minha-ficha"
+              element={
+                <PermissionRoute resource="sales_agent_numbers" action="own_ficha">
+                  <MinhaFichaDaIa />
                 </PermissionRoute>
               }
             />

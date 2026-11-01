@@ -21,6 +21,7 @@ import {
 import { MenuProvider } from '@/contexts/MenuContext';
 import { NomeDaAba, paginaNoMenu } from './nomeDaAba';
 import { useAppDataStore } from '@/store/appDataStore';
+import { aplicarMinhaFichaNoMenu, useMinhaFichaNoMenu } from '@/features/salesAgents/useMinhasFichas';
 import { aplicarProprietariosNoMenu, useProprietariosNoMenu } from '@/features/properties/proprietarios/menuDeProprietarios';
 
 import { useLanguage } from '../../hooks/useLanguage';
@@ -121,15 +122,17 @@ export default function MainLayout({ children }: MainLayoutProps) {
   const regras = [can, canAny, canAll, user?.role?.key, user?.email, tenantFeatures, archivedKeys, isSupport, demoMode] as const;
   // Gestão de proprietários: aparece (ou não) e ganha a bolinha conforme o dado, não só o cargo.
   const { visivel: proprietariosVisivel, marcador: proprietariosMarcador } = useProprietariosNoMenu();
+  // Minha ficha da IA: só o corretor dono de número (sem sales_agents.read e com número).
+  const minhaFichaVisivel = useMinhaFichaNoMenu();
   const secoes = useMemo(() => {
-    const filtradas = aplicarProprietariosNoMenu(
+    const filtradas = aplicarMinhaFichaNoMenu(aplicarProprietariosNoMenu(
       filterMenuSections(getCustomerMenuSections(), ...regras),
       { visivel: proprietariosVisivel, marcador: proprietariosMarcador },
-    );
+    ), minhaFichaVisivel);
     if (dashboardApps.length === 0) return filtradas;
     return filtradas.map(secao => ({ ...secao, itens: injectDashboardAppsIntoMenu(secao.itens, dashboardApps) }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dashboardApps, proprietariosVisivel, proprietariosMarcador, ...regras]);
+  }, [dashboardApps, proprietariosVisivel, proprietariosMarcador, minhaFichaVisivel, ...regras]);
   const rodape = useMemo(
     () => filterMenuItemsByPermissions(getFooterMenuItems(), ...regras),
     // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -355,6 +355,9 @@ export const getCustomerMenuSections = (): MenuSection[] => [
       { name: 'Disparos', href: '/disparos', icon: Megaphone, ...permissionFromRoute('/disparos'), ...permissionsFromRoute('/disparos'), featureKey: 'disparos', foraDoCelular: true },
       // Feature gerenciada pela Leal Mídia: super-admin SEMPRE vê; cliente só se ligar o toggle.
       { name: 'IA Vendedora', href: '/ia-vendedora', icon: Bot, ...permissionFromRoute('/ia-vendedora'), clientToggleKey: 'client_manage_automations' },
+      // Minha ficha da IA (01/11/2026): só o corretor dono de número (sem sales_agents.read e com
+      // número); quem decide é `aplicarMinhaFichaNoMenu`, o item nasce aqui só com a chave.
+      { name: 'Minha ficha da IA', href: '/ia-vendedora/minha-ficha', icon: UserRoundCheck, ...permissionFromRoute('/ia-vendedora/minha-ficha') },
       // Automações = "quando X acontecer, faça Y": o construtor de fluxos, direto
       // na lista (sprint 2, 03/10/2026). "Regras de lead" e "Lembretes" não
       // existem mais: os endereços antigos levam pra cá.

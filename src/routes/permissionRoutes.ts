@@ -56,6 +56,8 @@ export const ROUTE_PERMISSIONS: readonly RoutePermission[] = [
   { path: '/equipe', resource: 'users', action: 'read' },
   { path: '/ia-vendedora', resource: 'sales_agents', action: 'read' },
   { path: '/ia-vendedora/novo', resource: 'sales_agents', action: 'create' },
+  // Minha ficha (01/11/2026): o corretor dono do número muda nome, ele ou ela e como se apresenta. Sem número, a tela manda pra Dashboard.
+  { path: '/ia-vendedora/minha-ficha', resource: 'sales_agent_numbers', action: 'own_ficha' },
   // Sala de demonstração (21/10/2026): escondida; o servidor só atende administrador e a tela confere o cargo também.
   { path: '/sala-demonstracao', resource: 'sales_agents', action: 'update' },
   { path: '/disparos', resource: 'broadcasts', action: 'read', permissions: BROADCASTS_PERMISSIONS },

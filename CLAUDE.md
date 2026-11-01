@@ -10442,3 +10442,24 @@ Reestruturação da IA, fase 6, Tarefa 75. Spec: `docs/superpowers/ia-reestrutur
 3. O texto do conhecimento de fábrica é o mesmo pra todos os clientes (mora no `public`); não há edição.
 
 Código: `telas/ensinar/paginas/{Licoes,Exemplos,RegrasDaCasa,ConhecimentosDeFabrica,JanelaDoConhecimento,Arquivos,JanelaDoArquivo}.tsx`, `features/salesAgents/regrasDaCasa.ts` (com specs).
+
+## IA Vendedora · Minha ficha do corretor (desde 01/11/2026)
+
+O corretor dono de um número muda, só no número dele, o nome, "ele ou ela" e como se apresenta. A voz (quem fala) é do gestor: decisão do Tony na fase 2, "corretor mexe só na ficha".
+
+**O que aparece na tela** (`/ia-vendedora/minha-ficha`, item "Minha ficha da IA" em Vendas e automação)
+- Um cartão por número dele (número dividido = um cartão por IA): nome do número, IA, a voz só como texto ("A voz quem escolhe é o gestor."), campos Nome, Ele ou ela e Como se apresenta, e a prévia da primeira mensagem.
+- Grava na hora: texto ao sair do campo (Enter também), "Ele ou ela" no clique. Campo em branco volta pra ficha da casa (o placeholder mostra a da casa). Apresentação em uma linha, até 200 caracteres.
+- Erro do servidor aparece como veio, no cartão ("Este número não é seu."), e o campo volta ao valor anterior.
+
+**Decisões**
+1. O item do menu aparece com `sales_agent_numbers.own_ficha`, sem `sales_agents.read` e com pelo menos um número (`useMinhaFichaNoMenu`, mesmo padrão do `useProprietariosNoMenu`; `aplicarMinhaFichaNoMenu` tira o item do menu, da busca e das abas). Quem lê a IA (gestor) já tem a tela completa e não pergunta nada ao servidor.
+2. Sem número, nem item nem tela: a página manda pra `/dashboard`.
+3. Gravar manda só o campo que mudou (`{ voice: { name } }`); o servidor mistura no que já existe e mantém o `kind`.
+4. A prévia é o `previaDaApresentacao` de `features/salesAgents/fichas.ts`, com a voz efetiva do número (a dele por cima da casa).
+
+**Armadilhas**
+- Não usar `TextoNaHora` aqui: ele marca o texto digitado como salvo antes da resposta e não sabe voltar atrás no erro.
+- Voltar o frontend sozinho é seguro (a tela some); o servidor é o `own_fichas_controller` do backend (#65 do plano).
+
+Código: `MinhaFicha.tsx`, `features/salesAgents/useMinhasFichas.ts` (com specs), rota em `routes/index.tsx` e `routes/permissionRoutes.ts`.

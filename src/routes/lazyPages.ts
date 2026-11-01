@@ -49,6 +49,8 @@ export const AutomationsLayout = lazyWithRetry(() => import('@/pages/Customer/Au
 export const SalesAgents = lazyWithRetry(() => import('@/pages/Customer/Automations/SalesAgents/SalesAgents'));
 // Novo agente em 4 passos (/ia-vendedora/novo): abre pelo "+ Novo agente" da página de agentes.
 export const NovoAgente = lazyWithRetry(() => import('@/pages/Customer/Automations/SalesAgents/agentes/NovoAgente'));
+// Minha ficha da IA (/ia-vendedora/minha-ficha): a tela mínima do corretor dono do número.
+export const MinhaFichaDaIa = lazyWithRetry(() => import('@/pages/Customer/Automations/SalesAgents/MinhaFicha'));
 export const PortalsList = lazyWithRetry(() => import('../pages/Customer/Settings/Portals/PortalsList'));
 export const DashboardAppPage = lazyWithRetry(() => import('../pages/Customer/DashboardApp'));
 export const Tutorials = lazyWithRetry(() => import('@/pages/Customer/Tutorials'));

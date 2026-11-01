@@ -49,6 +49,7 @@ describe('o menu do CRM confere o cargo', () => {
   it.each([
     ['/disparos', 'broadcasts.read'],
     ['/ia-vendedora', 'sales_agents.read'],
+    ['/ia-vendedora/minha-ficha', 'sales_agent_numbers.own_ficha'],
     ['/properties', 'properties.read'],
     ['/property-owners', 'properties.read'],
     ['/settings/portals', 'portals.read'],
@@ -249,7 +250,7 @@ describe('Automações · sprint 2 (03/10/2026)', () => {
   const vendas = secoes.find(s => s.id === 'vendas')!;
 
   it('Vendas e automação: Funis de mensagem, Disparos, IA Vendedora e Automações; só Funis de mensagem tem abas', () => {
-    expect(vendas.itens.map(i => i.name)).toEqual(['Funis de mensagem', 'Disparos', 'IA Vendedora', 'Automações']);
+    expect(vendas.itens.map(i => i.name)).toEqual(['Funis de mensagem', 'Disparos', 'IA Vendedora', 'Minha ficha da IA', 'Automações']);
     vendas.itens.filter(i => i.name !== 'Funis de mensagem').forEach(i => expect(i.abas ?? []).toEqual([]));
   });
 

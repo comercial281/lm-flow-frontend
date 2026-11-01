@@ -71,6 +71,13 @@ describe('follow-up como aba de Funis de mensagem (Fase 3, 21/10/2026)', () => {
   });
 });
 
+describe('Minha ficha da IA (corretor dono do número, 01/11/2026)', () => {
+  it('abre com sales_agent_numbers.own_ficha e a chave está no mapa', () => {
+    expect(trecho('/ia-vendedora/minha-ficha')).toContain('<PermissionRoute resource="sales_agent_numbers" action="own_ficha">');
+    expect(ROUTE_PERMISSIONS).toContainEqual({ path: '/ia-vendedora/minha-ficha', resource: 'sales_agent_numbers', action: 'own_ficha' });
+  });
+});
+
 describe('toda rota do CRM confere o cargo', () => {
   it.each([
     ['/ia-vendedora', 'sales_agents', 'read'],
