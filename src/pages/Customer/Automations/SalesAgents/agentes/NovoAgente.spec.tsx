@@ -7,9 +7,11 @@ const list = vi.hoisted(() => vi.fn());
 const create = vi.hoisted(() => vi.fn());
 const criarNumero = vi.hoisted(() => vi.fn());
 const inboxesList = vi.hoisted(() => vi.fn());
+const contarPorMarca = vi.hoisted(() => vi.fn());
 const aviso = vi.hoisted(() => ({ error: vi.fn(), warning: vi.fn(), success: vi.fn() }));
 vi.mock('sonner', () => ({ toast: aviso }));
 vi.mock('@/services/salesAgents/salesAgentsService', () => ({ salesAgentsService: { list, create, criarNumero } }));
+vi.mock('@/services/properties/propertiesService', () => ({ propertiesService: { contarPorMarca } }));
 vi.mock('@/services/channels/inboxesService', () => ({ default: { list: inboxesList } }));
 
 import NovoAgente from './NovoAgente';
@@ -48,7 +50,8 @@ async function ateOPasso2() {
 beforeEach(() => {
   vi.clearAllMocks();
   list.mockResolvedValue([agente('ag-b', 'Agente B')]);
-  inboxesList.mockResolvedValue({ data: [{ id: 'in-1', name: 'Ana' }, { id: 'in-2', name: 'Bia' }, { id: 'in-3', name: 'Caio' }] });
+  inboxesList.mockResolvedValue({ data: [{ id: 'in-1', name: 'Ana' }, { id: 'in-2', name: 'Bia', whatsapp_cloud: { id: 1 } }, { id: 'in-3', name: 'Caio' }] });
+  contarPorMarca.mockResolvedValue({ venda: 12, locacao: 0, leilao: 0, empreendimento: 3 });
   create.mockResolvedValue({ id: 'ag-novo', name: 'Agente A' });
   criarNumero.mockResolvedValue({ id: 'num-1', warnings: [] });
 });
@@ -86,6 +89,37 @@ describe('NovoAgente', () => {
     expect(screen.getByRole('checkbox', { name: /Locação/ })).not.toBeChecked();
     expect(screen.getByRole('checkbox', { name: /Leilão/ })).not.toBeChecked();
     expect(screen.getByText('12 no cadastro')).toBeInTheDocument();
+  });
+
+  it('conta SEM agente: as marcas com imóvel vêm marcadas, com o número certo', async () => {
+    list.mockResolvedValue([]);
+    contarPorMarca.mockResolvedValue({ venda: 7, locacao: 0, leilao: 0, empreendimento: 2 });
+    await ateOPasso2();
+    await seguir();
+    await seguir();
+    expect(await screen.findByText('7 no cadastro')).toBeInTheDocument();
+    expect(screen.getByText('2 no cadastro')).toBeInTheDocument();
+    expect(screen.getByRole('checkbox', { name: /Venda/ })).toBeChecked();
+    expect(screen.getByRole('checkbox', { name: /Empreendimento/ })).toBeChecked();
+    expect(screen.getByRole('checkbox', { name: /Locação/ })).not.toBeChecked();
+  });
+
+  it('contagem que falha: marcas sem número e desmarcadas, e o aviso só depois de tentar criar', async () => {
+    contarPorMarca.mockRejectedValue(new Error('falhou'));
+    await ateOPasso2();
+    await seguir();
+    await seguir();
+    expect(screen.getByRole('checkbox', { name: /Venda/ })).not.toBeChecked();
+    expect(screen.queryByText(/no cadastro/)).toBeNull();
+    expect(screen.queryByText(/Marque pelo menos um/)).toBeNull();
+    await userEvent.click(screen.getByRole('button', { name: 'Criar agente desligado' }));
+    expect(screen.getByText(/Marque pelo menos um/)).toBeInTheDocument();
+    expect(create).not.toHaveBeenCalled();
+  });
+
+  it('número da API oficial leva o sufixo no passo 2', async () => {
+    await ateOPasso2();
+    expect(screen.getByRole('checkbox', { name: /Bia/ }).closest('label')).toHaveTextContent('Bia (API oficial)');
   });
 
   it('"Criar agente desligado": cria uma vez, um criarNumero por número, e abre o Configurar', async () => {

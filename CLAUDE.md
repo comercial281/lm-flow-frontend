@@ -10270,16 +10270,16 @@ Reestruturação da IA, fase 6, Tarefa 69. Spec: `docs/superpowers/ia-reestrutur
 No *⋯* da barra entra *Renomear* (janela com *Nome do agente*, grava só o `name` no Salvar; nome vazio não grava) e sai *Duplicar esta IA*.
 
 **Decisões (não reabrir sem o dono pedir):**
-1. **O Duplicar sai da tela** (spec fase 6). Saíram `DuplicateAgentDialog`, `duplicateAgent.ts` e o `novaIaRascunho` (e a lista de 4 perguntas sugeridas, que só ele usava). O MCP do servidor segue com o `Duplicator`; o `salesAgentsService.duplicate` ficou no serviço, sem uso na tela.
+1. **O Duplicar sai da tela** (spec fase 6). Saíram `DuplicateAgentDialog`, `duplicateAgent.ts` e o `novaIaRascunho` (e a lista de 4 perguntas sugeridas, que só ele usava). O MCP do servidor segue com o `Duplicator`; o `salesAgentsService.duplicate` e o tipo `DuplicatedSalesAgent` também saíram do serviço.
 2. **Criar é `create` UMA vez + `criarNumero` por número.** O agente nasce `enabled: false`, `next_steps: ['visita']`, com a ficha da casa e as marcas. O número não vai no corpo do agente.
 3. **Número que falha não desfaz nada** (o agente já existe): abre em `?ia=<novo>&tela=configurar&pagina=numeros` com aviso dizendo qual número não entrou. `create` que falha fica na tela, sem criar número.
 4. **C11:** o agente salva e nasce desligado mesmo sem pergunta obrigatória; quem recusa é o ligar, depois (*Filtra e passa precisa de pelo menos uma pergunta obrigatória.*).
 5. **Número dividido (seção 8):** só agente ligado conta. Desligado ou rascunho não gera aviso. Gatilho vale o do número ou, se o número herda, o do agente.
-6. **As marcas do passo 4** partem da contagem `catalog_marks` do primeiro agente da lista (a contagem é da conta toda). Conta sem agente nenhum: nada vem marcado, a pessoa escolhe.
+6. **As marcas do passo 4** vêm SEMPRE de `propertiesService.contarPorMarca()` (uma fonte só, lida uma vez ao abrir a tela), com ou sem agente na conta. As que têm imóvel vêm marcadas. Se a contagem falhar, as marcas ficam sem número e desmarcadas; o aviso *Marque pelo menos um…* só aparece depois de tentar criar sem marca. Número da API oficial leva *(API oficial)* no passo 2.
 7. Toda a conta mora em `features/salesAgents/novoAgente.ts` (`payloadDoNovo`, `avisoDoNumero`, `podeSeguir`); a tela só desenha. O Renomear é `RenomearAgente.tsx`, chamado pela `IaBarra` (que recebe `aoSalvo` e `podeEditar`; `podeCriar` saiu da barra).
 
 **Armadilhas:**
-1. A página `numeros` do Configurar ainda não existe como `PaginaId` (vem com a página de números); até lá o endereço cai na página padrão do Configurar. O texto do aviso já manda ligar o número lá.
-2. O servidor recusa agente sem marca (*Marque pelo menos um…*): por isso o passo 4 não deixa criar sem marca, em vez de mandar `serves` vazio.
+1. A página `numeros` do Configurar passa a existir com a Tarefa 70; até lá o endereço cai na página padrão do Configurar. O texto do aviso já manda ligar o número lá.
+2. O servidor recusa agente sem marca (*Marque pelo menos um…*): por isso o *Criar* não segue sem marca, em vez de mandar `serves` vazio.
 3. O catálogo "cartão à mão" e "Nenhum…" solto da régua do build pegam a tela nova: usar `Card` e frase sem "Nenhum".
 

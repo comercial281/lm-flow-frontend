@@ -18,6 +18,7 @@ import Aviso from '@/components/base/Aviso';
 import BotoesDeEscolha from '@/components/base/BotoesDeEscolha';
 import CartoesDeEscolha from '@/components/base/CartoesDeEscolha';
 import inboxesService from '@/services/channels/inboxesService';
+import { propertiesService } from '@/services/properties/propertiesService';
 import {
   salesAgentsService, type HouseVoice, type Job, type Marca, type QuemFala, type SalesAgent,
 } from '@/services/salesAgents/salesAgentsService';
@@ -40,7 +41,7 @@ const VOZES = [
 const GENEROS = [{ valor: 'ela' as const, rotulo: 'Ela' }, { valor: 'ele' as const, rotulo: 'Ele' }];
 const MARCAS: Record<Marca, string> = { venda: 'Venda', locacao: 'Locação', leilao: 'Leilão', empreendimento: 'Empreendimento' };
 
-interface Canal { id: string; name: string }
+interface Canal { id: string; name: string; oficial: boolean }
 
 export default function NovoAgente() {
   const navigate = useNavigate();
@@ -49,8 +50,11 @@ export default function NovoAgente() {
   const [agentes, setAgentes] = useState<SalesAgent[]>([]);
   const [canais, setCanais] = useState<Canal[]>([]);
   const [criando, setCriando] = useState(false);
-  // As marcas começam pelo cadastro, uma vez, quando a lista de agentes chega.
-  const [marcasIniciadas, setMarcasIniciadas] = useState(false);
+  // A contagem do cadastro vem de uma fonte só (a mesma pra conta com e sem agente),
+  // lida uma vez ao abrir. Falhou: as marcas ficam sem número e desmarcadas.
+  const [contagem, setContagem] = useState<Record<Marca, number> | null>(null);
+  // O aviso de marca só depois de tentar criar sem nenhuma.
+  const [tentouSemMarca, setTentouSemMarca] = useState(false);
 
   useEffect(() => {
     let vivo = true;
@@ -59,21 +63,22 @@ export default function NovoAgente() {
       .catch(() => { /* sem a lista, o passo 2 só não mostra quem já usa o número */ });
     inboxesService.list()
       .then((res) => {
-        const data = ((res as unknown as { data?: Array<{ id: string | number; name: string }> }).data) ?? [];
-        if (vivo) setCanais(data.map((i) => ({ id: String(i.id), name: i.name })));
+        const data = ((res as unknown as { data?: Array<{ id: string | number; name: string; whatsapp_cloud?: unknown }> }).data) ?? [];
+        if (vivo) setCanais(data.map((i) => ({ id: String(i.id), name: i.name, oficial: !!i.whatsapp_cloud })));
       })
       .catch(() => { if (vivo) setCanais([]); });
+    propertiesService.contarPorMarca()
+      .then((c) => {
+        if (!vivo) return;
+        setContagem(c);
+        // Só preenche se a pessoa ainda não mexeu nas marcas.
+        setR((x) => (x.serves.length ? x : { ...x, serves: marcasComImovel(c) }));
+      })
+      .catch(() => { /* sem contagem: marcas sem número e desmarcadas */ });
     return () => { vivo = false; };
   }, []);
 
-  // A contagem do cadastro é da conta toda: qualquer agente traz a mesma.
-  const contagem = agentes[0]?.catalog_marks ?? null;
   const comImovel = useMemo(() => marcasComImovel(contagem), [contagem]);
-  useEffect(() => {
-    if (marcasIniciadas || !agentes.length) return;
-    setMarcasIniciadas(true);
-    setR((x) => (x.serves.length ? x : { ...x, serves: comImovel }));
-  }, [agentes, comImovel, marcasIniciadas]);
 
   const casa = r.casa;
   const mudaCasa = (campo: Partial<HouseVoice>) => setR((x) => ({ ...x, casa: { ...x.casa, ...campo } }));
@@ -145,15 +150,16 @@ export default function NovoAgente() {
                 {canais.map((c) => {
                   const usam = agentesDoNumero(c.id, agentes);
                   const marcado = r.inboxIds.includes(c.id);
+                  const avisoDaDivisao = marcado ? avisoDoNumero(c.id, agentes) : null;
                   return (
                     <li key={c.id} className="space-y-2">
                       <label className="flex cursor-pointer items-center gap-2.5 text-sm">
                         <Checkbox checked={marcado} aria-label={c.name}
                           onCheckedChange={(v) => setR((x) => ({ ...x, inboxIds: alterna(x.inboxIds, c.id, v === true) }))} />
-                        <span>{c.name}</span>
+                        <span>{c.oficial ? `${c.name} (API oficial)` : c.name}</span>
                         {usam.map((n) => <span key={n} className="rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground">{n}</span>)}
                       </label>
-                      {marcado && avisoDoNumero(c.id, agentes) && <Aviso tom="atencao" compacto>{avisoDoNumero(c.id, agentes)}</Aviso>}
+                      {avisoDaDivisao && <Aviso tom="atencao" compacto>{avisoDaDivisao}</Aviso>}
                     </li>
                   );
                 })}
@@ -197,12 +203,12 @@ export default function NovoAgente() {
                     <Checkbox checked={r.serves.includes(m)} aria-label={MARCAS[m]}
                       onCheckedChange={(v) => setR((x) => ({ ...x, serves: alterna(x.serves, m, v === true) }))} />
                     <span>{MARCAS[m]}</span>
-                    <span className="text-xs text-muted-foreground">{`${contagem?.[m] ?? 0} no cadastro`}</span>
+                    {contagem && <span className="text-xs text-muted-foreground">{`${contagem[m]} no cadastro`}</span>}
                   </label>
                 </li>
               ))}
             </ul>
-            {r.serves.length === 0 && <p className="text-sm text-destructive">Marque pelo menos um: Venda, Locação, Leilão ou Empreendimento.</p>}
+            {tentouSemMarca && r.serves.length === 0 && <p className="text-sm text-destructive">Marque pelo menos um: Venda, Locação, Leilão ou Empreendimento.</p>}
             <Aviso tom="info">Nasce <b>desligado</b> e abre no Configurar com o que falta marcado no índice.</Aviso>
           </>
         )}
@@ -215,7 +221,8 @@ export default function NovoAgente() {
         {passo < PASSOS_DO_NOVO.length ? (
           <Button type="button" disabled={!podeSeguir(passo, r)} onClick={() => setPasso((p) => p + 1)}>Seguir</Button>
         ) : (
-          <Button type="button" disabled={!podeSeguir(passo, r) || criando} onClick={() => void criar()}>
+          <Button type="button" disabled={criando}
+            onClick={() => { if (!podeSeguir(passo, r)) { setTentouSemMarca(true); return; } void criar(); }}>
             {criando && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" aria-hidden />}Criar agente desligado
           </Button>
         )}

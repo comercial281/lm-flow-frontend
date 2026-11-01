@@ -35,13 +35,13 @@ import {
   Contracts,
   AutomationsLayout,
   SalesAgents,
+  NovoAgente,
   SalaDemonstracao,
   PortalsList,
   DashboardAppPage,
   Tutorials,
   NumeroOficial,
 } from './lazyPages';
-import NovoAgente from '@/pages/Customer/Automations/SalesAgents/agentes/NovoAgente';
 import RedirecionaAssistente from '@/pages/Customer/Automations/SalesAgents/RedirecionaAssistente';
 import PrivateRoute from './PrivateRoute';
 import AcademiaRoute from './AcademiaRoute';
