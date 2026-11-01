@@ -33,6 +33,9 @@ import { Conversation } from '@/types/chat/api';
 import { useConversations } from '@/hooks/chat/useConversations';
 import { useLanguage } from '@/hooks/useLanguage';
 import ActivateAiDialog from './ActivateAiDialog';
+import ReligarIaDialog from './ReligarIaDialog';
+import { salesAgentsService, type SalesAgent } from '@/services/salesAgents/salesAgentsService';
+import { agentesDoNumero } from '@/features/salesAgents/agentesDoNumero';
 import BotaoMaisAcoes from '@/components/base/BotaoMaisAcoes';
 
 interface ConversationActionsDropdownProps {
@@ -69,11 +72,25 @@ const ConversationActionsDropdown: React.FC<ConversationActionsDropdownProps> = 
   const aiPaused =
     aiPausedOverride ?? conversation?.additional_attributes?.sales_agent_paused === true;
 
-  const toggleAi = async (enable: boolean) => {
+  // Número dividido: ao religar, a pessoa escolhe qual agente volta a atender.
+  const [agentesParaReligar, setAgentesParaReligar] = useState<SalesAgent[] | null>(null);
+
+  const toggleAi = async (enable: boolean, agentId?: string) => {
     if (!conversation?.id) return;
     setTogglingAi(true);
     try {
-      const state = await chatService.toggleSalesAgent(String(conversation.id), enable);
+      if (enable && !agentId) {
+        const doNumero = await salesAgentsService
+          .list()
+          .then((agents) => agentesDoNumero(agents, conversation.inbox_id))
+          .catch(() => []);
+        if (doNumero.length > 1) {
+          setAgentesParaReligar(doNumero);
+          return;
+        }
+      }
+      const state = await chatService.toggleSalesAgent(String(conversation.id), enable, agentId);
+      setAgentesParaReligar(null);
       setAiPausedOverride(state.status === 'paused');
       toast.success(state.label);
     } catch {
@@ -441,6 +458,13 @@ const ConversationActionsDropdown: React.FC<ConversationActionsDropdownProps> = 
         </DropdownMenuItem>
       </DropdownMenuContent>
       <ActivateAiDialog conversation={conversation} open={aiOpen} onOpenChange={setAiOpen} />
+      <ReligarIaDialog
+        agentes={agentesParaReligar ?? []}
+        open={agentesParaReligar !== null}
+        salvando={togglingAi}
+        onOpenChange={(v) => { if (!v) setAgentesParaReligar(null); }}
+        onConfirmar={(id) => void toggleAi(true, id)}
+      />
     </DropdownMenu>
   );
 };

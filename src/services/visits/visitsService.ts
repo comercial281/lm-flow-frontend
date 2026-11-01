@@ -21,6 +21,8 @@ export interface Visit {
   property?: { id: string; title: string; code: string; address_city?: string; address_neighborhood?: string };
   contact?: { id: string; name: string; phone_number?: string };
   realtor?: PersonRef | null;
+  // O tipo do compromisso: visita, videochamada, reuniao ou ligacao. Ausente = visita.
+  kind?: 'visita' | 'videochamada' | 'reuniao' | 'ligacao' | string | null;
   // Quem agendou: a IA ou uma pessoa. Ausente em servidor antigo.
   booked_by?: 'ia' | 'pessoa' | null;
   created_by?: PersonRef | null;

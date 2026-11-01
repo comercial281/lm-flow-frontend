@@ -45,6 +45,7 @@ import {
 
 import { ehAtrasada, estiloDaSituacao, SITUACOES_DA_LEGENDA } from '@/features/visits/situacaoDaVisita';
 import { PecaDaVisita, IconeDeQuemAgendou } from '@/features/visits/PecaDaVisita';
+import { rotuloDoTipo } from '@/features/visits/tipoDaVisita';
 import { PreviaDoLead } from '@/features/visits/PreviaDoLead';
 import { ResumoDoLead } from '@/features/visits/ResumoDoLead';
 import { lerResumoDoLead, resumoGuardado } from '@/features/visits/guardaDoResumo';
@@ -1038,7 +1039,7 @@ function LinhaDaVisita({
         <div>
           <span className="inline-flex items-center gap-1.5 text-xs font-medium">
             <span aria-hidden className="h-2 w-2 rounded-full bg-[var(--st)]" />
-            {VISIT_STATUS_LABELS[visit.status] ?? visit.status}
+            {VISIT_STATUS_LABELS[visit.status] ?? visit.status} · {rotuloDoTipo(visit)}
           </span>
           <IconeDeQuemAgendou visita={visit} className="ml-2 inline-block h-3.5 w-3.5 align-[-2px] text-muted-foreground" />
           {atrasada && <span className="ml-2 text-xs font-medium text-orange-600 dark:text-orange-400">Atrasada</span>}
@@ -1124,7 +1125,7 @@ function VisitCard({
           <div>
             <span className="inline-flex items-center gap-1.5 text-xs font-medium" style={estiloDaSituacao(visit.status)}>
               <span aria-hidden className="h-2 w-2 rounded-full bg-[var(--st)]" />
-              {VISIT_STATUS_LABELS[visit.status] ?? visit.status}
+              {VISIT_STATUS_LABELS[visit.status] ?? visit.status} · {rotuloDoTipo(visit)}
             </span>
             <IconeDeQuemAgendou visita={visit} className="ml-2 inline-block h-3.5 w-3.5 align-[-2px] text-muted-foreground" />
             {atrasada && (

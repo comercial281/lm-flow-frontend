@@ -1161,6 +1161,20 @@ export interface WeeklyReportResult {
   detail: string | null;
 }
 
+/** Uma linha da tabela "Por campanha" do relatório semanal (`stats.campanhas`). */
+export interface WeeklyReportCampaign {
+  /** null = a linha "Sem campanha". */
+  key: string | null;
+  label: string;
+  kind: string;
+  leads: number;
+  responderam: number;
+  passados: number;
+  visitas: number;
+  fora_do_perfil: number;
+  pararam: { chegou: number; respondeu: number; passou: number; visita: number };
+}
+
 export interface WeeklyReport {
   id: string;
   period_start: string;
@@ -1172,6 +1186,8 @@ export interface WeeklyReport {
   stats: {
     ia?: Record<string, number>;
     equipe?: Record<string, unknown>;
+    /** Fase 6: a quebra por campanha (servidor novo; o antigo não manda). */
+    campanhas?: WeeklyReportCampaign[];
   };
   /**
    * O que não deu certo ao montar ESTE relatório, em português e pronto do servidor.

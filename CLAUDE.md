@@ -3347,6 +3347,8 @@ Armadilhas:
 
 ## Duplicar a IA para outro número (desde 2026-09-23)
 
+⚠️ Revista em 01/11/2026 (Tarefa 79): *Duplicar esta IA* saiu do menu *⋯*. Um agente atende vários números (Configurar > Números e usuários) e o agente novo nasce em *+ Novo agente*. Ver *Novo agente em 4 passos, Renomear e a saída do Duplicar*.
+
 Pedido do dono do produto: *"agora que podemos personalizar bastante a IA, eu
 gostaria de poder duplicar ela, para plugar em uma instância e replicar para
 outra de forma fácil"*.
@@ -3496,6 +3498,8 @@ Armadilhas:
    nova foi escrita.
 
 ## A IA pode falar como o próprio corretor do número (desde 2026-09-25)
+
+⚠️ Revista em 01/11/2026 (Tarefa 79): a voz virou a *ficha da casa* do agente mais a voz de cada número (Configurar > Números e usuários), e o corretor dono do número ajusta o nome e o jeito de se apresentar em *Minha ficha*. Ver *IA Vendedora · Minha ficha do corretor*.
 
 Relato do dono do produto: no WhatsApp de uma corretora, a IA dizia *"deixa eu
 passar tudo pro meu colega do time"*. E quando acertava a voz (*"deixa eu confirmar
@@ -6646,6 +6650,8 @@ O que ainda usa o serviço antigo no frontend:
 
 ## IA Vendedora · casca nova: barra de topo, Painel primeiro e veredito único (desde 2026-10-05)
 
+⚠️ Revista em 01/11/2026 (Tarefa 79): O item *Nova IA* no fim do seletor saiu (decisão 2). O agente novo nasce em *+ Novo agente*, na página de agentes, e abre em `/ia-vendedora/novo` (4 passos). Ver *IA Vendedora · Página de agentes e Novo agente* e *Novo agente em 4 passos*.
+
 > Entrega 1 da refatoração da IA Vendedora. Spec: `LM FLOW/specs/2026-10-05-ia-vendedora-refatoracao-design.md`; plano: `LM FLOW/plans/2026-10-05-ia-vendedora-entrega-1-casca.md`. Só tela: nenhuma IA muda de atendimento.
 
 **O que aparece na tela:** barra de topo própria, no modelo do Meu site: o seletor da IA (nome + ▾, com o veredito de cada IA e *Nova IA* no fim da lista), o selo do veredito da IA aberta e os menus *Painel ▾* (*Visão geral*, *Sugestões*, *Relatório semanal*) · *Configurar* · *Ensinar* · *Testar* · *Diagnóstico*, mais *Mais ações* (⋯) com *Duplicar esta IA* e *Excluir IA*. A lista de IAs à esquerda e as 8 abas saíram. ⚠️ Revista em 06/10/2026: *Testar* virou um botão (a janela abre por cima da página) e o *Diagnóstico* foi pro "⋯", só pra equipe. Ver *IA Vendedora · Configurar pela ordem da conversa (06/10/2026)*.
@@ -7337,6 +7343,8 @@ botão Aceitar.") no lugar de "Seu cargo não permite esta ação".
 
 ## IA Vendedora · Configurar pela ordem da conversa (06/10/2026)
 
+⚠️ Revista em 01/11/2026 (Tarefa 79): as 15 páginas viraram 8 num índice só (Modo operante, Números e usuários, Público-alvo e produto, Campanhas e gatilhos, Condução, Materiais, Destino, Funil e follow-up). Ver *IA Vendedora · Configurar em 8 páginas*.
+
 > Onda 3 da reestruturação do Configurar. Spec: `LM FLOW/specs/2026-10-06-ia-configurar-reestruturacao-design.md` (inventário ao lado). Protótipo aprovado pelo dono em 06/10. Servidor: ondas 1 e 2 (`comercial281/lm-flow`). Nasce em cima do *Follow-up padrão de 30 dias (06/10/2026)*.
 
 **O que aparece na tela:** *IA Vendedora → Configurar* tem 15 páginas curtas em 5 grupos, na ordem da conversa: **Atendimento** (Canal · Horário) · **Introdução** (Identidade · Abertura · Intenção) · **Conversa** (Personalidade · Qualificação · Catálogo · Restrições) · **Repasse** (Objetivo · Critério · Destino · Funil · Agendamento) · **Follow-up**. Trilho à esquerda que acompanha a rolagem, com bolinha âmbar na página com pendência e cadeado no Agendamento quando o objetivo não é visita. Cada página: grupo, título e uma frase, e uma caixa com faixas (título e frase à esquerda, controles à direita). **Não tem Salvar**: chave e botões gravam no clique, texto ao sair do campo, e aparece "Salvo · Desfazer". A barra de cima tem só a bolinha do veredito, *Painel ▾ · Configurar · Ensinar*, o botão **Testar** (abre por cima da página, com o celular subindo), a chave **Ligada** e o "⋯" (*Duplicar*, *Excluir* e, só pra equipe, *Motor* e *Diagnóstico*). A Visão geral ganhou os *Últimos atendimentos*.
@@ -7374,6 +7382,8 @@ botão Aceitar.") no lugar de "Seu cargo não permite esta ação".
 
 ## IA Vendedora · Passa direto, mesmo faltando pergunta (21/10/2026)
 
+⚠️ Revista em 01/11/2026 (Tarefa 79): as chaves da Passagem imediata moram agora em Configurar > Modo operante (exceções de repasse, lidas de `handoff_exceptions_effective`), e não mais em *Repasse · Critério*, que saiu. Ver *IA Vendedora · Configurar em 8 páginas*.
+
 **O problema.** No cenário "Perguntas obrigatórias respondidas", lead que recusava mandar documento (Nataly) ficava preso: a IA insistia nas perguntas e não passava. Na Pinot, pedido de visita no mesmo dia também travou: o servidor registrava o repasse como `regra`, e o portão do checklist barrava `regra`.
 
 **A decisão (dono do produto, 21/10/2026).**
@@ -7387,6 +7397,8 @@ botão Aceitar.") no lugar de "Seu cargo não permite esta ação".
 **22/10/2026: uma seção só (dono do produto).** A seção à parte repetia a pergunta da **Passagem imediata** ("quando ela passa na hora?"). Agora é tudo na Passagem imediata: *Lead irritado*, *Pediu pra falar com uma pessoa ou pediu ligação*, *Perguntou se é robô* e, só no cenário das perguntas obrigatórias, *Recusou mandar documento* e *Perguntou o que ela não sabe*. "Pediu ligação" deixou de ter chave própria: quem pede ligação cai em `pediu_humano`, que passa sempre, então desligar só a ligação prometia uma trava que não existia. A chave de pessoa grava `escalate_on_human_request` **e** `early_handoff.pediu_ligacao` no mesmo clique. ⚠️ Ensaio de 22/10: *Perguntou o que ela não sabe* ainda não funciona só por instrução (ela promete "vou confirmar com o corretor" e segue perguntando, no Haiku e no Sonnet); a correção é no servidor.
 
 ## IA Vendedora · Ensinar no padrão do Configurar (11/10/2026)
+
+⚠️ Revista em 01/11/2026 (Tarefa 79): o Ensinar virou 5 páginas (Lições, Exemplos, Regras e objeções da casa, Conhecimentos de fábrica, Arquivos e prova social). Ver *IA Vendedora · Ensinar em 5 páginas*.
 
 > Spec: `LM FLOW/specs/2026-10-11-ia-ensinar-refatoracao-design.md`; plano: `LM FLOW/plans/2026-10-11-ia-ensinar-refatoracao.md`. Protótipo: https://claude.ai/artifact/9uC2FJBqkVBozCLRwzTCVh
 
@@ -8134,6 +8146,8 @@ Armadilhas:
    Landings e Site Builder não passam `barraExtra` e não mudam.
 
 ## Caminhos da intenção em caixinhas (desde 2026-10-08)
+
+⚠️ Revista em 01/11/2026 (Tarefa 79): os caminhos da intenção moram agora em Configurar > Público-alvo e produto (`intencao` cai em `publico`). As caixinhas e o Sondando seguem como estão aqui.
 
 O Grupo Habitar escreveu a pergunta dele ("Você já mora na região do Castelo?"), tirou Investimento e a IA seguia puxando "morar ou investir": a pergunta não chegava ao lead que fala primeiro e oito linhas fixas do comando citavam os dois.
 
@@ -10041,6 +10055,8 @@ Código: `features/flowAutomations/readiness.ts` (`hasOwnTrigger`, `nodeProblem(
 
 ## Formulários do Meta: imóvel vinculado por busca (desde 2026-10-28)
 
+⚠️ Revista em 01/11/2026 (Tarefa 79): a tela virou *Configurações > Campanhas* (Formulários do Meta e Anúncios de WhatsApp), no mesmo endereço; o imóvel vinculado é *O que esta campanha vende* na janela da campanha. Ver *Campanhas (era Formulários do Meta)*.
+
 **O que aparece na tela:** em Configurações > Formulários do Meta, o campo "Imóvel vinculado" deixou de ser uma caixa de escolha e virou a busca por título ou código (a mesma de Tarefas). Escolhido, vira o cartão do imóvel com a lixeira pra tirar.
 
 **Regras:** a caixa antiga carregava só os 100 imóveis Ativos mais novos, uma vez, ao abrir a página: imóvel antigo de cliente com mais de 100 não aparecia, o vinculado fora da lista abria como "Nenhum", e o recém-cadastrado só aparecia recarregando. A busca vai ao servidor a cada texto (até 20 resultados, sem teto de catálogo, qualquer situação do imóvel, como em Tarefas). O imóvel já vinculado é lido pelo id; apagado, aparece "Imóvel não encontrado" com a lixeira.
@@ -10516,3 +10532,69 @@ Configurações > Campanhas, no mesmo endereço de antes (`/automations/origem`,
 - A régua da casa (`conferir-padrao`, glossário) barra "apagar": o botão se chama **Excluir ficha** (o enunciado e o protótipo diziam "Apagar ficha"), e a mensagem de "Nenhum…" solto também: a janela diz "Sem IA nesta campanha.".
 
 Código: `pages/Customer/Settings/Campanhas/{Campanhas,LinhaDaCampanha,JanelaDaCampanha}.tsx`, `features/campanhas/{condicaoDaCampanha,qualIaAtende,itensDeCampanha}.ts` (com specs), `LeadAdsForms.tsx` (parte Formulários) e `Origem.tsx`.
+
+## Construtor: não mandar se a IA já estiver conversando (Tarefa 79, 01/11/2026)
+
+Reestruturação da IA, fase 5 (seção 3). No bloco **Mensagem** do construtor entra a caixinha **Não mandar se a IA já estiver conversando com o lead**, com a ajuda "Liga sozinha nos fluxos de entrada. Use quando o fluxo e a IA falam com o mesmo lead.".
+
+**O que aparece na tela**
+- A caixinha fica logo depois de *Marcar progresso*, no painel do bloco Mensagem. Marcar e desmarcar grava `skip_if_ai_talking` (`true`/`false`) no rascunho do bloco, e o Salvar do painel leva junto.
+- No **funil de conversa** não aparece (a mensagem sai com o corretor ao vivo). No **modo guiado** do corretor também não (o servidor não deixa o corretor mudar opção do gestor).
+- Bloco **novo** num fluxo cujo gatilho inclui "Lead criado" já nasce com a caixinha marcada, nos três tipos que mandam mensagem (`send_whatsapp`, `sequence`, `funnel`). Outro gatilho nasce desmarcada; bloco que não manda mensagem nunca recebe a chave.
+
+**Decisões**
+1. `configDoBlocoNovo(item, triggerEvent)` (`features/flowAutomations/palette.ts`) monta a config do bloco novo; o `insertNode` do canvas passa o gatilho (`lead.created` se algum evento do gatilho for esse). O servidor faz o mesmo na criação (`default_skip_if_ai_talking`), a tela só mostra já marcado.
+2. Bloco que já existe não muda, e o valor gravado (inclusive `false`) manda. A tela devolve a chave no `config` ao salvar, senão ela se perderia.
+3. Duplicar bloco copia a config como está (não reaplica o padrão).
+
+**Armadilhas**
+- Voltar o backend pra antes da fase 5 deixa a chave inerte (o motor antigo não a lê); a tela segue inofensiva.
+
+Código: `components/flowAutomations/MessageBlockFields.tsx` (`PularSeIaConversandoField`), `features/flowAutomations/palette.ts`, `pages/Customer/Automations/FlowBuilder/FlowAutomationCanvas.tsx` (`insertNode`). Specs: `MessageBlockFields.spec.tsx`, `palette.spec.ts`.
+
+## IA Vendedora · Relatório semanal por campanha (Tarefa 79, 01/11/2026)
+
+Reestruturação da IA, fase 6. Em *IA Vendedora > Painel > Relatório semanal* o relatório da semana ganha a tabela **Por campanha**.
+
+**O que aparece na tela**
+- Entre os dois cartões (A IA e O time) e o texto do WhatsApp: tabela com **Campanha · Leads · Responderam · Passados · Visitas · Fora do perfil · Onde pararam**, uma linha por campanha, vinda de `stats.campanhas` do servidor. A conversa sem marca vem como **Sem campanha**.
+- **Onde pararam** mostra as etapas que têm lead, com a contagem ("Chegou 4 · Respondeu 3 · Passou 1 · Visita 2"). Cada lead conta uma vez, na etapa mais avançada que alcançou.
+- Uma frase embaixo avisa que são só leads novos da semana, então a soma pode ficar abaixo dos "Leads atendidos" do topo.
+- Servidor antigo (sem `stats.campanhas`) ou lista vazia: sem tabela e sem aviso. A tela não calcula nada, só mostra.
+
+**Decisões**
+1. A tabela é `telas/TabelaPorCampanha.tsx`, sem estado; o tipo `WeeklyReportCampaign` está no serviço. O texto do WhatsApp com as 3 maiores campanhas é montado pelo servidor.
+2. "Visitas" são conversas com visita da IA no período (não linhas de visita), por isso fecha com "Onde pararam".
+
+Código: `pages/Customer/Automations/SalesAgents/telas/{TelaRelatorioSemanal,TabelaPorCampanha}.tsx`, `services/salesAgents/salesAgentsService.ts`. Specs: `TelaRelatorioSemanal.spec.tsx`.
+
+## IA Vendedora · Escolha do agente no número dividido (Tarefa 79, 01/11/2026)
+
+Reestruturação da IA, fase 2 (C15 e C81). Num número dividido entre agentes, quem manda a IA assumir diz qual agente.
+
+**O que aparece na tela**
+- **Bloco "Passar para a IA"** (construtor): com um agente só no cliente, aparece "IA que assume: <nome>" e o id dele vai em `config.sales_agent_id`. Com algum número dividido, aparece **Escolha qual agente atende** (botões de escolha) e grava o id escolhido. Sem número dividido nenhum, o bloco segue como antes (a IA do número da conversa).
+- **Ativar IA pra este lead** (`ActivateAiDialog`): lista os agentes do **número da conversa** (pelos números do agente, na ordem do número), não pelo espelho `inbox_id`. Com um agente, vem marcado e a escolha some; com mais de um, pede **Escolha qual agente atende** e o *Ativar IA* só liga depois de escolher. O imóvel padrão acompanha o agente escolhido.
+- **Religar IA neste lead** (menu *⋯* da conversa): num número dividido abre a janela *ReligarIaDialog* pedindo o agente; o servidor recebe `sales_agent_id` em `POST /conversations/:id/sales_agent`.
+
+**Decisões**
+1. `features/salesAgents/agentesDoNumero.ts` é a regra única: agente vivo (não juntado), que responde ao vivo (não é só de follow-up), com o número ligado, ordenado por `position`; os ligados vêm no lugar dos desligados. Sem escolha, o servidor usa o primeiro do número (fluxo antigo segue).
+2. A escolha usa `EscolhaDoAgente` (`components/base`), em `BotoesDeEscolha`.
+
+**Armadilhas**
+- O liga/desliga do robô no topo da conversa (`useIaDaConversa`) e o do cartão do funil (`LeadQuickActions`) ainda ligam sem escolha: num número dividido o servidor usa o primeiro agente do número. Entram numa próxima rodada.
+
+Código: `features/salesAgents/agentesDoNumero.ts`, `components/base/EscolhaDoAgente.tsx`, `components/flowAutomations/EscolhaDoAgenteDoBloco.tsx`, `components/chat/conversation/{ActivateAiDialog,ReligarIaDialog,ConversationActionsDropdown}.tsx`, `services/chat/chatService.ts`.
+
+## Agenda de Visitas: o tipo do compromisso (Tarefa 79, 01/11/2026)
+
+Spec C72. O aviso do servidor já diz "Visita, Videochamada, Reunião ou Ligação marcada" pelo `kind` do compromisso; a Agenda passa a mostrar o mesmo tipo.
+
+**O que aparece na tela**
+- Na lista da Agenda, a linha da situação ganha o tipo: "Agendada · Videochamada". Sem tipo, vale **Visita**.
+- No calendário (Semana e Dia), o bloco escreve o tipo ao lado da hora só quando não é Visita ("10:00 às 11:00 · Reunião"); a pílula do mês leva o tipo no nome acessível. Visita comum fica como sempre.
+
+**Armadilhas**
+- O endereço `GET /visits` ainda **não devolve** o `kind` no `serialize_visit` do backend: até ele devolver, toda linha mostra "Visita". A tela já lê `visit.kind` quando vier.
+
+Código: `features/visits/tipoDaVisita.ts`, `PecaDaVisita.tsx`, `pages/Customer/Visits/Visits.tsx`, `services/visits/visitsService.ts`. Specs: `tipoDaVisita.spec.ts`, `PecaDaVisita.spec.tsx`.

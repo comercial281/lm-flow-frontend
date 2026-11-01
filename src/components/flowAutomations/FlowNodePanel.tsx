@@ -43,6 +43,7 @@ import { FlowBlockDialog } from './FlowBlockDialog';
 import { NotificationFields } from './NotificationFields';
 import { isNotifyAction } from '@/features/flowAutomations/notification';
 import { LinhaDoEnvio, MessageBlockFields } from './MessageBlockFields';
+import { EscolhaDoAgenteDoBloco } from './EscolhaDoAgenteDoBloco';
 import { flowNumberAiLine, flowNumberMessageLine, type FlowNumberView } from '@/features/flowAutomations/flowNumber';
 
 interface Props {
@@ -452,10 +453,13 @@ export function FlowNodePanel({ node, resources, onClose, onSave, onDirtyChange,
         );
       case 'hand_to_ai':
         return (
-          <p className="text-sm">
-            {(numeroDoFluxo && flowNumberAiLine(numeroDoFluxo))
-              || 'Quem atende: a IA do número da conversa do lead. Se esse número não tiver IA ligada, nada acontece.'}
-          </p>
+          <div className="space-y-3">
+            <p className="text-sm">
+              {(numeroDoFluxo && flowNumberAiLine(numeroDoFluxo))
+                || 'Quem atende: a IA do número da conversa do lead. Se esse número não tiver IA ligada, nada acontece.'}
+            </p>
+            <EscolhaDoAgenteDoBloco config={config} onChange={setConfig} />
+          </div>
         );
       case 'disable_ai':
         return <p className="text-sm">Pra religar, use o bloco Passar para a IA ou o botão no card do lead.</p>;

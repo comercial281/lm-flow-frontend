@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { FLOW_NODE_DEFS } from '@/types/flowAutomations';
 import { ACTION_TYPE_LABELS } from '@/services/leadAutomation/leadAutomationService';
-import { freshBlockConfig, isVisibleKind, isVisibleNode, paletteGroups, paletteItems, blockLabel, HIDDEN_BLOCK_NOTICE } from './palette';
+import { configDoBlocoNovo, freshBlockConfig, isVisibleKind, isVisibleNode, paletteGroups, paletteItems, blockLabel, HIDDEN_BLOCK_NOTICE } from './palette';
 import { summaryLine } from '@/components/flowAutomations/FlowNodeCard';
 
 const node = (kind: string, config: Record<string, unknown> = {}) => ({
@@ -113,5 +113,32 @@ describe('paleta da sprint 2', () => {
 
   it('o sino não fala do Hub', () => {
     expect(FLOW_NODE_DEFS.find(d => d.kind === 'notify_bell')?.label).not.toMatch(/hub/i);
+  });
+});
+
+describe('configDoBlocoNovo (não mandar se a IA já estiver conversando)', () => {
+  const item = (kind: string) => ({ key: kind, kind, label: kind, group: 'message', config: { a: 1 } }) as never;
+
+  it('com lead.created liga nos 3 tipos que mandam mensagem', () => {
+    for (const kind of ['send_whatsapp', 'sequence', 'funnel']) {
+      expect(configDoBlocoNovo(item(kind), 'lead.created').skip_if_ai_talking).toBe(true);
+    }
+  });
+
+  it('outro gatilho não liga', () => {
+    expect(configDoBlocoNovo(item('send_whatsapp'), 'lead.message_received')).not.toHaveProperty('skip_if_ai_talking');
+    expect(configDoBlocoNovo(item('send_whatsapp'), null)).not.toHaveProperty('skip_if_ai_talking');
+  });
+
+  it('bloco que não manda mensagem nunca recebe a chave', () => {
+    for (const kind of ['wait', 'add_label', 'hand_to_ai', 'condition']) {
+      expect(configDoBlocoNovo(item(kind), 'lead.created')).not.toHaveProperty('skip_if_ai_talking');
+    }
+  });
+
+  it('é cópia: não muda a config do item da paleta', () => {
+    const it0 = item('send_whatsapp');
+    configDoBlocoNovo(it0, 'lead.created');
+    expect(it0.config).toEqual({ a: 1 });
   });
 });
