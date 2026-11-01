@@ -77,9 +77,15 @@ export function condicaoEmEdicao(c: Parcial): CondicaoEmEdicao {
   };
 }
 
-/** Lê pt-BR de verdade: ponto é milhar, vírgula é centavos ("R$ 1.500,50" -> 1500.5; "15.000" -> 15000). */
+/**
+ * Lê pt-BR de verdade: ponto é milhar, vírgula é centavos ("R$ 1.500,50" -> 1500.5; "15.000" -> 15000).
+ * Sem vírgula, UM ponto seguido de 1 ou 2 dígitos no fim é decimal ("899.90" -> 899.9): teclado de
+ * celular que só tem ponto. "1.500" e "1.500.000" seguem milhar.
+ */
 export function numeroDoCampo(texto: string): number | null {
-  const limpo = texto.replace(/R\$/gi, '').replace(/\s/g, '').replace(/\./g, '').replace(',', '.');
+  const semMoeda = texto.replace(/R\$/gi, '').replace(/\s/g, '');
+  const pontoDecimal = !semMoeda.includes(',') && /^[^.]*\.\d{1,2}$/.test(semMoeda);
+  const limpo = pontoDecimal ? semMoeda : semMoeda.replace(/\./g, '').replace(',', '.');
   if (!/\d/.test(limpo)) return null;
   const n = Number(limpo.replace(/[^\d.]/g, ''));
   return Number.isFinite(n) ? n : null;

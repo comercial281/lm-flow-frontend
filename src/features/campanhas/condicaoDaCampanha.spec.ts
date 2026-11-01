@@ -59,6 +59,12 @@ describe('condicaoParaGravar', () => {
     expect(numeroDoCampo('R$ 1.500,50')).toBe(1500.5);
     expect(numeroDoCampo('15.000')).toBe(15000);
     expect(numeroDoCampo('899,9')).toBe(899.9);
+    // Teclado de celular com só ponto: um ponto com 1 ou 2 dígitos no fim é decimal.
+    expect(numeroDoCampo('899.90')).toBe(899.9);
+    expect(numeroDoCampo('899.9')).toBe(899.9);
+    expect(numeroDoCampo('1500.5')).toBe(1500.5);
+    expect(numeroDoCampo('1.500')).toBe(1500);
+    expect(numeroDoCampo('1.500.000')).toBe(1500000);
   });
   it('converte dinheiro digitado e corta a observação no teto', () => {
     const r = condicaoParaGravar({ ...vazioDaCondicao(), down_payment_from: 'R$ 1.500', installment_from: '900', note: 'a'.repeat(400) });
