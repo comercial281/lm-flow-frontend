@@ -109,6 +109,8 @@ export function emBranco(t: SalesAgentTrigger): boolean {
       return t.mode === 'code' && !(t.code ?? '').trim();
     case 'form':
       return !(t.form_ids ?? []).length;
+    case 'campaign':
+      return !(t.campaign_link_ids ?? []).length;
     case 'pipeline_stage':
       return !t.stage_id;
     default:

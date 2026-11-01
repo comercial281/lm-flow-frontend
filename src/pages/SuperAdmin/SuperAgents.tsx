@@ -8,12 +8,11 @@ import { Seletor } from '@/components/base/Seletor';
 import { useConfirmacao, type PedidoDeConfirmacao } from '@/hooks/useConfirmacao';
 import {
   superAgentsService,
-  MODE_LABELS,
   type SuperAgent,
   type SuperAgentPatch,
   type ModelOption,
 } from '@/services/superAdmin/superAgentsService';
-import { ESQUELETO, PAGINA, SECAO, SELO, TITULO_SECAO } from '@/pages/Admin/Area/estilo';
+import { ESQUELETO, PAGINA, SECAO, TITULO_SECAO } from '@/pages/Admin/Area/estilo';
 
 type Confirmar = (pedido: PedidoDeConfirmacao) => Promise<boolean>;
 
@@ -133,7 +132,6 @@ function AgentRow({
   onPatched: (p: Partial<SuperAgent>) => void;
 }) {
   const [saving, setSaving] = useState(false);
-  const [mode, setMode] = useState(agent.mode);
   const [keyword, setKeyword] = useState(agent.trigger_keyword ?? '');
   const [hoursStart, setHoursStart] = useState('');
   const [hoursEnd, setHoursEnd] = useState('');
@@ -196,7 +194,7 @@ function AgentRow({
   const selectedModel = catalog.find(m => m.id === model);
 
   const saveConfig = () => {
-    const patch: SuperAgentPatch = { mode, trigger_keyword: keyword.trim() || null };
+    const patch: SuperAgentPatch = { trigger_keyword: keyword.trim() || null };
     if (inboxId && inboxId !== agent.inbox_id) patch.inbox_id = inboxId;
     if (model !== (agent.model ?? '')) patch.model = model || null;
     if (testModel !== (agent.test_model ?? '')) patch.test_model = testModel || null;
@@ -218,7 +216,6 @@ function AgentRow({
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <span className="truncate text-sm font-medium text-foreground">{agent.name}</span>
-            <span className={`${SELO} text-muted-foreground`}>{MODE_LABELS[agent.mode] ?? agent.mode}</span>
           </div>
           <p className="mt-0.5 flex items-center gap-3 text-[11px] text-muted-foreground">
             {agent.inbox_name && <span className="flex items-center gap-1"><MessageSquare className="h-3 w-3" aria-hidden="true" />{agent.inbox_name}</span>}
@@ -246,14 +243,6 @@ function AgentRow({
 
       {open && (
         <div className="flex flex-col gap-3 border-t border-border p-3">
-          <div>
-            <Label htmlFor={`modo-${agent.id}`}>Modo</Label>
-            <Seletor id={`modo-${agent.id}`} value={mode} onChange={e => setMode(e.target.value)} className="mt-1 w-full">
-              {Object.entries(MODE_LABELS).map(([v, l]) => (
-                <option key={v} value={v}>{l}</option>
-              ))}
-            </Seletor>
-          </div>
           <div>
             <Label htmlFor={`numero-${agent.id}`} className="flex items-center gap-1"><MessageSquare className="h-3.5 w-3.5" aria-hidden="true" /> Número de WhatsApp</Label>
             <Seletor id={`numero-${agent.id}`} value={inboxId} onChange={e => setInboxId(e.target.value)} className="mt-1 w-full">

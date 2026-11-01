@@ -20,7 +20,7 @@ describe('lições no serviço', () => {
     get.mockResolvedValue({ data: { data: [{ id: 'l1', kind: 'rule', content: 'x', enabled: true }] } });
     const r = await salesAgentsService.listLessons('ia-1');
     expect(r.limites).toEqual(LIMITES_PADRAO);
-    expect(r.licoes[0]).toMatchObject({ in_use: true, origin: 'manual' });
+    expect(r.licoes[0]).toMatchObject({ in_use: true, origin: 'equipe' });
   });
 
   it('edita pelo PATCH', async () => {

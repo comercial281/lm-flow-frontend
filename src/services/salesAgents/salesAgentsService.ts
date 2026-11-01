@@ -1,8 +1,6 @@
 import api from '@/services/core/api';
 import type { AgentPerformance } from '@/types/aiResults';
 
-export type SalesAgentMode = 'seller' | 'sdr' | 'assistant';
-
 /**
  * As TRÊS ESCOLHAS da IA (refatoração, entrega 2). O servidor devolve persona e
  * alcance sempre RESOLVIDOS (coluna, senão lido das antigas: voz em primeira pessoa
@@ -15,6 +13,122 @@ export type PersonaDaIa = 'broker' | 'owner' | 'assistant';
 export type AlcanceDaIa = 'qualify' | 'visit';
 export type TomDaIa = 'close' | 'formal';
 export type EmojiDaIa = 'none' | 'light';
+
+/**
+ * Os CONTRATOS da reestruturação da IA (fases 2 a 6). Onde o servidor manda nulo com
+ * sentido ("herda do agente", "agente ainda não migrado"), o tipo é `| null`, nunca
+ * opcional: a tela precisa distinguir "não veio" de "é nulo de propósito".
+ */
+
+/** O trabalho do agente. Nulo = agente ainda não migrado. */
+export type Job = 'filtra_passa' | 'leva_visita';
+/** O que ele oferece como próximo passo. */
+export type NextStep = 'visita' | 'videochamada' | 'reuniao' | 'ligacao';
+/** O que a casa atende. Nulo no agente = não migrado. */
+export type Marca = 'venda' | 'locacao' | 'leilao' | 'empreendimento';
+/** Os quatro caminhos de fábrica da intenção (chaves de `serves_intents` e `audience_intents`). */
+export type Intencao = 'moradia' | 'investimento' | 'primeiro_imovel' | 'troca';
+/** Onde o atendimento continua depois do repasse (fase 5). Nulo nos destinos que não escolhem. */
+export type ContinueAt = 'corretor_number' | 'same_number' | 'service_number';
+
+export type QuemFala = 'consultora' | 'corretor' | 'dono_gerente';
+/** A ficha de um NÚMERO: só muda o que é diferente da casa (campo ausente herda). */
+export interface Voz {
+  kind?: QuemFala;
+  name?: string;
+  gender?: 'ele' | 'ela';
+  intro?: string;
+}
+/** A ficha da CASA (a do agente): a do número mais o endereço do escritório. */
+export interface HouseVoice extends Voz {
+  office_address?: string;
+}
+
+/** As cinco exceções de repasse que a casa pode ligar, e as escritas à mão. */
+export type ExcecaoPronta = 'recusou_documento' | 'pediu_ligacao' | 'nao_sei' | 'pediu_pra_visitar' | 'objecao_sem_contorno';
+export interface HandoffExceptions {
+  prontas: Record<ExcecaoPronta, boolean>;
+  escritas: string[];
+}
+
+/** Um número do agente (a lista vem no próprio agente, do mais antigo pro mais novo). */
+export interface AgentNumber {
+  id: string;
+  inbox_id: string;
+  phone: string | null;
+  inbox_name: string;
+  enabled: boolean;
+  connected: boolean;
+  /** Nulo = usa a ficha da casa. */
+  voice: Voz | null;
+  /** Nulo = herda os gatilhos do agente; `[]` = sem gatilho. */
+  triggers: SalesAgentTrigger[] | null;
+  /** A ordem dos agentes dentro do número (número dividido). */
+  position: number;
+  owner_user_id: string | null;
+  owner_name: string | null;
+}
+/** A resposta de criar/mudar um número traz os avisos do número dividido. */
+export interface AgentNumberComAvisos extends AgentNumber {
+  warnings: string[];
+}
+export interface NovoNumero {
+  inbox_id: string;
+  voice?: Voz | null;
+  triggers?: SalesAgentTrigger[] | null;
+  enabled?: boolean;
+  position?: number;
+}
+/** `voice: null` volta pra ficha da casa; `triggers: null` volta pros gatilhos do agente. */
+export type MudancaDoNumero = Partial<Omit<NovoNumero, 'inbox_id'>>;
+
+/** Um quadro de agente (30 dias). Número sem conversa não vem em `numbers`: ausente é 0. */
+export interface ResumoDoAgente {
+  id: string;
+  conversations: number;
+  handoffs: number;
+  /** Nula quando nenhum repasse foi respondido. */
+  median_reply_minutes: number | null;
+  numbers: { inbox_id: string; conversations: number }[];
+}
+
+export type TopicoDeFabrica = 'mcmv' | 'financiamento' | 'fgts' | 'compra_planta' | 'custos_compra' | 'compra_leilao' | 'locacao' | 'vender_atual';
+/** Um dos 8 conhecimentos de fábrica (só leitura). */
+export interface ConhecimentoDeFabrica {
+  topic: TopicoDeFabrica;
+  title: string;
+  body: string | null;
+  reviewed_at: string | null;
+  enabled: boolean;
+  by_marks: boolean;
+}
+
+/** Minha ficha: o número de que o corretor é dono, com a voz dele e a da casa. */
+export interface MinhaFicha {
+  id: string;
+  inbox_id: string;
+  phone: string | null;
+  inbox_name: string;
+  agent_id: string;
+  agent_name: string;
+  voice: Voz | null;
+  house_voice: HouseVoice;
+}
+/** Só estes três campos o servidor aceita do corretor. */
+export interface CamposDaMinhaFicha {
+  name?: string;
+  gender?: 'ele' | 'ela' | '';
+  intro?: string;
+}
+
+export interface LinkDoImovel {
+  link: string;
+  message: string;
+  number: string | null;
+  property: { id: string; code: string; title: string } | null;
+}
+
+export interface RegraDaCasa { objecao: string; resposta: string }
 
 export type ActiveHoursMode = 'always' | 'outside_business' | 'custom';
 export interface ActiveHoursWindow {
@@ -36,7 +150,7 @@ export interface ActiveHours {
   windows?: ActiveHoursWindow[];
 }
 
-export type SalesAgentTriggerType = 'keyword' | 'origin' | 'property' | 'pipeline_stage' | 'pipeline' | 'tag' | 'form';
+export type SalesAgentTriggerType = 'keyword' | 'origin' | 'property' | 'pipeline_stage' | 'pipeline' | 'tag' | 'form' | 'campaign';
 /** any = QUALQUER gatilho da lista ativa (padrão/OR). all = TODOS precisam bater (AND). */
 export type SalesAgentTriggerMatchMode = 'any' | 'all';
 export interface SalesAgentTrigger {
@@ -48,13 +162,44 @@ export interface SalesAgentTrigger {
   stage_id?: string;     // pipeline_stage
   match_type?: 'contains' | 'equals'; // keyword: contém a palavra ou é exatamente ela
   form_ids?: string[];   // form: form_id das configs de Origem → Formulários
+  campaign_link_ids?: string[]; // campaign: as linhas de Campanhas (campaign_links)
 }
 
 export interface SalesAgent {
   id: string;
   name: string;
   enabled: boolean;
-  mode: SalesAgentMode;
+  /** O trabalho. Nulo = agente ainda não migrado (o cérebro lê as colunas antigas). */
+  job: Job | null;
+  /** O que ele oferece como próximo passo. Nulo = não migrado. */
+  next_steps: NextStep[] | null;
+  /** Exceções de repasse. Nulo = não migrado. */
+  handoff_exceptions: HandoffExceptions | null;
+  /** A ficha da casa. Nula = não migrado (o servidor monta pela regra da migração). */
+  house_voice: HouseVoice | null;
+  /** Juntado a outro agente: o código novo trata como "não existe mais". */
+  absorbed_into_id?: string | null;
+  /** Os números do agente, do mais antigo pro mais novo. */
+  numbers: AgentNumber[];
+  /** O que a casa atende. Nulo = não migrado. */
+  serves: Marca[] | null;
+  /** Quantos imóveis ativos há em cada marca (o servidor conta; a tela só mostra). */
+  catalog_marks: Record<Marca, number>;
+  /** Conhecimentos de fábrica que a casa desligou (vazia = todos ligados). */
+  factory_knowledge_off: TopicoDeFabrica[] | null;
+  house_rules: string[];
+  house_objections: RegraDaCasa[];
+  /** Avisos que não travam a gravação das regras da casa. */
+  house_rules_notices?: string[];
+  handoff_continue_at: ContinueAt | null;
+  handoff_service_inbox_id: string | null;
+  handoff_arrival_message: string | null;
+  /** O pino de localização (chave própria; cliente pode mexer). */
+  location_pin_enabled?: boolean;
+  /** Lembrete do Jev: o modo gravado (campo de motor, só a equipe grava) e o efetivo. */
+  material_hint_mode?: 'off' | 'sombra' | 'ligado' | null;
+  material_hint_mode_effective?: 'off' | 'sombra' | 'ligado' | null;
+  lessons_count?: number;
   trigger_keyword: string | null;
   persona_role: string | null;
   persona_goal: string | null;
@@ -317,6 +462,8 @@ export interface SalesAgentOpening {
   label?: string;
   origins?: string[];   // casa se a origem do lead (campanha/anúncio/plataforma) contém algum
   form_ids?: string[];  // casa pelo ID do formulário do Meta
+  /** A campanha dona da abertura: um formulário (`form`) ou uma linha de Campanhas (`link`). */
+  ref?: { kind: 'form' | 'link'; id: string };
   keywords?: string[];  // casa se a 1ª mensagem do lead contém alguma
   greeting?: string;
   intent_question?: string;
@@ -575,7 +722,21 @@ export interface GeneratedAgentConfig {
 export interface SalesAgentPayload {
   name: string;
   enabled?: boolean;
-  mode?: SalesAgentMode;
+  job?: Job;
+  next_steps?: NextStep[];
+  handoff_exceptions?: { prontas: Partial<Record<ExcecaoPronta, boolean>>; escritas: string[] };
+  house_voice?: HouseVoice;
+  /** A tela nova manda só `serves` (nunca `locacao_enabled` junto). */
+  serves?: Marca[];
+  factory_knowledge_off?: TopicoDeFabrica[];
+  house_rules?: string[];
+  house_objections?: RegraDaCasa[];
+  handoff_continue_at?: ContinueAt | null;
+  handoff_service_inbox_id?: string | null;
+  handoff_arrival_message?: string | null;
+  location_pin_enabled?: boolean;
+  /** Campo de MOTOR: só a equipe grava (de cliente o servidor descarta). */
+  material_hint_mode?: 'off' | 'sombra' | 'ligado';
   trigger_keyword?: string | null;
   persona_role?: string | null;
   persona_goal?: string | null;
@@ -876,7 +1037,10 @@ export interface RehearsalForm {
 }
 
 export type SalesAgentLessonKind = 'rule' | 'good_example' | 'bad_example';
-export type OrigemDaLicao = 'manual' | 'suggestion';
+/** De onde veio a lição. O servidor antigo mandava `manual` e `suggestion`: a leitura traduz. */
+export type OrigemDaLicao = 'sugestao' | 'correcao' | 'equipe';
+/** O assunto da lição. Nulo = sem assunto. */
+export type TemaDaLicao = 'preco' | 'tom' | 'objecao' | 'visita' | 'documento' | 'abertura' | 'outro';
 export interface SalesAgentLesson {
   id: string;
   kind: SalesAgentLessonKind;
@@ -884,15 +1048,53 @@ export interface SalesAgentLesson {
   context: string | null;
   enabled: boolean;
   created_at: string;
-  /** 'suggestion' = veio do "Aplicar" de uma sugestão do Painel. */
   origin: OrigemDaLicao;
+  topic: TemaDaLicao | null;
+  /** O "jeito errado" e o "por quê" (até 200): só no exemplo bom. */
+  bad_content: string | null;
+  why: string | null;
   /** Entra no prompt hoje (régua do servidor: as N ligadas mais novas de cada tipo). */
   in_use: boolean;
 }
 
 /** Quantas ela lê: lições por tipo e conversas reais. Vem do servidor (meta.limits). */
-export interface LimitesDasLicoes { per_kind: number; conversations: number }
+export interface LimitesDasLicoes {
+  /** Ponte da tela antiga: sai junto com ela. */
+  per_kind: number;
+  conversations: number;
+  rules?: { count: number; chars: number };
+  examples?: { count: number; chars: number };
+}
 export const LIMITES_PADRAO: LimitesDasLicoes = { per_kind: 12, conversations: 6 };
+
+/** O contador de uma página (regras, ou exemplos bons e ruins somados). */
+export interface ContadorDasLicoes {
+  valendo: number;
+  pausadas: number;
+  fora_por_tamanho: number;
+  cabem: number;
+}
+export interface ContadoresDasLicoes { regras: ContadorDasLicoes; exemplos: ContadorDasLicoes }
+
+const CABEM_REGRAS = 40;
+const CABEM_EXEMPLOS = 20;
+
+/** Tradução do `origin` da resposta antiga. */
+function origemDaLicao(origin: unknown): OrigemDaLicao {
+  if (origin === 'sugestao' || origin === 'suggestion') return 'sugestao';
+  if (origin === 'correcao') return 'correcao';
+  return 'equipe';
+}
+
+/** Servidor sem `meta.counter`: monta da lista, pela mesma régua (pausada, valendo, fora do prompt). */
+function contarDaLista(licoes: SalesAgentLesson[], cabem: number): ContadorDasLicoes {
+  return {
+    valendo: licoes.filter((l) => l.enabled && l.in_use).length,
+    pausadas: licoes.filter((l) => !l.enabled).length,
+    fora_por_tamanho: licoes.filter((l) => l.enabled && !l.in_use).length,
+    cabem,
+  };
+}
 
 // --- sugestões da IA e relatório semanal ---
 
@@ -1121,6 +1323,11 @@ const BASE = '/sales_agents';
 /** O que a duplicação devolve: a IA nova + o que foi copiado junto. */
 export interface DuplicatedSalesAgent extends SalesAgent {
   duplicated?: { lessons: number; documents: number; warnings: string[] };
+}
+
+/** Resposta sem `warnings` (servidor mais velho) vale lista vazia. */
+function comAvisos(numero: AgentNumberComAvisos): AgentNumberComAvisos {
+  return { ...numero, warnings: numero.warnings ?? [] };
 }
 
 export const salesAgentsService = {
@@ -1400,16 +1607,84 @@ export const salesAgentsService = {
     return (res.data as { data: SalesAgentDocument }).data;
   },
 
+  // --- números do agente (fase 2) ---
+
+  async criarNumero(agentId: string, body: NovoNumero): Promise<AgentNumberComAvisos> {
+    const res = await api.post(`${BASE}/${agentId}/numbers`, body);
+    return comAvisos((res.data as { data: AgentNumberComAvisos }).data);
+  },
+
+  /** `{triggers: null}` e `{voice: null}` vão no corpo como nulo: é "herda do agente" e "usa a ficha da casa". */
+  async atualizarNumero(agentId: string, numberId: string, body: MudancaDoNumero): Promise<AgentNumberComAvisos> {
+    const res = await api.patch(`${BASE}/${agentId}/numbers/${numberId}`, body);
+    return comAvisos((res.data as { data: AgentNumberComAvisos }).data);
+  },
+
+  async tirarNumero(agentId: string, numberId: string): Promise<void> {
+    await api.delete(`${BASE}/${agentId}/numbers/${numberId}`);
+  },
+
+  // --- quadros, conhecimento de fábrica e link (fase 6) ---
+
+  /** Os quadros da página de agentes (30 dias). */
+  async resumos(): Promise<ResumoDoAgente[]> {
+    const res = await api.get(`${BASE}/summaries`);
+    return (res.data as { data?: ResumoDoAgente[] }).data ?? [];
+  },
+
+  /** Os 8 conhecimentos de fábrica do agente (só leitura). */
+  async conhecimentosDeFabrica(agentId: string): Promise<ConhecimentoDeFabrica[]> {
+    const res = await api.get(`${BASE}/${agentId}/factory_knowledge`);
+    return (res.data as { data?: ConhecimentoDeFabrica[] }).data ?? [];
+  },
+
+  /** O link de WhatsApp de um imóvel (código curto no lugar do UUID). */
+  async criarLink(agentId: string, params: { property_code: string; conversation_id?: string; inbox_id?: string }): Promise<LinkDoImovel> {
+    const res = await api.get(`${BASE}/${agentId}/property_link`, { params });
+    return (res.data as { data: LinkDoImovel }).data;
+  },
+
+  // --- Minha ficha (o corretor dono do número) ---
+
+  async minhasFichas(): Promise<MinhaFicha[]> {
+    const res = await api.get('/sales_agent_numbers/own_fichas');
+    return (res.data as { data?: MinhaFicha[] }).data ?? [];
+  },
+
+  /** Só `name`, `gender` e `intro` viajam: o servidor recusa o resto inteiro. */
+  async gravarMinhaFicha(numberId: string, ficha: CamposDaMinhaFicha): Promise<MinhaFicha> {
+    const voice: CamposDaMinhaFicha = {};
+    if (ficha.name !== undefined) voice.name = ficha.name;
+    if (ficha.gender !== undefined) voice.gender = ficha.gender;
+    if (ficha.intro !== undefined) voice.intro = ficha.intro;
+    const res = await api.patch(`/sales_agent_numbers/${numberId}/own_ficha`, { voice });
+    return (res.data as { data: MinhaFicha }).data;
+  },
+
   // --- aprendizado (lições: feedback -> regra / exemplo) ---
 
-  async listLessons(agentId: string): Promise<{ licoes: SalesAgentLesson[]; limites: LimitesDasLicoes }> {
+  async listLessons(agentId: string): Promise<{ licoes: SalesAgentLesson[]; limites: LimitesDasLicoes; contadores: ContadoresDasLicoes }> {
     const res = await api.get(`${BASE}/${agentId}/lessons`);
-    const body = res.data as { data?: Partial<SalesAgentLesson>[]; meta?: { limits?: LimitesDasLicoes } };
+    const body = res.data as {
+      data?: Partial<SalesAgentLesson>[];
+      meta?: { limits?: LimitesDasLicoes; counter?: { rules?: ContadorDasLicoes; examples?: ContadorDasLicoes } };
+    };
     // Servidor anterior ao Ensinar novo não manda origin/in_use/limits: tudo conta como valendo.
     const licoes = (body.data ?? []).map((l) => ({
-      origin: 'manual', in_use: true, ...l,
+      in_use: true, topic: null, bad_content: null, why: null, ...l, origin: origemDaLicao(l.origin),
     }) as SalesAgentLesson);
-    return { licoes, limites: body.meta?.limits ?? LIMITES_PADRAO };
+    const limites = body.meta?.limits ?? LIMITES_PADRAO;
+    const regras = licoes.filter((l) => l.kind === 'rule');
+    const exemplos = licoes.filter((l) => l.kind !== 'rule');
+    const contador = body.meta?.counter;
+    return {
+      licoes,
+      limites,
+      contadores: {
+        regras: contador?.rules ?? contarDaLista(regras, limites.rules?.count ?? CABEM_REGRAS),
+        exemplos: contador?.examples ?? contarDaLista(exemplos, limites.examples?.count ?? CABEM_EXEMPLOS),
+      },
+    };
   },
 
   async createLesson(
@@ -1417,15 +1692,16 @@ export const salesAgentsService = {
     kind: SalesAgentLessonKind,
     content: string,
     context?: string,
+    extra: Partial<Pick<SalesAgentLesson, 'topic' | 'origin' | 'bad_content' | 'why'>> = {},
   ): Promise<SalesAgentLesson> {
-    const res = await api.post(`${BASE}/${agentId}/lessons`, { kind, content, context: context || undefined });
+    const res = await api.post(`${BASE}/${agentId}/lessons`, { kind, content, context: context || undefined, ...extra });
     return (res.data as { data: SalesAgentLesson }).data;
   },
 
   async updateLesson(
     agentId: string,
     lessonId: string,
-    patch: Partial<Pick<SalesAgentLesson, 'content' | 'context' | 'enabled' | 'kind'>>,
+    patch: Partial<Pick<SalesAgentLesson, 'content' | 'context' | 'enabled' | 'kind' | 'topic' | 'bad_content' | 'why'>>,
   ): Promise<SalesAgentLesson> {
     const res = await api.patch(`${BASE}/${agentId}/lessons/${lessonId}`, patch);
     return (res.data as { data: SalesAgentLesson }).data;

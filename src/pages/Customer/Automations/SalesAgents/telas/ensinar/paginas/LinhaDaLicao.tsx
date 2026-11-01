@@ -10,7 +10,7 @@ export const dataCurta = (iso: string) => {
 
 /** "Sugestão aceita" ou "Escrita à mão" (o servidor não guarda quem escreveu). */
 export function SeloDeOrigem({ licao, className }: { licao: SalesAgentLesson; className?: string }) {
-  const sugestao = licao.origin === 'suggestion';
+  const sugestao = licao.origin === 'sugestao';
   return (
     <span className={cn('rounded-full px-2.5 py-0.5 text-xs font-semibold',
       sugestao ? 'bg-primary/10 text-primary' : 'bg-muted text-foreground/80', className)}>

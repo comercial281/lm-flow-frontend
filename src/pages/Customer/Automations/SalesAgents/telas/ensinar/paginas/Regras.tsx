@@ -23,8 +23,8 @@ import type { PropsDaPaginaDoEnsinar } from './tipos';
 type Filtro = 'todas' | 'mao' | 'sugestoes' | 'pausadas';
 const FILTROS: { chave: Filtro; rotulo: string; passa: (l: SalesAgentLesson) => boolean }[] = [
   { chave: 'todas', rotulo: 'Todas', passa: () => true },
-  { chave: 'mao', rotulo: 'Escritas à mão', passa: (l) => l.origin === 'manual' },
-  { chave: 'sugestoes', rotulo: 'Das sugestões', passa: (l) => l.origin === 'suggestion' },
+  { chave: 'mao', rotulo: 'Escritas à mão', passa: (l) => l.origin !== 'sugestao' },
+  { chave: 'sugestoes', rotulo: 'Das sugestões', passa: (l) => l.origin === 'sugestao' },
   { chave: 'pausadas', rotulo: 'Pausadas', passa: (l) => !l.enabled },
 ];
 

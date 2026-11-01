@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { arquivosSemQuando, casosDe, conversasReais, paginaDoEnsinarDaUrl, regrasForaDoLimite, textoDosCasos } from './paginas';
 import type { SalesAgentDocument, SalesAgentLesson } from '@/services/salesAgents/salesAgentsService';
 
-const licao = (p: Partial<SalesAgentLesson>) => ({ id: 'x', kind: 'rule', content: 'c', context: null, enabled: true, created_at: '', origin: 'manual', in_use: true, ...p }) as SalesAgentLesson;
+const licao = (p: Partial<SalesAgentLesson>) => ({ id: 'x', kind: 'rule', content: 'c', context: null, enabled: true, created_at: '', origin: 'equipe', in_use: true, ...p }) as SalesAgentLesson;
 
 describe('registro do Ensinar', () => {
   it('lê a página do endereço; desconhecida ou da cadeia do objeto vira null', () => {

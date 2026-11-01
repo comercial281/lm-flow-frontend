@@ -6,7 +6,7 @@ import { agenteDeTeste } from '@/test/salesAgents/agenteDeTeste';
 import type { Licoes } from '../useLicoes';
 import Regras from './Regras';
 
-const L = (id: string, extra = {}) => ({ id, kind: 'rule', content: `regra ${id}`, context: null, enabled: true, created_at: '2026-10-10T12:00:00Z', origin: 'manual', in_use: true, ...extra });
+const L = (id: string, extra = {}) => ({ id, kind: 'rule', content: `regra ${id}`, context: null, enabled: true, created_at: '2026-10-10T12:00:00Z', origin: 'equipe', in_use: true, ...extra });
 
 function abrir(licoes: object[], extra: Partial<Licoes> = {}) {
   const l: Licoes = { licoes: licoes as never, limites: { per_kind: 12, conversations: 6 }, estado: 'pronto', carregar: vi.fn(),
@@ -26,7 +26,7 @@ describe('Regras', () => {
   });
 
   it('origem: Escrita à mão ou Sugestão aceita', () => {
-    abrir([L('a'), L('c', { origin: 'suggestion' })]);
+    abrir([L('a'), L('c', { origin: 'sugestao' })]);
     expect(screen.getByText('Escrita à mão')).toBeInTheDocument();
     expect(screen.getByText('Sugestão aceita')).toBeInTheDocument();
   });
@@ -58,7 +58,7 @@ describe('Regras', () => {
   });
 
   it('filtro Escritas à mão deixa de fora as sugestões aceitas', async () => {
-    abrir([L('a'), L('b', { origin: 'suggestion' })]);
+    abrir([L('a'), L('b', { origin: 'sugestao' })]);
     await userEvent.click(screen.getByRole('tab', { name: /Escritas à mão/ }));
     expect(screen.getByText('regra a')).toBeInTheDocument();
     expect(screen.queryByText('regra b')).not.toBeInTheDocument();

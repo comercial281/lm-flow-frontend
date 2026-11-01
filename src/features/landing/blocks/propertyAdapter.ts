@@ -15,7 +15,8 @@ export function toLandingProperty(
     code: property.code,
     title: property.title,
     description: property.description,
-    stage: property.stage,
+    // `unknown` (fase não informada) não tem rótulo na vitrine: segue sem fase.
+    stage: property.stage === 'unknown' ? undefined : property.stage,
     salePrice: property.sale_price ?? null,
     displayPrice: property.display_price,
     bedrooms: property.bedrooms ?? null,

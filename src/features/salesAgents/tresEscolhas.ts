@@ -68,7 +68,6 @@ export function novaIaRascunho(): SalesAgentPayload {
   return {
     name: 'Nova IA',
     enabled: false,
-    mode: 'seller',
     inbox_id: null,
     persona_kind: 'assistant',
     reach: 'qualify',

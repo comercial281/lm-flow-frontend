@@ -43,6 +43,7 @@ function newTrigger(type: SalesAgentTriggerType): SalesAgentTrigger {
     case 'pipeline': return { type, mode: 'any', pipeline_id: '' };
     case 'tag': return { type, value: '' };
     case 'form': return { type, form_ids: [] };
+    case 'campaign': return { type, campaign_link_ids: [] };
   }
 }
 

@@ -6,7 +6,7 @@ import { agenteDeTeste } from '@/test/salesAgents/agenteDeTeste';
 import type { Licoes } from '../useLicoes';
 import Exemplos from './Exemplos';
 
-const L = (id: string, kind: string, extra = {}) => ({ id, kind, content: `resp ${id}`, context: `lead ${id}`, enabled: true, created_at: '2026-10-10T12:00:00Z', origin: 'manual', in_use: true, ...extra });
+const L = (id: string, kind: string, extra = {}) => ({ id, kind, content: `resp ${id}`, context: `lead ${id}`, enabled: true, created_at: '2026-10-10T12:00:00Z', origin: 'equipe', in_use: true, ...extra });
 
 function abrir(licoes: object[], conversas = [{ lead: 'Tem varanda?', resposta: 'Tem sim!' }], extra: Partial<Licoes> = {}) {
   const l: Licoes = { licoes: licoes as never, limites: { per_kind: 12, conversations: 1 }, estado: 'pronto', carregar: vi.fn(),
