@@ -34,7 +34,7 @@ export default function JanelaDoMaterial({ agentId, doc, aoFechar, aoSalvo }: {
   const [quando, setQuando] = useState(doc.send_when ?? '');
   const [quandoNao, setQuandoNao] = useState(doc.send_when_not ?? '');
   const [mensagem, setMensagem] = useState(doc.send_caption ?? '');
-  const [umaVez, setUmaVez] = useState(doc.send_once);
+  const [umaVez, setUmaVez] = useState(doc.send_once ?? true); // indefinido = padrão do servidor (uma vez só)
   const [salvando, setSalvando] = useState(false);
 
   const salvar = async () => {

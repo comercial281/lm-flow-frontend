@@ -115,7 +115,55 @@ describe('Da casa', () => {
   });
 });
 
+describe('+ Material deste imóvel', () => {
+  it('link: um POST só, com property_codes; o da casa não manda o campo', async () => {
+    await abrir();
+    await userEvent.click(within(grupo('Residencial Teste')).getByRole('button', { name: '+ Material deste imóvel' }));
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Colar um link' }));
+    let janela = screen.getByRole('dialog', { name: 'Novo link' });
+    await userEvent.type(within(janela).getByLabelText('Nome'), 'Tour do AB01');
+    await userEvent.type(within(janela).getByLabelText('Endereço do link'), 'https://exemplo.test/t');
+    await userEvent.click(within(janela).getByRole('button', { name: 'Criar' }));
+    await waitFor(() => expect(criarLink).toHaveBeenCalledWith('ia-1', { title: 'Tour do AB01', url: 'https://exemplo.test/t', propertyCodes: ['AB01'] }));
+    expect(atualizarDoc).not.toHaveBeenCalled();
+    await userEvent.click(within(await screen.findByRole('dialog', { name: 'Quando ela manda' })).getByRole('button', { name: 'Cancelar' }));
+
+    await userEvent.click(screen.getByRole('button', { name: '+ Material da casa' }));
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Colar um link' }));
+    janela = screen.getByRole('dialog', { name: 'Novo link' });
+    await userEvent.type(within(janela).getByLabelText('Nome'), 'Site');
+    await userEvent.type(within(janela).getByLabelText('Endereço do link'), 'https://exemplo.test/s');
+    await userEvent.click(within(janela).getByRole('button', { name: 'Criar' }));
+    await waitFor(() => expect(criarLink).toHaveBeenLastCalledWith('ia-1', { title: 'Site', url: 'https://exemplo.test/s' }));
+  });
+
+  it('arquivo: o PATCH leva sendable e property_codes', async () => {
+    await abrir();
+    await userEvent.click(within(grupo('Residencial Teste')).getByRole('button', { name: '+ Material deste imóvel' }));
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Subir arquivo' }));
+    await userEvent.upload(screen.getByLabelText('Escolher arquivo de Residencial Teste'), new File(['x'], 'planta.pdf', { type: 'application/pdf' }));
+    await waitFor(() => expect(atualizarDoc).toHaveBeenCalledWith('ia-1', 'arq', { sendable: true, property_codes: ['AB01'] }));
+  });
+
+  it('upload ok e PATCH falho: diz que o arquivo subiu e onde achar', async () => {
+    const { toast } = await import('sonner');
+    const erro = vi.spyOn(toast, 'error').mockImplementation(() => '');
+    atualizarDoc.mockRejectedValue(new Error('x'));
+    await abrir();
+    await userEvent.click(screen.getByRole('button', { name: '+ Material da casa' }));
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Subir arquivo' }));
+    await userEvent.upload(screen.getByLabelText('Escolher arquivo da casa'), new File(['x'], 'a.pdf', { type: 'application/pdf' }));
+    await waitFor(() => expect(erro).toHaveBeenCalledWith(expect.stringContaining('Ensinar > Arquivos')));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+});
+
 describe('De cada imóvel', () => {
+  it('diz que as chaves valem pra todos os imóveis', async () => {
+    await abrir();
+    expect(within(grupo('Residencial Teste')).getAllByText(/vale pra todos os imóveis/).length).toBeGreaterThanOrEqual(3);
+  });
+
   it('o imóvel só mostra o material ligado a ele (material de outro imóvel não aparece)', async () => {
     await abrir();
     const g = within(grupo('Residencial Teste'));

@@ -1618,11 +1618,13 @@ export const salesAgentsService = {
   /** "+ Material da casa" por link: um documento do tipo `url`, que a IA pode mandar ao lead. */
   async criarLink(
     agentId: string,
-    link: { title: string; url: string; sendWhen?: string; sendWhenNot?: string },
+    link: { title: string; url: string; sendWhen?: string; sendWhenNot?: string; propertyCodes?: string[] },
   ): Promise<SalesAgentDocument> {
     const body: Record<string, unknown> = { title: link.title, source_type: 'url', source_url: link.url, sendable: true };
     if (link.sendWhen !== undefined) body.send_when = link.sendWhen;
     if (link.sendWhenNot !== undefined) body.send_when_not = link.sendWhenNot;
+    // Ligado ao imóvel já no POST: criar solto e ligar depois deixaria o link da casa se o PATCH falhasse.
+    if (link.propertyCodes?.length) body.property_codes = link.propertyCodes;
     const res = await api.post(`${BASE}/${agentId}/documents`, body);
     return (res.data as { data: SalesAgentDocument }).data;
   },

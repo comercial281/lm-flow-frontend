@@ -79,6 +79,12 @@ describe('quadros, conhecimento de fábrica e link', () => {
     expect(r.id).toBe('d1');
   });
 
+  it('criarLink com propertyCodes manda property_codes no mesmo POST', async () => {
+    post.mockResolvedValue({ data: { data: { id: 'd1' } } });
+    await salesAgentsService.criarLink('a1', { title: 'Tour', url: 'https://exemplo.com/t', propertyCodes: ['AB01'] });
+    expect(post).toHaveBeenCalledWith('/sales_agents/a1/documents', { title: 'Tour', source_type: 'url', source_url: 'https://exemplo.com/t', sendable: true, property_codes: ['AB01'] });
+  });
+
   it('criarLink sem regras de envio não manda send_when', async () => {
     post.mockResolvedValue({ data: { data: { id: 'd1' } } });
     await salesAgentsService.criarLink('a1', { title: 'Tabela', url: 'https://exemplo.com/t' });

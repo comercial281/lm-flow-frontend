@@ -31,6 +31,7 @@ import type { PropsDaPagina } from '../paginas';
 const TIPO: Record<ListingKind, string> = { development: 'Empreendimento', resale: 'Revenda', auction: 'Leilão' };
 const SEM_REGRA = 'Sem "quando mandar": ela usa o próprio juízo.';
 const MAXIMO_DE_CAMPANHAS = 30;
+const VALE_PRA_TODOS = 'A chave vale pra todos os imóveis.';
 
 function iconeDe(d: SalesAgentDocument): LucideIcon {
   return d.source_type === 'url' ? Link2 : d.media_kind === 'image' ? ImageIcon : d.media_kind === 'video' ? Film : FileText;
@@ -162,30 +163,37 @@ export default function Materiais({ agent, gravar, irPara }: PropsDaPagina) {
   };
 
   // --- criar material ---
-  const abrirNovo = async (criado: SalesAgentDocument, codigo?: string) => {
-    const doc = (await salesAgentsService.updateDocument(agent.id, criado.id, { sendable: true, ...(codigo ? { property_codes: [codigo] } : {}) })) ?? criado;
-    await carregarDocs();
-    setJanela({ tipo: 'material', doc });
-  };
+  // Arquivo: o upload não marca enviável nem liga ao imóvel; o PATCH faz as duas coisas juntas.
   const subir = async (file: File, codigo?: string) => {
     if (ocupado) return;
     const erro = docUploadError(file);
     if (erro) { toast.error(erro); return; }
     setOcupado('0');
+    let criado: SalesAgentDocument;
     try {
-      const criado = await salesAgentsService.uploadFileDocument(agent.id, file, undefined, (p) => setOcupado(String(p)));
-      await abrirNovo(criado, codigo);
+      criado = await salesAgentsService.uploadFileDocument(agent.id, file, undefined, (p) => setOcupado(String(p)));
     } catch {
       toast.error('Não deu pra subir o arquivo. Tente de novo.');
+      setOcupado(null);
+      return;
+    }
+    try {
+      const doc = (await salesAgentsService.updateDocument(agent.id, criado.id, { sendable: true, ...(codigo ? { property_codes: [codigo] } : {}) })) ?? criado;
+      await carregarDocs();
+      setJanela({ tipo: 'material', doc });
+    } catch {
+      void carregarDocs();
+      toast.error('O arquivo subiu, mas não ficou pronto pra mandar. Abra Ensinar > Arquivos e ajuste lá.');
     } finally {
       setOcupado(null);
     }
   };
+  // Link: um POST só, já enviável e (no imóvel) já ligado ao código.
   const criarLink = async (link: { title: string; url: string }, codigo?: string) => {
-    const criado = await salesAgentsService.criarLink(agent.id, link);
+    const criado = await salesAgentsService.criarLink(agent.id, { ...link, ...(codigo ? { propertyCodes: [codigo] } : {}) });
     setJanela(null);
-    if (codigo) await abrirNovo(criado, codigo);
-    else { await carregarDocs(); setJanela({ tipo: 'material', doc: criado }); }
+    await carregarDocs();
+    setJanela({ tipo: 'material', doc: criado });
   };
 
   const regraDoBook = (agent.book_send_rule ?? '').trim();
@@ -222,7 +230,7 @@ export default function Materiais({ agent, gravar, irPara }: PropsDaPagina) {
     }
     return (
       <Linha icone={MapPin} titulo="Localização" selo="do cadastro" quando={QUANDO_PADRAO.pino}
-        aviso="Sai como pino no mapa, com o nome do imóvel e o bairro."
+        aviso={`Sai como pino no mapa, com o nome do imóvel e o bairro. ${VALE_PRA_TODOS}`}
         acao={<Chave rotulo="Mandar a localização" semRotuloVisivel semAviso ligada={agent.location_pin_enabled !== false}
           aoMudar={(v) => gravar({ location_pin_enabled: v })} />} />
     );
@@ -239,7 +247,7 @@ export default function Materiais({ agent, gravar, irPara }: PropsDaPagina) {
             <>
               {i.has_book && (
                 <Linha icone={FileText} titulo="Book" selo="do cadastro" quando={regraDoBook}
-                  aviso={i.book_file_name ?? undefined}
+                  aviso={<>{i.book_file_name ? <span className="block">{i.book_file_name}</span> : null}<span className="block">{VALE_PRA_TODOS}</span></>}
                   acao={(
                     <>
                       <Button type="button" variant="ghost" size="sm" aria-label="Editar a regra do book" onClick={() => setJanela({ tipo: 'book' })}>Editar</Button>
@@ -248,7 +256,7 @@ export default function Materiais({ agent, gravar, irPara }: PropsDaPagina) {
                     </>
                   )} />
               )}
-              <Linha icone={ImageIcon} titulo="Fotos e vídeo" selo="do cadastro" quando={QUANDO_PADRAO.fotos}
+              <Linha icone={ImageIcon} titulo="Fotos e vídeo" selo="do cadastro" quando={QUANDO_PADRAO.fotos} aviso={VALE_PRA_TODOS}
                 acao={<Chave rotulo="Mandar fotos e vídeo" semRotuloVisivel semAviso ligada={agent.rich_media_enabled !== false}
                   aoMudar={(v) => gravar({ rich_media_enabled: v })} />} />
               {i.virtual_tour_url && <Linha icone={Link2} titulo="Tour virtual" selo="do cadastro" quando={QUANDO_PADRAO.tour} aviso={i.virtual_tour_url} />}

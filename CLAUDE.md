@@ -10404,7 +10404,7 @@ Fase 6, tela 3 do protótipo `agentes.html`, página **Materiais** do Configurar
 2. **O pino segue a regra de privacidade de 03/10** (alfinete exato só pra empreendimento) e a restrição "endereço exato". `pinoPode` (`features/salesAgents/materiais.ts`) só espelha a regra do servidor pra explicar na tela; quem decide é o servidor (`Property#public_coordinates?`).
 3. **A janela do material salva sem `send_topics`.** O assunto continua gravado no servidor e saiu da tela. O vínculo com o imóvel é o `property_codes` de hoje (lista de códigos), nunca um `property_id`.
 4. **Material de outro imóvel não aparece**: o servidor tirou o "resgate" de arquivo restrito; a tela só lista o que tem o código do imóvel.
-5. **Upload**: `uploadFileDocument` (com a mesma validação do `docUpload`) e depois `updateDocument({ sendable: true })`, porque o upload não marca enviável. Link: `criarLink` (já nasce enviável). Em "Material deste imóvel" os dois ainda recebem `property_codes: [código]` pelo `updateDocument`.
+5. **Upload**: `uploadFileDocument` (com a mesma validação do `docUpload`) e depois `updateDocument({ sendable: true })`, porque o upload não marca enviável. Link: `criarLink` (já nasce enviável). Em "Material deste imóvel" o link leva `property_codes` no mesmo POST (`criarLink(..., { propertyCodes })`, pra nunca nascer como material da casa se um segundo passo falhar); o arquivo leva `property_codes` no PATCH junto do `sendable`. Upload ok e PATCH falho avisa que o arquivo subiu e manda pro Ensinar > Arquivos.
 6. **"Ver outro imóvel"** é um seletor simples dos 100 imóveis ativos (a dúvida 2 do plano J falava em "a busca"; fica pra quando houver reclamação de carteira grande).
 
 **Armadilhas:**
