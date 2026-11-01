@@ -7,7 +7,7 @@ import Restricoes from './Restricoes';
 
 describe('Restrições', () => {
   it('etiqueta liga/desliga a subchave; própria sai com Tirar e entra com Adicionar', async () => {
-    const gravar = gravarDeTeste('restricoes');
+    const gravar = gravarDeTeste('conducao');
     render(<Restricoes agent={agenteDeTeste({ ai_limits: { address: true, custom: ['Permuta'] } })} inboxes={[]} gravar={gravar} irPara={vi.fn()} diagnostico={null} />);
     await userEvent.click(screen.getByRole('button', { name: 'Desconto' }));
     expect(gravar).toHaveBeenLastCalledWith({ ai_limits: { address: true, discount: true, price: false, iptu: false, custom: ['Permuta'] } },

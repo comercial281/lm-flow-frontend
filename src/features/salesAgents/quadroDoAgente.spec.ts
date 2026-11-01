@@ -3,7 +3,7 @@ import type { AgentNumber, ResumoDoAgente, SalesAgent } from '@/services/salesAg
 import { quadroDoAgente } from './quadroDoAgente';
 
 const numero = (id: string, dono: string, voz: AgentNumber['voice'] = { kind: 'corretor' }) =>
-  ({ id, inbox_id: `in-${id}`, inbox_name: `Canal ${id}`, owner_name: dono, voice: voz, enabled: true, connected: true } as unknown as AgentNumber);
+  ({ id, inbox_id: `in-${id}`, inbox_name: `Canal ${id}`, owner_name: dono, owner_user_id: `u-${id}`, voice: voz, enabled: true, connected: true } as unknown as AgentNumber);
 const agente = (extra: Partial<SalesAgent> = {}) =>
   ({
     id: 'ag-1', name: 'Agente A', enabled: true, inbox_id: 'in-1', job: 'leva_visita', next_steps: ['visita'],

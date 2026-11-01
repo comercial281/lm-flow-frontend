@@ -93,14 +93,14 @@ describe('Destino', () => {
     expect(screen.getByText('Fica com o dono do número')).toBeInTheDocument();
     expect(screen.queryByRole('radio', { name: 'Corretor fixo' })).toBeNull();
     expect(gravar).not.toHaveBeenCalled();
-    await userEvent.click(screen.getByRole('button', { name: 'Mudar persona' }));
-    expect(irPara).toHaveBeenCalledWith('identidade');
+    await userEvent.click(screen.getByRole('button', { name: 'Mudar quem fala' }));
+    expect(irPara).toHaveBeenCalledWith('numeros');
   });
 
   it('IA antiga de corretor com corretor fixo: aviso e conversão explícita', async () => {
     const { gravar } = await abrir(agenteDeTeste()); // broker + handoff user
     await userEvent.click(screen.getByRole('button', { name: 'Passar a entregar pro dono do número' }));
-    expect(gravar).toHaveBeenCalledWith({ persona_kind: 'broker', handoff_target: 'number_owner', handoff_user_id: null, handoff_roleta_config_id: null });
+    expect(gravar).toHaveBeenCalledWith({ handoff_target: 'number_owner', handoff_user_id: null, handoff_roleta_config_id: null });
   });
 
   it('"a roleta deste número" (antiga): nenhum cartão marcado e o aviso', async () => {

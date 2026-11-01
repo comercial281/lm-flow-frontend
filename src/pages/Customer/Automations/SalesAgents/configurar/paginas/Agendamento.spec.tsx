@@ -12,17 +12,17 @@ vi.mock('@/services/salesAgents/salesAgentsService', async (orig) => {
 import Agendamento from './Agendamento';
 
 const abrir = (extra = {}, irPara = vi.fn()) => {
-  const gravar = gravarDeTeste('agendamento');
-  render(<><Agendamento agent={agenteDeTeste(extra)} inboxes={[]} gravar={gravar} irPara={irPara} diagnostico={null} aoChaveGerada={vi.fn()} /><button>fora</button></>);
+  const gravar = gravarDeTeste('modo');
+  render(<><Agendamento agent={agenteDeTeste({ job: 'leva_visita', reach: 'visit', ...extra })} inboxes={[]} gravar={gravar} irPara={irPara} diagnostico={null} aoChaveGerada={vi.fn()} /><button>fora</button></>);
   return { gravar, irPara };
 };
 
 describe('Agendamento', () => {
-  it('sem visita: cadeado e "Mudar o objetivo"', async () => {
-    const { irPara } = abrir({ reach: 'qualify' });
+  it('sem visita: cadeado e "Mudar o modo operante"', async () => {
+    const { irPara } = abrir({ job: 'filtra_passa', reach: 'qualify' });
     expect(screen.getByText('Ela não agenda visita')).toBeInTheDocument();
-    await userEvent.click(screen.getByRole('button', { name: 'Mudar o objetivo' }));
-    expect(irPara).toHaveBeenCalledWith('objetivo');
+    await userEvent.click(screen.getByRole('button', { name: 'Mudar o modo operante' }));
+    expect(irPara).toHaveBeenCalledWith('modo');
   });
 
   it('duração em botões; antecedência grava ao sair, como subchave', async () => {

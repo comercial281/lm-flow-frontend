@@ -142,7 +142,7 @@ export default function Qualificacao({ agent, gravar, irPara }: PropsDaPagina) {
         {agent.transfer_config?.mode !== 'checklist' && (
           <Aviso tom="neutro">
             <p>As obrigatórias só seguram o lead com o critério "Perguntas obrigatórias respondidas".</p>
-            <Button type="button" size="sm" variant="outline" className="mt-2" onClick={() => irPara('criterio')}>Abrir Critério</Button>
+            <Button type="button" size="sm" variant="outline" className="mt-2" onClick={() => irPara('modo')}>Abrir Modo operante</Button>
           </Aviso>
         )}
       </Secao>

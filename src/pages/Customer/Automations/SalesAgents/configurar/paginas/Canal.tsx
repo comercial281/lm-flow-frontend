@@ -100,7 +100,7 @@ export default function Canal({ agent, inboxes, gravar, irPara, diagnostico }: P
         {agent.followup_only && !agent.followup_enabled && (
           <Aviso tom="atencao">
             <p>Com o follow-up desligado, ela não faz nada neste modo.</p>
-            <Button type="button" size="sm" variant="outline" className="mt-2" onClick={() => irPara('followup')}>Abrir Follow-up</Button>
+            <Button type="button" size="sm" variant="outline" className="mt-2" onClick={() => irPara('funil')}>Abrir Funil e follow-up</Button>
           </Aviso>
         )}
       </Secao>

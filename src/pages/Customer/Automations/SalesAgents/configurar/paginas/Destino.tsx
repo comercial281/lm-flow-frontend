@@ -150,7 +150,7 @@ export default function Destino({ agent, gravar, irPara, aoChaveGerada }: PropsD
                   A persona é "O corretor": ela fala como ele, então o lead é dele{agent.number_owner_name ? ` (${agent.number_owner_name})` : ''}.
                 </p>
               </div>
-              <Button type="button" variant="outline" onClick={() => irPara('identidade')}>Mudar persona</Button>
+              <Button type="button" variant="outline" onClick={() => irPara('numeros')}>Mudar quem fala</Button>
             </div>
             {gravado === 'number_owner' && agent.number_owner_id && <AvisoDeTeste agentId={agent.id} />}
             {gravado !== 'number_owner' && (
@@ -160,7 +160,7 @@ export default function Destino({ agent, gravar, irPara, aoChaveGerada }: PropsD
                   <p className="mt-2 text-destructive">{FRASE_SEM_DONO}</p>
                 ) : (
                   <Button type="button" size="sm" variant="outline" className="mt-2"
-                    onClick={() => void gravar({ persona_kind: 'broker', handoff_target: 'number_owner', handoff_user_id: null, handoff_roleta_config_id: null })}>
+                    onClick={() => void gravar({ handoff_target: 'number_owner', handoff_user_id: null, handoff_roleta_config_id: null })}>
                     Passar a entregar pro dono do número
                   </Button>
                 )}

@@ -69,7 +69,7 @@ export default function Criterio({ agent, gravar, irPara }: PropsDaPagina) {
         {quando === 'checklist' && semPerguntas && (
           <Aviso tom="atencao">
             <p>Nenhuma pergunta obrigatória ainda.</p>
-            <Button type="button" size="sm" variant="outline" className="mt-2" onClick={() => irPara('qualificacao')}>Abrir Qualificação</Button>
+            <Button type="button" size="sm" variant="outline" className="mt-2" onClick={() => irPara('conducao')}>Abrir Condução</Button>
           </Aviso>
         )}
         {quando === 'pos_visita' && !visita && <Aviso tom="atencao">Ela só qualifica e passa, então "Visita marcada" nunca acontece. Escolha outro.</Aviso>}

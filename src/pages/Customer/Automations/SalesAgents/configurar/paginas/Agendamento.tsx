@@ -33,8 +33,8 @@ export default function Agendamento({ agent, gravar, irPara }: PropsDaPagina) {
       <div className="flex flex-col items-center gap-3 rounded-2xl border-[1.5px] border-dashed border-border bg-card p-10 text-center">
         <Lock className="h-7 w-7 text-muted-foreground" aria-hidden />
         <b>Ela não agenda visita</b>
-        <p className="text-sm text-muted-foreground">Em Objetivo, ela está como "Qualificar e passar".</p>
-        <Button type="button" onClick={() => irPara('objetivo')}>Mudar o objetivo</Button>
+        <p className="text-sm text-muted-foreground">Em Modo operante, ela está como "Filtra e passa".</p>
+        <Button type="button" onClick={() => irPara('modo')}>Mudar o modo operante</Button>
       </div>
     );
   }

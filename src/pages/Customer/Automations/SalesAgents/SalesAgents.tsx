@@ -191,8 +191,8 @@ export default function SalesAgents() {
       throw { response: { data: { message: motivoEscrito(e) ?? undefined } } };
     }
   }, [selected, aoSalvo]);
-  // Mesmas travas do Ligar de antes; desligar nunca trava (a barra só usa a trava com a IA desligada).
-  const trava = selected ? podeLigar(selected) : null;
+  // Mesmas travas do Ligar de antes, mais o número dividido (os outros agentes entram na conta); desligar nunca trava (a barra só usa a trava com a IA desligada).
+  const trava = selected ? podeLigar(selected, agents) : null;
   const travaDoLigar = trava && !trava.pode && trava.motivo && trava.pagina ? { motivo: trava.motivo, pagina: trava.pagina } : null;
 
   // ⚠️ Trocar de IA ou de tela com uma edição pela metade pergunta

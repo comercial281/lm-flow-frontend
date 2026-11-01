@@ -326,11 +326,11 @@ describe('IA Vendedora · casca', () => {
 });
 
 describe('endereços antigos e telas fora do menu (onda 3)', () => {
-  it('?passo=3 vira a página Abertura do Configurar', async () => {
+  it('?passo=3 vira a página Condução do Configurar', async () => {
     list.mockResolvedValue([ia('ia-1', 'IA de Vendas')]);
     abrir('/ia-vendedora?ia=ia-1&tela=configurar&passo=3');
     await screen.findByText('tela configurar · IA de Vendas');
-    await waitFor(() => expect(endereco()).toBe('?ia=ia-1&tela=configurar&pagina=abertura'));
+    await waitFor(() => expect(endereco()).toBe('?ia=ia-1&tela=configurar&pagina=conducao'));
   });
 
   it('?tela=testar abre a Visão geral com o Testar por cima', async () => {
@@ -375,7 +375,7 @@ describe('endereços antigos e telas fora do menu (onda 3)', () => {
 
   it('em Configurar não há o título duplo da casca', async () => {
     list.mockResolvedValue([ia('ia-1', 'IA de Vendas')]);
-    abrir('/ia-vendedora?ia=ia-1&tela=configurar&pagina=canal');
+    abrir('/ia-vendedora?ia=ia-1&tela=configurar&pagina=numeros');
     await screen.findByText('tela configurar · IA de Vendas');
     expect(screen.queryByRole('heading', { level: 1, name: 'Configurar' })).toBeNull();
   });
@@ -392,13 +392,13 @@ describe('chave Ligada da barra (onda 3)', () => {
     await waitFor(() => expect(screen.getByRole('switch', { name: 'Ligar ou desligar a IA' })).toBeChecked());
   });
 
-  it('IA sem número: a chave trava e o clique abre a página Canal do Configurar', async () => {
+  it('IA sem número: a chave trava e o clique abre a página Números e usuários do Configurar', async () => {
     list.mockResolvedValue([ia('ia-1', 'IA de Vendas', { enabled: false, inbox_id: null })]);
     abrir('/ia-vendedora?ia=ia-1');
     await screen.findByText('tela visao-geral · IA de Vendas');
     expect(screen.getByRole('switch', { name: 'Ligar ou desligar a IA' })).toBeDisabled();
-    await userEvent.click(screen.getByRole('button', { name: 'Não dá pra ligar: Falta o número de WhatsApp. Abrir Canal' }));
-    await waitFor(() => expect(endereco()).toBe('?ia=ia-1&tela=configurar&pagina=canal'));
+    await userEvent.click(screen.getByRole('button', { name: 'Não dá pra ligar: Falta o número de WhatsApp. Abrir Números e usuários' }));
+    await waitFor(() => expect(endereco()).toBe('?ia=ia-1&tela=configurar&pagina=numeros'));
     expect(update).not.toHaveBeenCalled();
   });
 

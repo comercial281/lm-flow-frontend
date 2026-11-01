@@ -7,7 +7,7 @@ import Abertura from './Abertura';
 
 describe('Abertura', () => {
   it('"Com texto de base" mostra o texto (sem gravar); "Automática" limpa o texto gravado', async () => {
-    const gravar = gravarDeTeste('abertura');
+    const gravar = gravarDeTeste('legado');
     render(<><Abertura agent={agenteDeTeste()} inboxes={[]} gravar={gravar} irPara={vi.fn()} diagnostico={null} /><button>fora</button></>);
     await userEvent.click(screen.getByRole('radio', { name: 'Com texto de base' }));
     expect(gravar).not.toHaveBeenCalled();
@@ -20,7 +20,7 @@ describe('Abertura', () => {
   // gravado com a tela dizendo Automática (a IA lida ainda não tinha o texto, e o
   // "limpar" só rodava com texto já gravado).
   it('digitou o texto e clicou "Automática": o último a gravar é o null', async () => {
-    const gravar = gravarDeTeste('abertura');
+    const gravar = gravarDeTeste('legado');
     render(<Abertura agent={agenteDeTeste({ greeting: null })} inboxes={[]} gravar={gravar} irPara={vi.fn()} diagnostico={null} />);
     await userEvent.click(screen.getByRole('radio', { name: 'Com texto de base' }));
     await userEvent.type(screen.getByLabelText('Texto de base'), 'Oi, tudo bem?');
@@ -31,7 +31,7 @@ describe('Abertura', () => {
 
   // Sem blur (o campo some no desmonte e grava o que tinha): o null ainda vem depois.
   it('"Automática" sem o campo perder o foco: o null grava DEPOIS do texto pendente', () => {
-    const gravar = gravarDeTeste('abertura');
+    const gravar = gravarDeTeste('legado');
     render(<Abertura agent={agenteDeTeste({ greeting: null })} inboxes={[]} gravar={gravar} irPara={vi.fn()} diagnostico={null} />);
     fireEvent.click(screen.getByRole('radio', { name: 'Com texto de base' }));
     fireEvent.change(screen.getByLabelText('Texto de base'), { target: { value: 'Oi' } });
@@ -42,7 +42,7 @@ describe('Abertura', () => {
 
   it('variações em tabela, com etiquetas do que cada uma tem, e Editar abre a janela', async () => {
     const openings = [{ label: 'Vila Nova · Stories', origins: [], form_ids: ['123'], keywords: [], image_url: 'https://x/i.png' }];
-    render(<Abertura agent={agenteDeTeste({ openings, greeting: 'Oi' })} inboxes={[]} gravar={gravarDeTeste('abertura')} irPara={vi.fn()} diagnostico={null} />);
+    render(<Abertura agent={agenteDeTeste({ openings, greeting: 'Oi' })} inboxes={[]} gravar={gravarDeTeste('legado')} irPara={vi.fn()} diagnostico={null} />);
     const linha = screen.getByText('Vila Nova · Stories').closest('li')!;
     expect(within(linha).getByText('Formulário')).toBeInTheDocument();
     expect(within(linha).getByText('Imagem')).toBeInTheDocument();
@@ -51,7 +51,7 @@ describe('Abertura', () => {
   });
 
   it('Nova variação grava a lista com a nova no fim', async () => {
-    const gravar = gravarDeTeste('abertura');
+    const gravar = gravarDeTeste('legado');
     render(<Abertura agent={agenteDeTeste()} inboxes={[]} gravar={gravar} irPara={vi.fn()} diagnostico={null} />);
     await userEvent.click(screen.getByRole('button', { name: 'Nova variação' }));
     expect(gravar).toHaveBeenCalledWith({ openings: [{ label: 'Nova campanha', origins: [], form_ids: [], keywords: [] }] });

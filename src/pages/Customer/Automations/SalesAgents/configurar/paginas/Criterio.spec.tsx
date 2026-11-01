@@ -6,7 +6,7 @@ import { gravarDeTeste } from '@/test/salesAgents/gravarDeTeste';
 import Criterio from './Criterio';
 
 const abrir = (extra = {}) => {
-  const gravar = gravarDeTeste('criterio');
+  const gravar = gravarDeTeste('legado');
   render(<Criterio agent={agenteDeTeste(extra)} inboxes={[]} gravar={gravar} irPara={vi.fn()} diagnostico={null} />);
   return gravar;
 };

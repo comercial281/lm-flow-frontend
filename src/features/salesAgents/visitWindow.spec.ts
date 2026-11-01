@@ -49,8 +49,8 @@ describe('a chave da visita no mesmo dia', () => {
 
   // Desde a onda 3 cada página grava os campos DELA (paginas.ts): a chave é
   // subchave do visit_config na página Agendamento, mesclada sobre o último salvo.
-  it('é campo da página Agendamento, por dentro do visit_config', () => {
-    expect(PAGINAS.agendamento.campos).toContain('visit_config.same_day_requires_human');
+  it('é campo da página Modo operante, por dentro do visit_config', () => {
+    expect(PAGINAS.modo.campos).toContain('visit_config.same_day_requires_human');
   });
 
   // A tela precisa dizer o que a chave faz: quem liga e manda uma mensagem de

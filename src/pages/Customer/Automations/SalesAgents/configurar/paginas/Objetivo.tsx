@@ -46,7 +46,7 @@ export default function Objetivo({ agent, gravar, irPara }: PropsDaPagina) {
           )}
           <li className="rounded-lg border border-primary/30 bg-primary/5 px-3 py-2 text-primary">Passa pro corretor</li>
         </ol>
-        {alcance === 'visit' && <Button type="button" variant="outline" className="self-start" onClick={() => irPara('agendamento')}>Abrir Agendamento</Button>}
+        {alcance === 'visit' && <Button type="button" variant="outline" className="self-start" onClick={() => irPara('modo')}>Abrir Modo operante</Button>}
       </Secao>
     </Secoes>
   );

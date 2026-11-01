@@ -55,7 +55,7 @@ describe('Painel → Visão geral', () => {
     });
     const item = screen.getByText(/Nenhum número escolhido/).closest('li')!;
     await userEvent.click(within(item).getByRole('button', { name: 'Corrigir' }));
-    expect(props.aoIr).toHaveBeenCalledWith('configurar', 'canal');
+    expect(props.aoIr).toHaveBeenCalledWith('configurar', 'numeros');
   });
 
   it('WhatsApp desconectado: o "Corrigir" abre a configuração do número, onde se religa', () => {

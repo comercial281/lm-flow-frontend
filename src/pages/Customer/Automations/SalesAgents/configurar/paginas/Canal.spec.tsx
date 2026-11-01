@@ -11,7 +11,7 @@ import Canal from './Canal';
 const INBOXES = [{ id: 'inbox-1', name: 'Vendas (11) 98765-4321', oficial: false }, { id: 'inbox-2', name: 'Lançamentos', oficial: false }, { id: 'inbox-3', name: 'Oficial 1', oficial: true }];
 
 function abrir(agent: SalesAgent = agenteDeTeste(), diagnostico: never | null = null) {
-  const gravar = gravarDeTeste('canal');
+  const gravar = gravarDeTeste('legado');
   const irPara = vi.fn();
   render(<Canal agent={agent} inboxes={INBOXES} gravar={gravar} irPara={irPara} diagnostico={diagnostico} />);
   return { gravar, irPara };

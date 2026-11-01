@@ -12,7 +12,7 @@ beforeEach(() => { listar.mockReset(); listar.mockResolvedValue({ data: [] }); }
 
 describe('Catálogo', () => {
   it('tipo de venda em botões: Lançamento (padrão) apaga a chave; outro grava a subchave', async () => {
-    const gravar = gravarDeTeste('catalogo');
+    const gravar = gravarDeTeste('legado');
     render(<Catalogo agent={agenteDeTeste({ playbook: {} })} inboxes={[]} gravar={gravar} irPara={vi.fn()} diagnostico={null} />);
     expect(screen.getByRole('radio', { name: 'Lançamento' })).toHaveAttribute('aria-checked', 'true');
     await userEvent.click(screen.getByRole('radio', { name: 'Usado ou pronto' }));
@@ -20,7 +20,7 @@ describe('Catálogo', () => {
   });
 
   it('as 4 chaves do que ela pode usar; o book mostra a regra', async () => {
-    const gravar = gravarDeTeste('catalogo');
+    const gravar = gravarDeTeste('legado');
     render(<Catalogo agent={agenteDeTeste()} inboxes={[]} gravar={gravar} irPara={vi.fn()} diagnostico={null} />);
     ['Consultar o cadastro', 'Oferecer outras opções', 'Fotos e vídeo', 'Book do imóvel'].forEach((n) => expect(screen.getByRole('switch', { name: n })).toBeChecked());
     expect(screen.getByLabelText('Quando ela pode mandar o book')).toBeInTheDocument();
@@ -33,7 +33,7 @@ describe('Catálogo', () => {
   it('imóvel padrão: só diz "não está entre os ativos" depois de a lista chegar', async () => {
     let soltar: (v: unknown) => void = () => {};
     listar.mockReturnValue(new Promise((res) => { soltar = res; }));
-    render(<Catalogo agent={agenteDeTeste({ default_property_code: 'AP0566' })} inboxes={[]} gravar={gravarDeTeste('catalogo')} irPara={vi.fn()} diagnostico={null} />);
+    render(<Catalogo agent={agenteDeTeste({ default_property_code: 'AP0566' })} inboxes={[]} gravar={gravarDeTeste('legado')} irPara={vi.fn()} diagnostico={null} />);
     expect(screen.getByLabelText('Imóvel padrão')).toHaveValue('AP0566');
     expect(screen.queryByText(/não está entre os ativos/)).toBeNull();
     soltar({ data: [{ code: 'CA0100', title: 'Casa' }] });
@@ -42,7 +42,7 @@ describe('Catálogo', () => {
 
   it('imóvel padrão: com a lista chegada e o código nela, aparece o nome', async () => {
     listar.mockResolvedValue({ data: [{ code: 'AP0566', title: 'Apto Centro' }] });
-    render(<Catalogo agent={agenteDeTeste({ default_property_code: 'AP0566' })} inboxes={[]} gravar={gravarDeTeste('catalogo')} irPara={vi.fn()} diagnostico={null} />);
+    render(<Catalogo agent={agenteDeTeste({ default_property_code: 'AP0566' })} inboxes={[]} gravar={gravarDeTeste('legado')} irPara={vi.fn()} diagnostico={null} />);
     expect(await screen.findByRole('option', { name: 'AP0566 · Apto Centro' })).toBeInTheDocument();
     expect(screen.queryByText(/não está entre os ativos/)).toBeNull();
   });

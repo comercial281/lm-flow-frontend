@@ -56,15 +56,15 @@ describe('IaBarra (onda 3)', () => {
   it('Ligar travado: chave desabilitada com o motivo, e o clique leva à página que corrige', async () => {
     const props = abrir({
       selecionada: ia('ia-1', 'IA de Vendas', { enabled: false }),
-      travaDoLigar: { motivo: 'Falta o número de WhatsApp.', pagina: 'canal' },
+      travaDoLigar: { motivo: 'Falta o número de WhatsApp.', pagina: 'numeros' },
     });
     expect(screen.getByRole('switch', { name: 'Ligar ou desligar a IA' })).toBeDisabled();
-    await userEvent.click(screen.getByRole('button', { name: 'Não dá pra ligar: Falta o número de WhatsApp. Abrir Canal' }));
-    expect(props.aoCorrigirLigar).toHaveBeenCalledWith('canal');
+    await userEvent.click(screen.getByRole('button', { name: 'Não dá pra ligar: Falta o número de WhatsApp. Abrir Números e usuários' }));
+    expect(props.aoCorrigirLigar).toHaveBeenCalledWith('numeros');
   });
 
   it('desligar nunca trava', () => {
-    abrir({ travaDoLigar: { motivo: 'Falta o número de WhatsApp.', pagina: 'canal' } });
+    abrir({ travaDoLigar: { motivo: 'Falta o número de WhatsApp.', pagina: 'numeros' } });
     expect(screen.getByRole('switch', { name: 'Ligar ou desligar a IA' })).not.toBeDisabled();
   });
 

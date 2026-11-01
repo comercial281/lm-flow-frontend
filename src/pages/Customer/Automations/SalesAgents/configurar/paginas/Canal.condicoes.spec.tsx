@@ -19,7 +19,7 @@ import Canal from './Canal';
 
 // O `gravar` de teste devolvendo a IA "salva" pra página, como a casca faz.
 function abrir(inicial: SalesAgent) {
-  const gravar = gravarDeTeste('canal');
+  const gravar = gravarDeTeste('legado');
   function Casca() {
     const [agent, setAgent] = useState(inicial);
     const gravarEAplicar = async (...args: Parameters<typeof gravar>) => {
@@ -178,7 +178,7 @@ describe('Canal · a condição antiga vale até a nova ficar completa', () => {
   });
 
   it('"Todos os leads" → Desfazer: a palavra digitada depois grava ao sair da página sem sair do campo', async () => {
-    const gravar = gravarDeTeste('canal');
+    const gravar = gravarDeTeste('legado');
     let desfazer = () => {};
     function Casca() {
       const [agent, setAgent] = useState(agenteDeTeste({ triggers: [{ type: 'tag', value: 'vip' }] }));

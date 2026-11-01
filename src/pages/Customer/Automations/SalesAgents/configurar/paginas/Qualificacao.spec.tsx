@@ -6,7 +6,7 @@ import { gravarDeTeste } from '@/test/salesAgents/gravarDeTeste';
 import Qualificacao from './Qualificacao';
 
 const abrir = (agent = agenteDeTeste(), irPara = vi.fn()) => {
-  const gravar = gravarDeTeste('qualificacao');
+  const gravar = gravarDeTeste('conducao');
   render(<><Qualificacao agent={agent} inboxes={[]} gravar={gravar} irPara={irPara} diagnostico={null} /><button>fora</button></>);
   return { gravar, irPara };
 };
@@ -39,8 +39,8 @@ describe('Qualificação', () => {
 
   it('fora do critério das obrigatórias, avisa e leva ao Critério', async () => {
     const { irPara } = abrir(agenteDeTeste({ transfer_config: { mode: 'temperatura' } }));
-    await userEvent.click(screen.getByRole('button', { name: 'Abrir Critério' }));
-    expect(irPara).toHaveBeenCalledWith('criterio');
+    await userEvent.click(screen.getByRole('button', { name: 'Abrir Modo operante' }));
+    expect(irPara).toHaveBeenCalledWith('modo');
   });
 
   it('editar uma linha e clicar em "Obrigatória" de outra grava com o texto NOVO', async () => {

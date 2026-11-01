@@ -38,13 +38,18 @@ function montar(agent = agenteDeTeste()) {
 describe('camposDaMudanca', () => {
   it('campo solto vai pelo nome; jsonb dividido só com subchave', () => {
     expect(camposDaMudanca({ greeting: 'Oi' })).toEqual(['greeting']);
-    expect(camposDaMudanca({ transfer_config: { mode: 'checklist' } }, ['transfer_config.mode'])).toEqual(['transfer_config.mode']);
-    expect(() => camposDaMudanca({ transfer_config: { mode: 'checklist' } })).toThrow(/transfer_config/);
+    expect(camposDaMudanca({ transfer_config: { briefing_enabled: false } }, ['transfer_config.briefing_enabled'])).toEqual(['transfer_config.briefing_enabled']);
+    expect(() => camposDaMudanca({ transfer_config: { briefing_enabled: false } })).toThrow(/transfer_config/);
+    expect(() => camposDaMudanca({ house_voice: { name: 'Ana' } })).toThrow(/house_voice/);
+    expect(camposDaMudanca({ house_voice: { name: 'Ana' } }, ['house_voice.name'])).toEqual(['house_voice.name']);
   });
 
   it('recusa o que saiu da tela', () => {
     expect(() => camposDaMudanca({ enabled: true })).toThrow(/enabled/);
     expect(() => camposDaMudanca({ crm_policy: { capture: true } }, ['crm_policy.capture'])).toThrow(/crm_policy.capture/);
+    // Tarefa 70: o que o Configurar em 8 páginas esconde também nunca é gravado.
+    expect(() => camposDaMudanca({ persona_kind: 'broker' })).toThrow(/persona_kind/);
+    expect(() => camposDaMudanca({ transfer_config: { mode: 'checklist' } }, ['transfer_config.mode'])).toThrow(/transfer_config.mode/);
   });
 
   // A raiz passada como "subchave" levaria o jsonb inteiro da página e apagaria o
@@ -76,19 +81,19 @@ describe('useGravarNaHora', () => {
     let a: Promise<boolean>;
     let b: Promise<boolean>;
     await act(async () => {
-      a = result.current.gravar({ transfer_config: { ...agent.transfer_config, mode: 'temperatura', min_temperature: 'hot' } }, ['transfer_config.mode', 'transfer_config.min_temperature']);
+      a = result.current.gravar({ transfer_config: { ...agent.transfer_config, required_questions: ['Renda', 'Quartos'] } }, ['transfer_config.required_questions']);
       b = result.current.gravar({ transfer_config: { ...agent.transfer_config, briefing_enabled: false } }, ['transfer_config.briefing_enabled']);
       await new Promise((r) => setTimeout(r, 0));
     });
     expect(update).toHaveBeenCalledTimes(1); // o segundo espera o primeiro
     await act(async () => {
-      primeira.resolver(salvo(agent, { transfer_config: { ...agent.transfer_config, mode: 'temperatura', min_temperature: 'hot' } }, '2026-10-06T10:00:01Z'));
+      primeira.resolver(salvo(agent, { transfer_config: { ...agent.transfer_config, required_questions: ['Renda', 'Quartos'] } }, '2026-10-06T10:00:01Z'));
       await a!; await b!;
     });
     expect(update).toHaveBeenCalledTimes(2);
-    // O segundo PATCH leva a temperatura do primeiro (já salva) + o resumo desligado + a voz de antes.
+    // O segundo PATCH leva as obrigatórias do primeiro (já salva) + o resumo desligado + a voz de antes.
     expect(update.mock.calls[1][1]).toEqual({
-      transfer_config: { mode: 'temperatura', min_temperature: 'hot', required_questions: ['Renda'], voice: 'first_person', briefing_enabled: false },
+      transfer_config: { mode: 'checklist', required_questions: ['Renda', 'Quartos'], voice: 'first_person', briefing_enabled: false },
     });
   });
 
@@ -114,11 +119,11 @@ describe('useGravarNaHora', () => {
   it('Desfazer monta sobre o salvo MAIS NOVO: não apaga o que outra tela gravou no mesmo jsonb', async () => {
     const { result, agent, unmount } = montar();
     update.mockImplementationOnce(async (_id: string, patch: Partial<SalesAgent>) => salvo(agent, patch, '2026-10-06T10:00:01Z'));
-    await act(async () => { await result.current.gravar({ transfer_config: { ...agent.transfer_config, mode: 'temperatura' } }, ['transfer_config.mode']); });
+    await act(async () => { await result.current.gravar({ transfer_config: { ...agent.transfer_config, required_questions: ['Renda', 'Quartos'] } }, ['transfer_config.required_questions']); });
     const desfazer = toast.mock.calls.find((c) => c[0] === 'Salvo')![1].action.onClick as () => void;
     unmount(); // saiu da página
     // Outra tela (o Destino) desligou o resumo depois.
-    registrarSalvo(salvo(agent, { transfer_config: { ...agent.transfer_config, mode: 'temperatura', briefing_enabled: false } }, '2026-10-06T10:00:05Z'));
+    registrarSalvo(salvo(agent, { transfer_config: { ...agent.transfer_config, required_questions: ['Renda', 'Quartos'], briefing_enabled: false } }, '2026-10-06T10:00:05Z'));
     update.mockImplementationOnce(async (_id: string, patch: Partial<SalesAgent>) => salvo(agent, patch, '2026-10-06T10:00:06Z'));
     await act(async () => { desfazer(); await new Promise((r) => setTimeout(r, 0)); });
     expect(update).toHaveBeenLastCalledWith('ia-1', {
@@ -129,14 +134,14 @@ describe('useGravarNaHora', () => {
   // Revisão final da onda 3 (M5): a onda 2 recusa gravação NOVA de `inbox_roleta`. O
   // Desfazer de uma IA antiga volta pro equivalente de hoje; a persona "dono" volta
   // como dono (ela tem voz própria desde 06/10).
-  it('Desfazer numa IA antiga não regrava inbox_roleta e devolve o dono', async () => {
-    const { result, agent } = montar(agenteDeTeste({ handoff_target: 'inbox_roleta', persona_kind: 'owner', handoff_user_id: null }));
+  it('Desfazer numa IA antiga não regrava inbox_roleta', async () => {
+    const { result, agent } = montar(agenteDeTeste({ handoff_target: 'inbox_roleta', handoff_user_id: null }));
     update.mockImplementationOnce(async (_id: string, patch: Partial<SalesAgent>) => salvo(agent, patch, '2026-10-06T10:00:01Z'));
-    await act(async () => { await result.current.gravar({ persona_kind: 'broker', handoff_target: 'number_owner' }); });
+    await act(async () => { await result.current.gravar({ handoff_target: 'number_owner' }); });
     const desfazer = toast.mock.calls.find((c) => c[0] === 'Salvo')![1].action.onClick as () => void;
     update.mockImplementationOnce(async (_id: string, patch: Partial<SalesAgent>) => salvo(agent, patch, '2026-10-06T10:00:02Z'));
     await act(async () => { desfazer(); await new Promise((r) => setTimeout(r, 0)); });
-    expect(update).toHaveBeenLastCalledWith('ia-1', { persona_kind: 'owner', handoff_target: 'roleta' });
+    expect(update).toHaveBeenLastCalledWith('ia-1', { handoff_target: 'roleta' });
   });
 
   it('o registro guarda o mais novo e ignora a cópia otimista', async () => {

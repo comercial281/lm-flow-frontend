@@ -18,7 +18,7 @@ import Followup from './Followup';
 beforeEach(() => { listarFluxos.mockReset(); listarFluxos.mockResolvedValue(FLUXOS); });
 
 const abrir = (agent: SalesAgent = agenteDeTeste()) => {
-  const gravar = gravarDeTeste('followup');
+  const gravar = gravarDeTeste('funil');
   render(<><Followup agent={agent} inboxes={[]} gravar={gravar} irPara={vi.fn()} diagnostico={null} aoChaveGerada={vi.fn()} /><button>fora</button></>);
   return gravar;
 };

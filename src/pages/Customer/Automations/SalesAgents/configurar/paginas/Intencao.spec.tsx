@@ -18,7 +18,7 @@ const agente = (extra: Partial<SalesAgent> = {}) => agenteDeTeste({
 });
 
 const abrir = (agent = agente()) => {
-  const gravar = gravarDeTeste('intencao');
+  const gravar = gravarDeTeste('publico');
   render(<><Intencao agent={agent} inboxes={[]} gravar={gravar} irPara={vi.fn()} diagnostico={null} /><button>fora</button></>);
   return gravar;
 };
