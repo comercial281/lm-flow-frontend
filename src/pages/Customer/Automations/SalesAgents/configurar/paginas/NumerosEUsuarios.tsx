@@ -27,6 +27,7 @@ import { useNumerosDoAgente } from '../useNumerosDoAgente';
 import FichaDaVoz from './FichaDaVoz';
 import Horario from './Horario';
 
+const SEM_AVISO = () => undefined;
 const PEDE_DONO = 'A voz Corretor pede o destino "Fica com o dono do número".';
 const AVISO_OFICIAL = 'Pela API oficial a IA responde normalmente quem chamar. Abrir conversa com lead de formulário e mandar follow-up depois de 24h ainda não funcionam neste número. Acima de 1.000 respostas no mês, a Meta cobra cada resposta.';
 
@@ -53,7 +54,7 @@ function Etiqueta({ children, tom }: { children: string; tom?: 'ok' | 'aviso' | 
 
 export default function NumerosEUsuarios(props: PropsDaPagina) {
   const { agent, inboxes, gravar, irPara } = props;
-  const { criar, mudar, tirar } = useNumerosDoAgente(agent, props.aoSalvo ?? (() => undefined));
+  const { criar, mudar, tirar } = useNumerosDoAgente(agent, props.aoSalvo ?? SEM_AVISO);
   const [resumo, setResumo] = useState<ResumoDoAgente | null | undefined>(undefined);
   const [outros, setOutros] = useState<SalesAgent[]>([]);
   const [editando, setEditando] = useState<string | null>(null);

@@ -489,6 +489,15 @@ describe('TestarJanela · Testar como (Tarefa 71)', () => {
     expect(screen.queryByLabelText('Testar como')).not.toBeInTheDocument();
   });
 
+  it('2 números e só 1 ligado: sem seletor, mas vai o inbox_id do ligado', async () => {
+    rehearsal.mockResolvedValueOnce(resposta('Oi!', estado()));
+    abrir(com([numero('inbox-1', 'Ana', { enabled: false }), numero('inbox-2', 'Bia')]));
+    expect(screen.queryByLabelText('Testar como')).not.toBeInTheDocument();
+    await userEvent.type(screen.getByLabelText('Mensagem do lead'), 'oi{Enter}');
+    await screen.findByText('Oi!');
+    expect(rehearsal.mock.calls[0][1]).toMatchObject({ inbox_id: 'inbox-2' });
+  });
+
   it('com 1 número nada muda: sem seletor e sem inbox_id', async () => {
     rehearsal.mockResolvedValueOnce(resposta('Oi!', estado()));
     abrir(com([numero('inbox-1', 'Ana')]));

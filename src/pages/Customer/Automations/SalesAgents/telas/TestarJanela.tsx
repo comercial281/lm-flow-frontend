@@ -158,7 +158,7 @@ export default function TestarJanela({ agent, aoFechar, ritmo = 1 }: { agent: Sa
             </div>
           )}
 
-          {e.numeros.length > 0 && (
+          {e.numeros.length > 1 && (
             <div className="space-y-2">
               <h3 className={TITULO}>Testar como</h3>
               <Seletor aria-label="Testar como" className="h-10 w-full" value={e.inboxId} disabled={aguardando}

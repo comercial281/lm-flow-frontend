@@ -90,6 +90,12 @@ describe('Modo operante', () => {
     expect(screen.queryByRole('checkbox', { name: 'Pediu pra visitar' })).toBeNull();
   });
 
+  it('as caixinhas mostram o que o servidor diz que vale agora (handoff_exceptions_effective)', () => {
+    abrir({ handoff_exceptions: null, handoff_exceptions_effective: { ...PRONTAS, nao_sei: true, recusou_documento: false } });
+    expect(screen.getByRole('checkbox', { name: 'Ela não sabe responder' })).toBeChecked();
+    expect(screen.getByRole('checkbox', { name: 'Recusou mandar documento' })).not.toBeChecked();
+  });
+
   it('ligar uma pronta grava as cinco e mantém as escritas', async () => {
     const gravar = abrir();
     await userEvent.click(screen.getByRole('checkbox', { name: 'Ela não sabe responder' }));

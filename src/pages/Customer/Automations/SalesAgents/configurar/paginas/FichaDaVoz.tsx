@@ -26,14 +26,14 @@ export default function FichaDaVoz({ idBase, voz, casa, aoMudar }: FichaDaVozPro
       <Campo id={`${idBase}-kind`} rotulo="Quem fala">
         <Seletor id={`${idBase}-kind`} className={`${CLASSE_DO_CAMPO} w-full`} value={voz.kind ?? ''}
           onChange={(e) => aoMudar({ kind: (e.target.value || undefined) as QuemFala | undefined })}>
-          {noNumero && <option value="">{IGUAL}</option>}
+          <option value="">{noNumero ? IGUAL : 'Escolha'}</option>
           {(Object.keys(ROTULO_DA_VOZ) as QuemFala[]).map((k) => <option key={k} value={k}>{ROTULO_DA_VOZ[k]}</option>)}
         </Seletor>
       </Campo>
       <Campo id={`${idBase}-gender`} rotulo="Ele ou ela">
         <Seletor id={`${idBase}-gender`} className={`${CLASSE_DO_CAMPO} w-full`} value={voz.gender ?? ''}
           onChange={(e) => aoMudar({ gender: (e.target.value || undefined) as Voz['gender'] })}>
-          {noNumero && <option value="">{IGUAL}</option>}
+          <option value="">{noNumero ? IGUAL : 'Escolha'}</option>
           <option value="ela">Ela</option>
           <option value="ele">Ele</option>
         </Seletor>

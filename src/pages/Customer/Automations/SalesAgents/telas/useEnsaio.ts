@@ -28,10 +28,14 @@ export function temGatilho(agent: SalesAgent): boolean {
   return (agent.triggers?.length ?? 0) > 0 || !!agent.trigger_keyword?.trim();
 }
 
-/** Os números em que o Testar pode "ser" o atendimento: só os ligados. Com menos de 2, não há o que escolher. */
+/**
+ * Os números em que o Testar pode "ser" o atendimento: só os ligados. Agente com um número só: nada
+ * muda (lista vazia, sem `inbox_id`). Com 2 números e 1 ligado, a lista tem o único ligado (o
+ * servidor usaria "o primeiro", que pode ser o desligado); o seletor só aparece com 2 ou mais.
+ */
 export function numerosDoTestar(agent: SalesAgent): AgentNumber[] {
-  const lista = (agent.numbers ?? []).filter((n) => n.enabled);
-  return lista.length > 1 ? lista : [];
+  const todos = agent.numbers ?? [];
+  return todos.length > 1 ? todos.filter((n) => n.enabled) : [];
 }
 
 export function temGatilhoDeFormulario(agent: SalesAgent): boolean {

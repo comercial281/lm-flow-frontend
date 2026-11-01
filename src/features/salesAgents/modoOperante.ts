@@ -54,29 +54,11 @@ export function fraseDeFechamento(job: Job | null, nextSteps: readonly NextStep[
 }
 
 /**
- * As exceções prontas que valem pro agente. Gravadas, é o que está gravado (chave ausente =
- * desligada). Agente ainda não migrado (`handoff_exceptions` nulo): a regra da migração do
- * servidor (`default_handoff_exceptions_for`), pelo critério de repasse antigo.
+ * As exceções prontas que valem pro agente: o servidor manda `handoff_exceptions_effective` (as cinco
+ * como o cérebro lê AGORA, migrado ou não). Servidor antigo: o que está gravado em `prontas`; sem
+ * nada disso, todas desmarcadas (a tela não inventa regra de migração).
  */
-export function prontasDoAgente(agent: Pick<SalesAgent, 'handoff_exceptions' | 'transfer_config'>): Record<ExcecaoPronta, boolean> {
-  const gravadas = agent.handoff_exceptions?.prontas;
-  const ligadas = new Set<ExcecaoPronta>();
-  if (gravadas) {
-    ORDEM_DAS_PRONTAS.forEach((k) => { if (gravadas[k] === true) ligadas.add(k); });
-  } else {
-    const cfg = agent.transfer_config ?? {};
-    const antigas = ['recusou_documento', 'pediu_ligacao', 'nao_sei'] as const;
-    if (cfg.mode === 'checklist') {
-      antigas.filter((k) => cfg.early_handoff?.[k] !== false).forEach((k) => ligadas.add(k));
-      ligadas.add('pediu_pra_visitar');
-    } else if (cfg.mode === 'pos_visita') {
-      ligadas.add('objecao_sem_contorno');
-    } else if (cfg.mode === 'sem_resposta') {
-      ligadas.add('nao_sei');
-      ligadas.add('pediu_pra_visitar');
-    } else {
-      ORDEM_DAS_PRONTAS.forEach((k) => ligadas.add(k));
-    }
-  }
-  return Object.fromEntries(ORDEM_DAS_PRONTAS.map((k) => [k, ligadas.has(k)])) as Record<ExcecaoPronta, boolean>;
+export function prontasDoAgente(agent: Pick<SalesAgent, 'handoff_exceptions' | 'handoff_exceptions_effective'>): Record<ExcecaoPronta, boolean> {
+  const fonte: Partial<Record<ExcecaoPronta, boolean>> = agent.handoff_exceptions_effective ?? agent.handoff_exceptions?.prontas ?? {};
+  return Object.fromEntries(ORDEM_DAS_PRONTAS.map((k) => [k, fonte[k] === true])) as Record<ExcecaoPronta, boolean>;
 }

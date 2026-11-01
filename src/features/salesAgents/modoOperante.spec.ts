@@ -38,18 +38,16 @@ describe('rótulos', () => {
 describe('prontasDoAgente', () => {
   const todas = (o: Partial<Record<string, boolean>>) => ({ recusou_documento: false, pediu_ligacao: false, nao_sei: false, pediu_pra_visitar: false, objecao_sem_contorno: false, ...o });
 
-  it('gravadas: o que está gravado, chave ausente é desligada', () => {
-    const p = prontasDoAgente({ handoff_exceptions: { prontas: { nao_sei: true } as never, escritas: [] }, transfer_config: {} });
-    expect(p).toEqual(todas({ nao_sei: true }));
+  it('usa o que o servidor diz que vale agora', () => {
+    const efetivas = todas({ nao_sei: true, pediu_pra_visitar: true });
+    expect(prontasDoAgente({ handoff_exceptions: null, handoff_exceptions_effective: efetivas })).toEqual(efetivas);
   });
 
-  it('não migrado, critério das obrigatórias: as três do passar direto como estão, mais pediu pra visitar', () => {
-    const p = prontasDoAgente({ handoff_exceptions: null, transfer_config: { mode: 'checklist', early_handoff: { pediu_ligacao: false } } });
-    expect(p).toEqual(todas({ recusou_documento: true, nao_sei: true, pediu_pra_visitar: true }));
+  it('servidor antigo: o que está gravado, chave ausente é desligada', () => {
+    expect(prontasDoAgente({ handoff_exceptions: { prontas: { nao_sei: true } as never, escritas: [] } })).toEqual(todas({ nao_sei: true }));
   });
 
-  it('não migrado: visita marcada liga só a objeção; sem critério, todas', () => {
-    expect(prontasDoAgente({ handoff_exceptions: null, transfer_config: { mode: 'pos_visita' } })).toEqual(todas({ objecao_sem_contorno: true }));
-    expect(Object.values(prontasDoAgente({ handoff_exceptions: null, transfer_config: {} })).every(Boolean)).toBe(true);
+  it('sem nada: todas desmarcadas, sem inventar regra', () => {
+    expect(prontasDoAgente({ handoff_exceptions: null })).toEqual(todas({}));
   });
 });

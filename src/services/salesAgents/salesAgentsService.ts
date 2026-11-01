@@ -168,6 +168,8 @@ export interface SalesAgent {
   next_steps: NextStep[] | null;
   /** Exceções de repasse. Nulo = não migrado. */
   handoff_exceptions: HandoffExceptions | null;
+  /** As cinco prontas como o cérebro lê AGORA (migrado ou não). Ausente em servidor antigo. */
+  handoff_exceptions_effective?: Record<ExcecaoPronta, boolean>;
   /** A ficha da casa. Nula = não migrado (o servidor monta pela regra da migração). */
   house_voice: HouseVoice | null;
   /** Juntado a outro agente: o código novo trata como "não existe mais". */
