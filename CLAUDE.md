@@ -10488,3 +10488,30 @@ Cadastro do imóvel (`/properties/new` e a edição). Segue com **Salvar** (não
 - Voltar o backend pra antes da fase 3 faz o código antigo ler `stage = 9` como fase nula (ver o diário do backend); a tela segue inofensiva.
 
 Código: `features/properties/cadastro/finalidade.ts`, `pages/Customer/Properties/cadastro/secoes/SecaoCondicoes.tsx`, mudanças em `SecaoBasico`, `SecaoComposicao`, `SecaoDetalhesDaVenda`, `SecaoObra`, `PreencherPorTexto`, `listingKind.ts`, `formularioDoCadastro.ts`, `secoesDoCadastro.ts` (com specs).
+
+## Campanhas (era Formulários do Meta) (Tarefa 77, 01/11/2026)
+
+Configurações > Campanhas, no mesmo endereço de antes (`/automations/origem`, o que o "editar em Campanhas" da IA usa). O item do menu "Formulários" virou "Campanhas".
+
+**O que aparece na tela**
+- Título "Campanhas" e duas partes: **Formulários do Meta** (as fichas de sempre, com tudo o que já faziam) e **Anúncios de WhatsApp** (linhas de campanha e de anúncio que trouxeram lead). Cada linha mostra os leads dos últimos **90 dias** (é o corte do servidor; o protótipo falava em 30), **Vende** (nome do imóvel, "+N", "Todo o tipo Leilão", "Todo o catálogo" ou o selo **Não diz o que vende**), **Condição do anúncio** (só o que a linha preencheu, ou "A do imóvel") e **Qual IA atende**.
+- No topo, o aviso "N campanhas trouxeram lead esta semana e não dizem o que vendem" (lead dos últimos 7 dias, só ficha de formulário e anúncios; formulário sem ficha segue em "Disponíveis no Facebook").
+- **A janela da campanha** (a do formulário e a do anúncio são a mesma `JanelaDaCampanha`; segue com **Salvar**, não grava na hora): *O que esta campanha vende* (Imóveis escolhidos de 1 a 10, Um tipo inteiro ou Todo o catálogo; com 2 ou mais, "a conversa começa sem imóvel fixo"), *Condição* (entrada, parcela, renda mínima, fluxo e observação até 300; a dica do campo é a condição do imóvel quando é um só; **Preencher com o texto do anúncio** só no WhatsApp), *Pra quem é este anúncio* (as 4 caixinhas e a frase de `fraseDaIntencao(lista, 'desta campanha')`), *Qual IA atende* e, no formulário, a *entrada do lead* de sempre (funil, etapa, palavra, quem assume, etiquetas, ativo). **Excluir ficha** só aparece com `lead_ads_form_configs.delete`.
+- Por cargo: administrador vê tudo (inclusive **Conectar o Meta**, que leva a Integrações > Facebook, e Excluir ficha); gerente edita sem os dois; corretor não tem o item no menu e, se chegar pelo endereço, cai no `NoAccessState`; quem só lê vê o botão **Ver** e a janela sem Salvar.
+
+**Decisões**
+1. "Qual IA atende" é do servidor (C25): opções em `GET /campaigns/agent_options`, gravar em `PUT /campaigns/agent`, tirar em `DELETE`. A confirmação de mover vem do 409 (`conflicts`): a tela mostra "Esta campanha sai da IA <nome>." e reenvia com `confirm_move`. Sem regra de "uma opção por número" na tela: `features/campanhas/qualIaAtende.ts` só arruma rótulo, o que vem fixo (a IA que atende todo lead do número) e a frase. Os nomes `opcoesDeIa`/`gravacaoDaIa` do enunciado não existem.
+2. A escolha da IA grava **na hora** (é outro endereço) e vale a permissão da campanha, não a da IA (C26): `lead_ads_form_configs.update` no formulário, `campaign_links.update` no anúncio. Formulário novo ainda sem ficha pede salvar antes. Anúncio sem linha cria a linha (`criarLinha`) na primeira gravação, do Salvar ou da IA.
+3. "Preencher com o texto do anúncio" chama `POST /campaign_links/condition_from_text` (`condicaoDoTexto`); a tela não lê texto. Traz os números e pede a conferência.
+4. Formulário: `property_id` da ficha é o **primeiro** imóvel; a lista inteira vai em `property_ids`, junto com `sells_scope`, `sells_listing_kind`, `offer_condition` e `audience_intents`. O campo antigo "Imóvel vinculado" saiu: "O que esta campanha vende" o substitui.
+5. A condição da linha vence a do imóvel; vazio vem do imóvel; vazio nos dois é "não informado" (`condicaoDaLinha`, só apresentação).
+6. `LeadAdsForms` virou a parte Formulários: sozinho (sem `campanhas`) continua sendo a página de antes; `Campanhas` passa título, aviso, a parte dos anúncios e a lista do servidor.
+7. A permissão da página para gerente e diretor está numa parada do Tony; a tela segue as chaves (`lead_ads_form_configs.*` e `campaign_links.*`) e não depende disso.
+
+**Armadilhas**
+- O `id` do formulário em `PUT /campaigns/agent` é o `form_id` do Meta, não o id da ficha; o do anúncio é o da linha (`campaign_link`).
+- Os specs de `LeadAdsForms.*` renderizam a tela sozinha e só mockam `leadAdsFormsService`: a janela não pode chamar `campanhasService` sem a lista de opções vir de cima.
+- Servidor sem as chaves de Campanhas: `opcoesDeIa` falha em silêncio e o bloco "Qual IA atende" some; o resto da janela segue.
+- A régua da casa (`conferir-padrao`, glossário) barra "apagar": o botão se chama **Excluir ficha** (o enunciado e o protótipo diziam "Apagar ficha"), e a mensagem de "Nenhum…" solto também: a janela diz "Sem IA nesta campanha.".
+
+Código: `pages/Customer/Settings/Campanhas/{Campanhas,LinhaDaCampanha,JanelaDaCampanha}.tsx`, `features/campanhas/{condicaoDaCampanha,qualIaAtende,itensDeCampanha}.ts` (com specs), `LeadAdsForms.tsx` (parte Formulários) e `Origem.tsx`.

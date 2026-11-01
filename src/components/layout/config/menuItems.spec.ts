@@ -208,11 +208,11 @@ describe('menu novo: seções (fase 4)', () => {
     }
   });
 
-  it('a Página do Facebook é aba de Integrações, e Formulários fica sozinho em Minha imobiliária', () => {
+  it('a Página do Facebook é aba de Integrações, e Campanhas (era Formulários) fica sozinho em Minha imobiliária', () => {
     const imobiliaria = secoes.find(s => s.id === 'imobiliaria')!;
     const integracoes = imobiliaria.itens.find(i => i.name === 'Integrações')!;
     expect(integracoes.abas?.map(a => a.name)).toEqual(['WhatsApp', 'WhatsApp Oficial', 'Facebook', 'Pixel', 'Portais', 'CVCRM', 'Site da imobiliária']);
-    expect(imobiliaria.itens.find(i => i.href === '/automations/origem')?.name).toBe('Formulários');
+    expect(imobiliaria.itens.find(i => i.href === '/automations/origem')?.name).toBe('Campanhas');
   });
 
   it('o dono do endereço é o casamento mais longo, inclusive em tela interna', () => {

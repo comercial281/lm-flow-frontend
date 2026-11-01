@@ -401,9 +401,9 @@ export const getCustomerMenuSections = (): MenuSection[] => [
       ]),
       // Tela única de distribuição: modo + quem participa + prazo + gestor.
       { name: 'Roleta de leads', href: '/automations/roleta-config', icon: Shuffle, ...permissionFromRoute('/automations/roleta-config'), featureKey: 'lead_automations' },
-      // Formulários dos Lead Ads (endereço antigo da tela Origem). A conexão da
+      // Campanhas (era Formulários dos Lead Ads; endereço antigo da tela Origem). A conexão da
       // página do Facebook está em Integrações → Facebook desde 01/10/2026.
-      { name: 'Formulários', href: '/automations/origem', icon: ClipboardList, ...permissionFromRoute('/automations/origem'), featureKey: 'lead_automations', clientToggleKey: 'client_manage_automations', hideOnRoot: true },
+      { name: 'Campanhas', href: '/automations/origem', icon: ClipboardList, ...permissionFromRoute('/automations/origem'), featureKey: 'lead_automations', clientToggleKey: 'client_manage_automations', hideOnRoot: true },
       { name: 'Etiquetas', href: '/settings/labels', icon: Tags, ...gestao('/settings/labels', 'labels.create') },
       // Listas da casa (E1 do funil, 07/10/2026): motivos de perda e categorias de
       // tarefa. A rota abre pra quem lê o funil; o menu pede também

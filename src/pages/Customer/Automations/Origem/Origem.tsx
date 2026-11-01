@@ -1,9 +1,9 @@
-import LeadAdsForms from '@/pages/Customer/Settings/LeadAdsForms';
+import Campanhas from '@/pages/Customer/Settings/Campanhas/Campanhas';
 
-// Minha imobiliária → Formulários (endereço /automations/origem, mantido para
-// não quebrar link salvo). Era a tela "Origem", com a aba das páginas do
-// Facebook ao lado; desde 01/10/2026 a conexão da página mora em
-// Integrações → Facebook (/settings/facebook) e aqui ficam só os formulários.
+// Minha imobiliária → Campanhas (endereço /automations/origem, mantido para não quebrar link salvo, e é o
+// que o "editar em Campanhas" da IA usa). Era a tela "Origem" e depois "Formulários"; desde 01/11/2026 (Tarefa 77) é
+// a lista de Campanhas: formulários do Meta e anúncios de WhatsApp, com o que cada um vende e qual IA atende.
+// A conexão da página do Facebook mora em Integrações → Facebook (/settings/facebook).
 export default function Origem() {
-  return <LeadAdsForms />;
+  return <Campanhas />;
 }
