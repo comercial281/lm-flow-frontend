@@ -380,13 +380,13 @@ export const propertiesService = {
   },
 
   /**
-   * Quantos imóveis ATIVOS há em cada marca da IA (Venda, Locação, Leilão, Empreendimento).
+   * Quantos imóveis ATIVOS ou RESERVADOS há em cada marca (como o servidor, `Serves.catalog_marks`) da IA (Venda, Locação, Leilão, Empreendimento).
    * Venda = revenda à venda; Locação = aluguel. Leilão e Empreendimento pelo tipo. O agente
    * serializado já traz isto em `catalog_marks`; este serve a quem não tem o agente na mão.
    */
   async contarPorMarca(): Promise<Record<Marca, number>> {
     const pedir = (recorte: Record<string, string | string[]>) =>
-      api.get('/properties', { params: { status: 'active', ...recorte, per_page: 1 } });
+      api.get('/properties', { params: { 'status[]': ['active', 'reserved'], ...recorte, per_page: 1 } });
     const [venda, locacao, leilao, empreendimento] = await Promise.all([
       pedir({ listing_kind: 'resale', 'transaction_type[]': ['sale', 'sale_rent'] }),
       pedir({ 'transaction_type[]': ['rent', 'sale_rent'] }),

@@ -167,3 +167,21 @@ describe('lições: contador e origem', () => {
     expect(licoes[1]).toMatchObject({ topic: null, bad_content: null, why: null });
   });
 });
+
+describe('uploadFileDocument', () => {
+  it('leva sendable e property_codes no próprio multipart (sem PATCH depois)', async () => {
+    post.mockResolvedValue({ data: { data: { id: 'd1' } } });
+    await salesAgentsService.uploadFileDocument('a1', new File(['x'], 'p.pdf'), undefined, undefined, { sendable: true, property_codes: ['AB01', 'AB02'] });
+    const form = post.mock.calls[0][1] as FormData;
+    expect(form.get('sendable')).toBe('true');
+    expect(form.get('property_codes')).toBe('AB01,AB02');
+  });
+
+  it('sem config, o multipart não leva nenhum dos dois campos', async () => {
+    post.mockResolvedValue({ data: { data: { id: 'd1' } } });
+    await salesAgentsService.uploadFileDocument('a1', new File(['x'], 'p.pdf'));
+    const form = post.mock.calls[0][1] as FormData;
+    expect(form.has('sendable')).toBe(false);
+    expect(form.has('property_codes')).toBe(false);
+  });
+});

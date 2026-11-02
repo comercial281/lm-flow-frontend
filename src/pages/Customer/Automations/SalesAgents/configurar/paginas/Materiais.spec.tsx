@@ -97,8 +97,8 @@ describe('Da casa', () => {
     await userEvent.click(screen.getByRole('menuitem', { name: 'Subir arquivo' }));
     const arquivo = new File(['x'], 'folder.pdf', { type: 'application/pdf' });
     await userEvent.upload(screen.getByLabelText('Escolher arquivo da casa'), arquivo);
-    await waitFor(() => expect(subirArquivo).toHaveBeenCalledWith('ia-1', arquivo, undefined, expect.any(Function)));
-    await waitFor(() => expect(atualizarDoc).toHaveBeenCalledWith('ia-1', 'arq', { sendable: true }));
+    await waitFor(() => expect(subirArquivo).toHaveBeenCalledWith('ia-1', arquivo, undefined, expect.any(Function), { sendable: true }));
+    expect(atualizarDoc).not.toHaveBeenCalled();
     expect(await screen.findByRole('dialog', { name: 'Quando ela manda' })).toBeInTheDocument();
   });
 
@@ -137,23 +137,24 @@ describe('+ Material deste imóvel', () => {
     await waitFor(() => expect(criarLink).toHaveBeenLastCalledWith('ia-1', { title: 'Site', url: 'https://exemplo.test/s' }));
   });
 
-  it('arquivo: o PATCH leva sendable e property_codes', async () => {
+  it('arquivo: o upload já leva sendable e property_codes, sem PATCH depois', async () => {
     await abrir();
     await userEvent.click(within(grupo('Residencial Teste')).getByRole('button', { name: '+ Material deste imóvel' }));
     await userEvent.click(screen.getByRole('menuitem', { name: 'Subir arquivo' }));
     await userEvent.upload(screen.getByLabelText('Escolher arquivo de Residencial Teste'), new File(['x'], 'planta.pdf', { type: 'application/pdf' }));
-    await waitFor(() => expect(atualizarDoc).toHaveBeenCalledWith('ia-1', 'arq', { sendable: true, property_codes: ['AB01'] }));
+    await waitFor(() => expect(subirArquivo).toHaveBeenCalledWith('ia-1', expect.any(File), undefined, expect.any(Function), { sendable: true, property_codes: ['AB01'] }));
+    expect(atualizarDoc).not.toHaveBeenCalled();
   });
 
-  it('upload ok e PATCH falho: diz que o arquivo subiu e onde achar', async () => {
+  it('upload falho: diz que não deu pra subir e não abre janela', async () => {
     const { toast } = await import('sonner');
     const erro = vi.spyOn(toast, 'error').mockImplementation(() => '');
-    atualizarDoc.mockRejectedValue(new Error('x'));
+    subirArquivo.mockRejectedValue(new Error('x'));
     await abrir();
     await userEvent.click(screen.getByRole('button', { name: '+ Material da casa' }));
     await userEvent.click(screen.getByRole('menuitem', { name: 'Subir arquivo' }));
     await userEvent.upload(screen.getByLabelText('Escolher arquivo da casa'), new File(['x'], 'a.pdf', { type: 'application/pdf' }));
-    await waitFor(() => expect(erro).toHaveBeenCalledWith(expect.stringContaining('Ensinar > Arquivos')));
+    await waitFor(() => expect(erro).toHaveBeenCalledWith('Não deu pra subir o arquivo. Tente de novo.'));
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 });

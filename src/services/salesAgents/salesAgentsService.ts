@@ -1545,11 +1545,15 @@ export const salesAgentsService = {
     file: File,
     title?: string,
     onProgress?: (percent: number) => void,
+    /** Já no upload (o `create` aceita no multipart): enviável e os imóveis ligados, sem PATCH depois. */
+    config?: { sendable?: boolean; property_codes?: string[] },
   ): Promise<SalesAgentDocument> {
     const form = new FormData();
     form.append('source_type', 'file');
     form.append('file', file);
     if (title) form.append('title', title);
+    if (config?.sendable !== undefined) form.append('sendable', String(config.sendable));
+    if (config?.property_codes?.length) form.append('property_codes', config.property_codes.join(','));
     const res = await api.post(`${BASE}/${agentId}/documents`, form, {
       onUploadProgress: (e) => {
         if (!onProgress || !e.total) return;

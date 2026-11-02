@@ -23,6 +23,10 @@ describe('leitor único da recusa por cargo', () => {
 });
 
 describe('serverRefusalMessageOf', () => {
+  it.each(['OWN_FICHA_NOT_OWNER', 'OWN_FICHA_FIELDS'])('%s (Minha ficha) leva a frase do servidor', (code) => {
+    expect(serverRefusalMessageOf(erro(403, { error: { code, message: 'Este número não é seu.' } }))).toBe('Este número não é seu.');
+  });
+
   const erro = (status: number, data: unknown) => ({ response: { status, data } });
 
   it('lê a frase só quando o código é da lista de frases pra quem usa', () => {

@@ -163,27 +163,21 @@ export default function Materiais({ agent, gravar, irPara }: PropsDaPagina) {
   };
 
   // --- criar material ---
-  // Arquivo: o upload não marca enviável nem liga ao imóvel; o PATCH faz as duas coisas juntas.
+  // Arquivo: um POST só, já enviável e (no imóvel) já ligado ao código, como o link.
   const subir = async (file: File, codigo?: string) => {
     if (ocupado) return;
     const erro = docUploadError(file);
     if (erro) { toast.error(erro); return; }
     setOcupado('0');
-    let criado: SalesAgentDocument;
     try {
-      criado = await salesAgentsService.uploadFileDocument(agent.id, file, undefined, (p) => setOcupado(String(p)));
-    } catch {
-      toast.error('Não deu pra subir o arquivo. Tente de novo.');
-      setOcupado(null);
-      return;
-    }
-    try {
-      const doc = (await salesAgentsService.updateDocument(agent.id, criado.id, { sendable: true, ...(codigo ? { property_codes: [codigo] } : {}) })) ?? criado;
+      const doc = await salesAgentsService.uploadFileDocument(
+        agent.id, file, undefined, (p) => setOcupado(String(p)),
+        { sendable: true, ...(codigo ? { property_codes: [codigo] } : {}) },
+      );
       await carregarDocs();
       setJanela({ tipo: 'material', doc });
     } catch {
-      void carregarDocs();
-      toast.error('O arquivo subiu, mas não ficou pronto pra mandar. Abra Ensinar > Arquivos e ajuste lá.');
+      toast.error('Não deu pra subir o arquivo. Tente de novo.');
     } finally {
       setOcupado(null);
     }
