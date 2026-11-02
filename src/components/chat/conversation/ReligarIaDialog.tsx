@@ -9,11 +9,17 @@ const ReligarIaDialog: React.FC<{
   agentes: SalesAgent[];
   open: boolean;
   salvando?: boolean;
+  /** O agente que já está na conversa: vem marcado. */
+  atual?: string | null;
+  /** A recusa do servidor, como veio. */
+  erro?: string | null;
   onOpenChange: (open: boolean) => void;
   onConfirmar: (agenteId: string) => void;
-}> = ({ agentes, open, salvando = false, onOpenChange, onConfirmar }) => {
+}> = ({ agentes, open, salvando = false, atual = null, erro = null, onOpenChange, onConfirmar }) => {
   const [escolhido, setEscolhido] = useState<string | null>(null);
-  useEffect(() => { if (open) setEscolhido(null); }, [open]);
+  useEffect(() => {
+    if (open) setEscolhido(atual && agentes.some((a) => a.id === atual) ? atual : null);
+  }, [open, atual, agentes]);
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
@@ -22,6 +28,7 @@ const ReligarIaDialog: React.FC<{
           <DialogDescription>Este número é dividido entre agentes. Diga qual deles volta a atender este lead.</DialogDescription>
         </DialogHeader>
         <EscolhaDoAgente agentes={agentes} valor={escolhido} aoEscolher={setEscolhido} desabilitado={salvando} />
+        {erro && <p role="alert" className="text-sm text-destructive">{erro}</p>}
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={salvando}>Cancelar</Button>
           <Button onClick={() => escolhido && onConfirmar(escolhido)} disabled={!escolhido || salvando}>Religar IA</Button>

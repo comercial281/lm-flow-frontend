@@ -2,6 +2,8 @@
 // e IA. A lógica da IA veio do antigo CardActionsPanel sem mudar de fonte: o
 // estado chega pronto no card (`item.sales_agent`) e o liga/desliga é o mesmo
 // endpoint da conversa.
+import { useLigarIa } from '@/features/conversas/useLigarIa';
+import ReligarIaDialog from '@/components/chat/conversation/ReligarIaDialog';
 import { useCallback, useState } from 'react';
 import { Bot, BotOff, CalendarPlus, HelpCircle, Loader2, MessageSquare } from 'lucide-react';
 import { toast } from 'sonner';
@@ -71,11 +73,24 @@ export default function LeadQuickActions({
   const iaLigada = aiState?.status === 'active';
   const iaIndisponivel = !convId || !aiState || aiState.status === 'none';
 
+  // Ligar num número dividido pede o agente (o mesmo caminho do robô do topo da conversa).
+  const ligarIa = useLigarIa({
+    aoLigar: (_id, next) => {
+      setAiState(next);
+      setRelatorio(null);
+      toast.success(next.label);
+    },
+  });
+
   const trocarIa = useCallback(async () => {
     if (!convId) return;
+    if (!iaLigada) {
+      await ligarIa.pedirLigar(convId);
+      return;
+    }
     setTrocandoIa(true);
     try {
-      const next = await chatService.toggleSalesAgent(convId, !iaLigada);
+      const next = await chatService.toggleSalesAgent(convId, false);
       setAiState(next);
       setRelatorio(null);
       toast.success(next.label);
@@ -84,7 +99,7 @@ export default function LeadQuickActions({
     } finally {
       setTrocandoIa(false);
     }
-  }, [convId, iaLigada]);
+  }, [convId, iaLigada, ligarIa.pedirLigar]);
 
   const carregarRelatorio = useCallback(async () => {
     if (!convId || relatorio) return;
@@ -135,7 +150,7 @@ export default function LeadQuickActions({
         <button
           type="button"
           className={classeDaIa}
-          disabled={trocandoIa || iaIndisponivel}
+          disabled={trocandoIa || ligarIa.procurando || iaIndisponivel}
           title={motivo ?? (iaLigada ? 'Desligar a IA neste lead' : 'Ligar a IA neste lead')}
           aria-pressed={iaLigada}
           onClick={trocarIa}
@@ -188,6 +203,7 @@ export default function LeadQuickActions({
         </Popover>
       )}
 
+      <ReligarIaDialog {...ligarIa.janela} />
       {visita.janela}
     </div>
   );

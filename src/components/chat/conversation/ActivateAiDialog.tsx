@@ -22,7 +22,6 @@ import type { SalesAgentLeadReport } from '@/types/analytics/pipelines';
 import EmptyState from '@/components/base/EmptyState';
 import Aviso from '@/components/base/Aviso';
 import { avisarIaRecarregar } from '@/features/conversas/atalhosDoLead';
-import { agentesDoNumero } from '@/features/salesAgents/agentesDoNumero';
 import EscolhaDoAgente from '@/components/base/EscolhaDoAgente';
 
 interface Props {
@@ -64,10 +63,9 @@ const ActivateAiDialog: React.FC<Props> = ({ conversation, open, onOpenChange })
       .then((r) => { if (vez === ultimaCarga.current) setReport(r); })
       .catch(() => { if (vez === ultimaCarga.current) setReport(null); });
     salesAgentsService
-      .list()
-      .then((agents) => {
+      .listForInbox(String(conversation.inbox_id))
+      .then((doNumero) => {
         if (vez !== ultimaCarga.current) return;
-        const doNumero = agentesDoNumero(agents, conversation.inbox_id);
         setAgentes(doNumero);
         setEscolhidoId(null);
         setPropertyCode(doNumero.length === 1 ? doNumero[0].default_property_code ?? '' : '');

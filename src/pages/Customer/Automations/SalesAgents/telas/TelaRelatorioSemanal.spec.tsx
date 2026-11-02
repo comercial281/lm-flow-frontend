@@ -58,7 +58,7 @@ const CAMPANHAS = [
     pararam: { chegou: 4, respondeu: 3, passou: 1, visita: 2 } },
   { key: 'ad:9', label: 'Anúncio AB01', kind: 'ad', leads: 4, responderam: 1, passados: 0, visitas: 0, fora_do_perfil: 0,
     pararam: { chegou: 3, respondeu: 1, passou: 0, visita: 0 } },
-  { key: null, label: 'Sem campanha', kind: 'none', leads: 2, responderam: 0, passados: 0, visitas: 0, fora_do_perfil: 0,
+  { key: 'none', label: 'Sem campanha', kind: 'none', leads: 2, responderam: 0, passados: 0, visitas: 0, fora_do_perfil: 0,
     pararam: { chegou: 2, respondeu: 0, passou: 0, visita: 0 } },
 ];
 

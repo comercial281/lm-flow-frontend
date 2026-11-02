@@ -1,4 +1,5 @@
 import { Suspense, useState } from 'react';
+import ReligarIaDialog from '@/components/chat/conversation/ReligarIaDialog';
 import { Bot, BotOff, CalendarClock, MapPin, Rocket, UserCheck } from 'lucide-react';
 
 import IconActionButton from '@/components/base/IconActionButton';
@@ -133,6 +134,8 @@ export default function AtalhosDoLead({ contact, conversation, pipelines, nome, 
           />
         </Suspense>
       )}
+
+      <ReligarIaDialog {...ia.janela} />
 
       {visitaAberta && lead && (
         <Suspense fallback={null}>

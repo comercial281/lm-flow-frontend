@@ -37,7 +37,7 @@ export default function TabelaPorCampanha({ campanhas }: { campanhas: WeeklyRepo
           <tbody>
             {campanhas.map((c, i) => (
               <tr key={c.key ?? `sem-${i}`} className="border-t border-sidebar-border">
-                <td className="px-3 py-2 font-medium">{c.key == null ? 'Sem campanha' : c.label}</td>
+                <td className="px-3 py-2 font-medium">{c.key == null || c.kind === 'none' ? 'Sem campanha' : c.label}</td>
                 <td className="px-3 py-2 text-right">{c.leads}</td>
                 <td className="px-3 py-2 text-right">{c.responderam}</td>
                 <td className="px-3 py-2 text-right">{c.passados}</td>

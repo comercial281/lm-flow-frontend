@@ -1057,6 +1057,7 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
               donoDoEnvio={donoDoEnvio}
               numeroDoFluxo={numberView}
               numerosDiferentes={numeroDoFluxoVale && !numeroAtivo && numberDivergent}
+              inboxDoFluxo={numeroAtivo && numberSetting.mode === 'number' ? numberSetting.inboxId || null : null}
             />
           )}
           {openPanel?.type === 'trigger' && !semGatilho && (

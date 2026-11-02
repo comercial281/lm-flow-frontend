@@ -8,7 +8,7 @@ import type { Conversation } from '@/types/chat/api';
 const list = vi.hoisted(() => vi.fn());
 const engage = vi.hoisted(() => vi.fn());
 const status = vi.hoisted(() => vi.fn());
-vi.mock('@/services/salesAgents/salesAgentsService', () => ({ salesAgentsService: { list, engage } }));
+vi.mock('@/services/salesAgents/salesAgentsService', () => ({ salesAgentsService: { listForInbox: list, engage } }));
 vi.mock('@/services/chat/chatService', () => ({ chatService: { getSalesAgentStatus: status } }));
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 

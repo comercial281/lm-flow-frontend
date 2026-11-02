@@ -7,7 +7,7 @@ import type { Conversation } from '@/types/chat/api';
 const list = vi.hoisted(() => vi.fn());
 const engage = vi.hoisted(() => vi.fn());
 const status = vi.hoisted(() => vi.fn());
-vi.mock('@/services/salesAgents/salesAgentsService', () => ({ salesAgentsService: { list, engage } }));
+vi.mock('@/services/salesAgents/salesAgentsService', () => ({ salesAgentsService: { listForInbox: list, engage } }));
 vi.mock('@/services/chat/chatService', () => ({ chatService: { getSalesAgentStatus: status } }));
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
@@ -36,16 +36,15 @@ describe('ActivateAiDialog · número dividido', () => {
     await waitFor(() => expect(engage).toHaveBeenCalledWith('b', expect.objectContaining({ conversationId: 'c1' })));
   });
 
-  it('lista pelos números do agente, não pelo espelho inbox_id', async () => {
-    const a = { ...agente('a', 'Agente A', 0, 'i9'), numbers: [{ inbox_id: 'i9', position: 0, enabled: true }, { inbox_id: 'i1', position: 0, enabled: true }] };
-    list.mockResolvedValue([a, agente('b', 'Agente B', 1)]);
+  it('pergunta ao servidor pelos agentes do número da conversa, não pelo espelho inbox_id', async () => {
+    list.mockResolvedValue([agente('a', 'Agente A', 0), agente('b', 'Agente B', 1)]);
     render(<ActivateAiDialog conversation={conversa} open onOpenChange={() => {}} />);
     expect(await screen.findByRole('radio', { name: 'Agente A' })).toBeInTheDocument();
-    expect(screen.getByRole('radio', { name: 'Agente B' })).toBeInTheDocument();
+    expect(list).toHaveBeenCalledWith('i1');
   });
 
   it('com um agente só, vem marcado e a escolha some', async () => {
-    list.mockResolvedValue([agente('a', 'Agente A', 0), agente('c', 'Agente C', 0, 'i2')]);
+    list.mockResolvedValue([agente('a', 'Agente A', 0)]);
     render(<ActivateAiDialog conversation={conversa} open onOpenChange={() => {}} />);
     expect(await screen.findByText('Agente A')).toBeInTheDocument();
     expect(screen.queryByText('Escolha qual agente atende')).toBeNull();

@@ -1,9 +1,10 @@
 import BotoesDeEscolha from '@/components/base/BotoesDeEscolha';
-import { ESCOLHA_DO_AGENTE } from '@/features/salesAgents/agentesDoNumero';
 
 // A escolha do agente num número dividido (fase 2): usada no bloco "Passar para a IA"
 // do construtor e na janela "Ativar IA pra este lead". Com um agente só não se usa:
 // quem chama mostra o nome e pronto.
+
+export const ESCOLHA_DO_AGENTE = 'Escolha qual agente atende';
 
 export interface AgenteEscolhivel {
   id: string;

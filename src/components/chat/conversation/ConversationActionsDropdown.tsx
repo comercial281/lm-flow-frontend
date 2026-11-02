@@ -34,8 +34,7 @@ import { useConversations } from '@/hooks/chat/useConversations';
 import { useLanguage } from '@/hooks/useLanguage';
 import ActivateAiDialog from './ActivateAiDialog';
 import ReligarIaDialog from './ReligarIaDialog';
-import { salesAgentsService, type SalesAgent } from '@/services/salesAgents/salesAgentsService';
-import { agentesDoNumero } from '@/features/salesAgents/agentesDoNumero';
+import { useLigarIa } from '@/features/conversas/useLigarIa';
 import BotaoMaisAcoes from '@/components/base/BotaoMaisAcoes';
 
 interface ConversationActionsDropdownProps {
@@ -72,25 +71,23 @@ const ConversationActionsDropdown: React.FC<ConversationActionsDropdownProps> = 
   const aiPaused =
     aiPausedOverride ?? conversation?.additional_attributes?.sales_agent_paused === true;
 
-  // Número dividido: ao religar, a pessoa escolhe qual agente volta a atender.
-  const [agentesParaReligar, setAgentesParaReligar] = useState<SalesAgent[] | null>(null);
+  // Religar: num número dividido a pessoa escolhe o agente (o mesmo caminho do robô do topo e do cartão).
+  const ligarIa = useLigarIa({
+    aoLigar: (_id, state) => {
+      setAiPausedOverride(state.status === 'paused');
+      toast.success(state.label);
+    },
+  });
 
-  const toggleAi = async (enable: boolean, agentId?: string) => {
+  const toggleAi = async (enable: boolean) => {
     if (!conversation?.id) return;
+    if (enable) {
+      await ligarIa.pedirLigar(String(conversation.id), conversation);
+      return;
+    }
     setTogglingAi(true);
     try {
-      if (enable && !agentId) {
-        const doNumero = await salesAgentsService
-          .list()
-          .then((agents) => agentesDoNumero(agents, conversation.inbox_id))
-          .catch(() => []);
-        if (doNumero.length > 1) {
-          setAgentesParaReligar(doNumero);
-          return;
-        }
-      }
-      const state = await chatService.toggleSalesAgent(String(conversation.id), enable, agentId);
-      setAgentesParaReligar(null);
+      const state = await chatService.toggleSalesAgent(String(conversation.id), false);
       setAiPausedOverride(state.status === 'paused');
       toast.success(state.label);
     } catch {
@@ -221,7 +218,7 @@ const ConversationActionsDropdown: React.FC<ConversationActionsDropdownProps> = 
             setOpen(false);
             void toggleAi(aiPaused);
           }}
-          disabled={togglingAi}
+          disabled={togglingAi || ligarIa.procurando}
           className="flex items-center gap-2"
         >
           <BotOff className="h-4 w-4" />
@@ -458,13 +455,7 @@ const ConversationActionsDropdown: React.FC<ConversationActionsDropdownProps> = 
         </DropdownMenuItem>
       </DropdownMenuContent>
       <ActivateAiDialog conversation={conversation} open={aiOpen} onOpenChange={setAiOpen} />
-      <ReligarIaDialog
-        agentes={agentesParaReligar ?? []}
-        open={agentesParaReligar !== null}
-        salvando={togglingAi}
-        onOpenChange={(v) => { if (!v) setAgentesParaReligar(null); }}
-        onConfirmar={(id) => void toggleAi(true, id)}
-      />
+      <ReligarIaDialog {...ligarIa.janela} />
     </DropdownMenu>
   );
 };

@@ -44,6 +44,7 @@ import { NotificationFields } from './NotificationFields';
 import { isNotifyAction } from '@/features/flowAutomations/notification';
 import { LinhaDoEnvio, MessageBlockFields } from './MessageBlockFields';
 import { EscolhaDoAgenteDoBloco } from './EscolhaDoAgenteDoBloco';
+import { ESCOLHA_DO_AGENTE } from '@/components/base/EscolhaDoAgente';
 import { flowNumberAiLine, flowNumberMessageLine, type FlowNumberView } from '@/features/flowAutomations/flowNumber';
 
 interface Props {
@@ -80,6 +81,8 @@ interface Props {
   numeroDoFluxo?: FlowNumberView | null;
   /** Fluxo antigo da equipe cujas Mensagens saem por números diferentes. */
   numerosDiferentes?: boolean;
+  /** O número pelo qual o fluxo fala (número específico): o "Passar para a IA" lista os agentes dele. */
+  inboxDoFluxo?: string | null;
 }
 
 // "Por um tempo, saindo só em horário comercial" (o modo `schedule`) virou a
@@ -263,11 +266,13 @@ function withOwnerSendFrom(kind: string, config: FlowNodeConfig): FlowNodeConfig
   return config;
 }
 
-export function FlowNodePanel({ node, resources, onClose, onSave, onDirtyChange, flowKind = 'automation', guided = false, saving = false, pessoal = false, numeroPessoal = null, numeroPessoalCarregando = false, donoDoEnvio = null, numeroDoFluxo = null, numerosDiferentes = false }: Props) {
+export function FlowNodePanel({ node, resources, onClose, onSave, onDirtyChange, flowKind = 'automation', guided = false, saving = false, pessoal = false, numeroPessoal = null, numeroPessoalCarregando = false, donoDoEnvio = null, numeroDoFluxo = null, numerosDiferentes = false, inboxDoFluxo = null }: Props) {
   // Pessoal (a minha ou a de outra pessoa): a mensagem sai pelo número do dono.
   const peloDono = pessoal || donoDoEnvio != null;
   const [config, setConfig] = useState<FlowNodeConfig>(node?.config || {});
   const [problem, setProblem] = useState<string | null>(null);
+  // "Passar para a IA" num número dividido: falta escolher o agente.
+  const [faltaAgente, setFaltaAgente] = useState(false);
 
   React.useEffect(() => {
     setConfig(node?.config || {});
@@ -458,7 +463,7 @@ export function FlowNodePanel({ node, resources, onClose, onSave, onDirtyChange,
               {(numeroDoFluxo && flowNumberAiLine(numeroDoFluxo))
                 || 'Quem atende: a IA do número da conversa do lead. Se esse número não tiver IA ligada, nada acontece.'}
             </p>
-            <EscolhaDoAgenteDoBloco config={config} onChange={setConfig} />
+            <EscolhaDoAgenteDoBloco config={config} onChange={setConfig} inboxId={inboxDoFluxo} guided={guided} aoPrecisarEscolher={setFaltaAgente} />
           </div>
         );
       case 'disable_ai':
@@ -602,6 +607,10 @@ export function FlowNodePanel({ node, resources, onClose, onSave, onDirtyChange,
     const finalConfig = peloDono ? withOwnerSendFrom(activeNode.kind, baseConfig) : baseConfig;
     // Mesma régua do cartão e da chave de ligar (readiness.ts), e o que o passo
     // do guia pede (sprint 4).
+    if (activeNode.kind === 'hand_to_ai' && faltaAgente) {
+      setProblem(ESCOLHA_DO_AGENTE);
+      return;
+    }
     const issue = nodeProblem({ kind: activeNode.kind, config: finalConfig }, flowKind) ?? guideRequiredProblem(guide, finalConfig, activeNode.kind);
     if (issue) {
       setProblem(issue);

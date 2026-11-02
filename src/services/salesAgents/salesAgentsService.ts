@@ -1163,7 +1163,7 @@ export interface WeeklyReportResult {
 
 /** Uma linha da tabela "Por campanha" do relatório semanal (`stats.campanhas`). */
 export interface WeeklyReportCampaign {
-  /** null = a linha "Sem campanha". */
+  /** O servidor manda 'none' (e `kind: 'none'`) na linha "Sem campanha"; null também vale. */
   key: string | null;
   label: string;
   kind: string;
@@ -1339,6 +1339,12 @@ function comAvisos(numero: AgentNumberComAvisos): AgentNumberComAvisos {
 export const salesAgentsService = {
   async list(): Promise<SalesAgent[]> {
     const res = await api.get(BASE);
+    return (res.data as { data: SalesAgent[] }).data ?? [];
+  },
+
+  /** Os agentes que atendem UM número, na ordem do número (quem decide é o servidor, `?inbox_id=`). */
+  async listForInbox(inboxId: string): Promise<SalesAgent[]> {
+    const res = await api.get(BASE, { params: { inbox_id: inboxId } });
     return (res.data as { data: SalesAgent[] }).data ?? [];
   },
 

@@ -10558,7 +10558,7 @@ Código: `components/flowAutomations/MessageBlockFields.tsx` (`PularSeIaConversa
 Reestruturação da IA, fase 6. Em *IA Vendedora > Painel > Relatório semanal* o relatório da semana ganha a tabela **Por campanha**.
 
 **O que aparece na tela**
-- Entre os dois cartões (A IA e O time) e o texto do WhatsApp: tabela com **Campanha · Leads · Responderam · Passados · Visitas · Fora do perfil · Onde pararam**, uma linha por campanha, vinda de `stats.campanhas` do servidor. A conversa sem marca vem como **Sem campanha**.
+- Entre os dois cartões (A IA e O time) e o texto do WhatsApp: tabela com **Campanha · Leads · Responderam · Passados · Visitas · Fora do perfil · Onde pararam**, uma linha por campanha, vinda de `stats.campanhas` do servidor. A conversa sem marca vem como **Sem campanha** (o servidor manda `key: 'none'` e `kind: 'none'`; a tela olha o `kind`).
 - **Onde pararam** mostra as etapas que têm lead, com a contagem ("Chegou 4 · Respondeu 3 · Passou 1 · Visita 2"). Cada lead conta uma vez, na etapa mais avançada que alcançou.
 - Uma frase embaixo avisa que são só leads novos da semana, então a soma pode ficar abaixo dos "Leads atendidos" do topo.
 - Servidor antigo (sem `stats.campanhas`) ou lista vazia: sem tabela e sem aviso. A tela não calcula nada, só mostra.
@@ -10574,18 +10574,17 @@ Código: `pages/Customer/Automations/SalesAgents/telas/{TelaRelatorioSemanal,Tab
 Reestruturação da IA, fase 2 (C15 e C81). Num número dividido entre agentes, quem manda a IA assumir diz qual agente.
 
 **O que aparece na tela**
-- **Bloco "Passar para a IA"** (construtor): com um agente só no cliente, aparece "IA que assume: <nome>" e o id dele vai em `config.sales_agent_id`. Com algum número dividido, aparece **Escolha qual agente atende** (botões de escolha) e grava o id escolhido. Sem número dividido nenhum, o bloco segue como antes (a IA do número da conversa).
-- **Ativar IA pra este lead** (`ActivateAiDialog`): lista os agentes do **número da conversa** (pelos números do agente, na ordem do número), não pelo espelho `inbox_id`. Com um agente, vem marcado e a escolha some; com mais de um, pede **Escolha qual agente atende** e o *Ativar IA* só liga depois de escolher. O imóvel padrão acompanha o agente escolhido.
-- **Religar IA neste lead** (menu *⋯* da conversa): num número dividido abre a janela *ReligarIaDialog* pedindo o agente; o servidor recebe `sales_agent_id` em `POST /conversations/:id/sales_agent`.
+- **Bloco "Passar para a IA"** (construtor): o bloco lista os agentes do **número pelo qual o fluxo fala** (quando o fluxo usa "Por um número específico"; senão, os do cliente inteiro). Com um agente só aparece "IA que assume: <nome>" e **nada é gravado** (o servidor, sem `sales_agent_id`, usa o agente do número). Com número dividido aparece **Escolha qual agente atende** (botões de escolha), o Salvar não deixa passar sem a escolha e a escolha grava `config.sales_agent_id`. No modo guiado do corretor a escolha some.
+- **Ativar IA pra este lead** (`ActivateAiDialog`): lista os agentes do número da conversa. Com um agente, vem marcado e a escolha some; com mais de um, pede **Escolha qual agente atende** e o *Ativar IA* só liga depois de escolher. O imóvel padrão acompanha o agente escolhido.
+- **Religar IA** no menu da conversa, no robô do topo da conversa e no botão de IA do cartão do funil: os três passam pelo mesmo hook (`useLigarIa`). Num número dividido abre a janela *ReligarIaDialog* pedindo o agente (vem marcado o que já está na conversa); com um agente só liga direto. A recusa do servidor ("Essa IA não atende o número desta conversa...") aparece na janela como veio.
 
 **Decisões**
-1. `features/salesAgents/agentesDoNumero.ts` é a regra única: agente vivo (não juntado), que responde ao vivo (não é só de follow-up), com o número ligado, ordenado por `position`; os ligados vêm no lugar dos desligados. Sem escolha, o servidor usa o primeiro do número (fluxo antigo segue).
-2. A escolha usa `EscolhaDoAgente` (`components/base`), em `BotoesDeEscolha`.
+1. Quem atende o número é regra do servidor: `salesAgentsService.listForInbox(inboxId)` (`GET /sales_agents?inbox_id=`, na ordem do número). A tela não refaz a regra. Só o bloco, quando o fluxo não fala por um número, olha o cliente inteiro (`agentesParaOBloco`/`temNumeroDividido`).
+2. **O bloco não grava `sales_agent_id` sozinho** (decisão do controlador, vence o enunciado): gravar ao abrir deixava o painel "mudado" e prendia o bloco num agente que pode deixar de servir o número quando nascer o segundo agente. Só grava quando a pessoa escolhe.
+3. `useLigarIa` (`features/conversas`) devolve `pedirLigar` e as props da janela; cada tela renderiza `<ReligarIaDialog {...janela} />` e cuida do próprio estado em `aoLigar`. A conversa vem da tela (menu) ou de `GET /conversations/:id` (robô e cartão).
+4. A escolha usa `EscolhaDoAgente` (`components/base`), em `BotoesDeEscolha`.
 
-**Armadilhas**
-- O liga/desliga do robô no topo da conversa (`useIaDaConversa`) e o do cartão do funil (`LeadQuickActions`) ainda ligam sem escolha: num número dividido o servidor usa o primeiro agente do número. Entram numa próxima rodada.
-
-Código: `features/salesAgents/agentesDoNumero.ts`, `components/base/EscolhaDoAgente.tsx`, `components/flowAutomations/EscolhaDoAgenteDoBloco.tsx`, `components/chat/conversation/{ActivateAiDialog,ReligarIaDialog,ConversationActionsDropdown}.tsx`, `services/chat/chatService.ts`.
+Código: `features/conversas/useLigarIa.ts`, `features/salesAgents/agentesDoNumero.ts`, `components/base/EscolhaDoAgente.tsx`, `components/flowAutomations/EscolhaDoAgenteDoBloco.tsx`, `components/chat/conversation/{ActivateAiDialog,ReligarIaDialog,ConversationActionsDropdown}.tsx`, `features/conversas/useIaDaConversa.ts`, `components/pipelines/card/LeadQuickActions.tsx`, `services/chat/chatService.ts`.
 
 ## Agenda de Visitas: o tipo do compromisso (Tarefa 79, 01/11/2026)
 
@@ -10596,6 +10595,6 @@ Spec C72. O aviso do servidor já diz "Visita, Videochamada, Reunião ou Ligaç�
 - No calendário (Semana e Dia), o bloco escreve o tipo ao lado da hora só quando não é Visita ("10:00 às 11:00 · Reunião"); a pílula do mês leva o tipo no nome acessível. Visita comum fica como sempre.
 
 **Armadilhas**
-- O endereço `GET /visits` ainda **não devolve** o `kind` no `serialize_visit` do backend: até ele devolver, toda linha mostra "Visita". A tela já lê `visit.kind` quando vier.
+- Servidor sem o `kind` na visita (antigo): toda linha mostra "Visita".
 
 Código: `features/visits/tipoDaVisita.ts`, `PecaDaVisita.tsx`, `pages/Customer/Visits/Visits.tsx`, `services/visits/visitsService.ts`. Specs: `tipoDaVisita.spec.ts`, `PecaDaVisita.spec.tsx`.

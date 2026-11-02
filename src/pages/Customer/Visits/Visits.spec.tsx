@@ -114,6 +114,22 @@ describe('Agenda de Visitas: Semana e Dia', () => {
     try { localStorage.removeItem('lm-visitas-visao'); } catch { /* sem armazenamento */ }
   });
 
+  it('a linha da lista mostra a situação e o tipo: "Agendada · Visita" sem tipo, "· Videochamada" com tipo', async () => {
+    const hoje = new Date();
+    const as10 = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate(), 10, 0);
+    list.mockResolvedValue({
+      data: [
+        { id: 'v1', status: 'scheduled', scheduled_at: as10.toISOString(), duration_minutes: 30, contact: { id: 'c1', name: 'Ana' } },
+        { id: 'v2', status: 'scheduled', kind: 'videochamada', scheduled_at: as10.toISOString(), duration_minutes: 30, contact: { id: 'c2', name: 'Bia' } },
+      ],
+      meta: { total: 2, active_total: 2, only_mine: false },
+    });
+    abrir();
+    await userEvent.click(await screen.findByRole('button', { name: 'Ver em lista' }));
+    expect(await screen.findByText('Agendada · Visita')).toBeInTheDocument();
+    expect(screen.getByText('Agendada · Videochamada')).toBeInTheDocument();
+  });
+
   it('Semana pede ao servidor só a semana e desenha a visita como bloco', async () => {
     const hoje = new Date();
     const as15 = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate(), 15, 0);
