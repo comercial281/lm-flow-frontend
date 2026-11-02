@@ -69,4 +69,12 @@ describe('iaInicial (Tarefa 68)', () => {
     expect(iaInicial(ids, 'excluida')).toBe('ia-1');
     expect(iaInicial([], 'excluida')).toBeNull();
   });
+  it('link salvo de agente juntado abre o agente que o absorveu, não o primeiro', () => {
+    expect(iaInicial(['ia-1', 'ia-2'], 'velha', { velha: 'ia-2' })).toBe('ia-2');
+  });
+  it('junção em cadeia segue até o agente vivo; ciclo ou destino sumido cai na primeira', () => {
+    expect(iaInicial(['ia-1', 'ia-2'], 'a', { a: 'b', b: 'ia-2' })).toBe('ia-2');
+    expect(iaInicial(['ia-1', 'ia-2'], 'a', { a: 'b', b: 'a' })).toBe('ia-1');
+    expect(iaInicial(['ia-1', 'ia-2'], 'a', { a: 'sumido' })).toBe('ia-1');
+  });
 });

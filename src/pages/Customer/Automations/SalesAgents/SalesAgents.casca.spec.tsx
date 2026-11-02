@@ -14,8 +14,9 @@ const diagnostics = vi.hoisted(() => vi.fn());
 const create = vi.hoisted(() => vi.fn());
 const update = vi.hoisted(() => vi.fn());
 const resumos = vi.hoisted(() => vi.fn());
+const destroy = vi.hoisted(() => vi.fn());
 vi.mock('@/services/salesAgents/salesAgentsService', () => ({
-  salesAgentsService: { list, diagnostics, create, update, destroy: vi.fn(), resumos },
+  salesAgentsService: { list, diagnostics, create, update, destroy, resumos },
 }));
 vi.mock('@/services/channels/inboxesService', () => ({ default: { list: vi.fn().mockResolvedValue({ data: [] }) } }));
 const permissao = vi.hoisted(() => ({ criar: true }));
@@ -200,6 +201,31 @@ describe('IA Vendedora · casca', () => {
   it('IA que não existe mais no endereço cai na primeira', async () => {
     abrir('/ia-vendedora?ia=excluida&tela=ensinar');
     expect(await screen.findByText('tela ensinar · IA de Vendas')).toBeInTheDocument();
+  });
+
+  it('link salvo de agente juntado abre o agente que o absorveu', async () => {
+    list.mockResolvedValue([
+      ia('ia-1', 'IA de Vendas'),
+      ia('ia-2', 'IA Demo'),
+      ia('ia-3', 'IA Juntada', { absorbed_into_id: 'ia-2' }),
+    ]);
+    abrir('/ia-vendedora?ia=ia-3&tela=ensinar');
+    expect(await screen.findByText('tela ensinar · IA Demo')).toBeInTheDocument();
+  });
+
+  it('depois de Excluir IA, vai pra página de agentes (não abre outro agente)', async () => {
+    destroy.mockResolvedValue(undefined);
+    abrir('/ia-vendedora?ia=ia-1');
+    await screen.findByText('tela visao-geral · IA de Vendas');
+    list.mockResolvedValue([ia('ia-2', 'IA Demo', { inbox_id: null })]);
+    await userEvent.click(screen.getByRole('button', { name: 'Mais ações' }));
+    await userEvent.click(await screen.findByRole('menuitem', { name: /Excluir IA/ }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Excluir' }));
+    await waitFor(() => expect(destroy).toHaveBeenCalledWith('ia-1'));
+    await waitFor(() => expect(endereco()).toBe(''));
+    expect(await screen.findByText('+ Novo agente')).toBeInTheDocument();
+    expect(screen.queryByText(/tela visao-geral/)).toBeNull();
+    expect(endereco()).toBe('');
   });
 
   it('o menu troca a tela mantendo a IA', async () => {

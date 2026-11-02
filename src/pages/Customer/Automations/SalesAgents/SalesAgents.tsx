@@ -8,7 +8,7 @@
 // `telas/`; o Configurar são as páginas de `configurar/` (onda 3), que gravam na
 // hora (`configurar/useGravarNaHora.ts`), devolvendo a IA salva por `aoSalvo`.
 // Spec: LM FLOW/specs/2026-10-05-ia-vendedora-refatoracao-design.md.
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { BaseHeader, Pagina } from '@/components/base';
 import Carregando from '@/components/base/Carregando';
@@ -55,6 +55,8 @@ const maisNova = (a: SalesAgent): SalesAgent => {
 export default function SalesAgents() {
   const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
   const [agents, setAgents] = useState<SalesAgent[]>([]);
+  const excluidaRef = useRef<string | null>(null);
+  const [juntados, setJuntados] = useState<Record<string, string>>({});
   const [selected, setSelected] = useState<SalesAgent | null>(null);
   const [inboxes, setInboxes] = useState<InboxOption[]>([]);
   const [loading, setLoading] = useState(true);
@@ -93,7 +95,10 @@ export default function SalesAgents() {
     try {
       // A lista relida nunca volta uma IA pra trás do último salvo dela.
       // Agente juntado a outro (fase 2) é "não existe mais": nem na página, nem no seletor.
-      const list = (await salesAgentsService.list()).filter((a) => !a.absorbed_into_id).map(maisNova);
+      const todos = await salesAgentsService.list();
+      const list = todos.filter((a) => !a.absorbed_into_id).map(maisNova);
+      // Link salvo de agente juntado abre o agente que o absorveu.
+      setJuntados(Object.fromEntries(todos.filter((a) => a.absorbed_into_id).map((a) => [a.id, a.absorbed_into_id as string])));
       setAgents(list);
       setSelected((prev) => (prev ? list.find((a) => a.id === prev.id) ?? null : null));
     } catch (e) {
@@ -123,7 +128,11 @@ export default function SalesAgents() {
   // formato certo (inclusive o `?agent=` que o assistente ainda usa pra devolver).
   useEffect(() => {
     if (loading) return;
-    const alvo = iaInicial(agents.map((a) => a.id), iaPedida);
+    // IA que acabou de ser excluída: o endereço ainda pode trazer o id dela por um instante
+    // (a navegação é adiada), e cair na "primeira" abriria outro agente. Espera o endereço sair.
+    if (iaPedida && iaPedida === excluidaRef.current) return;
+    excluidaRef.current = null;
+    const alvo = iaInicial(agents.map((a) => a.id), iaPedida, juntados);
     if (!iaPedida) {
       setSelected(null);
       return;
@@ -135,7 +144,7 @@ export default function SalesAgents() {
     const certo = paramsDaIa(alvo, tela, paginaPedida(searchParams, tela));
     if (searchParams.toString() !== new URLSearchParams(certo).toString()) setSearchParams(certo, { replace: true });
     setSelected((prev) => (prev?.id === alvo ? prev : agents.find((a) => a.id === alvo) ?? null));
-  }, [loading, agents, iaPedida, tela, searchParams, setSearchParams]);
+  }, [loading, agents, juntados, iaPedida, tela, searchParams, setSearchParams]);
 
   // O Diagnóstico da IA aberta alimenta o selo e as pendências. Relido quando a
   // IA muda ou é salva (`updated_at`), nunca a cada tecla. Falha não grita: o
@@ -222,7 +231,12 @@ export default function SalesAgents() {
     try {
       await salesAgentsService.destroy(agent.id);
       toast.success('Excluído');
-      if (selected?.id === agent.id) setSelected(null);
+      // Excluiu a que estava aberta: vai pra página de agentes (sem `ia`), não abre outra.
+      if (selected?.id === agent.id) {
+        excluidaRef.current = agent.id;
+        setSelected(null);
+        setSearchParams({}, { replace: true });
+      }
       await loadAgents();
     } catch {
       toast.error('Erro ao excluir');

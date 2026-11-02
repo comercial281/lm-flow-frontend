@@ -113,9 +113,21 @@ export function paramsDaIa(ia: string | null, tela: TelaId, pagina?: string | nu
  * agentes (Tarefa 68; a "última IA usada" saiu). IA do endereço que não existe mais
  * (excluída, juntada) cai na primeira.
  */
-export function iaInicial(ids: string[], doEndereco: string | null): string | null {
+export function iaInicial(
+  ids: string[],
+  doEndereco: string | null,
+  /** Agentes juntados: id do que foi juntado → id do que o absorveu (`absorbed_into_id`). */
+  juntados: Record<string, string> = {},
+): string | null {
   if (!doEndereco) return null;
-  return ids.includes(doEndereco) ? doEndereco : (ids[0] ?? null);
+  if (ids.includes(doEndereco)) return doEndereco;
+  // Link salvo de agente juntado: segue até o que o absorveu (com teto, contra ciclo).
+  let atual = doEndereco;
+  for (let i = 0; i < 10 && juntados[atual]; i++) {
+    atual = juntados[atual];
+    if (ids.includes(atual)) return atual;
+  }
+  return ids[0] ?? null;
 }
 
 export function itensDoGrupo(grupo: GrupoId, opts: { insights: boolean }): TelaInfo[] {
