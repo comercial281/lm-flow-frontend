@@ -1,5 +1,6 @@
 import { Suspense, type ReactNode } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
+import RedirecionaComResto from './RedirecionaComResto';
 import { useAdminAccess } from '@/hooks/useAdminAccess';
 import { isRootTenantHost } from '@/components/layout/config/menuItems';
 import { lazyWithRetry } from '@/utils/chunkReload';
@@ -104,7 +105,6 @@ const FlowAutomationsList = lazyWithRetry(() => import('@/pages/Customer/Automat
 const FlowAutomationCanvas = lazyWithRetry(() => import('@/pages/Customer/Automations/FlowBuilder/FlowAutomationCanvas'));
 const Origem = lazyWithRetry(() => import('@/pages/Customer/Automations/Origem/Origem'));
 const WelcomeAutomations = lazyWithRetry(() => import('@/pages/Customer/Settings/WelcomeAutomations').then(m => ({ default: m.WelcomeAutomations })));
-const LeadAdsForms = lazyWithRetry(() => import('@/pages/Customer/Settings/LeadAdsForms'));
 const LandingPageEditor = lazyWithRetry(() => import('@/pages/Customer/Properties/LandingPageEditor/LandingPageEditorPage'));
 const LandingByIdEditor = lazyWithRetry(() => import('@/pages/Customer/Properties/LandingPageEditor/LandingByIdEditorPage'));
 const SimulatorDemo = lazyWithRetry(() => import('@/pages/Customer/Properties/LandingPageEditor/SimulatorDemoPage'));
@@ -763,15 +763,10 @@ const AppRouter = () => {
                 }
               />
               <Route path="lead-automations" element={<Navigate to="/automations" replace />} />
+              {/* Formulários do Meta virou Campanhas (/automations/origem): o endereço antigo leva pra lá. */}
               <Route
                 path="lead-ads-forms"
-                element={
-                  <Suspense fallback={outletSuspenseFallback}>
-                    <PermissionRoute resource="lead_ads_form_configs" action="read">
-                      <LeadAdsForms />
-                    </PermissionRoute>
-                  </Suspense>
-                }
+                element={<RedirecionaComResto para="/automations/origem" />}
               />
               {/* Follow-up (Automações · sprint 3, 03/10/2026): a mesma lista e o
                   mesmo canvas das Automações, com os fluxos de follow-up. O editor
@@ -934,11 +929,7 @@ const AppRouter = () => {
 
             <Route
               path="/settings/lead-ads-forms"
-              element={
-                <PermissionRoute resource="lead_ads_form_configs" action="read">
-                  <LeadAdsForms />
-                </PermissionRoute>
-              }
+              element={<RedirecionaComResto para="/automations/origem" />}
             />
 
             {/* O endereço antigo do Follow-up leva pra aba nova (sprint 3). */}

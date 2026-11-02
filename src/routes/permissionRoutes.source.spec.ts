@@ -107,8 +107,6 @@ describe('toda rota do CRM confere o cargo', () => {
     ['roleta-config/:id', 'roleta_configs', 'read'],
     // Rulings do controlador (X36/G5, 2026-09-26) — além da tabela do brief;
     // chave confirmada no backend via PermissionRegistry.
-    ['lead-ads-forms', 'lead_ads_form_configs', 'read'],
-    ['/settings/lead-ads-forms', 'lead_ads_form_configs', 'read'],
     // Listas da casa (E1 do funil): abre pra quem lê o funil; mudar é pipelines.update no servidor.
     ['/settings/listas', 'pipelines', 'read'],
     // Card completo (E4): a página do lead pede o mesmo que o quadro.
