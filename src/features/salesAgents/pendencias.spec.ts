@@ -152,10 +152,16 @@ describe('pendenciasDasPaginas: o que a reestruturação acrescenta', () => {
   });
 
   it('reunião nos próximos passos sem endereço do escritório avisa em Modo operante', () => {
-    const sem = completo({ next_steps: ['visita', 'reuniao'], house_voice: { kind: 'consultora', name: 'Ana', gender: 'ela' } });
+    const sem = completo({ job: 'leva_visita', next_steps: ['visita', 'reuniao'], house_voice: { kind: 'consultora', name: 'Ana', gender: 'ela' } });
     expect(pendenciasDasPaginas(sem)).toContainEqual(expect.objectContaining({
       chave: 'reuniao_sem_endereco', pagina: 'modo', impedeLigar: false,
       frase: 'A reunião no escritório está nos próximos passos, mas falta o endereço do escritório na ficha da casa: ela não é oferecida.',
+    }));
+    // No Filtra e passa ela não marca nada: a reunião é oferecida, sem o endereço (como o servidor, 02/11/26).
+    const filtra = completo({ job: 'filtra_passa', next_steps: ['reuniao'], house_voice: { kind: 'consultora', name: 'Ana', gender: 'ela' } });
+    expect(pendenciasDasPaginas(filtra)).toContainEqual(expect.objectContaining({
+      chave: 'reuniao_sem_endereco',
+      frase: 'A reunião no escritório está nos próximos passos, mas falta o endereço do escritório na ficha da casa: ela é oferecida, mas sem o endereço.',
     }));
     const com = completo({ next_steps: ['reuniao'], house_voice: { kind: 'consultora', office_address: 'Rua A, 10' } });
     expect(chaves(com)).not.toContain('modo:reuniao_sem_endereco');
