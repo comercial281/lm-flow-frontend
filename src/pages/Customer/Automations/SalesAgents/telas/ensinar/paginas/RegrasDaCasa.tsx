@@ -122,7 +122,7 @@ export default function RegrasDaCasa({ agent, gravar, confirmar }: PropsDaPagina
         )}
       </Secao>
 
-      <Secao titulo="Objeções da casa" descricao={`Como a casa responde às objeções que valem pra qualquer imóvel (até ${TETO_DE_OBJECOES}). Sem nenhuma, ela usa o padrão de fábrica.`}>
+      <Secao titulo="Objeções da casa" descricao={`Como a casa responde às objeções que valem pra qualquer imóvel (até ${TETO_DE_OBJECOES}). Elas somam às de fábrica: quando falam do mesmo assunto, vale a da casa.`}>
         <div className="grid gap-3">
           <CampoTexto id="en-objecao-casa" rotulo="Objeção" maxLength={TETO_DA_OBJECAO} valor={objecao} aoMudar={setObjecao} placeholder="Ex.: Achei caro" />
           <CampoTextoLongo id="en-objecao-resposta" rotulo="Resposta da casa" rows={3} maxLength={TETO_DA_RESPOSTA} valor={resposta} aoMudar={setResposta}
