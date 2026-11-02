@@ -21,7 +21,7 @@ export function ResumoDaCampanha({ item, nomes }: { item: ItemDeCampanha; nomes?
   return (
     <div className="grid gap-3 sm:grid-cols-3">
       <Celula rotulo="Vende">
-        {vende ? <span className="truncate font-medium">{vende}</span> : <Badge variant="outline" className="border-amber-500/40 text-amber-600">Não diz o que vende</Badge>}
+        {vende ? <span className="truncate font-medium">{vende}</span> : <Badge variant="outline" className="border-amber-500/40 text-amber-700 dark:text-amber-400">Não diz o que vende</Badge>}
       </Celula>
       <Celula rotulo="Condição do anúncio">
         {resumoDaCondicao(item.offer_condition).map((s) => <Badge key={s} variant="secondary" className="text-xs">{s}</Badge>)}

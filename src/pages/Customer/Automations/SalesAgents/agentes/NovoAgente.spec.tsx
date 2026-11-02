@@ -71,6 +71,17 @@ describe('NovoAgente', () => {
     expect(seguirBtn).toBeEnabled();
   });
 
+  it('Filtra e passa avisa o que falta pra ligar; Leva até a visita mantém a frase de pronto', async () => {
+    abrir();
+    await screen.findByRole('list', { name: 'Passos' });
+    expect(screen.getByText(/O resto já vem pronto pro modo escolhido/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('radio', { name: 'Filtra e passa' }));
+    expect(screen.queryByText(/O resto já vem pronto/)).toBeNull();
+    expect(screen.getByText(/Depois, em Condução, marque pelo menos uma pergunta obrigatória pra poder ligar\./)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('radio', { name: 'Leva até a visita' }));
+    expect(screen.getByText(/O resto já vem pronto pro modo escolhido/)).toBeInTheDocument();
+  });
+
   it('no passo 2, o número que já tem agente mostra o nome dele e avisa da divisão', async () => {
     await ateOPasso2();
     const ana = screen.getByRole('checkbox', { name: /Ana/ });

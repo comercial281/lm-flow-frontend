@@ -131,7 +131,12 @@ export default function NovoAgente() {
           <>
             <div>
               <h2 className="text-lg font-semibold">Qual o modo operante?</h2>
-              <p className="text-sm text-muted-foreground">Dá pra mudar depois. O resto já vem pronto pro modo escolhido.</p>
+              <p className="text-sm text-muted-foreground">
+                Dá pra mudar depois.{' '}
+                {r.job === 'filtra_passa'
+                  ? 'Depois, em Condução, marque pelo menos uma pergunta obrigatória pra poder ligar.'
+                  : 'O resto já vem pronto pro modo escolhido.'}
+              </p>
             </div>
             <CartoesDeEscolha<Job> rotulo="Modo operante" valor={r.job} opcoes={MODOS} aoEscolher={(job) => setR((x) => ({ ...x, job }))} />
             <Campo id="novo-nome" rotulo="Nome do agente" ajuda="Só aparece aqui no LM Flow.">
