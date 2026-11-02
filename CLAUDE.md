@@ -10598,3 +10598,25 @@ Spec C72. O aviso do servidor já diz "Visita, Videochamada, Reunião ou Ligaç�
 - Servidor sem o `kind` na visita (antigo): toda linha mostra "Visita".
 
 Código: `features/visits/tipoDaVisita.ts`, `PecaDaVisita.tsx`, `pages/Customer/Visits/Visits.tsx`, `services/visits/visitsService.ts`. Specs: `tipoDaVisita.spec.ts`, `PecaDaVisita.spec.tsx`.
+
+## IA Vendedora · Correções da revisão final das telas (02/11/2026)
+
+Rodada de correção depois da revisão final do plano de reestruturação da IA. O que mudou pra quem usa:
+
+- **Novo agente com a voz Corretor** não trava mais: nasce com o destino "dono do número" (o servidor só aceita esse na voz Corretor). Nas outras vozes nasce com a roleta (não mais o destino antigo).
+- **A frase de recusa do servidor aparece** em Números e usuários, Campanhas e formulários: a tela lê `{error: "texto"}` e `{errors: [...]}` além dos formatos antigos (`motivoEscrito`, num ponto só).
+- **Passar para a IA** (construtor): a escolha do agente só é **obrigatória** quando o fluxo fala por um número específico e esse número é dividido. Nos outros casos é opcional, com a primeira opção **A IA do número da conversa** (não grava agente; é o padrão), e dá pra voltar a ela depois de escolher um agente.
+- **Motor**: saíram a reescrita de bloco, os pontos-chave e as objeções (o servidor não lê mais bloco reescrito nem `vars.objecoes`; as objeções são as da casa e o próximo passo vem das opções do agente). Ficou *O texto que a IA recebe* e a dor de quem procura (`dor_tipica`, que o servidor ainda lê). Vale pra equipe e pra cliente com `ia_playbook`.
+- **Minha ficha**: o 403 mostra uma mensagem só (`OWN_FICHA_NOT_OWNER` e `OWN_FICHA_FIELDS` entraram em `USER_FACING_CODES`).
+- **Novo agente**: a contagem por marca conta ativos e reservados, como o servidor; em Filtra e passa a frase diz o que falta pra ligar (marcar uma pergunta obrigatória em Condução), porque a IA nasce sem pergunta obrigatória.
+- **+ Material deste imóvel** (e da casa) com arquivo vai num POST só, já enviável e ligado ao código (`uploadFileDocument` aceita `config`); o segundo PATCH saiu.
+- **Excluir IA** leva pra página de agentes (não abre outro agente). Link salvo de agente **juntado** abre o agente que o absorveu (`absorbed_into_id`, seguindo a cadeia).
+- **Formulários antigos**: `/settings/lead-ads-forms` e `/automations/lead-ads-forms` redirecionam pra `/automations/origem` (Campanhas), mantendo busca e trecho (`RedirecionaComResto`).
+- O aviso "Não diz o que vende" da linha da campanha ganhou par no escuro.
+
+**Armadilhas**
+- Redirecionar com `<Navigate to="/x" />` solto joga fora o `?...#...`: usar `RedirecionaComResto`.
+- Excluir a IA aberta: o endereço ainda traz o id dela por um instante e cair na "primeira" abria outro agente; a casca guarda o id excluído e espera o endereço sair.
+- Voltar de versão: voltar só a tela é seguro pro servidor (nada muda no esquema nem nos endereços), mas devolve o Novo agente sem destino (a voz Corretor volta a travar), o Passar para a IA obrigatório pela conta inteira e os formulários antigos no endereço antigo. Voltar o backend não pede voltar a tela nesta rodada.
+
+Código: `features/salesAgents/{novoAgente,erroDoServidor,iaMenu}.ts`, `components/flowAutomations/EscolhaDoAgenteDoBloco.tsx`, `components/base/EscolhaDoAgente.tsx`, `components/salesAgents/PlaybookSection.tsx`, `pages/.../SalesAgents/SalesAgents.tsx`, `routes/RedirecionaComResto.tsx`.
