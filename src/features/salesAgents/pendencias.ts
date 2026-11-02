@@ -136,9 +136,12 @@ export function pendenciasDasPaginas(agent: Lido): PendenciaDaPagina[] {
     lista.push({ chave: 'filtra_sem_obrigatoria', pagina: 'conducao', frase: FRASE_FILTRA_SEM_OBRIGATORIA, impedeLigar: true });
   }
   if (passos.includes('reuniao') && !(agent.house_voice?.office_address ?? '').trim()) {
+    // Como o servidor (HealthCheck, 02/11/26): no Filtra e passa ela não marca, então a reunião
+    // é oferecida e o corretor passa o endereço; no Leva até a visita ela não é oferecida.
+    const efeito = job === 'filtra_passa' ? 'ela é oferecida, mas sem o endereço.' : 'ela não é oferecida.';
     lista.push({
       chave: 'reuniao_sem_endereco', pagina: 'modo', impedeLigar: false,
-      frase: 'A reunião no escritório está nos próximos passos, mas falta o endereço do escritório na ficha da casa: ela não é oferecida.',
+      frase: `A reunião no escritório está nos próximos passos, mas falta o endereço do escritório na ficha da casa: ${efeito}`,
     });
   }
   // Voz Corretor em número ligado sem dono: a ficha do número, ou a da casa quando ele herda.
