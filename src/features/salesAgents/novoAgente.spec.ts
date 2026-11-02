@@ -34,6 +34,11 @@ describe('payloadDoNovo', () => {
     expect(p.house_voice).toEqual({ kind: 'corretor', name: 'Bia', gender: 'ela' });
   });
 
+  it('destino do lead: dono do número na voz Corretor, roleta nas outras', () => {
+    expect(payloadDoNovo(base({ casa: { kind: 'corretor' } })).handoff_target).toBe('number_owner');
+    expect(payloadDoNovo(base({ casa: { kind: 'consultora' } })).handoff_target).toBe('roleta');
+  });
+
   it('o nome vai sem espaço nas pontas', () => {
     expect(payloadDoNovo(base({ nome: '  Agente B ' })).name).toBe('Agente B');
   });

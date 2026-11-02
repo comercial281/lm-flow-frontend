@@ -45,6 +45,8 @@ export function payloadDoNovo(r: RascunhoDoNovo, comImovel: Marca[] = []): Sales
     enabled: false,
     ...(r.job ? { job: r.job } : {}),
     next_steps: ['visita'],
+    // Na voz Corretor o servidor só aceita o dono do número; nas outras, a roleta.
+    handoff_target: casa.kind === 'corretor' ? 'number_owner' : 'roleta',
     house_voice: casa,
     ...(serves.length ? { serves } : {}),
   };

@@ -21,10 +21,10 @@
  * "O servidor respondeu 404" é um fato; "a tabela não existe" seria um chute.
  */
 
-/** O motivo que o servidor escreveu, quando existe. A API tem DOIS formatos. */
+/** O motivo que o servidor escreveu, quando existe. A API tem vários formatos. */
 export function motivoEscrito(e: unknown): string | null {
   const data = (e as { response?: { data?: unknown } })?.response?.data as
-    | { error?: unknown; message?: unknown }
+    | { error?: unknown; errors?: unknown; message?: unknown }
     | undefined;
   if (!data || typeof data !== 'object') return null;
 
@@ -34,6 +34,17 @@ export function motivoEscrito(e: unknown): string | null {
 
   // A recusa por cargo: `error` como TEXTO e a explicação em `message`, no topo.
   if (typeof data.message === 'string' && data.message.trim()) return data.message;
+
+  // `error` como texto solto ({ error: "frase" }): o que o controller de números responde.
+  if (typeof data.error === 'string' && data.error.trim()) return data.error;
+
+  // Lista de frases ({ errors: ["a", "b"] }): campanhas e formulários. Junta numa só.
+  if (Array.isArray(data.errors)) {
+    const frases = data.errors
+      .filter((x): x is string => typeof x === 'string' && x.trim().length > 0)
+      .map((x) => x.trim().replace(/\.$/, ''));
+    if (frases.length) return frases.join('. ');
+  }
 
   return null;
 }

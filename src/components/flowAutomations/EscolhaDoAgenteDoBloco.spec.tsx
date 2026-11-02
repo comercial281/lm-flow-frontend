@@ -30,10 +30,10 @@ const agente = (id: string, name: string, position: number, inbox_id = 'i1') => 
 beforeEach(() => { list.mockReset(); listForInbox.mockReset(); });
 
 describe('Passar para a IA · escolha do agente', () => {
-  it('número dividido sem escolha mostra "Escolha qual agente atende", barra o Salvar e grava o id escolhido', async () => {
-    list.mockResolvedValue([agente('a', 'Agente A', 0), agente('b', 'Agente B', 1)]);
+  it('número específico dividido sem escolha mostra "Escolha qual agente atende", barra o Salvar e grava o id escolhido', async () => {
+    listForInbox.mockResolvedValue([agente('a', 'Agente A', 0), agente('b', 'Agente B', 1)]);
     const onSave = vi.fn();
-    render(<FlowNodePanel node={node()} resources={resources} onClose={() => {}} onSave={onSave} />);
+    render(<FlowNodePanel node={node()} resources={resources} onClose={() => {}} onSave={onSave} inboxDoFluxo="i1" />);
     expect(await screen.findByText('Escolha qual agente atende')).toBeTruthy();
     await act(async () => {});
     fireEvent.click(screen.getByText('Salvar'));
@@ -48,6 +48,7 @@ describe('Passar para a IA · escolha do agente', () => {
   it('bloco já com a escolha vem marcado', async () => {
     list.mockResolvedValue([agente('a', 'Agente A', 0), agente('b', 'Agente B', 1)]);
     render(<FlowNodePanel node={node({ sales_agent_id: 'a' })} resources={resources} onClose={() => {}} onSave={() => {}} />);
+    await screen.findByRole('radio', { name: 'A IA do número da conversa' });
     const radio = await screen.findByRole('radio', { name: 'Agente A' });
     expect(radio.getAttribute('aria-checked')).toBe('true');
   });
@@ -91,5 +92,34 @@ describe('Passar para a IA · escolha do agente', () => {
     await act(async () => {});
     expect(list).not.toHaveBeenCalled();
     expect(screen.queryByText('Escolha qual agente atende')).toBeNull();
+  });
+
+  it('fluxo pelo número da conversa com outro número dividido na conta: salva sem escolha', async () => {
+    list.mockResolvedValue([agente('a', 'Agente A', 0, 'i1'), agente('b', 'Agente B', 1, 'i1')]);
+    const onSave = vi.fn();
+    render(<FlowNodePanel node={node()} resources={resources} onClose={() => {}} onSave={onSave} />);
+    const padrao = await screen.findByRole('radio', { name: 'A IA do número da conversa' });
+    expect(padrao.getAttribute('aria-checked')).toBe('true');
+    await act(async () => {});
+    fireEvent.click(screen.getByText('Salvar'));
+    await waitFor(() => expect(onSave).toHaveBeenCalled());
+    expect(onSave.mock.calls[0][1].config.sales_agent_id).toBeUndefined();
+  });
+
+  it('voltar para "A IA do número da conversa" tira o sales_agent_id', async () => {
+    list.mockResolvedValue([agente('a', 'Agente A', 0), agente('b', 'Agente B', 1)]);
+    const onSave = vi.fn();
+    render(<FlowNodePanel node={node({ sales_agent_id: 'b' })} resources={resources} onClose={() => {}} onSave={onSave} />);
+    fireEvent.click(await screen.findByRole('radio', { name: 'A IA do número da conversa' }));
+    fireEvent.click(screen.getByText('Salvar'));
+    await waitFor(() => expect(onSave).toHaveBeenCalled());
+    expect(onSave.mock.calls[0][1].config).not.toHaveProperty('sales_agent_id');
+  });
+
+  it('número específico dividido não oferece a IA do número da conversa', async () => {
+    listForInbox.mockResolvedValue([agente('a', 'Agente A', 0), agente('b', 'Agente B', 1)]);
+    render(<FlowNodePanel node={node()} resources={resources} onClose={() => {}} onSave={() => {}} inboxDoFluxo="i1" />);
+    await screen.findByRole('radio', { name: 'Agente A' });
+    expect(screen.queryByRole('radio', { name: 'A IA do número da conversa' })).toBeNull();
   });
 });

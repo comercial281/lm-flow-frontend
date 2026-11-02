@@ -12,12 +12,14 @@ export interface AgenteEscolhivel {
 }
 
 export default function EscolhaDoAgente({
-  agentes, valor, aoEscolher, desabilitado = false,
+  agentes, valor, aoEscolher, desabilitado = false, opcaoPadrao,
 }: {
   agentes: AgenteEscolhivel[];
   valor: string | null;
   aoEscolher: (id: string) => void;
   desabilitado?: boolean;
+  /** Escolha opcional: o texto da primeira opção ("sem escolher"). Ela chama `aoEscolher('')`. */
+  opcaoPadrao?: string;
 }) {
   return (
     <div className="space-y-1.5">
@@ -25,8 +27,11 @@ export default function EscolhaDoAgente({
       <BotoesDeEscolha
         rotulo={ESCOLHA_DO_AGENTE}
         semNome
-        valor={valor}
-        opcoes={agentes.map(a => ({ valor: a.id, rotulo: a.name }))}
+        valor={opcaoPadrao && !valor ? '' : valor}
+        opcoes={[
+          ...(opcaoPadrao ? [{ valor: '', rotulo: opcaoPadrao }] : []),
+          ...agentes.map(a => ({ valor: a.id, rotulo: a.name })),
+        ]}
         aoEscolher={aoEscolher}
         desabilitado={desabilitado}
       />

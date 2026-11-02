@@ -9,7 +9,9 @@ import type { FlowNodeConfig } from '@/types/flowAutomations';
 // - fluxo que fala por um número: os agentes DESSE número (o servidor ordena);
 //   senão, os do cliente inteiro;
 // - um agente só: mostra o nome e não grava nada (o servidor usa o agente do número);
-// - número dividido: pede a escolha (Salvar não deixa passar sem ela);
+// - a escolha é OBRIGATÓRIA só quando o fluxo fala por um número específico E esse número
+//   é dividido (Salvar não deixa passar sem ela). Nos outros casos é opcional: a primeira
+//   opção, "A IA do número da conversa", não grava agente (é o padrão) e dá pra voltar a ela;
 // - modo guiado do corretor: some (o servidor não deixa mudar).
 
 export function EscolhaDoAgenteDoBloco({
@@ -39,7 +41,9 @@ export function EscolhaDoAgenteDoBloco({
 
   const escolhido = typeof config.sales_agent_id === 'string' && config.sales_agent_id ? config.sales_agent_id : null;
   const dividido = !!carregado?.dividido && carregado.candidatos.length > 0;
-  const falta = dividido && (!escolhido || !carregado!.candidatos.some(a => a.id === escolhido));
+  // Obrigatória só com número específico dividido; "dividido" da conta inteira só oferece.
+  const obrigatoria = dividido && !!inboxId;
+  const falta = obrigatoria && (!escolhido || !carregado!.candidatos.some(a => a.id === escolhido));
 
   useEffect(() => { aoPrecisarEscolher?.(falta); }, [falta, aoPrecisarEscolher]);
 
@@ -49,7 +53,12 @@ export function EscolhaDoAgenteDoBloco({
       <EscolhaDoAgente
         agentes={carregado.candidatos}
         valor={escolhido}
-        aoEscolher={id => onChange(c => ({ ...c, sales_agent_id: id }))}
+        opcaoPadrao={obrigatoria ? undefined : 'A IA do número da conversa'}
+        aoEscolher={id => onChange(c => {
+          if (id) return { ...c, sales_agent_id: id };
+          const { sales_agent_id: _tira, ...resto } = c;
+          return resto;
+        })}
       />
     );
   }

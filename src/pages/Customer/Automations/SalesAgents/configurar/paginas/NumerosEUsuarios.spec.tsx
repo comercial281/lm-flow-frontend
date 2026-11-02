@@ -185,7 +185,7 @@ describe('Números e usuários · tirar e adicionar', () => {
 
   it('o servidor recusou: mostra a frase dele e não relê', async () => {
     abrir();
-    servico.criarNumero.mockRejectedValue({ response: { data: { error: { message: 'Este agente já está neste número.' } } } });
+    servico.criarNumero.mockRejectedValue({ response: { data: { error: 'Este agente já está neste número.' } } });
     await userEvent.click(screen.getByRole('button', { name: '+ Adicionar número' }));
     await userEvent.selectOptions(screen.getByLabelText('Número de WhatsApp'), 'inbox-3');
     await userEvent.click(screen.getByRole('button', { name: 'Adicionar' }));

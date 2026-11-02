@@ -22,6 +22,18 @@ describe('motivoEscrito', () => {
     expect(motivoEscrito(e)).toBe('Seu cargo não permite esta ação.');
   });
 
+  it('lê o erro como texto solto: { error: "frase" }', () => {
+    expect(motivoEscrito({ response: { data: { error: 'Na voz Corretor o lead vai para o dono do número.' } } })).toBe(
+      'Na voz Corretor o lead vai para o dono do número.',
+    );
+  });
+
+  it('lê a lista { errors: [...] } juntando as frases', () => {
+    expect(motivoEscrito({ response: { data: { errors: ['Nome em branco', 'Código repetido'] } } })).toBe(
+      'Nome em branco. Código repetido',
+    );
+  });
+
   it('devolve nulo quando não há corpo legível', () => {
     expect(motivoEscrito({ response: { status: 404 } })).toBeNull();
     expect(motivoEscrito({ message: 'Network Error' })).toBeNull();
