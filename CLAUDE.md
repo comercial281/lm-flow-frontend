@@ -7360,7 +7360,7 @@ botão Aceitar.") no lugar de "Seu cargo não permite esta ação".
 8. **Intenção personalizável:** pergunta + até 5 caminhos (`playbook.vars.caminhos_intencao`); lista vazia = os 3 de fábrica (`intent_paths_default`).
 9. **Vozes do catálogo** com *Ouvir*; voz própria = *Falar com a equipe* (abre o chat de suporte). "Nunca" saiu (= chave de áudio desligada).
 10. **Follow-up numa página só, em linha do tempo** (retomada → entrega depois de N dias → depois dela). Um campo de dias, só *Entregar pro follow-up* e *Mover o card*, como no Follow-up padrão.
-11. **Motor** (o Avançado) saiu do Configurar pro "⋯", só equipe. ⚠️ Revê a decisão 10 do passo a passo (gestor via tudo). Cliente com `ia_playbook` vê o Motor só com o texto que a IA recebe e a reescrita do roteiro.
+11. **Motor** (o Avançado) saiu do Configurar pro "⋯", só equipe. ⚠️ Revê a decisão 10 do passo a passo (gestor via tudo). Cliente com `ia_playbook` vê o Motor só com o texto que a IA recebe e a dor de quem procura (a reescrita do roteiro saiu em 02/11/2026).
 12. **Diagnóstico** no "⋯", só equipe. **Últimos atendimentos** na Visão geral, sem custo e sem erro técnico pro cliente. ⚠️ Revê o parágrafo *O que aparece na tela* da casca (Testar e Diagnóstico eram menus da barra).
 
 **Armadilhas:**
@@ -7368,12 +7368,12 @@ botão Aceitar.") no lugar de "Seu cargo não permite esta ação".
 2. **`useGravarNaHora` tem fila por IA e um "último salvo" único** (`registrarSalvo`, alimentado pela casca e por toda tela que grava). Não gravar a IA por fora sem passar pelo `aoSalvo` da casca: um "Desfazer" tardio montaria o jsonb sobre uma cópia velha.
 3. **Texto grava ao sair do campo E ao desmontar** (`TextoNaHora`): trocar de página pelo endereço sem sair do campo não perde o que foi digitado.
 4. **Um `sticky` só, o do trilho** (com `self-start`). Nada no meio gruda nem rola sozinho — era o "objeto solto" do passo a passo (prévia `sticky` + barra de salvar). Há spec que lê a fonte. ⚠️ Segue valendo na Tarefa 70: o índice é o único `sticky` (no celular nem esse: vira pílulas).
-5. **O `PlaybookSection` (Motor) só mexe em próximo passo, dor e objeções**: as outras chaves de `vars` têm dono em página. Reescrever `vars` de uma lista fixa apagava os caminhos da intenção.
+5. **O `PlaybookSection` (Motor) só mexe na dor típica** (02/11/2026: a reescrita de bloco, o próximo passo e as objeções saíram do Motor, porque o servidor não lê mais bloco reescrito nem `vars.objecoes`; o próximo passo vem das opções do agente e as objeções são as da casa). As outras chaves de `vars` têm dono em página. Reescrever `vars` de uma lista fixa apagava os caminhos da intenção.
 6. **A chave Ligada tem as travas do `podeLigar`**, com o clique que leva à página que corrige.
 7. **Testar:** o estado continua do servidor (`useEnsaio` é o TelaTestar movido); a janela prende o foco e devolve pra quem abriu; `motion-reduce:animate-none` em toda animação. **Trocar de IA fecha o Testar** (a conversa de teste é de uma IA; quem troca reabre com um clique).
 8. **Destino chama-se *Sistema do cliente*, nunca "Webhook"** (a trava `conferir-padrao` reprova a palavra, teto 0): a descrição do cartão explica que é o CRM da imobiliária, por um endereço de integração. Se o dono quiser a palavra na tela, abre-se exceção na trava.
 9. **Os tetos do `conferir-padrao` não foram mexidos** nesta onda (arquivo compartilhado com outras frentes).
-10. **Motor no "⋯" aparece pra equipe OU pro cliente com `ia_playbook`** (senão ele perde a única tela de reescrever o roteiro que o servidor ainda aceita).
+10. **Motor no "⋯" aparece pra equipe OU pro cliente com `ia_playbook`** (a dor típica é a única parte do roteiro que o servidor ainda lê).
 11. **Condição em branco nunca vai pro servidor** (Canal → *Só alguns*). Palavra, etiqueta ou código vazios, formulário sem marcar e coluna sem escolher não deixam NENHUM lead passar (`SalesAgents::TriggerGate`): numa IA ligada, gravar *Adicionar condição* parava a IA. O `TriggersSection` grava só as completas (régua `emBranco` de `situacao.ts`); a linha em branco mora na tela até ser preenchida. **A condição antiga vale até a nova ficar completa** (decisão do dono, 07/10): trocar o tipo de uma condição completa, apagar a palavra dela ou desmarcar o formulário NÃO tira a antiga do servidor. A linha guarda a que substituiu (`salva`) e o servidor só troca quando a nova fica completa. Sem isso, a IA ligada com uma condição só passava a atender todo lead (lista vazia = todos) e, no *Qualquer uma*, parava de atender quem batia na condição trocada. Na tela nada muda, só o que fica gravado nesse meio-tempo. A **lixeira tira de verdade** (inclusive a antiga). Tirando a última, grava lista vazia, o *Só alguns* continua aberto e a frase "ela atende todo lead" aparece em destaque enquanto o servidor não tem condição completa. A palavra digitada grava no desmonte (inclusive a primeira condição), menos quando o desmonte é o *Todos os leads* (`escolheuTodos`, ligado pelo Canal).
 12. **Gravação que termina depois de trocar de IA** (texto gravado no desmonte, Desfazer) atualiza a lista, mas não troca a IA aberta: o `aoSalvo` da casca só substitui a IA da tela se for a mesma.
 13. **O Desfazer não regrava valor antigo recusado** (`inbox_roleta` → roleta; a persona `owner` volta como dono), em `useGravarNaHora#inversa`.
@@ -10238,11 +10238,11 @@ Não reabrir sem o dono pedir.
 
 ## IA Vendedora no Sonnet 5.5 (desde 2026-10-29)
 
-O Sonnet 4.5 sai do ar em 30/11/2026. A opção "Equilibrada (Sonnet, padrão)" do Motor passou a ser o Sonnet 5.5, e as IAs ligadas no 4.5 foram trocadas por lista (backend #543). IA nova nasce no 5.5. O Haiku (Moeda, Bruno e o painel Testar) não mudou. As funções internas que usam o modelo padrão (preencher imóvel com IA, descrição, site, qualificação, sugestões, relatório semanal) seguem no 4.5 até um PR próprio antes de 30/11.
+O Sonnet 4.5 sai do ar em 30/11/2026. A opção "Equilibrada (Sonnet, padrão)" do Motor passou a ser o Sonnet 5.5, e as IAs ligadas no 4.5 foram trocadas por lista (backend #543). IA nova nasce no 5.5. O Haiku (as IAs de teste e o painel Testar) não mudou. As funções internas que usam o modelo padrão (preencher imóvel com IA, descrição, site, qualificação, sugestões, relatório semanal) seguem no 4.5 até um PR próprio antes de 30/11.
 
 O que muda pra quem usa:
 - **A IA espera o lead quando a nossa última mensagem já perguntou algo.** Caso típico: o lead manda o formulário, a boas-vindas da automação pergunta "esse é o seu número?" e a IA não fala por cima. Antes, no 4.5, ela repetia a boas-vindas. Se a nossa mensagem não perguntou nada, ela continua o atendimento sem se apresentar de novo.
-- **A ficha não some mais no Sonnet.** No Sonnet 5 (Castellatto), 1 em cada 3 respostas saía sem a ficha: o lead lia o texto, mas o repasse, a visita e o que ele contou não eram registrados. Agora o formato é obrigatório nos dois Sonnets.
+- **A ficha não some mais no Sonnet.** No Sonnet 5 (numa IA de cliente), 1 em cada 3 respostas saía sem a ficha: o lead lia o texto, mas o repasse, a visita e o que ele contou não eram registrados. Agora o formato é obrigatório nos dois Sonnets.
 
 Ensaio de 29/10 (turnos reais do 4.5 reenviados ao 5.5): "termina com pergunta" na mesma faixa (amostra pequena) e respostas mais curtas. Quando não tem o dado, ela passa mais por "não sabe". Ainda vale conferir no dia a dia.
 
@@ -10476,7 +10476,7 @@ O corretor dono de um número muda, só no número dele, o nome, "ele ou ela" e 
 
 **Armadilhas**
 - Não usar `TextoNaHora` aqui: ele marca o texto digitado como salvo antes da resposta e não sabe voltar atrás no erro.
-- Voltar o frontend sozinho é seguro (a tela some); o servidor é o `own_fichas_controller` do backend (#65 do plano).
+- Voltar o frontend sozinho é seguro (a tela some); o servidor é o `own_fichas_controller` do backend (#65 do plano). Voltar o backend com a tela nova no ar faz a tela chamar um endereço que não existe (404 na Minha ficha): voltar a tela junto.
 
 Código: `MinhaFicha.tsx`, `features/salesAgents/useMinhasFichas.ts` (com specs), rota em `routes/index.tsx` e `routes/permissionRoutes.ts`.
 
@@ -10502,7 +10502,7 @@ Cadastro do imóvel (`/properties/new` e a edição). Segue com **Salvar** (não
 **Armadilhas**
 - Texto escrito no campo "nova linha" de Nunca prometer só entra com **Pôr** (ou Enter): sem isso o Salvar não leva.
 - Teste de cadastro de empreendimento que dependia de nascer em "Na planta" precisa escolher a fase antes (nasce `unknown`).
-- Voltar o backend pra antes da fase 3 faz o código antigo ler `stage = 9` como fase nula (ver o diário do backend); a tela segue inofensiva.
+- Voltar o backend pra antes da fase 3 com a tela nova no ar quebra o cadastro de empreendimento novo (nasce stage 'unknown', que o backend antigo não conhece): voltar a tela junto.
 
 Código: `features/properties/cadastro/finalidade.ts`, `pages/Customer/Properties/cadastro/secoes/SecaoCondicoes.tsx`, mudanças em `SecaoBasico`, `SecaoComposicao`, `SecaoDetalhesDaVenda`, `SecaoObra`, `PreencherPorTexto`, `listingKind.ts`, `formularioDoCadastro.ts`, `secoesDoCadastro.ts` (com specs).
 
@@ -10549,7 +10549,7 @@ Reestruturação da IA, fase 5 (seção 3). No bloco **Mensagem** do construtor 
 3. Duplicar bloco copia a config como está (não reaplica o padrão).
 
 **Armadilhas**
-- Voltar o backend pra antes da fase 5 deixa a chave inerte (o motor antigo não a lê); a tela segue inofensiva.
+- Voltar o backend pra antes da fase 5 deixa a chave inerte (o motor antigo não a lê), sem quebrar a tela. Voltar só a tela é seguro pro servidor, mas ao salvar um bloco a tela antiga não devolve a chave, e ela se perde (o bloco volta ao padrão do servidor).
 
 Código: `components/flowAutomations/MessageBlockFields.tsx` (`PularSeIaConversandoField`), `features/flowAutomations/palette.ts`, `pages/Customer/Automations/FlowBuilder/FlowAutomationCanvas.tsx` (`insertNode`). Specs: `MessageBlockFields.spec.tsx`, `palette.spec.ts`.
 

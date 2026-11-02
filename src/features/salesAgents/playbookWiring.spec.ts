@@ -39,12 +39,12 @@ describe('roteiro da IA na tela do cliente', () => {
     expect(src).toContain('isSuper || insightsToggle');
   });
 
-  // Os pontos-chave viajam DENTRO do `playbook`, como `vars`. Se alguém um dia os
+  // A dor típica viaja DENTRO do `playbook`, como `vars`. Se alguém um dia os
   // mover para campo próprio, ele precisa entrar na lista do PATCH — senão a tela
   // mostra, o aviso diz "Salvo", e nada foi salvo.
-  it('os pontos-chave viajam dentro do playbook (vars), não em campo solto', () => {
+  it('a dor típica viaja dentro do playbook (vars), não em campo solto', () => {
     const secao = read('src/components/salesAgents/PlaybookSection.tsx');
-    expect(secao).toContain('next_config.vars = cleaned');
+    expect(secao).toContain('next.vars = cleaned');
   });
 });
 

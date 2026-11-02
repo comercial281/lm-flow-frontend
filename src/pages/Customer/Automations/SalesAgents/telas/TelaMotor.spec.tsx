@@ -44,7 +44,7 @@ describe('Motor', () => {
     expect(update).toHaveBeenCalledWith('ia-1', { usage_limits: { daily_budget_usd: 5, max_new_leads_per_day: 30 } });
   });
 
-  it('cliente com ia_playbook: só o texto que a IA recebe e a reescrita do roteiro', () => {
+  it('cliente com ia_playbook: só o texto que a IA recebe e a dor de quem procura', () => {
     equipe.sim = false;
     roteiro.sim = true;
     render(<TelaMotor agent={agenteDeTeste()} aoSalvo={vi.fn()} />);
