@@ -18,7 +18,7 @@ import {
   salesAgentsService, type AgentNumber, type ResumoDoAgente, type SalesAgent, type Voz,
 } from '@/services/salesAgents/salesAgentsService';
 import {
-  O_QUE_A_VOZ_FAZ, ROTULO_DA_VOZ, formulariosDoNumero, previaDaApresentacao, vozDoNumero,
+  O_QUE_A_VOZ_FAZ, ROTULO_DA_VOZ, formulariosDoNumero, iniciaisDoNome, nomeDoNumero, previaDaApresentacao, vozDoNumero,
 } from '@/features/salesAgents/fichas';
 import { agentesDoNumero, avisoDoNumero } from '@/features/salesAgents/novoAgente';
 import { FRASE_SEM_DONO } from '@/features/salesAgents/pendencias';
@@ -32,7 +32,6 @@ const PEDE_DONO = 'A voz Corretor pede o destino "Fica com o dono do número".';
 const AVISO_OFICIAL = 'Pela API oficial a IA responde normalmente quem chamar. Abrir conversa com lead de formulário e mandar follow-up depois de 24h ainda não funcionam neste número. Acima de 1.000 respostas no mês, a Meta cobra cada resposta.';
 
 const plural = (n: number, um: string, varios: string) => `${n} ${n === 1 ? um : varios}`;
-const iniciais = (nome: string) => nome.split(/\s+/).filter(Boolean).map((p) => p[0]).join('').slice(0, 2).toUpperCase();
 
 function Balao({ texto }: { texto: string }) {
   return (
@@ -110,7 +109,8 @@ export default function NumerosEUsuarios(props: PropsDaPagina) {
     <>
       <Secoes>
         <Secao titulo="Padrão da casa" descricao="Vale pra todo número sem ficha própria.">
-          <div role="region" aria-label="Padrão da casa" className="grid items-start gap-6 lg:grid-cols-2">
+          {/* Campos com 3/5 e a prévia com 2/5 (03/11/2026): meio a meio, "Como se apresenta" mal aparecia. */}
+          <div role="region" aria-label="Padrão da casa" className="grid items-start gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
             <FichaDaVoz idBase="casa" voz={casa} aoMudar={gravarCasa} />
             <div className="space-y-3">
               <Balao texto={previaDaApresentacao(vozCasa)} />
@@ -125,19 +125,20 @@ export default function NumerosEUsuarios(props: PropsDaPagina) {
           <div className="grid gap-4 md:grid-cols-2">
             {numeros.map((n) => {
               const voz = vozDoNumero(n, casa);
-              const nome = n.owner_name ?? n.inbox_name;
+              const nome = nomeDoNumero(n);
               const aberta = editando === n.id;
               const inbox = inboxes.find((i) => String(i.id) === String(n.inbox_id));
               const aviso = avisoDoNumero(n.inbox_id, outros);
               const conv = conversas(n);
               return (
-                <article key={n.id} aria-label={nome} className="grid overflow-hidden rounded-2xl border border-border bg-card">
+                // `minmax(0,1fr)`: a coluna sem tamanho crescia até a linha mais comprida (texto que não quebra) e cortava a prévia na borda.
+                <article key={n.id} aria-label={nome} className="grid grid-cols-[minmax(0,1fr)] overflow-hidden rounded-2xl border border-border bg-card">
                   <div className="flex items-center gap-3 p-4">
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary" aria-hidden>{iniciais(nome)}</span>
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary" aria-hidden>{iniciaisDoNome(nome)}</span>
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-semibold">{nome}</p>
                       <p className="truncate text-xs text-muted-foreground">
-                        {`número ${n.inbox_name}`}{n.owner_name ? ` · usuário ${n.owner_name}` : ' · sem usuário'}
+                        {n.inbox_name ? `número ${n.inbox_name}` : 'excluído em Canais: tire daqui'}{n.owner_name ? ` · usuário ${n.owner_name}` : ' · sem usuário'}
                       </p>
                     </div>
                     <Etiqueta tom={n.connected ? 'ok' : 'aviso'}>{n.connected ? 'conectado' : 'desconectado'}</Etiqueta>

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { AgentNumber, HouseVoice } from '@/services/salesAgents/salesAgentsService';
-import { O_QUE_A_VOZ_FAZ, previaDaApresentacao, vozDoNumero } from './fichas';
+import { NUMERO_EXCLUIDO, O_QUE_A_VOZ_FAZ, iniciaisDoNome, nomeDoNumero, previaDaApresentacao, vozDoNumero } from './fichas';
 
 const numero = (voice: AgentNumber['voice']): AgentNumber => ({
   id: 'n1', inbox_id: 'i1', phone: null, inbox_name: 'Número Ana', enabled: true, connected: true, voice, triggers: null, position: 0,
@@ -49,5 +49,18 @@ describe('O_QUE_A_VOZ_FAZ', () => {
   it('uma frase pra cada voz, sem travessão', () => {
     expect(Object.keys(O_QUE_A_VOZ_FAZ).sort()).toEqual(['consultora', 'corretor', 'dono_gerente']);
     expect(Object.values(O_QUE_A_VOZ_FAZ).some((t) => /[—–]/.test(t))).toBe(false);
+  });
+});
+
+describe('nomeDoNumero', () => {
+  it('o dono, senão a caixa de entrada, senão "Número excluído" (caixa excluída vem nula)', () => {
+    expect(nomeDoNumero(numero(null))).toBe('Ana');
+    expect(nomeDoNumero({ ...numero(null), owner_name: null })).toBe('Número Ana');
+    expect(nomeDoNumero({ ...numero(null), owner_name: null, inbox_name: null })).toBe(NUMERO_EXCLUIDO);
+  });
+
+  it('iniciais de até duas palavras', () => {
+    expect(iniciaisDoNome('Número excluído')).toBe('NE');
+    expect(iniciaisDoNome('Marina')).toBe('M');
   });
 });

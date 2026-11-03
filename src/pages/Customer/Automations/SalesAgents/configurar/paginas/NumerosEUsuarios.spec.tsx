@@ -137,6 +137,11 @@ describe('Números e usuários · cartões', () => {
     abrir(agente({ numbers: [numero({ inbox_id: 'inbox-4', inbox_name: 'Número Oficial', owner_name: 'Dani' })] }));
     expect(screen.getByText(/Pela API oficial a IA responde normalmente quem chamar/)).toBeInTheDocument();
   });
+
+  it('número com a caixa de entrada excluída e sem dono não derruba a página (03/11/2026)', () => {
+    abrir(agente({ numbers: [numero({ inbox_id: 'excluida', inbox_name: null, owner_user_id: null, owner_name: null })] }));
+    expect(cartao('Número excluído').getByText(/excluído em Canais: tire daqui/)).toBeInTheDocument();
+  });
 });
 
 describe('Números e usuários · tirar e adicionar', () => {

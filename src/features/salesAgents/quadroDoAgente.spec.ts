@@ -16,11 +16,6 @@ const resumo = (extra: Partial<ResumoDoAgente> = {}): ResumoDoAgente =>
   ({ id: 'ag-1', conversations: 74, handoffs: 46, median_reply_minutes: 4, numbers: [], ...extra });
 
 describe('quadroDoAgente', () => {
-  it('iniciais do nome', () => {
-    expect(quadroDoAgente(agente({ name: 'Agente A' }), null).iniciais).toBe('AA');
-    expect(quadroDoAgente(agente({ name: 'Plantão' }), null).iniciais).toBe('PL');
-  });
-
   it('3 números, todos com voz Corretor: nomes e "Cada usuário, como ele mesmo"', () => {
     const q = quadroDoAgente(agente({ numbers: NUMEROS }), null);
     expect(q.numeros).toBe('3 números · Ana, Bia, Caio');
@@ -60,10 +55,16 @@ describe('quadroDoAgente', () => {
     expect(quadroDoAgente(duas, null).produto).toBe('Venda (3), Locação (1)');
   });
 
-  it('rodapé do resumo de 30 dias', () => {
-    expect(quadroDoAgente(agente(), resumo()).rodape).toBe('74 conversas em 30 dias · 46 passadas · corretor responde em 4 min');
-    expect(quadroDoAgente(agente(), resumo({ median_reply_minutes: null })).rodape).toBe('74 conversas em 30 dias · 46 passadas');
-    expect(quadroDoAgente(agente(), null).rodape).toBeNull();
+  it('números de 30 dias, um por coluna', () => {
+    expect(quadroDoAgente(agente(), resumo()).trintaDias).toEqual([
+      { valor: '74', rotulo: 'conversas' }, { valor: '46', rotulo: 'passadas' }, { valor: '4 min', rotulo: 'corretor responde' },
+    ]);
+    expect(quadroDoAgente(agente(), resumo({ median_reply_minutes: null })).trintaDias).toEqual([
+      { valor: '74', rotulo: 'conversas' }, { valor: '46', rotulo: 'passadas' },
+    ]);
+    expect(quadroDoAgente(agente(), resumo({ conversations: 1, handoffs: 1 })).trintaDias?.map((n) => n.rotulo))
+      .toEqual(['conversa', 'passada', 'corretor responde']);
+    expect(quadroDoAgente(agente(), null).trintaDias).toBeNull();
   });
 
   it('a contagem por marca pode vir de fora', () => {

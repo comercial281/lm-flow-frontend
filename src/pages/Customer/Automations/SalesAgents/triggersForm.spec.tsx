@@ -40,8 +40,10 @@ describe('gatilho de formulário', () => {
 });
 
 // No computador a caixa da lista do produto mede o rótulo escolhido (w-fit). Na
-// linha do gatilho, cada lista tem largura fixa pelo maior rótulo: a linha não
-// pula quando se troca a escolha, como o <select> nativo.
+// condição, cada lista tem largura que não depende do rótulo: a linha não pula
+// quando se troca a escolha, como o <select> nativo. Desde 03/11/2026 (cartão por
+// condição) o tipo estica na linha dele (`flex-1`) e as outras ocupam a largura
+// toda até um teto (`w-full`).
 describe('gatilho no computador', () => {
   beforeEach(() => {
     Element.prototype.hasPointerCapture = Element.prototype.hasPointerCapture ?? (() => false);
@@ -56,15 +58,14 @@ describe('gatilho no computador', () => {
     delete window.matchMedia;
   });
 
-  it('o tipo do gatilho tem largura fixa e troca pela lista do produto', async () => {
+  it('o tipo do gatilho tem largura que não depende do rótulo e troca pela lista do produto', async () => {
     render(<Harness />);
-    // A lista não tem rótulo: acha-se a caixa pelo texto da escolha atual.
     const tipo = (await screen.findByText('Veio de um destes formulários')).closest('button')!;
-    expect(tipo.className.split(/\s+/)).toContain('w-72');
+    expect(tipo.className.split(/\s+/)).toContain('flex-1');
     await userEvent.click(tipo);
     await userEvent.click(await screen.findByRole('option', { name: 'Origem do lead' }));
     const origem = (await screen.findByText('Só anúncios (FB/IG/Google)')).closest('button')!;
-    expect(origem.className.split(/\s+/)).toContain('w-64');
+    expect(origem.className.split(/\s+/)).toContain('w-full');
   });
 });
 

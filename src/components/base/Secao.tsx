@@ -38,14 +38,17 @@ interface SecaoProps {
 }
 
 export function Secao({ titulo, descricao, acao, id, children }: SecaoProps) {
+  // Na caixa da IA (moldura larga, 03/11/2026): o título fica numa coluna fixa e os
+  // campos levam o resto. Com 1/3 pro título, a ficha da voz cortava os campos.
+  const naCaixa = useContext(DentroDaCaixa);
   return (
-    <section id={id} className="grid gap-x-12 gap-y-5 py-8 lg:grid-cols-3">
+    <section id={id} className={cn('grid gap-x-12 gap-y-5 py-8', naCaixa ? 'lg:grid-cols-[16rem_minmax(0,1fr)]' : 'lg:grid-cols-3')}>
       <div className="space-y-2">
         <h2 className="text-base font-semibold">{titulo}</h2>
         {descricao && <div className="text-sm leading-relaxed text-muted-foreground">{descricao}</div>}
         {acao && <div className="pt-2">{acao}</div>}
       </div>
-      {children && <div className="min-w-0 space-y-5 lg:col-span-2">{children}</div>}
+      {children && <div className={cn('min-w-0 space-y-5', !naCaixa && 'lg:col-span-2')}>{children}</div>}
     </section>
   );
 }
