@@ -7,11 +7,17 @@
 // agente por "todo lead" sem ninguém ver.
 // ⚠️ "Só alguns" sem condição completa NÃO grava: a linha em branco mora só na tela (como no agente),
 // senão o número ficaria sem lead nenhum. O cartão fica "aberto" até outra escolha.
+//
+// Desenho (03/11/2026, pedido do dono: "os chips num canto e o resto desalinhado"): uma coluna só,
+// tudo na mesma linha da esquerda: o número com as iniciais (como em Números e usuários), as três
+// opções, a frase e as condições. Antes o número ficava à esquerda e as opções à direita, e o
+// número sem nome deixava as opções soltas.
 import { useEffect, useMemo, useRef, useState } from 'react';
 import BotoesDeEscolha from '@/components/base/BotoesDeEscolha';
 import type { SalesAgent, AgentNumber, SalesAgentTrigger } from '@/services/salesAgents/salesAgentsService';
 import { estadoDosGatilhos, gatilhosDoEstado, type EstadoDosGatilhos } from '@/features/salesAgents/gatilhosDoNumero';
 import { restricaoDosGatilhos } from '@/features/salesAgents/situacao';
+import { NUMERO_EXCLUIDO, iniciaisDoNome, nomeDoNumero } from '@/features/salesAgents/fichas';
 import { TriggersSection } from '../blocos/TriggersSection';
 import type { NumerosDoAgente } from '../useNumerosDoAgente';
 
@@ -50,7 +56,9 @@ function CartaoDoNumero({ agent, numero, mudar }: { agent: SalesAgent; numero: A
   // Escolheu outra opção: a palavra pendente do bloco não pode gravar ao desmontar (ressuscitaria o que saiu).
   const escolheuOutra = useRef(false);
   const estado: EstadoDosGatilhos = aberto ? 'proprios' : doServidor;
-  const nome = numero.owner_name ?? numero.inbox_name;
+  const nome = nomeDoNumero(numero);
+  // Com dono, o nome é o dele e o número vai embaixo; sem dono, o nome já é o do número.
+  const detalhe = numero.owner_name ? (numero.inbox_name ? `número ${numero.inbox_name}` : NUMERO_EXCLUIDO) : null;
   const triggers = useMemo(() => numero.triggers ?? [], [numero.triggers]);
   const herda = numero.triggers === null || numero.triggers === undefined;
   const doNumero = useMemo(() => ({ ...agent, triggers }) as SalesAgent, [agent, triggers]);
@@ -77,14 +85,17 @@ function CartaoDoNumero({ agent, numero, mudar }: { agent: SalesAgent; numero: A
 
   return (
     <div className="space-y-3 rounded-2xl border-[1.5px] border-border bg-background p-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
+      <div className="flex min-w-0 items-center gap-3">
+        <span aria-hidden className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
+          {iniciaisDoNome(nome)}
+        </span>
         <div className="min-w-0">
           <p className="truncate text-sm font-semibold">{nome}</p>
-          {numero.owner_name && <p className="truncate text-[13px] text-muted-foreground">{numero.inbox_name}</p>}
+          {detalhe && <p className="truncate text-[13px] text-muted-foreground">{detalhe}</p>}
         </div>
-        <BotoesDeEscolha<EstadoDosGatilhos> rotulo={`Gatilhos de ${nome}`} valor={estado} opcoes={OPCOES}
-          aoEscolher={(e) => void escolher(e)} />
       </div>
+      <BotoesDeEscolha<EstadoDosGatilhos> rotulo={`Gatilhos de ${nome}`} valor={estado} opcoes={OPCOES}
+        aoEscolher={(e) => void escolher(e)} />
       {frase && <p className="text-[13px] text-muted-foreground">{frase}</p>}
       {estado === 'proprios' && (
         <TriggersSection agent={doNumero} nome={`Condições de ${nome}`} semModo ultimaFica herdaDoAgente={herda} escolheuTodos={escolheuOutra}

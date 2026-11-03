@@ -2,6 +2,7 @@
 // Só texto: o servidor conta (marcas, 30 dias), a tela mostra.
 import type { Marca, NextStep, QuemFala, ResumoDoAgente, SalesAgent } from '@/services/salesAgents/salesAgentsService';
 import { pendenciasDaIa } from './situacao';
+import { nomeDoNumero } from './fichas';
 
 export interface QuadroDoAgente {
   numeros: string;
@@ -36,7 +37,7 @@ export function quadroDoAgente(
   contagem: Record<Marca, number> = agent.catalog_marks,
 ): QuadroDoAgente {
   const numeros = agent.numbers ?? [];
-  const nomes = numeros.map((n) => n.owner_name || n.inbox_name).filter(Boolean).join(', ');
+  const nomes = numeros.map(nomeDoNumero).join(', ');
   const casa: QuemFala = agent.house_voice?.kind ?? 'consultora';
   const todosCorretor = numeros.length > 0 && numeros.every((n) => (n.voice?.kind ?? casa) === 'corretor');
 

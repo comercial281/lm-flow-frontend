@@ -7,6 +7,8 @@ import { leadAdsFormsService, type LeadAdsFormConfig } from '@/services/leadAds/
 import { formOptions, formTriggerNotice, toggleForm } from '@/features/salesAgents/formTrigger';
 import { campanhasService, type ItemDeCampanha } from '@/services/campanhas/campanhasService';
 import { Seletor } from '@/components/base/Seletor';
+import { CLASSE_DO_CAMPO } from '@/components/base/Campo';
+import { cn } from '@/lib/utils';
 import BotoesDeEscolha from '@/components/base/BotoesDeEscolha';
 import { emBranco } from '@/features/salesAgents/situacao';
 import { type PipelineOpt, type StageOpt } from '../../configuracao/comum';
@@ -257,13 +259,16 @@ export function TriggersSection({ agent, onSave, escolheuTodos, nome, semModo, u
   const matchMode = agent.trigger_match_mode ?? 'any';
 
   return (
-    <div role={nome ? 'group' : undefined} aria-label={nome} className="pt-2 border-t border-sidebar-border">
+    // Desenho (03/11/2026, pedido do dono: "desalinhado, confuso"): cada condição é um cartão com o
+    // tipo e a lixeira na mesma linha e o resto embaixo, tudo começando na mesma linha da esquerda e
+    // com o campo da casa (CLASSE_DO_CAMPO). Antes os campos tinham larguras soltas e quebravam linha
+    // cada um num lugar, e a lixeira caía sozinha numa linha.
+    <div role={nome ? 'group' : undefined} aria-label={nome} className="border-t border-border pt-4">
       {/* ⚠️ "Só alguns" aberto sem condição completa no servidor: ela AINDA atende
-          todo lead. Em destaque, pra tela não parecer que já está filtrando. */}
-      {semCondicaoNoServidor ? (
-        <div className="mb-2"><Aviso tom="atencao"><p>{fraseSemCondicao}</p></Aviso></div>
-      ) : (
-        <p className="mb-2 text-sm text-muted-foreground">{fraseSemCondicao}</p>
+          todo lead. Em destaque, pra tela não parecer que já está filtrando. Com condição
+          gravada a frase some (03/11/2026): "sem nenhuma condição" em cima de condições confundia. */}
+      {semCondicaoNoServidor && (
+        <div className="mb-3"><Aviso tom="atencao"><p>{fraseSemCondicao}</p></Aviso></div>
       )}
 
       {triggers.length > 1 && !semModo && (
@@ -274,58 +279,65 @@ export function TriggersSection({ agent, onSave, escolheuTodos, nome, semModo, u
         </div>
       )}
 
-      <div className="space-y-2">
+      <div className="space-y-3">
         {triggers.map((t, i) => (
-          <div key={i} className="flex flex-wrap items-center gap-2 p-2 rounded-md border border-sidebar-border">
-            <Seletor
-              value={t.type}
-              onChange={(e) => commit(trocar(i, newTrigger(e.target.value as SalesAgentTriggerType)))}
-              className="w-72 max-w-full rounded-md border border-sidebar-border bg-background px-2 py-1 text-sm"
-            >
-              {TRIGGER_TYPES.map((tt) => <option key={tt.value} value={tt.value}>{tt.label}</option>)}
-            </Seletor>
+          <div key={i} className="space-y-3 rounded-xl border border-border bg-muted/30 p-3">
+            <div className="flex items-center gap-2">
+              <Seletor
+                aria-label="Tipo da condição"
+                value={t.type}
+                onChange={(e) => commit(trocar(i, newTrigger(e.target.value as SalesAgentTriggerType)))}
+                className={cn(CLASSE_DO_CAMPO, 'min-w-0 flex-1 sm:max-w-sm')}
+              >
+                {TRIGGER_TYPES.map((tt) => <option key={tt.value} value={tt.value}>{tt.label}</option>)}
+              </Seletor>
+              <Button type="button" variant="ghost" size="icon" onClick={() => remove(i)} className="ml-auto shrink-0 text-muted-foreground hover:text-red-500"
+                aria-label="Remover condição" title="Remover condição">
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
 
             {t.type === 'keyword' && (
-              <>
-                <Seletor value={t.match_type ?? 'contains'} onChange={(e) => update(i, { match_type: e.target.value as 'contains' | 'equals' })}
-                  className="w-36 rounded-md border border-sidebar-border bg-background px-2 py-1 text-sm">
+              <div className="flex flex-wrap gap-2">
+                <Seletor aria-label="Como a palavra aparece" value={t.match_type ?? 'contains'} onChange={(e) => update(i, { match_type: e.target.value as 'contains' | 'equals' })}
+                  className={cn(CLASSE_DO_CAMPO, 'w-full sm:w-44')}>
                   <option value="contains">Contém</option>
                   <option value="equals">É exatamente</option>
                 </Seletor>
-                <Input className="flex-1 min-w-40" placeholder="palavra (ex: fluxoimob)" value={t.value ?? ''}
+                <Input className={cn(CLASSE_DO_CAMPO, 'min-w-48 flex-1')} placeholder="palavra (ex: fluxoimob)" value={t.value ?? ''}
                   onChange={(e) => digitar(i, { value: e.target.value })} onBlur={sairDoCampo} />
-              </>
+              </div>
             )}
 
             {t.type === 'tag' && (
-              <Input className="flex-1 min-w-40" placeholder="etiqueta (ex: vip)" value={t.value ?? ''}
+              <Input className={cn(CLASSE_DO_CAMPO, 'w-full sm:max-w-sm')} placeholder="etiqueta (ex: vip)" value={t.value ?? ''}
                 onChange={(e) => digitar(i, { value: e.target.value })} onBlur={sairDoCampo} />
             )}
 
             {t.type === 'origin' && (
-              <Seletor value={t.mode ?? 'ads'} onChange={(e) => update(i, { mode: e.target.value })}
-                className="w-64 max-w-full rounded-md border border-sidebar-border bg-background px-2 py-1 text-sm">
+              <Seletor aria-label="Quais leads" value={t.mode ?? 'ads'} onChange={(e) => update(i, { mode: e.target.value })}
+                className={cn(CLASSE_DO_CAMPO, 'w-full sm:max-w-sm')}>
                 <option value="ads">Só anúncios (FB/IG/Google)</option>
                 <option value="all">Todos os leads</option>
               </Seletor>
             )}
 
             {t.type === 'property' && (
-              <>
-                <Seletor value={t.mode ?? 'any'} onChange={(e) => update(i, { mode: e.target.value })}
-                  className="w-[26rem] max-w-full rounded-md border border-sidebar-border bg-background px-2 py-1 text-sm">
+              <div className="flex flex-wrap gap-2">
+                <Seletor aria-label="Qual imóvel" value={t.mode ?? 'any'} onChange={(e) => update(i, { mode: e.target.value })}
+                  className={cn(CLASSE_DO_CAMPO, 'min-w-0 flex-1 sm:max-w-md')}>
                   <option value="any">Qualquer imóvel (veio de form/anúncio de imóvel)</option>
                   <option value="code">Imóvel específico (código)</option>
                 </Seletor>
                 {t.mode === 'code' && (
-                  <Input className="w-32" placeholder="código" value={t.code ?? ''}
+                  <Input className={cn(CLASSE_DO_CAMPO, 'w-36')} placeholder="código" value={t.code ?? ''}
                     onChange={(e) => digitar(i, { code: e.target.value })} onBlur={sairDoCampo} />
                 )}
-              </>
+              </div>
             )}
 
             {t.type === 'form' && (
-              <div className="w-full space-y-1">
+              <div className="space-y-2">
                 <div className="text-xs text-muted-foreground">
                   A IA só entra na conversa do lead que preencheu um dos formulários marcados. Lead de
                   outra campanha — inclusive anúncio que leva direto ao WhatsApp — fica de fora. Vale
@@ -359,7 +371,7 @@ export function TriggersSection({ agent, onSave, escolheuTodos, nome, semModo, u
             )}
 
             {t.type === 'campaign' && (
-              <div className="w-full space-y-1">
+              <div className="space-y-2">
                 <div className="text-xs text-muted-foreground">
                   A IA só entra na conversa do lead que veio de uma das campanhas ou anúncios marcados. A lista é a de
                   Campanhas: só entra aqui a campanha que já tem linha lá.
@@ -370,46 +382,43 @@ export function TriggersSection({ agent, onSave, escolheuTodos, nome, semModo, u
             )}
 
             {t.type === 'pipeline' && (
-              <>
+              <div className="space-y-1.5">
                 <Seletor
+                  aria-label="Qual funil"
                   value={t.pipeline_id ?? ''}
                   onChange={(e) => update(i, { pipeline_id: e.target.value })}
-                  className="w-64 max-w-full rounded-md border border-sidebar-border bg-background px-2 py-1 text-sm"
+                  className={cn(CLASSE_DO_CAMPO, 'w-full sm:max-w-sm')}
                 >
                   <option value="">Qualquer funil</option>
                   {pipelines.map((p) => <option key={p.id} value={p.id}>{`Só o funil ${p.name}`}</option>)}
                 </Seletor>
-                <span className="text-xs text-muted-foreground">
+                <p className="text-xs text-muted-foreground">
                   Card arquivado não conta — lead que saiu do funil e volta a escrever fica pro humano.
-                </span>
-              </>
+                </p>
+              </div>
             )}
 
             {t.type === 'pipeline_stage' && (
-              <>
-                <Seletor value={t.pipeline_id ?? ''} onChange={(e) => { loadStages(e.target.value); update(i, { pipeline_id: e.target.value, stage_id: '' }); }}
-                  className="w-48 rounded-md border border-sidebar-border bg-background px-2 py-1 text-sm">
+              <div className="flex flex-wrap gap-2">
+                <Seletor aria-label="Funil" value={t.pipeline_id ?? ''} onChange={(e) => { loadStages(e.target.value); update(i, { pipeline_id: e.target.value, stage_id: '' }); }}
+                  className={cn(CLASSE_DO_CAMPO, 'min-w-48 flex-1 sm:max-w-xs')}>
                   <option value="">— funil —</option>
                   {pipelines.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
                 </Seletor>
-                <Seletor value={t.stage_id ?? ''} onChange={(e) => update(i, { stage_id: e.target.value })} disabled={!t.pipeline_id}
-                  className="w-48 rounded-md border border-sidebar-border bg-background px-2 py-1 text-sm">
+                <Seletor aria-label="Coluna" value={t.stage_id ?? ''} onChange={(e) => update(i, { stage_id: e.target.value })} disabled={!t.pipeline_id}
+                  className={cn(CLASSE_DO_CAMPO, 'min-w-48 flex-1 sm:max-w-xs')}>
                   <option value="">— coluna —</option>
                   {(stagesByPipeline[t.pipeline_id ?? ''] ?? []).map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
                 </Seletor>
-              </>
+              </div>
             )}
-
-            <button onClick={() => remove(i)} className="ml-auto text-muted-foreground hover:text-red-500" aria-label="Remover condição" title="Remover condição">
-              <Trash2 className="h-4 w-4" />
-            </button>
           </div>
         ))}
       </div>
 
       {avisoUltima && <p className="mt-2 text-sm text-muted-foreground">{FRASE_ULTIMA_CONDICAO}</p>}
 
-      <Button size="sm" variant="outline" onClick={add} className="mt-2">
+      <Button size="sm" variant="outline" onClick={add} className="mt-3">
         <Plus className="h-4 w-4 mr-1" /> Adicionar condição
       </Button>
     </div>

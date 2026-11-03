@@ -56,7 +56,8 @@ export interface AgentNumber {
   id: string;
   inbox_id: string;
   phone: string | null;
-  inbox_name: string;
+  /** Nulo = a caixa de entrada foi apagada em Canais (o número ficou órfão no agente). */
+  inbox_name: string | null;
   enabled: boolean;
   connected: boolean;
   /** Nulo = usa a ficha da casa. */

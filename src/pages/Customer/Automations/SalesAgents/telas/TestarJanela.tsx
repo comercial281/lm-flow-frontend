@@ -22,7 +22,7 @@ import { CENARIOS_DO_TESTAR } from '@/features/salesAgents/cenariosDeTeste';
 import {
   AVANCOS_DA_JANELA, avisoDoModelo, juntarTravas, linhaDoCard, oQueAconteceria, painelDoEnsaio, rotuloDaPergunta,
 } from '@/features/salesAgents/ensaio';
-import { vozDoNumero } from '@/features/salesAgents/fichas';
+import { nomeDoNumero, vozDoNumero } from '@/features/salesAgents/fichas';
 import { fraseDoObjetivo } from '@/features/salesAgents/resumoDosPassos';
 import { cn } from '@/lib/utils';
 import TestMediaBubble from '../TestMediaBubble';
@@ -163,7 +163,7 @@ export default function TestarJanela({ agent, aoFechar, ritmo = 1 }: { agent: Sa
               <h3 className={TITULO}>Testar como</h3>
               <Seletor aria-label="Testar como" className="h-10 w-full" value={e.inboxId} disabled={aguardando}
                 onChange={(ev) => e.escolherNumero(ev.target.value)}>
-                {e.numeros.map((n) => <option key={n.inbox_id} value={n.inbox_id}>{n.owner_name ? `${n.owner_name} · ${n.inbox_name}` : n.inbox_name}</option>)}
+                {e.numeros.map((n) => <option key={n.inbox_id} value={n.inbox_id}>{n.owner_name && n.inbox_name ? `${n.owner_name} · ${n.inbox_name}` : nomeDoNumero(n)}</option>)}
               </Seletor>
               <p className="text-xs text-muted-foreground">A voz, os gatilhos e a agenda são do número. Trocar recomeça o teste.</p>
             </div>

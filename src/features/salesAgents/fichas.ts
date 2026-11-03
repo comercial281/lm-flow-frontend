@@ -17,6 +17,22 @@ export const O_QUE_A_VOZ_FAZ: Record<QuemFala, string> = {
 
 const vazio = (t: string | undefined | null) => !t || !t.trim();
 
+/** Número cuja caixa de entrada foi excluída em Canais: o servidor manda `inbox_name` nulo. */
+export const NUMERO_EXCLUIDO = 'Número excluído';
+
+/**
+ * O nome do número na tela: o usuário dono, senão o nome da caixa de entrada, senão "Número excluído".
+ * ⚠️ Os dois podem vir nulos (caixa excluída e sem dono): a tela de Números e usuários
+ * caía inteira tirando as iniciais de nulo (03/11/2026).
+ */
+export function nomeDoNumero(n: Pick<AgentNumber, 'owner_name' | 'inbox_name'>): string {
+  return n.owner_name || n.inbox_name || NUMERO_EXCLUIDO;
+}
+
+export function iniciaisDoNome(nome: string): string {
+  return nome.split(/\s+/).filter(Boolean).map((p) => p[0]).join('').slice(0, 2).toUpperCase();
+}
+
 /**
  * A voz com que o número fala: campo ausente ou em branco herda o da casa. O endereço do
  * escritório é da casa e não entra aqui.
