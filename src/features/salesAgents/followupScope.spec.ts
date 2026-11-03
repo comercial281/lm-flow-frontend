@@ -20,11 +20,11 @@ import { PAGINAS } from '@/pages/Customer/Automations/SalesAgents/configurar/pag
 describe('de quais leads a IA vai atrás', () => {
   const src = fonteDaIaVendedora();
 
-  // Desde a onda 3 o recorte é campo da página Follow-up (paginas.ts): lista
+  // Desde a onda 3 o recorte é campo da página Funil e follow-up (paginas.ts): lista
   // vazia viaja como lista vazia ("todos os leads que ela atendeu"), e só
   // `undefined` vira null (patchDoPasso.spec.ts).
-  it('o recorte é campo da página Follow-up', () => {
-    expect(PAGINAS.followup.campos).toContain('followup_pipeline_ids');
+  it('o recorte é campo da página Funil e follow-up', () => {
+    expect(PAGINAS.funil.campos).toContain('followup_pipeline_ids');
   });
 
   it('a página Follow-up grava o recorte por funil', () => {

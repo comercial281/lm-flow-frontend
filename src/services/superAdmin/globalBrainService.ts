@@ -8,7 +8,8 @@ export interface GlobalKnowledgeDoc {
   id: string;
   title: string;
   source_type: 'text' | 'url' | 'file';
-  status: 'pending' | 'ready' | 'failed';
+  // 'fabrica': conhecimento de fábrica (Fase 3), lido pelo tópico; o código antigo não o lê.
+  status: 'pending' | 'ready' | 'failed' | 'fabrica';
   category?: string | null;
   enabled: boolean;
   char_count: number;

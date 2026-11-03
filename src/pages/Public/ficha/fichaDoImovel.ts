@@ -72,7 +72,7 @@ export function selosDoImovel(p: CamposDaFicha, f: FichaDoImovel): Selo[] {
 
 /** "Em obra · entrega mar/2027" do empreendimento; sem fase no cadastro, nada. */
 export function faseDoImovel(p: CamposDaFicha, f: FichaDoImovel): string | null {
-  if (!f.fase || !p.stage) return null;
+  if (!f.fase || !p.stage || p.stage === 'unknown') return null;
   return seloDaFase(p.stage, p.delivery_forecast);
 }
 

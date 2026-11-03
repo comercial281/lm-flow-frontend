@@ -23,7 +23,7 @@ export function requiredPermissionOf(error: unknown): string | undefined {
  * português. Lista fechada de propósito: outros 403 (Pundit, etc.) trazem frase
  * técnica em inglês e nunca podem chegar na tela.
  */
-export const USER_FACING_CODES = ['OFFER_LOCKED'] as const;
+export const USER_FACING_CODES = ['OFFER_LOCKED', 'OWN_FICHA_NOT_OWNER', 'OWN_FICHA_FIELDS'] as const;
 
 /** Id do aviso da recusa com frase: global e telas usam o mesmo, e o sonner junta. */
 export function refusalToastId(message: string): string {

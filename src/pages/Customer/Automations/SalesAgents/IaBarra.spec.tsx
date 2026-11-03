@@ -1,9 +1,11 @@
-import { describe, expect, it, vi } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { SalesAgent } from '@/services/salesAgents/salesAgentsService';
 
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
+const update = vi.hoisted(() => vi.fn());
+vi.mock('@/services/salesAgents/salesAgentsService', () => ({ salesAgentsService: { update } }));
 import IaBarra, { type IaBarraProps } from './IaBarra';
 
 // As listas suspensas são Radix: abrem no pointerdown, que o fireEvent.click do
@@ -16,8 +18,8 @@ const DEMO = ia('ia-2', 'IA Demo', { inbox_id: null });
 function abrir(extra: Partial<IaBarraProps> = {}) {
   const props: IaBarraProps = {
     agents: [VENDAS, DEMO], selecionada: VENDAS, situacao: { tipo: 'atendendo', frase: 'Atendendo' },
-    tela: 'visao-geral', insights: true, podeCriar: true, podeExcluir: true, equipe: false, verMotor: false,
-    aoIr: vi.fn(), aoTrocarIa: vi.fn(), aoCriar: vi.fn(), aoDuplicar: vi.fn(), aoExcluir: vi.fn(),
+    tela: 'visao-geral', insights: true, podeEditar: true, podeExcluir: true, equipe: false, verMotor: false,
+    aoIr: vi.fn(), aoTrocarIa: vi.fn(), aoTodos: vi.fn(), aoSalvo: vi.fn(), aoExcluir: vi.fn(),
     aoTestar: vi.fn(), aoLigar: vi.fn().mockResolvedValue(undefined), travaDoLigar: null, aoCorrigirLigar: vi.fn(),
     ...extra,
   };
@@ -54,22 +56,24 @@ describe('IaBarra (onda 3)', () => {
   it('Ligar travado: chave desabilitada com o motivo, e o clique leva à página que corrige', async () => {
     const props = abrir({
       selecionada: ia('ia-1', 'IA de Vendas', { enabled: false }),
-      travaDoLigar: { motivo: 'Falta o número de WhatsApp.', pagina: 'canal' },
+      travaDoLigar: { motivo: 'Falta o número de WhatsApp.', pagina: 'numeros' },
     });
     expect(screen.getByRole('switch', { name: 'Ligar ou desligar a IA' })).toBeDisabled();
-    await userEvent.click(screen.getByRole('button', { name: 'Não dá pra ligar: Falta o número de WhatsApp. Abrir Canal' }));
-    expect(props.aoCorrigirLigar).toHaveBeenCalledWith('canal');
+    await userEvent.click(screen.getByRole('button', { name: 'Não dá pra ligar: Falta o número de WhatsApp. Abrir Números e usuários' }));
+    expect(props.aoCorrigirLigar).toHaveBeenCalledWith('numeros');
   });
 
   it('desligar nunca trava', () => {
-    abrir({ travaDoLigar: { motivo: 'Falta o número de WhatsApp.', pagina: 'canal' } });
+    abrir({ travaDoLigar: { motivo: 'Falta o número de WhatsApp.', pagina: 'numeros' } });
     expect(screen.getByRole('switch', { name: 'Ligar ou desligar a IA' })).not.toBeDisabled();
   });
 
-  it('"⋯": Duplicar e Excluir pra quem pode; Motor e Diagnóstico só pra equipe', async () => {
+  it('"⋯": Renomear e Excluir pra quem pode, sem Duplicar; Motor e Diagnóstico só pra equipe', async () => {
     abrir();
     await userEvent.click(screen.getByRole('button', { name: 'Mais ações' }));
-    expect(await screen.findByRole('menuitem', { name: /Duplicar esta IA/ })).toBeInTheDocument();
+    expect(await screen.findByRole('menuitem', { name: /Renomear/ })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: /Excluir IA/ })).toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: /Duplicar/ })).toBeNull();
     expect(screen.queryByRole('menuitem', { name: /Motor/ })).toBeNull();
     expect(screen.queryByRole('menuitem', { name: /Diagnóstico/ })).toBeNull();
   });
@@ -90,10 +94,48 @@ describe('IaBarra (onda 3)', () => {
     expect(props.aoIr).toHaveBeenCalledWith('motor');
   });
 
-  it('sem poder criar nem excluir, a equipe ainda tem o "⋯" (Motor e Diagnóstico)', async () => {
-    abrir({ podeCriar: false, podeExcluir: false, equipe: true, verMotor: true });
+  it('sem poder editar nem excluir, a equipe ainda tem o "⋯" (Motor e Diagnóstico)', async () => {
+    abrir({ podeEditar: false, podeExcluir: false, equipe: true, verMotor: true });
     await userEvent.click(screen.getByRole('button', { name: 'Mais ações' }));
     expect(await screen.findByRole('menuitem', { name: /Motor/ })).toBeInTheDocument();
-    expect(screen.queryByRole('menuitem', { name: /Duplicar/ })).toBeNull();
+    expect(screen.queryByRole('menuitem', { name: /Renomear/ })).toBeNull();
+  });
+
+  describe('Renomear', () => {
+    beforeEach(() => update.mockReset());
+
+    async function abrirJanela(props: Partial<IaBarraProps> = {}) {
+      const p = abrir(props);
+      await userEvent.click(screen.getByRole('button', { name: 'Mais ações' }));
+      await userEvent.click(await screen.findByRole('menuitem', { name: /Renomear/ }));
+      return p;
+    }
+
+    it('grava só o {name} e devolve a IA salva pelo aoSalvo', async () => {
+      const salva = ia('ia-1', 'Agente Novo');
+      update.mockResolvedValue(salva);
+      const props = await abrirJanela();
+      const campo = screen.getByLabelText('Nome do agente');
+      expect(campo).toHaveValue('IA de Vendas');
+      await userEvent.clear(campo);
+      await userEvent.type(campo, '  Agente Novo ');
+      await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+      await waitFor(() => expect(props.aoSalvo).toHaveBeenCalledWith(salva));
+      expect(update).toHaveBeenCalledWith('ia-1', { name: 'Agente Novo' });
+    });
+
+    it('nome vazio não grava', async () => {
+      const props = await abrirJanela();
+      await userEvent.clear(screen.getByLabelText('Nome do agente'));
+      expect(screen.getByRole('button', { name: 'Salvar' })).toBeDisabled();
+      expect(update).not.toHaveBeenCalled();
+      expect(props.aoSalvo).not.toHaveBeenCalled();
+    });
+
+    it('o mesmo nome fecha sem gravar', async () => {
+      await abrirJanela();
+      await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+      expect(update).not.toHaveBeenCalled();
+    });
   });
 });

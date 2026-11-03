@@ -60,10 +60,10 @@ const PAGINA = (pagina: PaginaId): Corrigir => ({ tela: 'configurar', pagina });
 // continua respondendo, só pior. "Só follow-up" (item `mode`) saiu daqui em
 // 11/10/2026: é escolha do gestor, não parada (vira restrição em `situacaoDaIa`).
 const PARADA_POR_ITEM: Record<string, { frase: string; corrigir?: Corrigir }> = {
-  inbox: { frase: 'Parada: o número desta IA não existe mais', corrigir: PAGINA('canal') },
+  inbox: { frase: 'Parada: o número desta IA não existe mais', corrigir: PAGINA('numeros') },
   // ⚠️ Era a tela Diagnóstico, que saiu do menu (só equipe). O "Corrigir" sai de
   // `corrigirDoItem`: a configuração do número, onde se religa (revisão da onda 3, M6).
-  credentials: { frase: 'Parada: o WhatsApp do número está desconectado', corrigir: PAGINA('canal') },
+  credentials: { frase: 'Parada: o WhatsApp do número está desconectado', corrigir: PAGINA('numeros') },
   api_key: { frase: 'Parada: problema na plataforma, avise o suporte' },
 };
 
@@ -71,21 +71,37 @@ const PARADA_POR_ITEM: Record<string, { frase: string; corrigir?: Corrigir }> = 
 // chave da IA no servidor, que o gestor não controla; e "IA ligada", que liga na
 // chave da barra).
 const CORRIGIR_DO_ITEM: Record<string, Corrigir> = {
-  mode: PAGINA('canal'),
-  inbox: PAGINA('canal'),
-  traffic: PAGINA('canal'),
-  activity: PAGINA('canal'),
-  credentials: PAGINA('canal'),
+  mode: PAGINA('funil'),
+  inbox: PAGINA('numeros'),
+  traffic: PAGINA('numeros'),
+  activity: PAGINA('numeros'),
+  credentials: PAGINA('numeros'),
   // Base de conhecimento e arquivos se corrigem na página Arquivos do Ensinar (sem a
   // página, o Ensinar abre em Instruções, que não resolve nada disso).
   knowledge: { tela: 'ensinar', pagina: 'arquivos' },
   files: { tela: 'ensinar', pagina: 'arquivos' },
   handoff: PAGINA('destino'),
-  default_property: PAGINA('catalogo'),
-  schedule: PAGINA('horario'),
-  triggers: PAGINA('canal'),
-  conflict: PAGINA('canal'),
+  default_property: PAGINA('publico'),
+  schedule: PAGINA('numeros'),
+  triggers: PAGINA('campanhas'),
+  conflict: PAGINA('campanhas'),
   client_system: PAGINA('destino'),
+  // Avisos do servidor (HealthCheck) que a reestruturação (Tarefa 70) mapeia pras páginas novas.
+  corretor_owner: PAGINA('numeros'),
+  visit_agenda: PAGINA('modo'),
+  reuniao_sem_endereco: PAGINA('modo'),
+  split_without_trigger: PAGINA('campanhas'),
+  split_trigger_crossing: PAGINA('campanhas'),
+};
+
+/**
+ * Pendência da tela → o item do servidor que diz a MESMA coisa. Com o item no Diagnóstico
+ * aparece um aviso só, o do servidor (com o Corrigir acima); sem Diagnóstico, o da tela.
+ * O `podeLigar` não usa isto: a trava de ligar segue com o texto da tela.
+ */
+const ALIAS_DO_SERVIDOR: Record<string, string> = {
+  corretor_sem_dono_do_numero: 'corretor_owner',
+  reuniao_sem_endereco: 'reuniao_sem_endereco',
 };
 
 /** Os gatilhos que o servidor de fato avalia: a lista + a palavra-chave antiga, se a lista não tiver gatilho de palavra. */
@@ -109,6 +125,8 @@ export function emBranco(t: SalesAgentTrigger): boolean {
       return t.mode === 'code' && !(t.code ?? '').trim();
     case 'form':
       return !(t.form_ids ?? []).length;
+    case 'campaign':
+      return !(t.campaign_link_ids ?? []).length;
     case 'pipeline_stage':
       return !t.stage_id;
     default:
@@ -124,6 +142,8 @@ function descricao(t: SalesAgentTrigger): string {
       return 'lead de anúncio';
     case 'form':
       return (t.form_ids ?? []).length === 1 ? 'lead do formulário escolhido' : 'lead dos formulários escolhidos';
+    case 'campaign':
+      return (t.campaign_link_ids ?? []).length === 1 ? 'lead da campanha escolhida' : 'lead das campanhas escolhidas';
     case 'property':
       return t.mode === 'code' ? `lead do imóvel ${(t.code ?? '').trim().toUpperCase()}` : 'lead que veio de um imóvel';
     case 'pipeline':
@@ -166,10 +186,10 @@ export function restricaoDosGatilhos(agent: AgenteLido): { frase: string; parada
 }
 
 export function situacaoDaIa(agent: AgenteLido, diagnostics?: HealthReport | null, oficial = false): Situacao {
-  if (!agent.enabled && !agent.inbox_id) return { tipo: 'rascunho', frase: 'Rascunho: falta escolher o número', corrigir: PAGINA('canal') };
+  if (!agent.enabled && !agent.inbox_id) return { tipo: 'rascunho', frase: 'Rascunho: falta escolher o número', corrigir: PAGINA('numeros') };
   // Desligada: sem botão, liga na chave da barra.
   if (!agent.enabled) return { tipo: 'desligada', frase: 'Desligada' };
-  if (!agent.inbox_id) return { tipo: 'parada', frase: 'Parada: falta o número', corrigir: PAGINA('canal') };
+  if (!agent.inbox_id) return { tipo: 'parada', frase: 'Parada: falta o número', corrigir: PAGINA('numeros') };
 
   const erro = (diagnostics?.items ?? []).find((i) => i.status === 'error' && PARADA_POR_ITEM[i.key]);
   if (erro) {
@@ -180,10 +200,10 @@ export function situacaoDaIa(agent: AgenteLido, diagnostics?: HealthReport | nul
 
   // "Só follow-up" é escolha (11/10/2026): era "Parada" vermelho. Vem depois do erro
   // que para (número apagado, WhatsApp caído), que continua ganhando.
-  if (agent.followup_only) return { tipo: 'restricao', frase: 'Só follow-up: ela não responde ao vivo, só retoma quem sumiu', corrigir: PAGINA('canal') };
+  if (agent.followup_only) return { tipo: 'restricao', frase: 'Só follow-up: ela não responde ao vivo, só retoma quem sumiu', corrigir: PAGINA('funil') };
 
   const restricao = restricaoDosGatilhos(agent);
-  if (restricao?.parada) return { tipo: 'parada', frase: `Parada: ${restricao.frase}`, corrigir: PAGINA('canal') };
+  if (restricao?.parada) return { tipo: 'parada', frase: `Parada: ${restricao.frase}`, corrigir: PAGINA('campanhas') };
   // Limitar quem ela atende é o uso normal (27/10/2026): fica verde, e o limite só
   // aparece ao passar o mouse na bolinha. Era "Atendendo com restrição", amarelo.
   if (restricao) return { tipo: 'atendendo', frase: `Atendendo: ${restricao.frase}` };
@@ -228,6 +248,10 @@ const TITULO_NO_PAINEL: Record<string, string> = {
   destino_sem_chave: 'Chave do sistema do cliente',
   destino_cvcrm_desconectado: 'Conexão com o CVCRM',
   perguntas_vazias: 'Perguntas antes de passar',
+  filtra_sem_obrigatoria: 'Pergunta obrigatória',
+  reuniao_sem_endereco: 'Endereço do escritório',
+  corretor_sem_dono_do_numero: 'Dono do número',
+  continua_sem_mensagem: 'Onde o atendimento continua',
   followup_sem_escolha: 'O que ela faz quando o lead some',
   followup_sem_fluxo: 'O que ela faz quando o lead some',
 };
@@ -255,7 +279,7 @@ export function pendenciasDaIa(agent: AgenteLido, diagnostics?: HealthReport | n
     .map((i) => daItem(i, agent, oficial));
 
   if (!diagnostics && agent.enabled && !agent.inbox_id) {
-    lista.push({ chave: 'inbox', titulo: 'Número de WhatsApp', detalhe: 'Nenhum número escolhido. Sem ele a IA não recebe nem responde ninguém.', grave: true, corrigir: PAGINA('canal') });
+    lista.push({ chave: 'inbox', titulo: 'Número de WhatsApp', detalhe: 'Nenhum número escolhido. Sem ele a IA não recebe nem responde ninguém.', grave: true, corrigir: PAGINA('numeros') });
   }
 
   // Só o gatilho que não deixa ninguém passar vira pendência (vermelha). O limite
@@ -267,7 +291,7 @@ export function pendenciasDaIa(agent: AgenteLido, diagnostics?: HealthReport | n
       titulo: 'Quem ela atende',
       detalhe: `${restricao.frase.charAt(0).toUpperCase()}${restricao.frase.slice(1)}.`,
       grave: true,
-      corrigir: PAGINA('canal'),
+      corrigir: PAGINA('campanhas'),
     });
   }
 
@@ -277,7 +301,7 @@ export function pendenciasDaIa(agent: AgenteLido, diagnostics?: HealthReport | n
   // Painel (é pendência de Identidade e trava o Ligar, mas não para quem já atende).
   for (const p of daPagina) {
     const titulo = TITULO_NO_PAINEL[p.chave];
-    if (!titulo || lista.some((x) => x.chave === p.chave)) continue;
+    if (!titulo || lista.some((x) => x.chave === p.chave || x.chave === ALIAS_DO_SERVIDOR[p.chave])) continue;
     const herda = sistemaGrave && DESTINO_DO_SISTEMA.includes(p.chave);
     lista.push({ chave: p.chave, titulo, detalhe: p.frase, grave: p.impedeLigar || herda, corrigir: PAGINA(p.pagina) });
   }

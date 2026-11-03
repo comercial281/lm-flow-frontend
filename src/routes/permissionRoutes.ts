@@ -55,6 +55,9 @@ export const ROUTE_PERMISSIONS: readonly RoutePermission[] = [
   { path: '/bolsao', resource: 'bolsao_leads', action: 'read' },
   { path: '/equipe', resource: 'users', action: 'read' },
   { path: '/ia-vendedora', resource: 'sales_agents', action: 'read' },
+  { path: '/ia-vendedora/novo', resource: 'sales_agents', action: 'create' },
+  // Minha ficha (01/11/2026): o corretor dono do número muda nome, ele ou ela e como se apresenta. Sem número, a tela manda pra Dashboard.
+  { path: '/ia-vendedora/minha-ficha', resource: 'sales_agent_numbers', action: 'own_ficha' },
   // Sala de demonstração (21/10/2026): escondida; o servidor só atende administrador e a tela confere o cargo também.
   { path: '/sala-demonstracao', resource: 'sales_agents', action: 'update' },
   { path: '/disparos', resource: 'broadcasts', action: 'read', permissions: BROADCASTS_PERMISSIONS },
@@ -71,7 +74,6 @@ export const ROUTE_PERMISSIONS: readonly RoutePermission[] = [
   { path: 'flow-builder/:id', resource: 'flow_automations', action: 'read', permissions: FLOW_BUILDER_PERMISSIONS, automationsChild: true },
   { path: 'template-variables', resource: 'canned_responses', action: 'read', automationsChild: true },
   { path: 'origem', resource: 'lead_ads_form_configs', action: 'read', automationsChild: true },
-  { path: 'lead-ads-forms', resource: 'lead_ads_form_configs', action: 'read', automationsChild: true },
   { path: 'follow-ups', resource: 'followup_sequences', action: 'read', permissions: FOLLOWUP_PERMISSIONS, automationsChild: true },
   { path: 'follow-ups/:id', resource: 'followup_sequences', action: 'read', permissions: FOLLOWUP_PERMISSIONS, automationsChild: true },
   { path: 'roleta-config', resource: 'roleta_configs', action: 'read', automationsChild: true },
@@ -84,7 +86,6 @@ export const ROUTE_PERMISSIONS: readonly RoutePermission[] = [
   { path: '/settings/listas', resource: 'pipelines', action: 'read' },
   { path: '/settings/attributes', resource: 'custom_attribute_definitions', action: 'read' },
   { path: '/settings/template-variables', resource: 'canned_responses', action: 'read' },
-  { path: '/settings/lead-ads-forms', resource: 'lead_ads_form_configs', action: 'read' },
   { path: '/settings/site-builder', resource: 'sites', action: 'read' },
   { path: '/settings/macros', resource: 'macros', action: 'read' },
   { path: '/settings/pixel-capi', resource: 'capi_configs', action: 'read' },
@@ -103,6 +104,7 @@ export const ROUTE_PERMISSIONS: readonly RoutePermission[] = [
   { path: '/channels', resource: 'channels', action: 'read' },
   { path: '/channels/new', resource: 'channels', action: 'create' },
   { path: '/channels/:id/settings', resource: 'channels', action: 'read' },
+  { path: '/channels/:id/oficial', resource: 'channels', action: 'read' },
   { path: '/settings/email-template-editor', resource: 'message_templates', action: 'create' },
   { path: '/reports', resource: 'reports', action: 'read' },
   { path: '/dashboard', resource: 'dashboard', action: 'read' },

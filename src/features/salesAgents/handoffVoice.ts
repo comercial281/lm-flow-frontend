@@ -18,14 +18,3 @@ import type { TransferConfig } from '@/services/salesAgents/salesAgentsService';
 export function speaksAsBroker(cfg?: TransferConfig | null): boolean {
   return cfg?.voice === 'first_person';
 }
-
-/**
- * Desligar REMOVE a chave: ausente é o padrão de sempre, e gravar o padrão
- * congelaria a escolha de hoje se o padrão da casa mudasse.
- */
-export function toggleVoice(cfg: TransferConfig | null | undefined, on: boolean): TransferConfig {
-  const base: TransferConfig = { ...(cfg ?? {}) };
-  if (on) return { ...base, voice: 'first_person' };
-  delete base.voice;
-  return base;
-}

@@ -105,7 +105,7 @@ describe('VRSync: o site manda quase tudo', () => {
   it('Básico: título, finalidade, tipo e situação travados', () => {
     comTravas(VRSYNC, <SecaoBasico form={form} setF={vi.fn()} editando={null} />);
     expect(screen.getByLabelText('Título')).toBeDisabled();
-    expect(screen.getByRole('radio', { name: 'Venda' })).toBeDisabled();
+    expect(screen.getByRole('checkbox', { name: 'À venda' })).toBeDisabled();
     screen.getAllByRole('combobox').forEach(c => expect(c).toBeDisabled());
   });
 
@@ -141,6 +141,6 @@ describe('sem fonte ligada (lista vazia)', () => {
   it('nada trava', () => {
     comTravas([], <SecaoBasico form={form} setF={vi.fn()} editando={null} />);
     expect(screen.getByLabelText('Título')).toBeEnabled();
-    expect(screen.getByRole('radio', { name: 'Venda' })).toBeEnabled();
+    expect(screen.getByRole('checkbox', { name: 'À venda' })).toBeEnabled();
   });
 });

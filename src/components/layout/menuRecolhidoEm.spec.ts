@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { menuRecolhido, ROTA_CONVERSAS, ROTA_RECOLHE_MENU } from './menuRecolhidoEm';
+import { menuRecolhido, recolheMenu, ROTA_CONVERSAS, ROTA_RECOLHE_MENU } from './menuRecolhidoEm';
 
 describe('menuRecolhido', () => {
   it('fora de Conversas devolve a preferência salva', () => {
@@ -55,5 +55,37 @@ describe('ROTA_RECOLHE_MENU', () => {
     for (const url of ['/automations', '/automations/flow-builder', '/automations/message-funnels', '/automations/follow-ups',
       '/automations/follow-ups/'])
       expect(ROTA_RECOLHE_MENU.test(url)).toBe(false);
+  });
+});
+
+describe('recolheMenu (pathname + search)', () => {
+  it('recolhe nas páginas de Configurar e Ensinar da IA Vendedora, lendo o search', () => {
+    expect(recolheMenu('/ia-vendedora', '?ia=ia-1&tela=configurar&pagina=modo')).toBe(true);
+    expect(recolheMenu('/ia-vendedora', '?ia=ia-1&tela=ensinar')).toBe(true);
+    expect(recolheMenu('/ia-vendedora', '?tela=configurar&ia=ia-1')).toBe(true);
+    expect(recolheMenu('/ia-vendedora', 'ia=ia-1&tela=configurar')).toBe(true);
+  });
+
+  it('recolhe no Novo agente', () => {
+    expect(recolheMenu('/ia-vendedora/novo', '')).toBe(true);
+    expect(recolheMenu('/ia-vendedora/novo/', '?x=1')).toBe(true);
+  });
+
+  it('não recolhe na página de agentes nem no Painel', () => {
+    expect(recolheMenu('/ia-vendedora', '')).toBe(false);
+    expect(recolheMenu('/ia-vendedora', '?ia=ia-1')).toBe(false);
+    expect(recolheMenu('/ia-vendedora', '?ia=ia-1&tela=visao-geral')).toBe(false);
+    expect(recolheMenu('/ia-vendedora', '?ia=ia-1&tela=relatorio')).toBe(false);
+  });
+
+  it('não recolhe em outra rota que tenha tela=configurar no search', () => {
+    expect(recolheMenu('/settings', '?tela=configurar')).toBe(false);
+    expect(recolheMenu('/ia-vendedora-velha', '?tela=configurar')).toBe(false);
+  });
+
+  it('as rotas de sempre continuam recolhendo pelo pathname', () => {
+    expect(recolheMenu('/conversations', '')).toBe(true);
+    expect(recolheMenu('/pipelines/abc', '')).toBe(true);
+    expect(recolheMenu('/pipelines', '')).toBe(false);
   });
 });

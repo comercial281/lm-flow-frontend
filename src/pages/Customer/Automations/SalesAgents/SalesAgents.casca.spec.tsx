@@ -13,11 +13,14 @@ const list = vi.hoisted(() => vi.fn());
 const diagnostics = vi.hoisted(() => vi.fn());
 const create = vi.hoisted(() => vi.fn());
 const update = vi.hoisted(() => vi.fn());
+const resumos = vi.hoisted(() => vi.fn());
+const destroy = vi.hoisted(() => vi.fn());
 vi.mock('@/services/salesAgents/salesAgentsService', () => ({
-  salesAgentsService: { list, diagnostics, create, update, destroy: vi.fn() },
+  salesAgentsService: { list, diagnostics, create, update, destroy, resumos },
 }));
 vi.mock('@/services/channels/inboxesService', () => ({ default: { list: vi.fn().mockResolvedValue({ data: [] }) } }));
-vi.mock('@/hooks/useCan', () => ({ useCan: () => () => true }));
+const permissao = vi.hoisted(() => ({ criar: true }));
+vi.mock('@/hooks/useCan', () => ({ useCan: () => (_r: string, acao: string) => (acao === 'create' ? permissao.criar : true) }));
 const equipe = vi.hoisted(() => ({ sim: false }));
 vi.mock('@/hooks/useIsSuperAdmin', () => ({ useIsSuperAdmin: () => equipe.sim }));
 // `roteiro` = a chave `ia_playbook` do cliente (vê o Motor); `ligado` = `ia_insights`; o resto, desligado.
@@ -66,13 +69,6 @@ vi.mock('./telas/TestarJanela', () => ({
 }));
 vi.mock('./telas/TelaMotor', () => marcador('motor'));
 vi.mock('./telas/TelaDiagnostico', () => marcador('diagnostico'));
-const duplicada = vi.hoisted(() => ({ copia: null as null | Record<string, unknown> }));
-vi.mock('@/components/salesAgents/DuplicateAgentDialog', () => ({
-  default: ({ onDuplicated }: { onDuplicated: (c: unknown) => void }) => (
-    <button type="button" onClick={() => onDuplicated(duplicada.copia)}>confirmar cópia</button>
-  ),
-}));
-
 import SalesAgents from './SalesAgents';
 
 const ia = (id: string, name: string, extra: Record<string, unknown> = {}) =>
@@ -87,6 +83,7 @@ function abrir(endereco: string) {
     <MemoryRouter initialEntries={[endereco]}>
       <Routes>
         <Route path="/ia-vendedora" element={<><SalesAgents /><Endereco /></>} />
+        <Route path="/ia-vendedora/novo" element={<p>tela novo agente</p>} />
       </Routes>
     </MemoryRouter>,
   );
@@ -100,6 +97,8 @@ beforeEach(() => {
   insights.ligado = true;
   insights.roteiro = false;
   equipe.sim = false;
+  permissao.criar = true;
+  resumos.mockResolvedValue([]);
   // O "último salvo" é por módulo: sem limpar, a IA de um teste vazaria pro próximo.
   esquecerSalvos();
   list.mockResolvedValue([ia('ia-1', 'IA de Vendas'), ia('ia-2', 'IA Demo', { inbox_id: null })]);
@@ -107,16 +106,71 @@ beforeEach(() => {
 });
 
 describe('IA Vendedora · casca', () => {
-  it('sem nada no endereço, abre a primeira IA na Visão geral', async () => {
+  // Revê a decisão 2 da casca (Tarefa 68): sem `ia`, a entrada é a página de agentes.
+  it('sem nada no endereço, abre a página de agentes (um quadro por agente)', async () => {
     abrir('/ia-vendedora');
-    expect(await screen.findByText('tela visao-geral · IA de Vendas')).toBeInTheDocument();
-    await waitFor(() => expect(endereco()).toBe('?ia=ia-1'));
+    expect(await screen.findByRole('link', { name: /IA de Vendas/ })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /IA Demo/ })).toBeInTheDocument();
+    expect(screen.getByText('+ Novo agente')).toBeInTheDocument();
+    expect(screen.queryByText(/tela visao-geral/)).toBeNull();
+    expect(endereco()).toBe('');
   });
 
-  it('abre a última IA usada neste navegador', async () => {
+  it('abre a página de agentes mesmo com a última IA no localStorage', async () => {
     localStorage.setItem('lmflow:ia-vendedora:ultima', 'ia-2');
     abrir('/ia-vendedora');
-    expect(await screen.findByText('tela visao-geral · IA Demo')).toBeInTheDocument();
+    expect(await screen.findByRole('link', { name: /IA Demo/ })).toBeInTheDocument();
+    expect(screen.queryByText(/tela visao-geral/)).toBeNull();
+  });
+
+  it('abrir uma IA não grava mais a última no navegador', async () => {
+    abrir('/ia-vendedora?ia=ia-2');
+    await screen.findByText('tela visao-geral · IA Demo');
+    expect(localStorage.getItem('lmflow:ia-vendedora:ultima')).toBeNull();
+  });
+
+  it('clicar no quadro abre o agente em Configurar', async () => {
+    abrir('/ia-vendedora');
+    await userEvent.click(await screen.findByRole('link', { name: /IA Demo/ }));
+    expect(await screen.findByText('tela configurar · IA Demo')).toBeInTheDocument();
+    expect(endereco()).toBe('?ia=ia-2&tela=configurar');
+  });
+
+  it('o seletor ▾ troca de agente direto, e "Todos os agentes" volta à página', async () => {
+    abrir('/ia-vendedora?ia=ia-1');
+    await screen.findByText('tela visao-geral · IA de Vendas');
+    await userEvent.click(screen.getByRole('button', { name: /IA de Vendas/ }));
+    await userEvent.click(await screen.findByRole('menuitem', { name: /IA Demo/ }));
+    await screen.findByText('tela visao-geral · IA Demo');
+    await userEvent.click(screen.getByRole('button', { name: /IA Demo/ }));
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Todos os agentes' }));
+    expect(await screen.findByText('+ Novo agente')).toBeInTheDocument();
+    expect(screen.queryByText(/tela visao-geral/)).toBeNull();
+    expect(endereco()).toBe('');
+  });
+
+  it('agente juntado some da página e do seletor; o desligado aparece', async () => {
+    list.mockResolvedValue([
+      ia('ia-1', 'IA de Vendas'),
+      ia('ia-2', 'IA Juntada', { absorbed_into_id: 'ia-1' }),
+      ia('ia-3', 'IA Parada', { enabled: false }),
+    ]);
+    abrir('/ia-vendedora');
+    expect(await screen.findByRole('link', { name: /IA Parada/ })).toBeInTheDocument();
+    expect(screen.queryByText('IA Juntada')).toBeNull();
+    await userEvent.click(screen.getByRole('link', { name: /IA de Vendas/ }));
+    await screen.findByText('tela configurar · IA de Vendas');
+    await userEvent.click(screen.getByRole('button', { name: /IA de Vendas/ }));
+    await screen.findByRole('menuitem', { name: /IA Parada/ });
+    expect(screen.queryByRole('menuitem', { name: /IA Juntada/ })).toBeNull();
+  });
+
+  it('o seletor não tem mais "Nova IA"', async () => {
+    abrir('/ia-vendedora?ia=ia-1');
+    await screen.findByText('tela visao-geral · IA de Vendas');
+    await userEvent.click(screen.getByRole('button', { name: /IA de Vendas/ }));
+    await screen.findByRole('menuitem', { name: 'Todos os agentes' });
+    expect(screen.queryByRole('menuitem', { name: /Nova IA/ })).toBeNull();
   });
 
   // O assistente (/ia-vendedora/:id/assistente) devolve com ?agent=<id>.
@@ -149,29 +203,37 @@ describe('IA Vendedora · casca', () => {
     expect(await screen.findByText('tela ensinar · IA de Vendas')).toBeInTheDocument();
   });
 
+  it('link salvo de agente juntado abre o agente que o absorveu', async () => {
+    list.mockResolvedValue([
+      ia('ia-1', 'IA de Vendas'),
+      ia('ia-2', 'IA Demo'),
+      ia('ia-3', 'IA Juntada', { absorbed_into_id: 'ia-2' }),
+    ]);
+    abrir('/ia-vendedora?ia=ia-3&tela=ensinar');
+    expect(await screen.findByText('tela ensinar · IA Demo')).toBeInTheDocument();
+  });
+
+  it('depois de Excluir IA, vai pra página de agentes (não abre outro agente)', async () => {
+    destroy.mockResolvedValue(undefined);
+    abrir('/ia-vendedora?ia=ia-1');
+    await screen.findByText('tela visao-geral · IA de Vendas');
+    list.mockResolvedValue([ia('ia-2', 'IA Demo', { inbox_id: null })]);
+    await userEvent.click(screen.getByRole('button', { name: 'Mais ações' }));
+    await userEvent.click(await screen.findByRole('menuitem', { name: /Excluir IA/ }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Excluir' }));
+    await waitFor(() => expect(destroy).toHaveBeenCalledWith('ia-1'));
+    await waitFor(() => expect(endereco()).toBe(''));
+    expect(await screen.findByText('+ Novo agente')).toBeInTheDocument();
+    expect(screen.queryByText(/tela visao-geral/)).toBeNull();
+    expect(endereco()).toBe('');
+  });
+
   it('o menu troca a tela mantendo a IA', async () => {
     abrir('/ia-vendedora?ia=ia-2');
     await screen.findByText('tela visao-geral · IA Demo');
     await userEvent.click(screen.getByRole('button', { name: 'Ensinar' }));
     expect(await screen.findByText('tela ensinar · IA Demo')).toBeInTheDocument();
     await waitFor(() => expect(endereco()).toBe('?ia=ia-2&tela=ensinar'));
-  });
-
-  it('Duplicar abre a cópia em Configurar, sem voltar pra IA original', async () => {
-    duplicada.copia = ia('ia-3', 'IA de Vendas (cópia)', { enabled: false });
-    // A recarga da lista fica pendente: a cópia já tem de ser a IA aberta.
-    let soltar: (v: unknown) => void = () => {};
-    list.mockResolvedValueOnce([ia('ia-1', 'IA de Vendas'), ia('ia-2', 'IA Demo', { inbox_id: null })])
-      .mockReturnValueOnce(new Promise((res) => { soltar = res; }))
-      .mockResolvedValue([ia('ia-1', 'IA de Vendas'), ia('ia-2', 'IA Demo', { inbox_id: null }), duplicada.copia]);
-    abrir('/ia-vendedora?ia=ia-1');
-    await screen.findByText('tela visao-geral · IA de Vendas');
-    await userEvent.click(screen.getByRole('button', { name: 'Mais ações' }));
-    await userEvent.click(await screen.findByRole('menuitem', { name: /Duplicar esta IA/ }));
-    await userEvent.click(await screen.findByRole('button', { name: 'confirmar cópia' }));
-    expect(await screen.findByText('tela configurar · IA de Vendas (cópia)')).toBeInTheDocument();
-    soltar([ia('ia-1', 'IA de Vendas'), ia('ia-2', 'IA Demo', { inbox_id: null }), duplicada.copia]);
-    await waitFor(() => expect(endereco()).toBe('?ia=ia-3&tela=configurar'));
   });
 
   it('ao trocar de IA, o selo não herda o veredito da anterior enquanto o Diagnóstico novo não chega', async () => {
@@ -210,12 +272,9 @@ describe('IA Vendedora · casca', () => {
     expect(screen.getByLabelText('mensagem de teste')).toHaveValue('');
   });
 
-  it('?tela=testar sem IA nenhuma não deixa a janela armada pra IA criada depois', async () => {
-    list.mockResolvedValue([]);
-    create.mockResolvedValue(ia('ia-nova', 'Nova IA', { enabled: false, inbox_id: null }));
+  it('?tela=testar sem IA no endereço abre a página de agentes, sem janela armada', async () => {
     abrir('/ia-vendedora?tela=testar');
-    await userEvent.click(await screen.findByRole('button', { name: 'Nova IA' }));
-    expect(await screen.findByText('tela configurar · Nova IA')).toBeInTheDocument();
+    expect(await screen.findByText('+ Novo agente')).toBeInTheDocument();
     expect(screen.queryByText(/janela testar/)).toBeNull();
   });
 
@@ -249,31 +308,20 @@ describe('IA Vendedora · casca', () => {
     await waitFor(() => expect(screen.queryByText('diagnóstico falhou')).toBeNull());
   });
 
-  it('sem IA nenhuma: aviso e o botão Nova IA', async () => {
+  it('sem agente nenhum: só o "+ Novo agente", que leva ao Novo agente', async () => {
     list.mockResolvedValue([]);
     abrir('/ia-vendedora');
-    expect(await screen.findByText('Nenhuma IA Vendedora criada ainda.')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Nova IA' })).toBeInTheDocument();
+    const novo = await screen.findByRole('link', { name: /\+ Novo agente/ });
+    expect(screen.getAllByRole('link')).toHaveLength(1);
+    await userEvent.click(novo);
+    expect(await screen.findByText('tela novo agente')).toBeInTheDocument();
   });
 
-  it('Nova IA cria o rascunho e abre o Configurar (na primeira página com pendência)', async () => {
-    list.mockResolvedValue([]);
-    create.mockResolvedValue(ia('ia-nova', 'Nova IA', { enabled: false, inbox_id: null }));
+  it('sem a permissão de criar, o "+ Novo agente" não aparece', async () => {
+    permissao.criar = false;
     abrir('/ia-vendedora');
-    await userEvent.click(await screen.findByRole('button', { name: 'Nova IA' }));
-    expect(create).toHaveBeenCalledWith(expect.objectContaining({ enabled: false, inbox_id: null, persona_kind: 'assistant', reach: 'qualify' }));
-    await waitFor(() => expect(endereco()).toBe('?ia=ia-nova&tela=configurar'));
-  });
-
-  it('Nova IA pela barra, com outras IAs na conta, também abre o Configurar dela', async () => {
-    create.mockResolvedValue(ia('ia-nova', 'Nova IA', { enabled: false, inbox_id: null }));
-    abrir('/ia-vendedora?ia=ia-1');
-    await screen.findByText('tela visao-geral · IA de Vendas');
-    // "Nova IA" mora no seletor de IA (o botão com o nome da IA aberta).
-    await userEvent.click(screen.getByRole('button', { name: /IA de Vendas/ }));
-    await userEvent.click(await screen.findByRole('menuitem', { name: /Nova IA/ }));
-    await waitFor(() => expect(endereco()).toBe('?ia=ia-nova&tela=configurar'));
-    expect(await screen.findByText('tela configurar · Nova IA')).toBeInTheDocument();
+    await screen.findByRole('link', { name: /IA Demo/ });
+    expect(screen.queryByText('+ Novo agente')).toBeNull();
   });
 
   it('com um passo pela metade, trocar de IA pergunta antes e não troca sem o ok', async () => {
@@ -304,11 +352,11 @@ describe('IA Vendedora · casca', () => {
 });
 
 describe('endereços antigos e telas fora do menu (onda 3)', () => {
-  it('?passo=3 vira a página Abertura do Configurar', async () => {
+  it('?passo=3 vira a página Condução do Configurar', async () => {
     list.mockResolvedValue([ia('ia-1', 'IA de Vendas')]);
     abrir('/ia-vendedora?ia=ia-1&tela=configurar&passo=3');
     await screen.findByText('tela configurar · IA de Vendas');
-    await waitFor(() => expect(endereco()).toBe('?ia=ia-1&tela=configurar&pagina=abertura'));
+    await waitFor(() => expect(endereco()).toBe('?ia=ia-1&tela=configurar&pagina=conducao'));
   });
 
   it('?tela=testar abre a Visão geral com o Testar por cima', async () => {
@@ -353,7 +401,7 @@ describe('endereços antigos e telas fora do menu (onda 3)', () => {
 
   it('em Configurar não há o título duplo da casca', async () => {
     list.mockResolvedValue([ia('ia-1', 'IA de Vendas')]);
-    abrir('/ia-vendedora?ia=ia-1&tela=configurar&pagina=canal');
+    abrir('/ia-vendedora?ia=ia-1&tela=configurar&pagina=numeros');
     await screen.findByText('tela configurar · IA de Vendas');
     expect(screen.queryByRole('heading', { level: 1, name: 'Configurar' })).toBeNull();
   });
@@ -370,13 +418,13 @@ describe('chave Ligada da barra (onda 3)', () => {
     await waitFor(() => expect(screen.getByRole('switch', { name: 'Ligar ou desligar a IA' })).toBeChecked());
   });
 
-  it('IA sem número: a chave trava e o clique abre a página Canal do Configurar', async () => {
+  it('IA sem número: a chave trava e o clique abre a página Números e usuários do Configurar', async () => {
     list.mockResolvedValue([ia('ia-1', 'IA de Vendas', { enabled: false, inbox_id: null })]);
     abrir('/ia-vendedora?ia=ia-1');
     await screen.findByText('tela visao-geral · IA de Vendas');
     expect(screen.getByRole('switch', { name: 'Ligar ou desligar a IA' })).toBeDisabled();
-    await userEvent.click(screen.getByRole('button', { name: 'Não dá pra ligar: Falta o número de WhatsApp. Abrir Canal' }));
-    await waitFor(() => expect(endereco()).toBe('?ia=ia-1&tela=configurar&pagina=canal'));
+    await userEvent.click(screen.getByRole('button', { name: 'Não dá pra ligar: Falta o número de WhatsApp. Abrir Números e usuários' }));
+    await waitFor(() => expect(endereco()).toBe('?ia=ia-1&tela=configurar&pagina=numeros'));
     expect(update).not.toHaveBeenCalled();
   });
 

@@ -1,7 +1,8 @@
 // Listas de escolha do passo a passo. Mesmos valores que o servidor aceita.
+// Desde 03/11/2026 toda IA roda no Haiku 5.5 (o padrão); o Sonnet 5.5 fica de reserva pra IA que escorregar.
 export const MODELOS: [string, string][] = [
-  ['claude-sonnet-4-5-20250929', 'Equilibrada (Sonnet, padrão)'],
-  ['claude-haiku-4-5-20251001', 'Mais rápida e barata (Haiku)'],
+  ['claude-haiku-5-5', 'Econômica (Haiku 5.5, padrão)'],
+  ['claude-sonnet-5-5', 'Mais forte (Sonnet 5.5)'],
 ];
 
 /** Os momentos da conversa que a IA aponta (SalesAgent::PIPELINE_MOVE_STAGES). */

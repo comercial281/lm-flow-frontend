@@ -21,7 +21,7 @@ const VOZES = [
 beforeEach(() => { voices.mockReset().mockResolvedValue(VOZES); openSupport.mockReset(); });
 
 const abrir = (agent = agenteDeTeste()) => {
-  const gravar = gravarDeTeste('personalidade');
+  const gravar = gravarDeTeste('conducao');
   render(<Personalidade agent={agent} inboxes={[]} gravar={gravar} irPara={vi.fn()} diagnostico={null} />);
   return gravar;
 };

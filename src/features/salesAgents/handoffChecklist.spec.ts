@@ -159,8 +159,8 @@ describe('checklistNotices', () => {
 // obrigatórias NÃO podem virar campo solto do agente: viajam como subchave do
 // transfer_config (página Qualificação), mescladas sobre o último salvo.
 describe('a gravação das obrigatórias', () => {
-  it('é subchave do transfer_config na Qualificação, nunca campo solto', () => {
-    expect(PAGINAS.qualificacao.campos).toContain('transfer_config.required_questions');
+  it('é subchave do transfer_config na Condução, nunca campo solto', () => {
+    expect(PAGINAS.conducao.campos).toContain('transfer_config.required_questions');
     expect(ORDEM_DAS_PAGINAS.flatMap((p) => [...PAGINAS[p].campos])).not.toContain('required_questions');
   });
 });

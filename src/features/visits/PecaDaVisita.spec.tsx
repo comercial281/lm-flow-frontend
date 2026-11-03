@@ -19,6 +19,26 @@ function visita(extra: Partial<Visit> = {}): Visit {
   };
 }
 
+describe('PecaDaVisita · tipo', () => {
+  it('videochamada aparece no nome acessível e escrita no bloco; visita comum fica como sempre', () => {
+    const { rerender } = render(<PecaDaVisita visita={visita({ kind: 'videochamada' })} forma="bloco" duracaoMin={60} altura={60} onClick={() => {}} />);
+    expect(screen.getByRole('button', { name: /Videochamada/ })).toBeTruthy();
+    expect(screen.getByText(/Videochamada/)).toBeTruthy();
+    rerender(<PecaDaVisita visita={visita({ kind: 'visita' })} forma="bloco" duracaoMin={60} altura={60} onClick={() => {}} />);
+    expect(screen.queryByText(/Videochamada/)).toBeNull();
+    expect(screen.getByRole('button', { name: /Maria Souza · Agendada/ })).toBeTruthy();
+  });
+
+  it('reunião e ligação na pílula: o tipo vai no nome acessível, sem tipo (Visita) não escreve nada a mais', () => {
+    const { rerender } = render(<PecaDaVisita visita={visita({ kind: 'reuniao' })} forma="pilula" onClick={() => {}} />);
+    expect(screen.getByRole('button', { name: /Reunião/ })).toBeTruthy();
+    rerender(<PecaDaVisita visita={visita({ kind: 'ligacao' })} forma="pilula" onClick={() => {}} />);
+    expect(screen.getByRole('button', { name: /Ligação/ })).toBeTruthy();
+    rerender(<PecaDaVisita visita={visita()} forma="pilula" onClick={() => {}} />);
+    expect(screen.getByRole('button', { name: /Maria Souza · Agendada/ })).toBeTruthy();
+  });
+});
+
 describe('PecaDaVisita', () => {
   it('pílula da IA tem o robô com o nome certo', () => {
     render(<PecaDaVisita visita={visita({ booked_by: 'ia' })} forma="pilula" onClick={() => {}} />);

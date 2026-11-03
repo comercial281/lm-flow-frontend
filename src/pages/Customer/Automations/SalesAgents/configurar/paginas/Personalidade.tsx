@@ -1,5 +1,6 @@
-// Conversa · Personalidade (onda 3). Formato (várias mensagens), áudio (quando +
-// voz do catálogo com "Ouvir" + "Falar com a equipe" pra voz própria) e curtidas.
+// Condução · Formato das respostas (onda 3; bloco da Condução na Tarefa 72). Várias mensagens,
+// áudio (quando + voz do catálogo com "Ouvir" + "Falar com a equipe" pra voz própria) e curtidas,
+// num bloco só.
 //
 // ⚠️ "Nunca" (audio_mode = 'never') saiu: é a chave desligada. Ligar o áudio numa
 // IA em "nunca" grava "quando o lead mandar áudio" junto.
@@ -47,12 +48,9 @@ export default function Personalidade({ agent, gravar }: PropsDaPagina) {
 
   return (
     <Secoes>
-      <Secao titulo="Formato" descricao="Mensagens curtas com digitando entre elas, como um corretor no WhatsApp.">
+      <Secao titulo="Formato das respostas" descricao="Mensagens curtas com digitando entre elas, como um corretor no WhatsApp. Áudio com a voz que você escolher e a reação com emoji na mensagem do lead.">
         <LinhaComChave rotulo="Responder em várias mensagens" ligada={agent.message_split_enabled !== false}
           aoMudar={(v) => gravar({ message_split_enabled: v })} />
-      </Secao>
-
-      <Secao titulo="Áudio" descricao="Resposta em áudio, com a voz que você escolher.">
         <LinhaComChave rotulo="Responder em áudio" ligada={audioLigado}
           aoMudar={(v) => gravar(v ? { audio_enabled: true, ...(agent.audio_mode === 'never' || !agent.audio_mode ? { audio_mode: 'mirror' as const } : {}) } : { audio_enabled: false })}>
           <BotoesDeEscolha rotulo="Quando ela responde em áudio"
@@ -85,9 +83,6 @@ export default function Personalidade({ agent, gravar }: PropsDaPagina) {
             <Button type="button" variant="outline" onClick={() => openSupport()}>Falar com a equipe</Button>
           </div>
         </LinhaComChave>
-      </Secao>
-
-      <Secao titulo="Curtidas" descricao="A reação com emoji grudada na mensagem do lead.">
         <LinhaComChave rotulo="Curtir mensagens do lead" ligada={!!agent.reaction_enabled} aoMudar={(v) => gravar({ reaction_enabled: v })}>
           <EtiquetasDeEscolha rotulo="Emojis que ela pode usar" grande escolhidas={reacoes}
             opcoes={REACOES_POSSIVEIS.map((e) => ({ valor: e, rotulo: e, nome: `Usar ${e}` }))}

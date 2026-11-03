@@ -1,0 +1,106 @@
+/**
+ * A condição que a campanha ou o anúncio tem (Tarefa 77, 01/11/2026). Só apresentação: quem decide o que a IA
+ * fala é o servidor (campanha, depois cadastro do imóvel, depois documento). Aqui a tela mostra de onde cada
+ * número vem e converte o que a pessoa digitou. "Preencher com o texto do anúncio" é do servidor
+ * (`campanhasService.condicaoDoTexto`); nada de ler texto de anúncio na tela.
+ */
+import type { CondicaoDaOferta } from '@/services/campanhas/campanhasService';
+
+export type CampoDaCondicao = 'down_payment_from' | 'installment_from' | 'min_income' | 'payment_terms';
+export type DeOndeVem = 'do anúncio' | 'do imóvel' | 'o corretor simula';
+
+export const TETO_DA_OBSERVACAO = 300;
+
+export const CAMPOS_DA_CONDICAO: { campo: CampoDaCondicao; rotulo: string; dinheiro: boolean }[] = [
+  { campo: 'down_payment_from', rotulo: 'Entrada a partir de', dinheiro: true },
+  { campo: 'installment_from', rotulo: 'Parcela a partir de', dinheiro: true },
+  { campo: 'min_income', rotulo: 'Renda mínima', dinheiro: true },
+  { campo: 'payment_terms', rotulo: 'Fluxo de pagamento', dinheiro: false },
+];
+
+type Parcial = Partial<CondicaoDaOferta> | null | undefined;
+
+/** Número em pt-BR: ponto de milhar, vírgula nos centavos (899,90; 15.000). Só mostra casas quando há centavos. */
+export const numeroEmPtBr = (n: number) =>
+  Number(n).toLocaleString('pt-BR', { minimumFractionDigits: Number.isInteger(Number(n)) ? 0 : 2, maximumFractionDigits: 2 });
+
+export const dinheiro = (n: number) => `R$ ${numeroEmPtBr(n)}`;
+
+const preenchido = (v: unknown) => (typeof v === 'string' ? v.trim() !== '' : v != null);
+
+export interface LinhaDeCondicao { campo: CampoDaCondicao; rotulo: string; valor: string; de: DeOndeVem }
+
+/** A linha vence o imóvel; vazio vem do imóvel; vazio nos dois é "não informado". */
+export function condicaoDaLinha(linha: { offer_condition?: Parcial }, imovel: Parcial): LinhaDeCondicao[] {
+  return CAMPOS_DA_CONDICAO.map(({ campo, rotulo, dinheiro: eDinheiro }) => {
+    const mostra = (v: unknown) => (eDinheiro ? dinheiro(Number(v)) : String(v));
+    const daLinha = linha.offer_condition?.[campo];
+    if (preenchido(daLinha)) return { campo, rotulo, valor: mostra(daLinha), de: 'do anúncio' as const };
+    const doImovel = imovel?.[campo];
+    if (preenchido(doImovel)) return { campo, rotulo, valor: mostra(doImovel), de: 'do imóvel' as const };
+    return { campo, rotulo, valor: 'não informado', de: 'o corretor simula' as const };
+  });
+}
+
+/** Os selos da coluna "Condição do anúncio": só o que a linha preencheu, ou "A do imóvel". */
+export function resumoDaCondicao(c: Parcial): string[] {
+  const selos: string[] = [];
+  if (preenchido(c?.down_payment_from)) selos.push(`Entrada ${dinheiro(c!.down_payment_from!)}`);
+  if (preenchido(c?.installment_from)) selos.push(`Parcela ${dinheiro(c!.installment_from!)}`);
+  if (preenchido(c?.min_income)) selos.push(`Renda ${dinheiro(c!.min_income!)}`);
+  if (preenchido(c?.payment_terms)) selos.push('Fluxo próprio');
+  if (preenchido(c?.note)) selos.push('Observação');
+  return selos.length ? selos : ['A do imóvel'];
+}
+
+/** Os campos da janela (tudo texto, como a pessoa digita). */
+export interface CondicaoEmEdicao {
+  down_payment_from: string;
+  installment_from: string;
+  min_income: string;
+  payment_terms: string;
+  note: string;
+}
+
+export const vazioDaCondicao = (): CondicaoEmEdicao => ({
+  down_payment_from: '', installment_from: '', min_income: '', payment_terms: '', note: '',
+});
+
+const textoDe = (v: unknown) => (v == null ? '' : String(v));
+/** O número que o servidor guardou, do jeito que a pessoa digita em pt-BR (nunca "899.9" cru no campo). */
+export const dinheiroNoCampo = (v: number | null | undefined) => (v == null || !Number.isFinite(Number(v)) ? '' : numeroEmPtBr(Number(v)));
+
+export function condicaoEmEdicao(c: Parcial): CondicaoEmEdicao {
+  return {
+    down_payment_from: dinheiroNoCampo(c?.down_payment_from), installment_from: dinheiroNoCampo(c?.installment_from),
+    min_income: dinheiroNoCampo(c?.min_income), payment_terms: textoDe(c?.payment_terms), note: textoDe(c?.note),
+  };
+}
+
+/**
+ * Lê pt-BR de verdade: ponto é milhar, vírgula é centavos ("R$ 1.500,50" -> 1500.5; "15.000" -> 15000).
+ * Sem vírgula, UM ponto seguido de 1 ou 2 dígitos no fim é decimal ("899.90" -> 899.9): teclado de
+ * celular que só tem ponto. "1.500" e "1.500.000" seguem milhar.
+ */
+export function numeroDoCampo(texto: string): number | null {
+  const semMoeda = texto.replace(/R\$/gi, '').replace(/\s/g, '');
+  const pontoDecimal = !semMoeda.includes(',') && /^[^.]*\.\d{1,2}$/.test(semMoeda);
+  const limpo = pontoDecimal ? semMoeda : semMoeda.replace(/\./g, '').replace(',', '.');
+  if (!/\d/.test(limpo)) return null;
+  const n = Number(limpo.replace(/[^\d.]/g, ''));
+  return Number.isFinite(n) ? n : null;
+}
+
+/**
+ * O que vai pro servidor. Sem condição vai o objeto com as chaves nulas, NUNCA `null`: o servidor descarta o `null`
+ * (`permit(offer_condition: {})`) e a condição antiga ficaria; com as chaves nulas ele normaliza pra `{}` (sem condição).
+ */
+export function condicaoParaGravar(c: CondicaoEmEdicao): CondicaoDaOferta {
+  return {
+    down_payment_from: numeroDoCampo(c.down_payment_from),
+    installment_from: numeroDoCampo(c.installment_from),
+    min_income: numeroDoCampo(c.min_income),
+    payment_terms: c.payment_terms.trim() || null,
+    note: c.note.trim().slice(0, TETO_DA_OBSERVACAO) || null,
+  };
+}

@@ -21,7 +21,7 @@ describe('situacaoDaIa', () => {
 
   // "IA Vendedora LM Flow - Demo": ligada sem número. Era a bolinha verde.
   it('ligada sem número: parada, falta o número, corrigir em Configurar', () => {
-    expect(situacaoDaIa(ia({ inbox_id: null }))).toEqual({ tipo: 'parada', frase: 'Parada: falta o número', corrigir: { tela: 'configurar', pagina: 'canal' } });
+    expect(situacaoDaIa(ia({ inbox_id: null }))).toEqual({ tipo: 'parada', frase: 'Parada: falta o número', corrigir: { tela: 'configurar', pagina: 'numeros' } });
   });
 
   // As duas "Nova IA Vendedora" vazias e as IAs de fábrica nunca configuradas.
@@ -96,7 +96,7 @@ describe('restricaoDosGatilhos (espelho do TriggerGate)', () => {
 
   it('com E, um gatilho em branco trava todo mundo e o veredito vira parada', () => {
     const agente = ia({ trigger_match_mode: 'all', triggers: [{ type: 'origin', mode: 'ads' }, { type: 'tag', value: ' ' }] });
-    expect(situacaoDaIa(agente)).toEqual({ tipo: 'parada', frase: 'Parada: um gatilho está em branco e não deixa ninguém passar', corrigir: { tela: 'configurar', pagina: 'canal' } });
+    expect(situacaoDaIa(agente)).toEqual({ tipo: 'parada', frase: 'Parada: um gatilho está em branco e não deixa ninguém passar', corrigir: { tela: 'configurar', pagina: 'campanhas' } });
   });
 });
 
@@ -112,7 +112,7 @@ describe('pendenciasDaIa', () => {
   it('itens do Diagnóstico fora do ok, graves primeiro, cada um com onde corrigir', () => {
     const p = pendenciasDaIa(ia(), diag(['enabled', 'ok'], ['knowledge', 'warning', 'Nenhum documento pronto.'], ['inbox', 'error', 'O canal vinculado não existe mais.'], ['api_key', 'error']));
     expect(p.map((x) => x.chave)).toEqual(['inbox', 'api_key', 'knowledge']);
-    expect(p[0]).toMatchObject({ grave: true, corrigir: { tela: 'configurar', pagina: 'canal' }, detalhe: 'O canal vinculado não existe mais.' });
+    expect(p[0]).toMatchObject({ grave: true, corrigir: { tela: 'configurar', pagina: 'numeros' }, detalhe: 'O canal vinculado não existe mais.' });
     expect(p[1].corrigir).toBeUndefined();
     expect(p[2]).toMatchObject({ grave: false, corrigir: { tela: 'ensinar', pagina: 'arquivos' } });
   });
@@ -132,7 +132,7 @@ describe('pendenciasDaIa', () => {
 
   it('gatilho em branco vira pendência vermelha', () => {
     const p = pendenciasDaIa(ia({ triggers: [{ type: 'form', form_ids: [] }] }), diag(['triggers', 'ok']));
-    expect(p).toEqual([{ chave: 'triggers', titulo: 'Quem ela atende', detalhe: 'Os gatilhos estão em branco e não deixam ninguém passar.', grave: true, corrigir: { tela: 'configurar', pagina: 'canal' } }]);
+    expect(p).toEqual([{ chave: 'triggers', titulo: 'Quem ela atende', detalhe: 'Os gatilhos estão em branco e não deixam ninguém passar.', grave: true, corrigir: { tela: 'configurar', pagina: 'campanhas' } }]);
   });
 
   it('aviso do servidor sobre o gatilho não aparece', () => {
@@ -170,8 +170,8 @@ describe('motivoSemAtendimento', () => {
 
 describe('onda 3: Corrigir leva à página certa', () => {
   it('"Corrigir" leva à página certa (onda 3)', () => {
-    expect(situacaoDaIa(agenteDeTeste({ enabled: false, inbox_id: null })).corrigir).toEqual({ tela: 'configurar', pagina: 'canal' });
-    expect(situacaoDaIa(agenteDeTeste({ enabled: true, inbox_id: null })).corrigir).toEqual({ tela: 'configurar', pagina: 'canal' });
+    expect(situacaoDaIa(agenteDeTeste({ enabled: false, inbox_id: null })).corrigir).toEqual({ tela: 'configurar', pagina: 'numeros' });
+    expect(situacaoDaIa(agenteDeTeste({ enabled: true, inbox_id: null })).corrigir).toEqual({ tela: 'configurar', pagina: 'numeros' });
     expect(situacaoDaIa(agenteDeTeste({ enabled: false })).corrigir).toBeUndefined(); // liga na chave da barra
     const comCredencial = pendenciasDaIa(agenteDeTeste(), { items: [{ key: 'credentials', label: 'WhatsApp', status: 'error', detail: 'Desconectado' }] } as never);
     expect(comCredencial.find((p) => p.chave === 'credentials')?.corrigir?.rota).toBe('/channels/inbox-1/settings?tab=configuration');
@@ -179,7 +179,7 @@ describe('onda 3: Corrigir leva à página certa', () => {
 
   it('"Entregar pro follow-up" sem follow-up aparece no Painel, laranja, em Follow-up', () => {
     const p = pendenciasDaIa(ia({ followup_enabled: true, followup_action: 'sequence', followup_flow_id: null }), diag());
-    expect(p).toEqual([expect.objectContaining({ chave: 'followup_sem_fluxo', grave: false, corrigir: { tela: 'configurar', pagina: 'followup' } })]);
+    expect(p).toEqual([expect.objectContaining({ chave: 'followup_sem_fluxo', grave: false, corrigir: { tela: 'configurar', pagina: 'funil' } })]);
   });
 
   it('corretor com destino que não é o dono: Painel, laranja, em Destino', () => {
@@ -187,9 +187,9 @@ describe('onda 3: Corrigir leva à página certa', () => {
     expect(p).toContainEqual(expect.objectContaining({ chave: 'persona_destino', grave: false, corrigir: { tela: 'configurar', pagina: 'destino' } }));
   });
 
-  it('corretor num número sem dono: vermelho, em Identidade', () => {
+  it('corretor num número sem dono: vermelho, em Números e usuários', () => {
     const p = pendenciasDaIa(ia({ persona_kind: 'broker', handoff_target: 'number_owner', number_owner_id: null, lead_facing_name: 'Bruno' } as Partial<SalesAgent>));
-    expect(p[0]).toMatchObject({ chave: 'persona_sem_dono', grave: true, corrigir: { tela: 'configurar', pagina: 'identidade' } });
+    expect(p[0]).toMatchObject({ chave: 'persona_sem_dono', grave: true, corrigir: { tela: 'configurar', pagina: 'numeros' } });
   });
 });
 
@@ -221,7 +221,7 @@ describe('fraseDaPalavraAntiga (§6.11: a tela dizia "sempre restringe")', () =>
 describe('limpeza dos avisos (11/10/2026)', () => {
   it('só follow-up é restrição (amarela), não "Parada"', () => {
     expect(situacaoDaIa(ia({ followup_only: true }))).toEqual({
-      tipo: 'restricao', frase: 'Só follow-up: ela não responde ao vivo, só retoma quem sumiu', corrigir: { tela: 'configurar', pagina: 'canal' },
+      tipo: 'restricao', frase: 'Só follow-up: ela não responde ao vivo, só retoma quem sumiu', corrigir: { tela: 'configurar', pagina: 'funil' },
     });
   });
 
@@ -279,5 +279,29 @@ describe('ocultar avisos', () => {
   it('gatilho em branco é parada', () => {
     const agente = ia({ triggers: [{ type: 'keyword', value: '' }] });
     expect(situacaoDaIa(agente, null).tipo).toBe('parada');
+  });
+});
+
+describe('Tarefa 70: um aviso só quando o servidor já diz a mesma coisa', () => {
+  const sem = { persona_kind: 'assistant' as const, lead_facing_name: 'Bia', house_voice: { kind: 'corretor' as const }, handoff_target: 'number_owner' as const,
+    numbers: [{ id: 'n', inbox_id: 'i', phone: null, inbox_name: 'Ana', enabled: true, connected: true, voice: null, triggers: null, position: 0, owner_user_id: null, owner_name: null }] };
+  const item = (key: string, status: 'warning' | 'error' = 'error') => ({ key, label: key, status, detail: `servidor: ${key}` });
+
+  it('corretor sem dono: com o item do servidor, só ele (Corrigir em Números e usuários)', () => {
+    const p = pendenciasDaIa(agenteDeTeste(sem), { status: 'error', items: [item('corretor_owner')] } as never);
+    expect(p.filter((x) => x.chave === 'corretor_owner' || x.chave === 'corretor_sem_dono_do_numero')).toEqual([
+      expect.objectContaining({ chave: 'corretor_owner', detalhe: 'servidor: corretor_owner', corrigir: { tela: 'configurar', pagina: 'numeros' } }),
+    ]);
+  });
+
+  it('sem Diagnóstico, o aviso da tela aparece', () => {
+    expect(pendenciasDaIa(agenteDeTeste(sem)).map((x) => x.chave)).toContain('corretor_sem_dono_do_numero');
+  });
+
+  it('o Corrigir dos itens do servidor leva à página nova', () => {
+    const p = pendenciasDaIa(agenteDeTeste({ persona_kind: 'assistant', lead_facing_name: 'Bia' }), { status: 'warning', items: ['visit_agenda', 'reuniao_sem_endereco', 'split_without_trigger', 'split_trigger_crossing'].map((k) => item(k, 'warning')) } as never);
+    expect(p.map((x) => [x.chave, x.corrigir?.pagina])).toEqual([
+      ['visit_agenda', 'modo'], ['reuniao_sem_endereco', 'modo'], ['split_without_trigger', 'campanhas'], ['split_trigger_crossing', 'campanhas'],
+    ]);
   });
 });

@@ -355,6 +355,9 @@ export const getCustomerMenuSections = (): MenuSection[] => [
       { name: 'Disparos', href: '/disparos', icon: Megaphone, ...permissionFromRoute('/disparos'), ...permissionsFromRoute('/disparos'), featureKey: 'disparos', foraDoCelular: true },
       // Feature gerenciada pela Leal Mídia: super-admin SEMPRE vê; cliente só se ligar o toggle.
       { name: 'IA Vendedora', href: '/ia-vendedora', icon: Bot, ...permissionFromRoute('/ia-vendedora'), clientToggleKey: 'client_manage_automations' },
+      // Minha ficha da IA (01/11/2026): só o corretor dono de número (sem sales_agents.read e com
+      // número); quem decide é `aplicarMinhaFichaNoMenu`, o item nasce aqui só com a chave.
+      { name: 'Minha ficha da IA', href: '/ia-vendedora/minha-ficha', icon: UserRoundCheck, ...permissionFromRoute('/ia-vendedora/minha-ficha') },
       // Automações = "quando X acontecer, faça Y": o construtor de fluxos, direto
       // na lista (sprint 2, 03/10/2026). "Regras de lead" e "Lembretes" não
       // existem mais: os endereços antigos levam pra cá.
@@ -398,9 +401,9 @@ export const getCustomerMenuSections = (): MenuSection[] => [
       ]),
       // Tela única de distribuição: modo + quem participa + prazo + gestor.
       { name: 'Roleta de leads', href: '/automations/roleta-config', icon: Shuffle, ...permissionFromRoute('/automations/roleta-config'), featureKey: 'lead_automations' },
-      // Formulários dos Lead Ads (endereço antigo da tela Origem). A conexão da
+      // Campanhas (era Formulários dos Lead Ads; endereço antigo da tela Origem). A conexão da
       // página do Facebook está em Integrações → Facebook desde 01/10/2026.
-      { name: 'Formulários', href: '/automations/origem', icon: ClipboardList, ...permissionFromRoute('/automations/origem'), featureKey: 'lead_automations', clientToggleKey: 'client_manage_automations', hideOnRoot: true },
+      { name: 'Campanhas', href: '/automations/origem', icon: ClipboardList, ...permissionFromRoute('/automations/origem'), featureKey: 'lead_automations', clientToggleKey: 'client_manage_automations', hideOnRoot: true },
       { name: 'Etiquetas', href: '/settings/labels', icon: Tags, ...gestao('/settings/labels', 'labels.create') },
       // Listas da casa (E1 do funil, 07/10/2026): motivos de perda e categorias de
       // tarefa. A rota abre pra quem lê o funil; o menu pede também

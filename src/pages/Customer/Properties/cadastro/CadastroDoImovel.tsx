@@ -44,6 +44,7 @@ import SecaoTipologias from './secoes/SecaoTipologias';
 import SecaoValores from './secoes/SecaoValores';
 import SecaoComposicao from './secoes/SecaoComposicao';
 import SecaoDetalhesDaVenda from './secoes/SecaoDetalhesDaVenda';
+import SecaoCondicoes from './secoes/SecaoCondicoes';
 import SecaoCaracteristicas from './secoes/SecaoCaracteristicas';
 import SecaoMidia from './secoes/SecaoMidia';
 import SecaoDescricao from './secoes/SecaoDescricao';
@@ -177,7 +178,7 @@ function Cadastro() {
   const criar = async (rascunho: boolean) => {
     // Rascunho só exige o título: o servidor aceita rascunho sem preço. O Link pro
     // lead inválido o servidor recusa até no rascunho, então ele também barra.
-    const erros = errosDoCadastro(form, travados).filter(e => !rascunho || e.secao === 'basico' || e.secao === 'midia');
+    const erros = errosDoCadastro(form, travados).filter(e => !rascunho || e.secao === 'basico' || e.secao === 'midia' || e.secao === 'condicoes');
     if (erros.length) { irParaErro(erros[0]); return; }
     setSalvando(true);
     try {
@@ -277,6 +278,7 @@ function Cadastro() {
       case 'valores': return <SecaoValores {...props} />;
       case 'composicao': return <SecaoComposicao {...props} />;
       case 'detalhesVenda': return <SecaoDetalhesDaVenda {...props} />;
+      case 'condicoes': return <SecaoCondicoes {...props} />;
       case 'caracteristicas': return <SecaoCaracteristicas {...props} />;
       case 'midia':
         return <SecaoMidia {...props} arquivos={arquivos} aoMudarArquivos={setArquivos} enviando={enviandoMidia || salvando} aoGerenciarFotos={() => void gerenciarFotos()}

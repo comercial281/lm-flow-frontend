@@ -1,9 +1,12 @@
 import api from '@/services/core/api';
 import type { PropertyTypology, TypologySummary } from '@/features/properties/typologies';
 import type { ListingKind, Ocupacao, Contagem } from '@/features/properties/listingKind';
+import type { Intencao, Marca, RegraDaCasa } from '@/services/salesAgents/salesAgentsService';
 
 export type { PropertyTypology, TypologySummary };
 
+/** Aceita troca: sim, não, ou a conversar. */
+export type AceitaTroca = 'sim' | 'nao' | 'a_conversar';
 export type PadraoDoImovel = 'economic' | 'medium' | 'high' | 'luxury';
 export interface Construtora { name?: string; contact_name?: string; phone?: string; website?: string; cnpj?: string }
 export interface DadosInternos { keys_location?: string; registration_number?: string; iptu_code?: string; notary?: string; appraised_value?: string; notes?: string }
@@ -27,7 +30,8 @@ export interface Property {
   category_type: 'residential' | 'commercial' | 'industrial' | 'rural' | 'corporate';
   property_type: string;
   status: 'draft' | 'active' | 'reserved' | 'sold' | 'rented' | 'inactive';
-  stage: 'ready' | 'in_construction' | 'launch' | 'pre_launch';
+  /** `unknown` = fase não informada no cadastro (a IA não chuta). */
+  stage: 'ready' | 'in_construction' | 'launch' | 'pre_launch' | 'unknown';
   /** Empreendimento ou Revenda. Ausente = servidor antigo (trate como revenda). */
   listing_kind?: ListingKind;
   occupancy?: Ocupacao | null;
@@ -116,6 +120,21 @@ export interface Property {
   owner?: { id: string; name: string } | null;
   accepts_financing?: boolean | null;
   accepts_fgts?: boolean | null;
+  /** Aceita troca. Nulo = ninguém informou. */
+  accepts_swap?: AceitaTroca | null;
+  /** A oferta do imóvel (fase 4). Nulo = não informado. */
+  down_payment_from?: number | null;
+  installment_from?: number | null;
+  min_income?: number | null;
+  payment_terms?: string | null;
+  /** Pra quem serve (chaves da intenção). */
+  serves_intents?: Intencao[] | null;
+  /** O que a IA nunca promete sobre este imóvel. */
+  never_promise?: string[] | null;
+  /** O fato de urgência e até quando vale ('AAAA-MM-DD'). */
+  urgency_fact?: string | null;
+  urgency_until?: string | null;
+  objections?: RegraDaCasa[] | null;
   mcmv?: boolean | null;
   building_standard?: PadraoDoImovel | null;
   total_units?: number | null;
@@ -193,6 +212,21 @@ export interface PropertyFormData {
   owner_id?: string | null;
   accepts_financing?: boolean | null;
   accepts_fgts?: boolean | null;
+  /** Aceita troca. Nulo = ninguém informou. */
+  accepts_swap?: AceitaTroca | null;
+  /** A oferta do imóvel (fase 4). Nulo = não informado. */
+  down_payment_from?: number | null;
+  installment_from?: number | null;
+  min_income?: number | null;
+  payment_terms?: string | null;
+  /** Pra quem serve (chaves da intenção). */
+  serves_intents?: Intencao[] | null;
+  /** O que a IA nunca promete sobre este imóvel. */
+  never_promise?: string[] | null;
+  /** O fato de urgência e até quando vale ('AAAA-MM-DD'). */
+  urgency_fact?: string | null;
+  urgency_until?: string | null;
+  objections?: RegraDaCasa[] | null;
   mcmv?: boolean | null;
   building_standard?: PadraoDoImovel | null;
   total_units?: number | null;
@@ -292,6 +326,11 @@ export interface AiExtractResult {
   parking_spaces?: number | null;
   useful_area_m2?: number | null;
   total_area_m2?: number | null;
+  /** A condição de pagamento que o material traz (fase 4). Pra quem serve, nunca prometer, urgência e objeções ficam com o time. */
+  down_payment_from?: number | null;
+  installment_from?: number | null;
+  min_income?: number | null;
+  payment_terms?: string | null;
   address_neighborhood?: string | null;
   address_city?: string | null;
   address_state?: string | null;
@@ -338,6 +377,24 @@ export const propertiesService = {
       resale: total(rev),
       auction: servidorAntigo || semLeilao ? 0 : total(lei),
     };
+  },
+
+  /**
+   * Quantos imóveis ATIVOS ou RESERVADOS há em cada marca (como o servidor, `Serves.catalog_marks`) da IA (Venda, Locação, Leilão, Empreendimento).
+   * Venda = revenda à venda; Locação = aluguel. Leilão e Empreendimento pelo tipo. O agente
+   * serializado já traz isto em `catalog_marks`; este serve a quem não tem o agente na mão.
+   */
+  async contarPorMarca(): Promise<Record<Marca, number>> {
+    const pedir = (recorte: Record<string, string | string[]>) =>
+      api.get('/properties', { params: { 'status[]': ['active', 'reserved'], ...recorte, per_page: 1 } });
+    const [venda, locacao, leilao, empreendimento] = await Promise.all([
+      pedir({ listing_kind: 'resale', 'transaction_type[]': ['sale', 'sale_rent'] }),
+      pedir({ 'transaction_type[]': ['rent', 'sale_rent'] }),
+      pedir({ listing_kind: 'auction' }),
+      pedir({ listing_kind: 'development' }),
+    ]);
+    const total = (r: { data: unknown }) => (r.data as PropertiesResponse).meta?.total ?? 0;
+    return { venda: total(venda), locacao: total(locacao), leilao: total(leilao), empreendimento: total(empreendimento) };
   },
 
   async get(id: string): Promise<Property> {

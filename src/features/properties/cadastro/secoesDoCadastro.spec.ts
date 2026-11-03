@@ -6,7 +6,7 @@ const ids = (k: 'development' | 'resale', editando = false) => secoesDoCadastro(
 describe('secoesDoCadastro', () => {
   it('empreendimento tem Construtora, Obra e Tipologias; nunca Proprietário nem Dados internos', () => {
     expect(ids('development')).toEqual(['basico', 'construtora', 'localizacao', 'obra', 'tipologias', 'detalhesVenda',
-      'caracteristicas', 'midia', 'descricao', 'equipe', 'comissao']);
+      'condicoes', 'caracteristicas', 'midia', 'descricao', 'equipe', 'comissao']);
   });
   it('revenda tem Proprietário, Valores, Composição e Dados internos', () => {
     const r = ids('resale');
@@ -14,6 +14,13 @@ describe('secoesDoCadastro', () => {
     expect(r).toContain('dadosInternos');
     expect(r).not.toContain('construtora');
     expect(r).not.toContain('obra');
+  });
+  it('Condições e argumentos vêm logo depois dos Detalhes da venda, nos três tipos', () => {
+    for (const k of ['development', 'resale', 'auction'] as const) {
+      const lista = secoesDoCadastro(k, { editando: false });
+      const i = lista.findIndex(s => s.id === 'detalhesVenda');
+      expect(lista[i + 1]).toEqual({ id: 'condicoes', titulo: 'Condições e argumentos' });
+    }
   });
   it('Onde divulgar só na edição, por último', () => {
     expect(ids('resale')).not.toContain('ondeDivulgar');

@@ -1,5 +1,6 @@
 import { Suspense, type ReactNode } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
+import RedirecionaComResto from './RedirecionaComResto';
 import { useAdminAccess } from '@/hooks/useAdminAccess';
 import { isRootTenantHost } from '@/components/layout/config/menuItems';
 import { lazyWithRetry } from '@/utils/chunkReload';
@@ -28,6 +29,7 @@ import {
   CadastroDoImovel,
   FotosDoImovel,
   GestaoDeProprietarios,
+  MinhaFichaDaIa,
   FichaDoProprietario,
   Visits,
   Tarefas,
@@ -35,6 +37,7 @@ import {
   Contracts,
   AutomationsLayout,
   SalesAgents,
+  NovoAgente,
   SalaDemonstracao,
   PortalsList,
   DashboardAppPage,
@@ -102,7 +105,6 @@ const FlowAutomationsList = lazyWithRetry(() => import('@/pages/Customer/Automat
 const FlowAutomationCanvas = lazyWithRetry(() => import('@/pages/Customer/Automations/FlowBuilder/FlowAutomationCanvas'));
 const Origem = lazyWithRetry(() => import('@/pages/Customer/Automations/Origem/Origem'));
 const WelcomeAutomations = lazyWithRetry(() => import('@/pages/Customer/Settings/WelcomeAutomations').then(m => ({ default: m.WelcomeAutomations })));
-const LeadAdsForms = lazyWithRetry(() => import('@/pages/Customer/Settings/LeadAdsForms'));
 const LandingPageEditor = lazyWithRetry(() => import('@/pages/Customer/Properties/LandingPageEditor/LandingPageEditorPage'));
 const LandingByIdEditor = lazyWithRetry(() => import('@/pages/Customer/Properties/LandingPageEditor/LandingByIdEditorPage'));
 const SimulatorDemo = lazyWithRetry(() => import('@/pages/Customer/Properties/LandingPageEditor/SimulatorDemoPage'));
@@ -617,6 +619,26 @@ const AppRouter = () => {
               }
             />
 
+            {/* Novo agente em 4 passos (fase 6): só quem pode criar agente. */}
+            <Route
+              path="/ia-vendedora/novo"
+              element={
+                <PermissionRoute resource="sales_agents" action="create">
+                  <NovoAgente />
+                </PermissionRoute>
+              }
+            />
+
+            {/* Minha ficha da IA (01/11/2026): o corretor dono do número. Sem número, a própria tela leva pra Dashboard. */}
+            <Route
+              path="/ia-vendedora/minha-ficha"
+              element={
+                <PermissionRoute resource="sales_agent_numbers" action="own_ficha">
+                  <MinhaFichaDaIa />
+                </PermissionRoute>
+              }
+            />
+
             {/* Sala de demonstração (21/10/2026): escondida. A tela confere o
                 administrador e o servidor devolve 404 fora do espaço de demonstração. */}
             <Route
@@ -741,15 +763,10 @@ const AppRouter = () => {
                 }
               />
               <Route path="lead-automations" element={<Navigate to="/automations" replace />} />
+              {/* Formulários do Meta virou Campanhas (/automations/origem): o endereço antigo leva pra lá. */}
               <Route
                 path="lead-ads-forms"
-                element={
-                  <Suspense fallback={outletSuspenseFallback}>
-                    <PermissionRoute resource="lead_ads_form_configs" action="read">
-                      <LeadAdsForms />
-                    </PermissionRoute>
-                  </Suspense>
-                }
+                element={<RedirecionaComResto para="/automations/origem" />}
               />
               {/* Follow-up (Automações · sprint 3, 03/10/2026): a mesma lista e o
                   mesmo canvas das Automações, com os fluxos de follow-up. O editor
@@ -912,11 +929,7 @@ const AppRouter = () => {
 
             <Route
               path="/settings/lead-ads-forms"
-              element={
-                <PermissionRoute resource="lead_ads_form_configs" action="read">
-                  <LeadAdsForms />
-                </PermissionRoute>
-              }
+              element={<RedirecionaComResto para="/automations/origem" />}
             />
 
             {/* O endereço antigo do Follow-up leva pra aba nova (sprint 3). */}

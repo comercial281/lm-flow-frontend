@@ -194,6 +194,29 @@ describe('lista de blocos', () => {
   });
 });
 
+describe('bloco novo e "Não mandar se a IA já estiver conversando"', () => {
+  const novaMensagem = async (trigger: Record<string, unknown>) => {
+    get.mockResolvedValue(flow({ trigger }));
+    renderCanvas();
+    await screen.findByTestId('bloco-inicio');
+    fireEvent.click(screen.getByRole('button', { name: /Blocos/ }));
+    const lista = await screen.findByTestId('painel-blocos');
+    fireEvent.click(within(lista).getByRole('button', { name: /^Mensagem/ }));
+    const painel = await screen.findByTestId('painel-do-bloco');
+    return within(painel).findByRole('checkbox', { name: /Não mandar se a IA já estiver conversando/ });
+  };
+
+  it('fluxo de "Lead criado": a Mensagem nova nasce com a caixinha marcada (o insertNode passa o gatilho)', async () => {
+    const caixinha = await novaMensagem({ event: 'lead.created', conditions: [] });
+    expect(caixinha.getAttribute('aria-checked')).toBe('true');
+  });
+
+  it('outro gatilho: a Mensagem nova nasce desmarcada', async () => {
+    const caixinha = await novaMensagem({ event: 'lead.tag_added', conditions: [] });
+    expect(caixinha.getAttribute('aria-checked')).toBe('false');
+  });
+});
+
 describe('lista de blocos pelo "+ saída"', () => {
   const comEspera = () => flow({
     nodes: [{

@@ -346,7 +346,7 @@ function dadosDoCartao({ p, wa, tab }: PropsDoCartao, ctx: CtxDoSite) {
   // exclusivo, os dois selos. Na revenda Exclusivo vence Destaque.
   const dev = p.listing_kind === 'development';
   const selos = [
-    dev ? { texto: seloDaFase(p.stage ?? 'ready', p.delivery_forecast), tipo: 'fase' as const } : null,
+    dev && p.stage && p.stage !== 'unknown' ? { texto: seloDaFase(p.stage, p.delivery_forecast), tipo: 'fase' as const } : null,
     // Minha Casa Minha Vida: logo depois da fase, na cor principal. Só `true` conta.
     p.mcmv === true ? { texto: 'MCMV', tipo: 'fase' as const } : null,
     p.exclusive ? { texto: 'Exclusivo', tipo: 'destaque' as const } : null,

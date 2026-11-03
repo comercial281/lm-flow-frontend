@@ -33,6 +33,8 @@ import { Conversation } from '@/types/chat/api';
 import { useConversations } from '@/hooks/chat/useConversations';
 import { useLanguage } from '@/hooks/useLanguage';
 import ActivateAiDialog from './ActivateAiDialog';
+import ReligarIaDialog from './ReligarIaDialog';
+import { useLigarIa } from '@/features/conversas/useLigarIa';
 import BotaoMaisAcoes from '@/components/base/BotaoMaisAcoes';
 
 interface ConversationActionsDropdownProps {
@@ -69,11 +71,23 @@ const ConversationActionsDropdown: React.FC<ConversationActionsDropdownProps> = 
   const aiPaused =
     aiPausedOverride ?? conversation?.additional_attributes?.sales_agent_paused === true;
 
+  // Religar: num número dividido a pessoa escolhe o agente (o mesmo caminho do robô do topo e do cartão).
+  const ligarIa = useLigarIa({
+    aoLigar: (_id, state) => {
+      setAiPausedOverride(state.status === 'paused');
+      toast.success(state.label);
+    },
+  });
+
   const toggleAi = async (enable: boolean) => {
     if (!conversation?.id) return;
+    if (enable) {
+      await ligarIa.pedirLigar(String(conversation.id), conversation);
+      return;
+    }
     setTogglingAi(true);
     try {
-      const state = await chatService.toggleSalesAgent(String(conversation.id), enable);
+      const state = await chatService.toggleSalesAgent(String(conversation.id), false);
       setAiPausedOverride(state.status === 'paused');
       toast.success(state.label);
     } catch {
@@ -204,7 +218,7 @@ const ConversationActionsDropdown: React.FC<ConversationActionsDropdownProps> = 
             setOpen(false);
             void toggleAi(aiPaused);
           }}
-          disabled={togglingAi}
+          disabled={togglingAi || ligarIa.procurando}
           className="flex items-center gap-2"
         >
           <BotOff className="h-4 w-4" />
@@ -441,6 +455,7 @@ const ConversationActionsDropdown: React.FC<ConversationActionsDropdownProps> = 
         </DropdownMenuItem>
       </DropdownMenuContent>
       <ActivateAiDialog conversation={conversation} open={aiOpen} onOpenChange={setAiOpen} />
+      <ReligarIaDialog {...ligarIa.janela} />
     </DropdownMenu>
   );
 };

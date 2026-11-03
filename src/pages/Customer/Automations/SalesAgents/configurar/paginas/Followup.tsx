@@ -89,7 +89,7 @@ export default function Followup({ agent, gravar, irPara }: PropsDaPagina) {
             <li className="space-y-3 px-3.5 py-3">
               <LinhaComChave rotulo="Retomada" descricao="Repete a pergunta que ficou sem resposta." ligada={!!agent.reengagement_enabled}
                 aoMudar={(v) => gravar({ reengagement_enabled: v })}>
-                {agent.followup_only && <Aviso tom="atencao">Com "Só follow-up" ela não responde ao vivo, então não há pergunta pra retomar.</Aviso>}
+                {agent.followup_only && <Aviso tom="atencao">Com "Esta IA só faz follow-up" ela não responde ao vivo, então não há pergunta pra retomar.</Aviso>}
                 <div className="flex flex-wrap items-end gap-3">
                   <TextoNaHora id="retomada-1" tipo="numero" min={1} max={48} rotulo="1ª depois de (horas)" className="w-44"
                     salvo={String(agent.reengagement_first_hours ?? REENGAGEMENT_DEFAULT_FIRST_HOURS)}

@@ -4,6 +4,7 @@ import { hora } from '@/lib/formato';
 import { cn } from '@/lib/utils';
 import { VISIT_STATUS_LABELS, type Visit } from '@/services/visits/visitsService';
 import { quemAgendou } from './quemAgendou';
+import { tipoDiferente } from './tipoDaVisita';
 import { ehAtrasada, estiloDaSituacao } from './situacaoDaVisita';
 
 export function IconeDeQuemAgendou({
@@ -77,8 +78,9 @@ export const PecaDaVisita = forwardRef<HTMLButtonElement, Props>(function PecaDa
       <IconeDeQuemAgendou decorativo visita={visita} className={forma === 'pilula' ? 'h-[11px] w-[11px]' : 'h-3 w-3'} />
     </span>
   ) : null;
+  const tipo = tipoDiferente(visita);
   const horaAcessivel = forma === 'bloco' && duracaoMin ? `${h}–${hora(new Date(inicio.getTime() + duracaoMin * 60000))}` : h;
-  const nomeAcessivel = [horaAcessivel, nome, situacao, q?.rotulo, atrasada ? 'passou sem registro' : null]
+  const nomeAcessivel = [horaAcessivel, nome, tipoDiferente(visita), situacao, q?.rotulo, atrasada ? 'passou sem registro' : null]
     .filter(Boolean)
     .join(' · ');
   const base: CSSProperties = { ...estiloDaSituacao(visita.status), ...style };
@@ -135,6 +137,7 @@ export const PecaDaVisita = forwardRef<HTMLButtonElement, Props>(function PecaDa
     >
       <span className="flex items-center gap-1 text-[10.5px] font-medium tabular-nums text-muted-foreground">
         {fim ? `${h} às ${fim}` : h}
+        {tipo && <span> · {tipo}</span>}
         {atrasada && (
           <span
             title="Passou e ninguém registrou"

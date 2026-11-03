@@ -17,7 +17,6 @@ export interface SuperAgent {
   tenant_name: string;
   name: string;
   enabled: boolean;
-  mode: string;
   trigger_keyword?: string | null;
   inbox_id?: string | null;
   inbox_name?: string | null;
@@ -56,7 +55,7 @@ interface Envelope<T> {
 }
 
 export type SuperAgentPatch = Partial<
-  Pick<SuperAgent, 'name' | 'enabled' | 'mode' | 'trigger_keyword' | 'inbox_id' | 'followup_enabled' | 'booking_enabled' | 'active_hours'
+  Pick<SuperAgent, 'name' | 'enabled' | 'trigger_keyword' | 'inbox_id' | 'followup_enabled' | 'booking_enabled' | 'active_hours'
   | 'model' | 'test_model' | 'max_output_tokens'>
 >;
 
@@ -174,8 +173,3 @@ export type {
   PerformanceTotals,
   PerformanceReport,
 } from '@/types/aiResults';
-export const MODE_LABELS: Record<string, string> = {
-  seller: 'Vendedor(a)',
-  sdr: 'SDR (qualifica e agenda)',
-  assistant: 'Assistente (sugere ao corretor)',
-};

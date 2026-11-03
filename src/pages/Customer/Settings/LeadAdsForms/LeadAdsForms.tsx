@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, type ReactNode } from 'react';
 import { apiErrorMessage } from '@/utils/apiHelpers';
 import { toast } from 'sonner';
 import { plural } from '@/lib/formato';
@@ -43,7 +43,11 @@ import { useAutomationResources } from '@/features/flowAutomations/editores/Lead
 import { roletaConfigService, roletaLabel, type RoletaConfig } from '@/services/roletaConfig/roletaConfigService';
 import CampoQuemAssume, { type QuemAssume } from '@/components/roleta/CampoQuemAssume';
 import { regraQuePega } from './regraPorPalavra';
-import { CampoDeImovel } from '@/components/properties/BuscaDeImovel';
+import JanelaDaCampanha from '../Campanhas/JanelaDaCampanha';
+import { ResumoDaCampanha, contagemDeLeads } from '../Campanhas/LinhaDaCampanha';
+import { itemDaFicha, itemEmBranco } from '@/features/campanhas/itensDeCampanha';
+import type { ItemDeCampanha, OpcaoDeIa } from '@/services/campanhas/campanhasService';
+import { useCan } from '@/hooks/useCan';
 import LabelMultiSelect from '@/components/labels/LabelMultiSelect';
 
 import { useConfirmacao } from '@/hooks/useConfirmacao';
@@ -66,7 +70,6 @@ interface FormState {
   label_ids: string[];
   // Quem assume: corretor fixo OU roleta (no máximo um dos dois).
   quem: QuemAssume;
-  property_id: string;
   match_keyword: string;
   is_active: boolean;
 }
@@ -91,7 +94,6 @@ const emptyFormState = (form_id = '', form_name = '', meta_page_id = ''): FormSt
   pipeline_stage_id: '',
   label_ids: [],
   quem: { default_assignee_id: null, roleta_config_id: null },
-  property_id: '',
   match_keyword: defaultKeyword(form_name),
   is_active: true,
 });
@@ -103,15 +105,41 @@ const quemDe = (cfg: { default_assignee_id?: string | null; roleta_config_id?: s
     ? { default_assignee_id: cfg.default_assignee_id, roleta_config_id: null }
     : { default_assignee_id: null, roleta_config_id: cfg.roleta_config_id ?? null };
 
-export default function LeadAdsForms() {
+/**
+ * Desde a Tarefa 77 (01/11/2026) esta é a parte "Formulários do Meta" da tela Campanhas. Sozinha (sem
+ * `campanhas`) segue funcionando como a página de antes; dentro de Campanhas recebe o título, o aviso do
+ * topo, a parte de anúncios de WhatsApp (`depois`) e a lista do servidor (`campanhas`).
+ */
+export interface LeadAdsFormsProps {
+  titulo?: string;
+  subtitulo?: string;
+  /** Acima da lista (o aviso de "campanha que não diz o que vende"). */
+  topo?: ReactNode;
+  /** Depois dos formulários (os anúncios de WhatsApp). */
+  depois?: ReactNode;
+  /** Botões a mais no cabeçalho. */
+  cabecalhoExtra?: ReactNode;
+  campanhas?: {
+    itens: ItemDeCampanha[];
+    /** A lista do servidor chegou. Sem ela o cartão não afirma "0 leads" nem "Nenhuma IA". */
+    listaPronta?: boolean;
+    listaFalhou?: boolean;
+    opcoesDeIa?: OpcaoDeIa[];
+    nomes?: Record<string, string>;
+    /** Mudou algo que a lista de Campanhas mostra: recarregar. */
+    aoMudar: () => void;
+  };
+}
+
+export default function LeadAdsForms({ titulo = 'Formulários', subtitulo = 'Pra onde cada formulário dos anúncios do Facebook manda os leads.', topo, depois, cabecalhoExtra, campanhas }: LeadAdsFormsProps = {}) {
   const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
+  const can = useCan();
   const resources = useAutomationResources(true);
 
   const [configs, setConfigs] = useState<LeadAdsFormConfig[]>([]);
   const [loading, setLoading] = useState(false);
   // Falha na leitura não vira "Nenhum formulário configurado" (o gestor recadastraria).
   const [erro, setErro] = useState(false);
-  const [saving, setSaving] = useState(false);
 
   const [metaForms, setMetaForms] = useState<MetaForm[]>([]);
   const [metaError, setMetaError] = useState<string | null>(null);
@@ -400,19 +428,23 @@ export default function LeadAdsForms() {
       pipeline_stage_id: cfg.pipeline_stage_id ?? '',
       label_ids:         cfg.label_ids ?? [],
       quem:              quemDe(cfg),
-      property_id:       cfg.property_id ?? '',
       match_keyword:     cfg.match_keyword ?? defaultKeyword(cfg.form_name),
       is_active:         cfg.is_active,
     });
     setModalOpen(true);
   };
 
-  const handleSave = async () => {
-    if (!form.pipeline_id) { toast.error('Selecione um funil'); return; }
-    if (!form.pipeline_stage_id) { toast.error('Selecione uma etapa'); return; }
+  // A entrada do lead (funil, etapa, quem assume, etiquetas): confere e devolve o que a ficha grava.
+  // Quem grava é a janela da campanha, junto com o que a campanha vende (Tarefa 77).
+  const montarEntrada = (): LeadAdsFormConfigFormData | null => {
+    if (!form.pipeline_id) { toast.error('Selecione um funil'); return null; }
+    if (!form.pipeline_stage_id) { toast.error('Selecione uma etapa'); return null; }
 
     const assign = form.quem;
-    const payload: LeadAdsFormConfigFormData = {
+    // Roleta nova (06/10/2026, D8): o horário e a mensagem de fora do horário
+    // são da roleta. `after_hours_message` não viaja: o texto gravado fica onde
+    // está (foi de onde a migração dos clientes o copiou).
+    return {
       form_id:             form.form_id,
       form_name:           form.form_name,
       meta_page_id:        form.meta_page_id || null,
@@ -422,29 +454,34 @@ export default function LeadAdsForms() {
       label_ids:           form.label_ids,
       default_assignee_id: assign.default_assignee_id,
       roleta_config_id:    assign.roleta_config_id,
-      property_id:         form.property_id || null,
+      property_id:         editing?.property_id ?? null,
       match_keyword:       form.match_keyword.trim() || null,
     };
-    // Roleta nova (06/10/2026, D8): o horário e a mensagem de fora do horário
-    // são da roleta. `after_hours_message` não viaja: o texto gravado fica onde
-    // está (foi de onde a migração dos clientes o copiou).
+  };
 
-    setSaving(true);
+  const aposSalvarJanela = ({ config }: { config?: LeadAdsFormConfig }) => {
+    if (!config) return;
+    setConfigs(prev => (prev.some(c => c.id === config.id) ? prev.map(c => c.id === config.id ? config : c) : [...prev, config]));
+    campanhas?.aoMudar();
+  };
+
+  const excluirFicha = async () => {
+    if (!editing) return;
+    const ok = await confirmar({
+      titulo: 'Excluir a ficha do formulário',
+      descricao: <>Os próximos leads de <strong>{form.form_name}</strong> deixam de entrar por esta ficha. Os leads que já chegaram ficam. Não dá pra desfazer.</>,
+      rotuloDaAcao: 'Excluir ficha',
+      destrutivo: true,
+    });
+    if (!ok) return;
     try {
-      if (editing) {
-        const updated = await leadAdsFormsService.update(editing.id, payload);
-        setConfigs(prev => prev.map(c => c.id === updated.id ? updated : c));
-        toast.success('Configuração atualizada');
-      } else {
-        const created = await leadAdsFormsService.create(payload);
-        setConfigs(prev => [...prev, created]);
-        toast.success('Configuração salva');
-      }
+      await leadAdsFormsService.delete(editing.id);
+      setConfigs(prev => prev.filter(c => c.id !== editing.id));
       setModalOpen(false);
+      toast.success('Ficha excluída');
+      campanhas?.aoMudar();
     } catch (e) {
-      toast.error(apiErrorMessage(e, 'Erro ao salvar'));
-    } finally {
-      setSaving(false);
+      toast.error(apiErrorMessage(e, 'Não foi possível excluir a ficha'));
     }
   };
 
@@ -556,10 +593,11 @@ export default function LeadAdsForms() {
       estreita
       cabecalho={
         <BaseHeader
-          title="Formulários"
-          subtitle="Pra onde cada formulário dos anúncios do Facebook manda os leads."
+          title={titulo}
+          subtitle={subtitulo}
           aDireita={
             <>
+          {cabecalhoExtra}
           <IconActionButton
             label="Diagnosticar conexão"
             icon={<Stethoscope className="h-4 w-4" />}
@@ -936,6 +974,8 @@ export default function LeadAdsForms() {
         </DialogContent>
       </Dialog>
 
+      {topo}
+
       {/* Uma linha por PÁGINA com problema. Antes vinha um erro único: com duas
           páginas conectadas, a que estava boa ficava sem aparecer. */}
       {metaPageErrors.length > 0 && metaForms.length > 0 && (
@@ -1084,7 +1124,7 @@ export default function LeadAdsForms() {
       {/* Configurações salvas */}
       <div className="mb-8">
         <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide mb-3">
-          Formulários configurados
+          {campanhas ? 'Formulários do Meta' : 'Formulários configurados'}
         </h2>
         {loading ? (
           <Carregando linhas={3} />
@@ -1149,9 +1189,23 @@ export default function LeadAdsForms() {
                         })}
                       </div>
                     )}
+                    {campanhas && (() => {
+                      const item = itemDaFicha(cfg, configDisplayName(cfg), campanhas.itens.find(i => i.form_config_id === cfg.id));
+                      if (campanhas.listaPronta === false) {
+                        return campanhas.listaFalhou
+                          ? <p className="mt-3 text-xs text-muted-foreground">Não deu pra carregar o resumo das campanhas. Recarregue a página.</p>
+                          : null;
+                      }
+                      return (
+                        <div className="mt-3">
+                          <p className="mb-2 text-xs text-muted-foreground">{contagemDeLeads(item.leads_count)}</p>
+                          <ResumoDaCampanha item={item} nomes={campanhas.nomes} />
+                        </div>
+                      );
+                    })()}
                   </div>
 
-                  <Button variant="ghost" size="icon" onClick={() => openEdit(cfg)} title="Editar">
+                  <Button variant="ghost" size="icon" onClick={() => openEdit(cfg)} title={can('lead_ads_form_configs', 'update') ? 'Editar' : 'Ver'}>
                     <Edit className="h-4 w-4" />
                   </Button>
                 </div>
@@ -1229,17 +1283,25 @@ export default function LeadAdsForms() {
         </div>
       )}
 
-      {/* Create / Edit Modal */}
-      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{editing ? 'Editar destino do formulário' : 'Configurar destino'}</DialogTitle>
-            <DialogDescription>
-              Leads do formulário <strong>{form.form_name}</strong> serão enviados para o destino abaixo.
-            </DialogDescription>
-          </DialogHeader>
+      {depois}
 
-          <div className="grid gap-5 py-2">
+      {/* A janela da campanha: o que vende, a condição, pra quem é, qual IA atende e a entrada do lead de sempre. */}
+      {modalOpen && (
+        <JanelaDaCampanha
+          key={editing?.id ?? `novo:${form.form_id}`}
+          tipo="form"
+          config={editing}
+          item={editing
+            ? itemDaFicha(editing, configDisplayName(editing), campanhas?.itens.find(i => i.form_config_id === editing.id))
+            : itemEmBranco({ key: `form:${form.form_id}`, kind: 'form', label: form.form_name })}
+          opcoesDeIa={campanhas?.listaPronta === false ? undefined : campanhas?.opcoesDeIa}
+          montarEntrada={montarEntrada}
+          aoFechar={() => setModalOpen(false)}
+          aoSalvar={aposSalvarJanela}
+          aoMudarIa={() => campanhas?.aoMudar()}
+          aoApagar={excluirFicha}
+          entrada={(
+            <>
             <GrupoDaJanela titulo="Para onde vai">
               <GradeDaJanela>
                 <CampoDaJanela rotulo="Funil" htmlFor="destino_funil" obrigatorio colunas={form.pipeline_id ? 2 : 4}>
@@ -1310,7 +1372,6 @@ export default function LeadAdsForms() {
                   onChange={quem => setForm(f => ({ ...f, quem }))}
                   pessoas={resources.users.filter(u => !u.deactivated).map(u => ({ id: String(u.id), nome: u.name }))}
                   roletas={roletas}
-                  disabled={saving}
                 />
               </CampoDaJanela>
             </GrupoDaJanela>
@@ -1325,17 +1386,6 @@ export default function LeadAdsForms() {
                   selectedIds={form.label_ids}
                   onChange={ids => setForm(f => ({ ...f, label_ids: ids }))}
                   onLabelCreated={() => resources.reloadLabels()}
-                  disabled={saving}
-                />
-              </CampoDaJanela>
-
-              {/* Imóvel vinculado a todo lead desse formulário */}
-              <CampoDaJanela rotulo="Imóvel vinculado" htmlFor="property_id">
-                <CampoDeImovel
-                  id="property_id"
-                  propertyId={form.property_id}
-                  aoMudar={property_id => setForm(f => ({ ...f, property_id }))}
-                  disabled={saving}
                 />
               </CampoDaJanela>
             </GrupoDaJanela>
@@ -1350,16 +1400,10 @@ export default function LeadAdsForms() {
                 <UILabel htmlFor="is_active" className="cursor-pointer">Ativo</UILabel>
               </div>
             </GrupoDaJanela>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setModalOpen(false)}>Cancelar</Button>
-            <Button onClick={handleSave} disabled={saving}>
-              {saving ? 'Salvando...' : editing ? 'Salvar' : 'Criar'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            </>
+          )}
+        />
+      )}
     </Pagina>
       {dialogoDeConfirmacao}
     </>

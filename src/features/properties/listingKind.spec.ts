@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   FILTROS_VAZIOS, subtituloDosImoveis, totalDeCadastros, abasVisiveis, destinosDeMover, rotuloDaOcupacao, rotuloDeMover, textoDoDesconto, tomDaOcupacao, abaPadrao, anosDaPrevisao, filtrosAtivos, juntarMesAno, lerAba, linhaDasTipologias, linkNaLista, descontoDaAvaliacao,
-  mesAno, paraCampoMes, paramsDosFiltros, separarMesAno, rotuloDaFase, rotuloDaSituacao, seloDaFase, textoDasUnidades, tipoDoImovel, tirarFiltro,
+  mesAno, paraCampoMes, paramsDosFiltros, separarMesAno, rotuloDaFase, FASES_DO_PUBLICO, rotuloDaSituacao, seloDaFase, textoDasUnidades, tipoDoImovel, tirarFiltro,
 } from './listingKind';
 
 describe('tipo do imóvel', () => {
@@ -33,6 +33,12 @@ describe('fase e entrega', () => {
     expect(rotuloDaFase('in_construction')).toBe('Em obra');
     expect(rotuloDaFase('pre_launch')).toBe('Pré-lançamento');
     expect(rotuloDaFase('ready')).toBe('Pronto para morar');
+  });
+
+  it('fase não informada diz isso, não "Pronto para morar", e não promete entrega', () => {
+    expect(rotuloDaFase('unknown')).toBe('Fase não informada');
+    expect(seloDaFase('unknown', '2027-12-01')).toBe('Fase não informada');
+    expect(FASES_DO_PUBLICO.map(f => f.valor)).not.toContain('unknown');
   });
 
   it('mês/ano', () => {

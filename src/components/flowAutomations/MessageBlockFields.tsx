@@ -77,6 +77,24 @@ export function ProgressFields({ config, onChange }: { config: FlowNodeConfig; o
   );
 }
 
+/** "Não mandar se a IA já estiver conversando com o lead" (Fase 5): grava `skip_if_ai_talking`. */
+export function PularSeIaConversandoField({ config, onChange }: { config: FlowNodeConfig; onChange: (next: FlowNodeConfig) => void }) {
+  return (
+    <div className="space-y-1">
+      <label className="flex items-center gap-2 text-sm cursor-pointer">
+        <Checkbox
+          checked={config.skip_if_ai_talking === true}
+          onCheckedChange={v => onChange({ ...config, skip_if_ai_talking: v === true })}
+        />
+        Não mandar se a IA já estiver conversando com o lead
+      </label>
+      <p className="pl-6 text-xs text-muted-foreground">
+        Liga sozinha nos fluxos de entrada. Use quando o fluxo e a IA falam com o mesmo lead.
+      </p>
+    </div>
+  );
+}
+
 interface EnvioPessoal {
   /** Automação pessoal do corretor: a mensagem sai pelo WhatsApp dele. */
   pessoal?: boolean;
@@ -164,6 +182,9 @@ export function MessageBlockFields({
             </>
           )}
           {!doResponsavel && <ProgressFields config={config} onChange={onChange} />}
+          {!guided && (
+            <PularSeIaConversandoField config={config} onChange={next => onChange(c => ({ ...c, skip_if_ai_talking: next.skip_if_ai_talking }))} />
+          )}
           <p className="text-xs text-muted-foreground">A mensagem sai marcada como automática, igual o Follow-up.</p>
         </>
       )}

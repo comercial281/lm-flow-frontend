@@ -3347,6 +3347,8 @@ Armadilhas:
 
 ## Duplicar a IA para outro número (desde 2026-09-23)
 
+⚠️ Revista em 01/11/2026 (Tarefa 79): *Duplicar esta IA* saiu do menu *⋯*. Um agente atende vários números (Configurar > Números e usuários) e o agente novo nasce em *+ Novo agente*. Ver *Novo agente em 4 passos, Renomear e a saída do Duplicar*.
+
 Pedido do dono do produto: *"agora que podemos personalizar bastante a IA, eu
 gostaria de poder duplicar ela, para plugar em uma instância e replicar para
 outra de forma fácil"*.
@@ -3496,6 +3498,8 @@ Armadilhas:
    nova foi escrita.
 
 ## A IA pode falar como o próprio corretor do número (desde 2026-09-25)
+
+⚠️ Revista em 01/11/2026 (Tarefa 79): a voz virou a *ficha da casa* do agente mais a voz de cada número (Configurar > Números e usuários), e o corretor dono do número ajusta o nome e o jeito de se apresentar em *Minha ficha*. Ver *IA Vendedora · Minha ficha do corretor*.
 
 Relato do dono do produto: no WhatsApp de uma corretora, a IA dizia *"deixa eu
 passar tudo pro meu colega do time"*. E quando acertava a voz (*"deixa eu confirmar
@@ -6646,6 +6650,8 @@ O que ainda usa o serviço antigo no frontend:
 
 ## IA Vendedora · casca nova: barra de topo, Painel primeiro e veredito único (desde 2026-10-05)
 
+⚠️ Revista em 01/11/2026 (Tarefa 79): O item *Nova IA* no fim do seletor saiu (decisão 2). O agente novo nasce em *+ Novo agente*, na página de agentes, e abre em `/ia-vendedora/novo` (4 passos). Ver *IA Vendedora · Página de agentes e Novo agente* e *Novo agente em 4 passos*.
+
 > Entrega 1 da refatoração da IA Vendedora. Spec: `LM FLOW/specs/2026-10-05-ia-vendedora-refatoracao-design.md`; plano: `LM FLOW/plans/2026-10-05-ia-vendedora-entrega-1-casca.md`. Só tela: nenhuma IA muda de atendimento.
 
 **O que aparece na tela:** barra de topo própria, no modelo do Meu site: o seletor da IA (nome + ▾, com o veredito de cada IA e *Nova IA* no fim da lista), o selo do veredito da IA aberta e os menus *Painel ▾* (*Visão geral*, *Sugestões*, *Relatório semanal*) · *Configurar* · *Ensinar* · *Testar* · *Diagnóstico*, mais *Mais ações* (⋯) com *Duplicar esta IA* e *Excluir IA*. A lista de IAs à esquerda e as 8 abas saíram. ⚠️ Revista em 06/10/2026: *Testar* virou um botão (a janela abre por cima da página) e o *Diagnóstico* foi pro "⋯", só pra equipe. Ver *IA Vendedora · Configurar pela ordem da conversa (06/10/2026)*.
@@ -6657,7 +6663,7 @@ O que ainda usa o serviço antigo no frontend:
 
 **Decisões (não reabrir sem o dono pedir):**
 1. Endereço `/ia-vendedora?ia=<id>&tela=<id>`, sempre com `replace` (o Voltar sai da página). Sem `tela`, Visão geral. Fonte única das telas: `src/features/salesAgents/iaMenu.ts`. ⚠️ Revista em 06/10/2026: no Configurar, trocar de PÁGINA (`&pagina=<id>`) empurra no histórico, e o Voltar volta à página anterior; o resto (IA, tela, a página gravada ao abrir sem `pagina`) continua com `replace`. Ver *IA Vendedora · Configurar pela ordem da conversa (06/10/2026)*.
-2. Com várias IAs, abre a última usada neste navegador (`localStorage` `lmflow:ia-vendedora:ultima`, com `try/catch`); senão, a primeira.
+2. Com várias IAs, abre a última usada neste navegador (`localStorage` `lmflow:ia-vendedora:ultima`, com `try/catch`); senão, a primeira. ⚠️ Revista em 01/11/2026 (Tarefa 68): sem `ia` no endereço, abre a página de agentes e a última IA saiu. Ver *IA Vendedora · Página de agentes e Novo agente*.
 3. Veredito único (`src/features/salesAgents/situacao.ts`): *Atendendo* · *Parada: <motivo>* · *Atendendo com restrição: só …* · *Desligada* · *Rascunho* (na entrega 1, desligada e sem número). Calculado da IA + `GET /sales_agents/:id/diagnostics`, espelhando o `SalesAgents::TriggerGate` (quem ela atende) e o `SalesAgents::HealthCheck`. Só os itens `inbox`, `mode`, `credentials` e `api_key` do Diagnóstico param a IA; os outros erros viram pendência.
 4. Gatilho que restringe aparece no selo (laranja) e como pendência, mesmo com a linha *Gatilhos* do Diagnóstico verde (o servidor não mudou).
 5. Follow-up ligado com máximo 0 vira a pendência laranja *Follow-up sem limite de tentativas*. As IAs que já estão assim continuam iguais. ⚠️ Revista em 06/10/2026: o *Máximo de tentativas* saiu da tela e a pendência virou *O que ela faz quando o lead some* (IA ainda em "A IA escreve"). Ver *Follow-up padrão de 30 dias (06/10/2026)*.
@@ -7337,42 +7343,46 @@ botão Aceitar.") no lugar de "Seu cargo não permite esta ação".
 
 ## IA Vendedora · Configurar pela ordem da conversa (06/10/2026)
 
+⚠️ Revista em 01/11/2026 (Tarefa 79): as 15 páginas viraram 8 num índice só (Modo operante, Números e usuários, Público-alvo e produto, Campanhas e gatilhos, Condução, Materiais, Destino, Funil e follow-up). Ver *IA Vendedora · Configurar em 8 páginas*.
+
 > Onda 3 da reestruturação do Configurar. Spec: `LM FLOW/specs/2026-10-06-ia-configurar-reestruturacao-design.md` (inventário ao lado). Protótipo aprovado pelo dono em 06/10. Servidor: ondas 1 e 2 (`comercial281/lm-flow`). Nasce em cima do *Follow-up padrão de 30 dias (06/10/2026)*.
 
 **O que aparece na tela:** *IA Vendedora → Configurar* tem 15 páginas curtas em 5 grupos, na ordem da conversa: **Atendimento** (Canal · Horário) · **Introdução** (Identidade · Abertura · Intenção) · **Conversa** (Personalidade · Qualificação · Catálogo · Restrições) · **Repasse** (Objetivo · Critério · Destino · Funil · Agendamento) · **Follow-up**. Trilho à esquerda que acompanha a rolagem, com bolinha âmbar na página com pendência e cadeado no Agendamento quando o objetivo não é visita. Cada página: grupo, título e uma frase, e uma caixa com faixas (título e frase à esquerda, controles à direita). **Não tem Salvar**: chave e botões gravam no clique, texto ao sair do campo, e aparece "Salvo · Desfazer". A barra de cima tem só a bolinha do veredito, *Painel ▾ · Configurar · Ensinar*, o botão **Testar** (abre por cima da página, com o celular subindo), a chave **Ligada** e o "⋯" (*Duplicar*, *Excluir* e, só pra equipe, *Motor* e *Diagnóstico*). A Visão geral ganhou os *Últimos atendimentos*.
 
 **Decisões (não reabrir sem o dono pedir):**
-1. **Trilho agrupado** (opção A), sempre visível ao rolar. Endereço `?ia=<id>&tela=configurar&pagina=<id>`; sem `pagina`, abre na primeira com pendência, senão em Canal. `?passo=N` antigo é traduzido (1 Identidade · 2 Objetivo · 3 Abertura · 4 Agendamento · 5 Catálogo · 6 Canal · 7 Follow-up · 8 Canal); `?tela=testar` abre a Visão geral com o Testar por cima; `?tela=diagnostico`/`motor` sem permissão caem na Visão geral. Trocar de página **empurra no histórico** (o Voltar volta à página anterior); abrir sem `pagina` grava a página aberta com `replace`. ⚠️ Revê a decisão 1 da casca, que era sempre `replace`.
+1. **Trilho agrupado** (opção A), sempre visível ao rolar. Endereço `?ia=<id>&tela=configurar&pagina=<id>`; sem `pagina`, abre na primeira com pendência, senão em Canal. `?passo=N` antigo é traduzido (1 Identidade · 2 Objetivo · 3 Abertura · 4 Agendamento · 5 Catálogo · 6 Canal · 7 Follow-up · 8 Canal); `?tela=testar` abre a Visão geral com o Testar por cima; `?tela=diagnostico`/`motor` sem permissão caem na Visão geral. Trocar de página **empurra no histórico** (o Voltar volta à página anterior); abrir sem `pagina` grava a página aberta com `replace`. ⚠️ Revê a decisão 1 da casca, que era sempre `replace`. ⚠️ Revista em 01/11/2026 (Tarefa 70, *IA Vendedora · Configurar em 8 páginas*): o trilho agrupado virou um índice de 8 páginas sem grupos, sem `pagina` abre em Modo operante (não mais em Canal), e o `?passo=N` e os 15 `?pagina=` antigos caem nas páginas novas. O resto (empurrar no histórico, `replace` ao abrir sem página) segue.
 2. **Rótulo curto no termo do ramo + uma frase.** Nada de frase de criança no rótulo.
 3. **Controles funcionais:** botões lado a lado (`BotoesDeEscolha`), cartões (`CartoesDeEscolha`), chave (`LinhaComChave`: o que depende só aparece ligada), etiquetas (`EtiquetasDeEscolha`), dias (`DiasDaSemana`), linha do tempo. Peças em `src/components/base/` pro resto do app.
 4. **Gravação na hora** (decisão 13 do dono, 06/10). ⚠️ **Revê a decisão 11 de *Configurar virou passo a passo*** (caixinha + Salvar; chave só no Ligar): nas páginas da IA tudo grava na hora e some o "Sair sem salvar?". O Ensinar (*Como ela atende*) ainda tem Salvar até a próxima rodada.
-5. **Persona: três vozes** (decisão do dono do produto, 06/10/2026, depois de a onda 2 ter tirado o Dono por falar igual à Consultora: o certo era dar voz a ele, não tirar). *O corretor*: primeira pessoa como o corretor dono do número, nunca fala de time; trava o Destino ("Fica com o dono do número"). *Dono da imobiliária*: primeira pessoa como dono, pode dizer que vai ver com o time dele ou pedir pra um corretor da equipe chamar; destino livre como a Consultora (bloco `HandoffVoice.owner_block` no servidor). *Consultora da imobiliária*: pré-atendimento de quem não é corretor, fala em nome da imobiliária. Não reabrir sem o dono pedir.
+5. **Persona: três vozes** (decisão do dono do produto, 06/10/2026, depois de a onda 2 ter tirado o Dono por falar igual à Consultora: o certo era dar voz a ele, não tirar). *O corretor*: primeira pessoa como o corretor dono do número, nunca fala de time; trava o Destino ("Fica com o dono do número"). *Dono da imobiliária*: primeira pessoa como dono, pode dizer que vai ver com o time dele ou pedir pra um corretor da equipe chamar; destino livre como a Consultora (bloco `HandoffVoice.owner_block` no servidor). *Consultora da imobiliária*: pré-atendimento de quem não é corretor, fala em nome da imobiliária. Não reabrir sem o dono pedir. ⚠️ Revista em 01/11/2026 (Tarefa 70): `persona_kind` e `lead_facing_name` viraram campos escondidos; quem fala é a ficha da casa (`house_voice`) e a de cada número, na página Números e usuários. A tela nunca mais grava a persona.
 6. **Destino:** *Roleta* · *Corretor fixo* · *Sistema do cliente*. "A roleta deste número" saiu (rotina da onda 2). Trocar o cartão **não grava**: roleta e corretor gravam quando alguém é escolhido; o Sistema do cliente com *Usar o sistema do cliente*, só com endereço salvo e chave pronta.
-7. **Passagem imediata na tela** (Critério: irritado, pediu pessoa, perguntou se é robô). ⚠️ Revê a decisão 9 do passo a passo (eram "sempre ligadas", fora da tela). Opções antigas de "quando passa" continuam só pra quem tem.
+7. **Passagem imediata na tela** (Critério: irritado, pediu pessoa, perguntou se é robô). ⚠️ Revê a decisão 9 do passo a passo (eram "sempre ligadas", fora da tela). Opções antigas de "quando passa" continuam só pra quem tem. ⚠️ Revista em 01/11/2026 (Tarefa 70): Critério saiu como página (Modo operante, `handoff_exceptions`, assume na Tarefa 71) e `escalate_on_*`, `crm_policy.cold` e `transfer_config.{mode,min_temperature,early_handoff}` ficam escondidos: a tela não grava mais.
 8. **Intenção personalizável:** pergunta + até 5 caminhos (`playbook.vars.caminhos_intencao`); lista vazia = os 3 de fábrica (`intent_paths_default`).
 9. **Vozes do catálogo** com *Ouvir*; voz própria = *Falar com a equipe* (abre o chat de suporte). "Nunca" saiu (= chave de áudio desligada).
 10. **Follow-up numa página só, em linha do tempo** (retomada → entrega depois de N dias → depois dela). Um campo de dias, só *Entregar pro follow-up* e *Mover o card*, como no Follow-up padrão.
-11. **Motor** (o Avançado) saiu do Configurar pro "⋯", só equipe. ⚠️ Revê a decisão 10 do passo a passo (gestor via tudo). Cliente com `ia_playbook` vê o Motor só com o texto que a IA recebe e a reescrita do roteiro.
+11. **Motor** (o Avançado) saiu do Configurar pro "⋯", só equipe. ⚠️ Revê a decisão 10 do passo a passo (gestor via tudo). Cliente com `ia_playbook` vê o Motor só com o texto que a IA recebe e a dor de quem procura (a reescrita do roteiro saiu em 02/11/2026).
 12. **Diagnóstico** no "⋯", só equipe. **Últimos atendimentos** na Visão geral, sem custo e sem erro técnico pro cliente. ⚠️ Revê o parágrafo *O que aparece na tela* da casca (Testar e Diagnóstico eram menus da barra).
 
 **Armadilhas:**
 1. **Campo novo numa página entra no `campos` dela em `configurar/paginas.ts`**, por subchave se for jsonb dividido. Fora da lista, o `ConfigurarPaginas` recusa gravar (erro de programação) e o `paginas.spec` reprova.
 2. **`useGravarNaHora` tem fila por IA e um "último salvo" único** (`registrarSalvo`, alimentado pela casca e por toda tela que grava). Não gravar a IA por fora sem passar pelo `aoSalvo` da casca: um "Desfazer" tardio montaria o jsonb sobre uma cópia velha.
 3. **Texto grava ao sair do campo E ao desmontar** (`TextoNaHora`): trocar de página pelo endereço sem sair do campo não perde o que foi digitado.
-4. **Um `sticky` só, o do trilho** (com `self-start`). Nada no meio gruda nem rola sozinho — era o "objeto solto" do passo a passo (prévia `sticky` + barra de salvar). Há spec que lê a fonte.
-5. **O `PlaybookSection` (Motor) só mexe em próximo passo, dor e objeções**: as outras chaves de `vars` têm dono em página. Reescrever `vars` de uma lista fixa apagava os caminhos da intenção.
+4. **Um `sticky` só, o do trilho** (com `self-start`). Nada no meio gruda nem rola sozinho — era o "objeto solto" do passo a passo (prévia `sticky` + barra de salvar). Há spec que lê a fonte. ⚠️ Segue valendo na Tarefa 70: o índice é o único `sticky` (no celular nem esse: vira pílulas).
+5. **O `PlaybookSection` (Motor) só mexe na dor típica** (02/11/2026: a reescrita de bloco, o próximo passo e as objeções saíram do Motor, porque o servidor não lê mais bloco reescrito nem `vars.objecoes`; o próximo passo vem das opções do agente e as objeções são as da casa). As outras chaves de `vars` têm dono em página. Reescrever `vars` de uma lista fixa apagava os caminhos da intenção.
 6. **A chave Ligada tem as travas do `podeLigar`**, com o clique que leva à página que corrige.
 7. **Testar:** o estado continua do servidor (`useEnsaio` é o TelaTestar movido); a janela prende o foco e devolve pra quem abriu; `motion-reduce:animate-none` em toda animação. **Trocar de IA fecha o Testar** (a conversa de teste é de uma IA; quem troca reabre com um clique).
 8. **Destino chama-se *Sistema do cliente*, nunca "Webhook"** (a trava `conferir-padrao` reprova a palavra, teto 0): a descrição do cartão explica que é o CRM da imobiliária, por um endereço de integração. Se o dono quiser a palavra na tela, abre-se exceção na trava.
 9. **Os tetos do `conferir-padrao` não foram mexidos** nesta onda (arquivo compartilhado com outras frentes).
-10. **Motor no "⋯" aparece pra equipe OU pro cliente com `ia_playbook`** (senão ele perde a única tela de reescrever o roteiro que o servidor ainda aceita).
+10. **Motor no "⋯" aparece pra equipe OU pro cliente com `ia_playbook`** (a dor típica é a única parte do roteiro que o servidor ainda lê).
 11. **Condição em branco nunca vai pro servidor** (Canal → *Só alguns*). Palavra, etiqueta ou código vazios, formulário sem marcar e coluna sem escolher não deixam NENHUM lead passar (`SalesAgents::TriggerGate`): numa IA ligada, gravar *Adicionar condição* parava a IA. O `TriggersSection` grava só as completas (régua `emBranco` de `situacao.ts`); a linha em branco mora na tela até ser preenchida. **A condição antiga vale até a nova ficar completa** (decisão do dono, 07/10): trocar o tipo de uma condição completa, apagar a palavra dela ou desmarcar o formulário NÃO tira a antiga do servidor. A linha guarda a que substituiu (`salva`) e o servidor só troca quando a nova fica completa. Sem isso, a IA ligada com uma condição só passava a atender todo lead (lista vazia = todos) e, no *Qualquer uma*, parava de atender quem batia na condição trocada. Na tela nada muda, só o que fica gravado nesse meio-tempo. A **lixeira tira de verdade** (inclusive a antiga). Tirando a última, grava lista vazia, o *Só alguns* continua aberto e a frase "ela atende todo lead" aparece em destaque enquanto o servidor não tem condição completa. A palavra digitada grava no desmonte (inclusive a primeira condição), menos quando o desmonte é o *Todos os leads* (`escolheuTodos`, ligado pelo Canal).
 12. **Gravação que termina depois de trocar de IA** (texto gravado no desmonte, Desfazer) atualiza a lista, mas não troca a IA aberta: o `aoSalvo` da casca só substitui a IA da tela se for a mesma.
 13. **O Desfazer não regrava valor antigo recusado** (`inbox_roleta` → roleta; a persona `owner` volta como dono), em `useGravarNaHora#inversa`.
-14. **WhatsApp desconectado:** o *Corrigir* leva à configuração do número (`enderecoConexao`, onde se lê o QR code), não ao Canal, que só mostra *Desconectado*.
+14. **WhatsApp desconectado:** o *Corrigir* leva à configuração do número (`enderecoConexao`, onde se lê o QR code), não ao Canal, que só mostra *Desconectado*. ⚠️ Revista em 01/11/2026 (Tarefa 70): a página Canal não existe mais; o Corrigir de número segue indo pra configuração do número, e os demais itens do número caem em Números e usuários.
 15. **CVCRM na página Destino** (06/10, vindo do #485 que entrou no passo 2 antigo): dentro de *Sistema do cliente*, os cartões *CVCRM* · *Outro sistema*. Trocar o cartão não grava; *Usar o CVCRM* só acende com a conexão de Integrações → CVCRM (`handoff_cvcrm_connected`); empreendimento e fila gravam na hora. A pendência `destino_cvcrm_desconectado` aponta pra página Destino.
 
 ## IA Vendedora · Passa direto, mesmo faltando pergunta (21/10/2026)
+
+⚠️ Revista em 01/11/2026 (Tarefa 79): as chaves da Passagem imediata moram agora em Configurar > Modo operante (exceções de repasse, lidas de `handoff_exceptions_effective`), e não mais em *Repasse · Critério*, que saiu. Ver *IA Vendedora · Configurar em 8 páginas*.
 
 **O problema.** No cenário "Perguntas obrigatórias respondidas", lead que recusava mandar documento (Nataly) ficava preso: a IA insistia nas perguntas e não passava. Na Pinot, pedido de visita no mesmo dia também travou: o servidor registrava o repasse como `regra`, e o portão do checklist barrava `regra`.
 
@@ -7387,6 +7397,8 @@ botão Aceitar.") no lugar de "Seu cargo não permite esta ação".
 **22/10/2026: uma seção só (dono do produto).** A seção à parte repetia a pergunta da **Passagem imediata** ("quando ela passa na hora?"). Agora é tudo na Passagem imediata: *Lead irritado*, *Pediu pra falar com uma pessoa ou pediu ligação*, *Perguntou se é robô* e, só no cenário das perguntas obrigatórias, *Recusou mandar documento* e *Perguntou o que ela não sabe*. "Pediu ligação" deixou de ter chave própria: quem pede ligação cai em `pediu_humano`, que passa sempre, então desligar só a ligação prometia uma trava que não existia. A chave de pessoa grava `escalate_on_human_request` **e** `early_handoff.pediu_ligacao` no mesmo clique. ⚠️ Ensaio de 22/10: *Perguntou o que ela não sabe* ainda não funciona só por instrução (ela promete "vou confirmar com o corretor" e segue perguntando, no Haiku e no Sonnet); a correção é no servidor.
 
 ## IA Vendedora · Ensinar no padrão do Configurar (11/10/2026)
+
+⚠️ Revista em 01/11/2026 (Tarefa 79): o Ensinar virou 5 páginas (Lições, Exemplos, Regras e objeções da casa, Conhecimentos de fábrica, Arquivos e prova social). Ver *IA Vendedora · Ensinar em 5 páginas*.
 
 > Spec: `LM FLOW/specs/2026-10-11-ia-ensinar-refatoracao-design.md`; plano: `LM FLOW/plans/2026-10-11-ia-ensinar-refatoracao.md`. Protótipo: https://claude.ai/artifact/9uC2FJBqkVBozCLRwzTCVh
 
@@ -8134,6 +8146,8 @@ Armadilhas:
    Landings e Site Builder não passam `barraExtra` e não mudam.
 
 ## Caminhos da intenção em caixinhas (desde 2026-10-08)
+
+⚠️ Revista em 01/11/2026 (Tarefa 79): os caminhos da intenção moram agora em Configurar > Público-alvo e produto (`intencao` cai em `publico`). As caixinhas e o Sondando seguem como estão aqui.
 
 O Grupo Habitar escreveu a pergunta dele ("Você já mora na região do Castelo?"), tirou Investimento e a IA seguia puxando "morar ou investir": a pergunta não chegava ao lead que fala primeiro e oito linhas fixas do comando citavam os dois.
 
@@ -10041,6 +10055,8 @@ Código: `features/flowAutomations/readiness.ts` (`hasOwnTrigger`, `nodeProblem(
 
 ## Formulários do Meta: imóvel vinculado por busca (desde 2026-10-28)
 
+⚠️ Revista em 01/11/2026 (Tarefa 79): a tela virou *Configurações > Campanhas* (Formulários do Meta e Anúncios de WhatsApp), no mesmo endereço; o imóvel vinculado é *O que esta campanha vende* na janela da campanha. Ver *Campanhas (era Formulários do Meta)*.
+
 **O que aparece na tela:** em Configurações > Formulários do Meta, o campo "Imóvel vinculado" deixou de ser uma caixa de escolha e virou a busca por título ou código (a mesma de Tarefas). Escolhido, vira o cartão do imóvel com a lixeira pra tirar.
 
 **Regras:** a caixa antiga carregava só os 100 imóveis Ativos mais novos, uma vez, ao abrir a página: imóvel antigo de cliente com mais de 100 não aparecia, o vinculado fora da lista abria como "Nenhum", e o recém-cadastrado só aparecia recarregando. A busca vai ao servidor a cada texto (até 20 resultados, sem teto de catálogo, qualquer situação do imóvel, como em Tarefas). O imóvel já vinculado é lido pelo id; apagado, aparece "Imóvel não encontrado" com a lixeira.
@@ -10220,3 +10236,388 @@ Armadilhas:
 
 Não reabrir sem o dono pedir.
 
+## IA Vendedora no Sonnet 5.5 (desde 2026-10-29)
+
+O Sonnet 4.5 sai do ar em 30/11/2026. A opção "Equilibrada (Sonnet, padrão)" do Motor passou a ser o Sonnet 5.5, e as IAs ligadas no 4.5 foram trocadas por lista (backend #543). IA nova nasce no 5.5. O Haiku (as IAs de teste e o painel Testar) não mudou. As funções internas que usam o modelo padrão (preencher imóvel com IA, descrição, site, qualificação, sugestões, relatório semanal) seguem no 4.5 até um PR próprio antes de 30/11.
+
+O que muda pra quem usa:
+- **A IA espera o lead quando a nossa última mensagem já perguntou algo.** Caso típico: o lead manda o formulário, a boas-vindas da automação pergunta "esse é o seu número?" e a IA não fala por cima. Antes, no 4.5, ela repetia a boas-vindas. Se a nossa mensagem não perguntou nada, ela continua o atendimento sem se apresentar de novo.
+- **A ficha não some mais no Sonnet.** No Sonnet 5 (numa IA de cliente), 1 em cada 3 respostas saía sem a ficha: o lead lia o texto, mas o repasse, a visita e o que ele contou não eram registrados. Agora o formato é obrigatório nos dois Sonnets.
+
+Ensaio de 29/10 (turnos reais do 4.5 reenviados ao 5.5): "termina com pergunta" na mesma faixa (amostra pequena) e respostas mais curtas. Quando não tem o dado, ela passa mais por "não sabe". Ainda vale conferir no dia a dia.
+
+**Voltar versão:** voltar o modelo de uma IA é escolher outro no Motor, e o 4.5 só vale até 30/11. Voltar o backend pra antes do #543 com IA no 5.5 deixa a IA muda: antes, voltar as IAs pro 4.5.
+
+Código: `configurar/opcoes.ts` (`MODELOS`). No backend: `AnthropicService`, `SalesAgents::ResponseSchema`, `ConversationRunner.awaits_lead?`, `Responder::CONTINUE_SEED`.
+
+---
+
+## IA Vendedora · Página de agentes e Novo agente (desde 01/11/2026)
+
+Reestruturação da IA, fase 6, Tarefa 68 (a página de agentes; o fluxo do Novo agente é a Tarefa 69). Spec: `docs/superpowers/ia-reestruturacao/specs/2026-10-31-fase-6-tela-design.md`.
+
+**O que aparece na tela:** `/ia-vendedora` sem `ia` no endereço abre *Agentes de IA*: uma grade de quadros (um por agente, no visual do `CartaoDeLink` de Integrações) e, no fim, o quadro tracejado *+ Novo agente*. O quadro mostra as iniciais, o nome, *N números · nome de cada usuário*, o selo da situação, *Modo operante*, *Quem fala* (*Cada usuário, como ele mesmo* quando todos os números falam como Corretor), *Próximo passo* (*Visita ou Reunião por vídeo*), *Produto* (*Empreendimento (10)*) e, no rodapé, *74 conversas em 30 dias · 46 passadas · corretor responde em 4 min* e a primeira pendência. Clicar abre o agente em *Configurar* (`?ia=<id>&tela=configurar`, sem `pagina`: cai na primeira página com pendência). O nome ▾ da barra troca de agente direto e ganhou *Todos os agentes* (volta à página); *Nova IA* saiu do seletor.
+
+**Decisões (não reabrir sem o dono pedir):**
+1. **Revê a decisão 2 da casca (05/10).** Antes, sem `ia` a casca abria a última IA do navegador (`lmflow:ia-vendedora:ultima`). Agora a página de agentes é a entrada (decisão do Tony em 28/10): com vários agentes, abrir direto num deles escondia os outros e o quadro com os números do mês. A chave do `localStorage` não é mais lida nem gravada.
+2. Sem `ia` a casca não abre nem reescreve nada (nem `?tela=` solto: `?tela=testar` sem IA mostra a página, sem janela armada). `?agent=` do assistente segue abrindo em Configurar. IA do endereço que não existe mais cai na primeira.
+3. Os números de 30 dias vêm de `GET /sales_agents/summaries`, lidos **uma vez** ao abrir a página. Falha tira só o rodapé (sem aviso vermelho). Número sem conversa não vem em `numbers` do resumo: conta como 0.
+4. *+ Novo agente* só com `sales_agents.create` e leva a `/ia-vendedora/novo` (a tela é a Tarefa 69, abaixo). A criação de rascunho por *Nova IA* saiu da casca; o `novaIaRascunho` foi apagado na Tarefa 69.
+5. Agente juntado a outro (`absorbed_into_id`) não aparece na página nem no seletor (a casca filtra ao ler a lista). A contagem por marca vem pronta do servidor (`catalog_marks`); a tela só mostra.
+6. Toda a conta de texto do quadro mora em `src/features/salesAgents/quadroDoAgente.ts` (`quadroDoAgente(agent, resumo, contagem)`); os componentes só desenham.
+
+**Armadilhas:**
+1. A barra da IA só aparece com `ia` no endereço; na página de agentes não há barra.
+2. O alternador de visão à mão é régua do build: o ícone `LayoutGrid` no menu da barra dispara a trava (`alternadorAMao`). O *Todos os agentes* usa `Users`.
+3. O quadro mostra a situação sem o Diagnóstico (1 chamada por agente seria pesada): o selo é o da configuração; o veredito completo continua dentro do agente.
+
+---
+
+## IA Vendedora · Novo agente em 4 passos, Renomear e a saída do Duplicar (desde 01/11/2026)
+
+Reestruturação da IA, fase 6, Tarefa 69. Spec: `docs/superpowers/ia-reestruturacao/specs/2026-10-31-fase-6-tela-design.md` (seções 2 e 8).
+
+**O que aparece na tela:** `/ia-vendedora/novo` (só com `sales_agents.create`), tela cheia com a trilha *1 · Modo operante · 2 · Números e usuários · 3 · Quem fala · 4 · Produto*, *Voltar* e *Seguir*.
+1. *Qual o modo operante?* em dois cartões (*Filtra e passa*, *Leva até a visita*) e o campo *Nome do agente*. O *Seguir* só liga com modo e nome.
+2. *Em quais números ele atende?*: um quadradinho por número conectado. Número que já tem agente mostra o nome dele ao lado. Marcado um número onde há agente LIGADO sem gatilho: *pra dividir este número, o agente X vai precisar de gatilhos; ele não muda até você ligar este*.
+3. *Quem fala, por padrão?*: a ficha da casa (Corretor, Consultora, Dono ou gerente), *Nome*, *Como se apresenta* e *Ele ou ela*.
+4. *O que ele vende?*: Venda, Locação, Leilão, Empreendimento, cada uma com *N no cadastro*. Vêm marcadas as que têm imóvel; as sem imóvel vêm desmarcadas. Sem nenhuma marcada, não cria. *Criar agente desligado* abre o agente em Configurar (`?ia=<novo>&tela=configurar`).
+
+No *⋯* da barra entra *Renomear* (janela com *Nome do agente*, grava só o `name` no Salvar; nome vazio não grava) e sai *Duplicar esta IA*.
+
+**Decisões (não reabrir sem o dono pedir):**
+1. **O Duplicar sai da tela** (spec fase 6). Saíram `DuplicateAgentDialog`, `duplicateAgent.ts` e o `novaIaRascunho` (e a lista de 4 perguntas sugeridas, que só ele usava). O MCP do servidor segue com o `Duplicator`; o `salesAgentsService.duplicate` e o tipo `DuplicatedSalesAgent` também saíram do serviço.
+2. **Criar é `create` UMA vez + `criarNumero` por número.** O agente nasce `enabled: false`, `next_steps: ['visita']`, com a ficha da casa e as marcas. O número não vai no corpo do agente.
+3. **Número que falha não desfaz nada** (o agente já existe): abre em `?ia=<novo>&tela=configurar&pagina=numeros` com aviso dizendo qual número não entrou. `create` que falha fica na tela, sem criar número.
+4. **C11:** o agente salva e nasce desligado mesmo sem pergunta obrigatória; quem recusa é o ligar, depois (*Filtra e passa precisa de pelo menos uma pergunta obrigatória.*).
+5. **Número dividido (seção 8):** só agente ligado conta. Desligado ou rascunho não gera aviso. Gatilho vale o do número ou, se o número herda, o do agente.
+6. **As marcas do passo 4** vêm SEMPRE de `propertiesService.contarPorMarca()` (uma fonte só, lida uma vez ao abrir a tela), com ou sem agente na conta. As que têm imóvel vêm marcadas. Se a contagem falhar, as marcas ficam sem número e desmarcadas; o aviso *Marque pelo menos um…* só aparece depois de tentar criar sem marca. Número da API oficial leva *(API oficial)* no passo 2.
+7. Toda a conta mora em `features/salesAgents/novoAgente.ts` (`payloadDoNovo`, `avisoDoNumero`, `podeSeguir`); a tela só desenha. O Renomear é `RenomearAgente.tsx`, chamado pela `IaBarra` (que recebe `aoSalvo` e `podeEditar`; `podeCriar` saiu da barra).
+
+**Armadilhas:**
+1. A página `numeros` do Configurar passa a existir com a Tarefa 70; até lá o endereço cai na página padrão do Configurar. O texto do aviso já manda ligar o número lá. ⚠️ Existe desde a Tarefa 70 (01/11/2026): o aviso do número que falhou leva a ela.
+2. O servidor recusa agente sem marca (*Marque pelo menos um…*): por isso o *Criar* não segue sem marca, em vez de mandar `serves` vazio.
+3. O catálogo "cartão à mão" e "Nenhum…" solto da régua do build pegam a tela nova: usar `Card` e frase sem "Nenhum".
+
+---
+
+## IA Vendedora · Configurar em 8 páginas (desde 01/11/2026)
+
+Reestruturação da IA, fase 6, Tarefa 70 (o molde; as Tarefas 71 a 74 enchem as páginas). Spec: `docs/superpowers/ia-reestruturacao/specs/2026-10-31-fase-6-tela-design.md` (seção 3, tela 3 do protótipo `agentes.html`).
+
+**O que aparece na tela:** *IA Vendedora → Configurar* cai de 15 páginas pra 8, num índice só (sem grupos): **Modo operante · Números e usuários · Público-alvo e produto · Campanhas e gatilhos · Condução · Materiais · Destino · Funil e follow-up**. Página larga (`max-w-6xl`), índice de `lg:w-52` à esquerda com a página atual acesa e bolinha âmbar na que tem pendência, título e frase em cima, a área numa caixa e, no pé, **← Anterior** e **Próxima →** com o nome da página vizinha (a primeira não tem Anterior, a última não tem Próxima). O menu do LM Flow recolhe em Configurar, Ensinar e no Novo agente. **No celular (abaixo de 768 px)** o índice vira uma fileira de pílulas que quebra linha, e tudo fica numa coluna, sem rolar pro lado. O Ensinar usa a mesma moldura e ganhou o mesmo pé.
+
+**O que é casca hoje:** (Modo operante e Números e usuários foram enchidos na Tarefa 71, seção abaixo.) `PublicoEProduto`, `Conducao` e `FunilEFollowup` (em `configurar/paginas/`) empilham as páginas antigas que ainda cabem nos campos da página nova (Agendamento, Horário, Intenção, Qualificação + Personalidade + Restrições, Funil + Follow-up). `Materiais` só diz que os blocos entram na próxima entrega (`CampanhasEGatilhos` e o Destino foram feitos na Tarefa 73). Canal, Identidade, Objetivo, Critério, Abertura e Catálogo ficaram no repositório, sem uso, até as Tarefas 71 a 74 reaproveitarem ou apagarem (os specs delas usam `gravarDeTeste('legado')`).
+
+**Endereços antigos (o `?pagina=` cai na página nova; `PAGINA_ANTIGA` em `configurar/paginas.ts`):**
+- `canal`, `horario` e `identidade` vão pra `numeros`; `abertura`, `personalidade`, `qualificacao` e `restricoes` pra `conducao`; `intencao` e `catalogo` pra `publico`; `objetivo`, `criterio` e `agendamento` pra `modo`; `followup` pra `funil`. `destino` e `funil` seguem.
+- `?passo=1..8`: 1, 6 e 8 `numeros`; 2 e 4 `modo`; 3 `conducao`; 5 `publico`; 7 `funil`.
+- O endereço velho é reescrito com `replace` (o Voltar não volta pro endereço velho). Sem página, abre na primeira com pendência, senão em Modo operante.
+
+**Decisões (não reabrir sem o dono pedir):**
+1. **Um `sticky` só e uma fileira de abas**, como já era. O índice é o único `sticky`; no celular não gruda.
+2. **Campo escondido nunca é gravado pela tela**, mesmo que o agente traga o valor. `CAMPOS_ESCONDIDOS` ganhou `persona_kind`, `lead_facing_name`, `transfer_config.{voice,mode,min_temperature,early_handoff}`, `crm_policy.cold`, `reach`, `booking_enabled`, `escalate_on_*`, `locacao_enabled`, `playbook.vars.tipo_venda`, `instructions` e `inbox_id`. `house_voice` entrou em `RAIZES_DIVIDIDAS` (só por subchave: `house_voice.name`). `CAMPOS_DE_ENSINAR` agora é `house_rules`, `house_objections`, `factory_knowledge_off`, `social_proof` e `example_conversations` (as Instruções saíram).
+3. **`podeLigar(agent, outros = [])`** recusa com o motivo escrito e leva à página que corrige: sem número (Números e usuários), *Filtra e passa precisa de pelo menos uma pergunta obrigatória.* (Condução; C11: o agente salva e nasce desligado, quem recusa é o ligar), voz Corretor em número sem dono (Números e usuários), número de atendimento sem mensagem de chegada (Destino) e o número dividido: *Pra dividir o número Ana com o agente Agente B, os dois precisam de gatilhos.* (Campanhas e gatilhos). Só agente LIGADO conta; "nenhuma pergunta marcada vale como todas", como no servidor. A barra da IA usa o `podeLigar` pra desabilitar a chave com o motivo (a casca passa a lista de agentes).
+4. **Pendências novas** (`pendencias.ts`): `filtra_sem_obrigatoria` e `corretor_sem_dono_do_numero` impedem ligar; `reuniao_sem_endereco` (a frase do servidor, "na ficha da casa") e `continua_sem_mensagem` (número de atendimento apagado depois: só avisa, o servidor não confere ao ligar; sem a mensagem de chegada, impede) também aparecem no Painel. **A agenda da visita não tem regra própria na tela:** vale o item `visit_agenda` do servidor (`HealthCheck#visit_agenda_item`), com o Corrigir em Modo operante. Onde o servidor já tem a mesma conferência (`corretor_owner`, `reuniao_sem_endereco`) o Painel mostra UM aviso, o dele (`ALIAS_DO_SERVIDOR` em `situacao.ts`); o Corrigir dos itens `corretor_owner` (Números e usuários), `visit_agenda`/`reuniao_sem_endereco` (Modo operante) e `split_*` (Campanhas e gatilhos) fica em `CORRIGIR_DO_ITEM`. Sem `job` gravado, o trabalho segue o servidor (`booking_enabled != false`), não o `reach`. Os ids antigos mudaram de página: `sem_numero` e `persona_sem_dono` vão a `numeros`, `perguntas_vazias` a `conducao`, `palavra_antiga` a `campanhas`, `followup_*` a `funil`. O "Corrigir" do Painel (`situacao.ts`) segue a mesma tabela: itens do número em `numeros`, `triggers` e `conflict` em `campanhas`, `default_property` em `publico`, `mode` (só follow-up) em `funil`.
+5. **C33:** o pino de localização tem chave própria (`location_pin_enabled`, página Materiais), não o `rich_media_enabled`. A chave é da Tarefa 74; aqui só entra no `campos` da página.
+6. **`agendamentoTravado`** olha o `job` gravado (Leva até a visita); sem `job` (não migrado) segue o servidor: `booking_enabled === false` trava.
+7. **A moldura é UM Card** (spec §3, `.secao2` do protótipo): `PaginasComTrilho emCard` põe título, frase e blocos num `Card` só, com os blocos separados por linha, e o pé fora dele. **Uma página nova entrega BLOCOS**: um `<Secoes>` com `<Secao titulo descricao>` por bloco (ou vários `Secoes` seguidos, num fragmento), nunca `Card`, borda ou fundo próprio: dentro do Card o `Secoes` vira só um `divide-y` (contexto `DentroDaCaixa` em `components/base/Secao.tsx`). As Tarefas 71 a 74 seguem assim.
+
+**Armadilhas:**
+1. **`recolheMenu(pathname, search)` lê o `search`.** A IA Vendedora é UMA rota (`/ia-vendedora`) e a tela vem em `?tela=`; o `MainLayout` passa `location.search`. Só o pathname nunca recolheria Configurar e Ensinar (e recolheria a página de agentes).
+2. **Campo novo numa página entra no `campos` dela em `paginas.ts`** (armadilha 1 de *Configurar pela ordem da conversa*, que continua valendo), e só se não estiver em `CAMPOS_ESCONDIDOS`: as duas listas se excluem e o `paginas.spec` reprova o cruzamento.
+3. **`gravarDeTeste('legado')`** desliga a régua do campo só pros specs das páginas que as Tarefas 71 a 74 vão apagar. Não usar em página nova.
+4. **O pé e o índice duplicam o nome da página nos botões** (`← Anterior <título>`, `Próxima → <título>`): teste que acha botão por regex do título precisa ancorar (`/^Regras/`).
+5. **A instrução de Ensinar ainda existe como tela** (`Instrucoes.tsx`) e grava `instructions`, que agora está escondido: a página sai do Ensinar na tarefa do Ensinar. Até lá, gravar nela é recusado pelo `useGravarNaHora`.
+6. **Voltar o frontend** pra antes desta tarefa devolve as 15 páginas; os endereços novos (`pagina=modo`...) caem na página inicial antiga.
+
+Código: `configurar/paginas.ts`, `configurar/camposDaIa.ts`, `configurar/ConfigurarPaginas.tsx`, `moldura/PaginasComTrilho.tsx`, `features/salesAgents/{pendencias,situacao}.ts`, `components/layout/{menuRecolhidoEm.ts,MainLayout.tsx}`.
+
+### Modo operante e Números e usuários (Tarefa 71, 01/11/2026)
+
+Fase 6, tela 3 do protótipo `agentes.html`. As duas primeiras páginas do Configurar deixam de ser casca.
+
+**O que aparece na tela:**
+- **Modo operante**, três blocos e a agenda. *O que ela faz*: dois cartões (**Filtra e passa** · **Leva até a visita**), que gravam `job` na hora; o de Filtra e passa diz "Passa quando as obrigatórias estão respondidas (N de M na Condução)". *Próximo passo*: caixinhas Visita · Reunião por vídeo · Reunião no escritório · Ligação (`next_steps`), com a frase de exemplo que ela usa pra fechar ("Ela fecha com: ..."), que muda com o que está marcado e com o modo. Marcando Reunião no escritório aparece **Endereço do escritório** (`house_voice.office_address`, até 200). *Passa na hora quando*: as cinco sempre ligadas, sem chave (Lead irritado, Pediu uma pessoa, Percebeu que é IA, Quer vender o imóvel dele, Pediu o que esta IA não atende), as cinco prontas com caixinha (`handoff_exceptions.prontas`; **Pediu pra visitar** só no Filtra e passa) e as escritas por vocês (campo "Outro motivo" + **Pôr**, × pra tirar). A agenda da visita (duração, antecedência, janela, mesmo dia, avaliação no Google, quando propor) mora embaixo e **só no Leva até a visita**.
+- **Números e usuários**: *Padrão da casa* (a ficha `house_voice`: quem fala, ele ou ela, nome, como se apresenta, mais a prévia em balão e o "o que a voz faz"); *Os números*, um cartão por número do agente (usuário, conectado/desconectado, prévia de como se apresenta, voz, formulários dos gatilhos, conversas de 30 dias, **Editar ficha**, **Tirar número**) e o cartão tracejado **+ Adicionar número**; e o Horário (24 horas / fora do comercial / personalizado + aviso fora do horário), que virou bloco da página. A ficha do número só guarda o que é diferente da casa ("Igual à casa" tira o campo). O aviso `A voz Corretor pede o destino "Fica com o dono do número".` aparece no cartão (com **Abrir Destino**) quando a voz é Corretor e o destino não é o dono do número.
+- **Testar**: com 2 ou mais números ligados, o painel da esquerda ganha **Testar como** (o número que o teste "é"). Trocar recomeça o teste em conversa livre.
+
+**Decisões (não reabrir sem o dono pedir):**
+1. **A ficha do número NUNCA vai pelo `gravar` da página.** Casa grava pelo `gravar` (`house_voice.*`, por subchave); número grava pela API própria (`useNumerosDoAgente`: `criarNumero`/`atualizarNumero`/`tirarNumero`) e **relê o agente** (`get` + `aoSalvo`). A página lê sempre `agent.numbers`, sem cópia (armadilha 2 do Configurar). Pra isso `PropsDaPagina` ganhou `aoSalvo?`.
+2. **`vozDoNumero(numero, casa)`**: campo ausente ou em branco herda o da casa. A prévia é texto fixo (`previaDaApresentacao`, lead "Maria", imóvel "Residencial Teste", casa "Aurora Imóveis"), sem chamar a IA.
+3. **Conversas de 30 dias** vêm de `GET /sales_agents/summaries` (`numbers[]`, casado por `inbox_id`). Número sem conversa não vem na lista: mostra **0**. Se a leitura falha, o cartão só não mostra a contagem.
+4. **Tirar número confirma pelo `useConfirmacao`** (a janela da casa; o app não usa `confirm()`). Número que outro agente ligado divide, sem gatilho, mostra o aviso da divisão (`avisoDoNumero`, os outros agentes vêm de `list`).
+5. **O último próximo passo não desmarca** (a caixinha fica desabilitada; o servidor também recusa lista vazia). Toda escrita das exceções manda as cinco prontas inteiras + as escritas. Agente sem `handoff_exceptions` (não migrado) mostra as prontas pela regra de migração do servidor (`prontasDoAgente`).
+6. **O Testar manda `inbox_id`** no primeiro turno, no `load` e nos formulários só com 2+ números ligados; com 1, nada muda. O nome no celular vem da voz do número (cai pro `lead_facing_name`).
+7. **Saíram** `Objetivo`, `Criterio`, `Agendamento` (virou `BlocoDaAgenda`), `Identidade` e `Canal`, mais `previaConversa`, `personaParaPatch`, `roletaDoNumero`, `keepBriefing` e `toggleVoice` (ninguém mais usava; `reach`, `persona_kind`, `transfer_config.mode/voice` são campos escondidos). A Passagem imediata do Critério virou as "sempre ligadas" sem chave (`escalate_on_*` escondidos).
+
+**Armadilhas:**
+1. **Gatilhos do agente ficaram sem tela até a Tarefa 73.** O "Público" (todos / só alguns), a palavra antiga com "Tirar essa regra" e o modo "Só follow-up" moravam no `Canal`. `TriggersSection` continua em `configurar/blocos/` pra Campanhas e gatilhos; o "Só follow-up" (`followup_only`) é da Funil e follow-up (Tarefa 74). Enquanto isso não entra, ninguém edita gatilho pela tela.
+2. **A escrita de número e a do `gravar` têm filas separadas.** Casa e número são rotas diferentes; só a do `gravar` tem o "Salvo · Desfazer". Número mostra erro pelo aviso e não tem Desfazer.
+3. **`inbox_id` do Testar só vale no primeiro turno**: depois o número segue no estado do ensaio (por isso trocar de número recomeça).
+4. **Voltar o frontend** pra antes disso devolve Objetivo, Critério e Canal, que gravam campos agora escondidos.
+
+Código: `configurar/paginas/{ModoOperante,BlocoDaAgenda,NumerosEUsuarios,FichaDaVoz,Horario}.tsx`, `configurar/useNumerosDoAgente.ts`, `features/salesAgents/{modoOperante,fichas}.ts`, `telas/{TestarJanela.tsx,useEnsaio.ts}`.
+
+### Público-alvo e produto, Condução, Funil e follow-up (Tarefa 72, 01/11/2026)
+
+Fase 6, tela 3 do protótipo `agentes.html`. As três páginas deixam de ser casca.
+
+**O que aparece na tela:**
+- **Público-alvo e produto**: *Produto* (as 4 marcas Venda · Locação · Leilão · Empreendimento com "N no cadastro" e a linha "Conhecimentos de fábrica ligados: ..."), *Imóvel principal* (com Consultar o cadastro e Oferecer outras opções), *Público-alvo* (as 4 caixinhas Moradia · Investimento · Primeiro imóvel · Trocar de imóvel, a frase de como ela pergunta, quando perguntar e a pergunta própria) e *Lead fora do perfil do imóvel* (Passa pro corretor · Encerra com educação · Segue atendendo).
+- **Condução**: Abertura (boas-vindas, origem, imagem e áudio; sem variações por campanha) · O que descobrir (com "Nunca pergunta o que o formulário já respondeu; uma pergunta por mensagem; no máximo 2 vezes a mesma.") · Formato das respostas (várias mensagens, áudio, curtidas) · Restrições.
+- **Funil e follow-up**: a chave **Esta IA só faz follow-up** (`followup_only`) no alto, depois o Funil e a linha do tempo.
+
+**Decisões (não reabrir sem o dono pedir):**
+1. A tela manda só `serves` (nunca `locacao_enabled`); a última marca não desmarca. A contagem vem de `agent.catalog_marks`.
+2. `features/salesAgents/marcas.ts` é ESPELHO da tabela da fase 3 (a lista muda na hora); depois de gravar vale o que o servidor devolve (`conhecimentosDeFabrica`). Desligado no Ensinar (`factory_knowledge_off`) sai da lista do espelho.
+3. As 4 caixinhas mexem só no `ativo` dos caminhos de fábrica em `playbook.vars.caminhos_intencao`; caminho próprio não aparece e nunca é apagado. A frase só conta os 4 de fábrica. `features/salesAgents/intencao.ts` (`fraseDaIntencao(lista, origem)`) serve às Tarefas 77 e 78.
+4. Lead fora do perfil grava `playbook.vars.fora_dos_caminhos`. Saíram a janela de editar caminho, Tipo de venda e "Também atende locação"; `Intencao.tsx` e `Catalogo.tsx` foram apagados. Fotos e vídeo e Book ficam pra Materiais (Tarefa 74).
+5. O botão do "O que descobrir" que mandava pro Modo operante trocar o critério saiu (o critério não existe mais).
+
+**Armadilhas:**
+1. `VariacaoDaCampanha.tsx` ficou sem uso até a Tarefa 73 (Campanhas e gatilhos).
+2. Voltar o frontend pra antes disso devolve Intenção/Catálogo, que gravam `locacao_enabled` e `tipo_venda` (escondidos).
+
+Código: `configurar/paginas/{PublicoEProduto,Conducao,FunilEFollowup,Abertura,Qualificacao,Personalidade,Restricoes}.tsx`, `features/salesAgents/{intencao,marcas}.ts`.
+
+### Campanhas e gatilhos e Destino (Tarefa 73, 01/11/2026)
+
+Fase 6 (e fases 2, 4 e 5), tela 3 do protótipo `agentes.html`. A página Campanhas e gatilhos deixa de ser casca e o Destino é refeito.
+
+**O que aparece na tela:**
+- **Campanhas e gatilhos**, três blocos. *Gatilhos do agente*: **Todos os leads** · **Só alguns** (grupo "Quem ela atende"), as condições, **Qualquer um** · **Todos** (`trigger_match_mode`) e, se o agente ainda tem a palavra antiga (`trigger_keyword`), a frase do que ela faz com **Tirar essa regra**. O tipo de condição ganhou **Veio destas campanhas** (`{type: 'campaign', campaign_link_ids}`; só campanha e anúncio com linha em Campanhas entram na lista). *Gatilhos por número*: um cartão por número do agente com **Os do agente** · **Todo lead do número** · **Só alguns**, e a frase fixa "No mesmo número, a mesma campanha não fica em dois agentes. Lead sem gatilho fica com o corretor." quando outro agente LIGADO divide o número. *Começo por campanha*: uma linha por campanha que chega na IA (`campanhasService.lista({salesAgentId})`) com o que vende e o link **editar em Campanhas** (`/automations/origem`), quatro selos (Boas-vindas própria/padrão · Com/Sem print · Com/Sem áudio · Intenção: texto próprio/automática) e **Abrir** com boas-vindas, print, áudio e pergunta de intenção. Vazio = o padrão da IA.
+- **Destino**: *Quem recebe* tem quatro cartões, **Roleta** · **Corretor fixo** · **Fica com o dono do número** · **Sistema do cliente**. *Onde o atendimento continua* só aparece com Roleta e Corretor fixo: **No número do corretor** · **Neste número** · **Num número de atendimento** (pede o número e a **Mensagem de chegada**, com `{nome}`, até 1000). *Depois que ela passa*: texto fixo (15 minutos sem resposta o responsável recebe "lead esperando", 1 hora o gerente também, e a IA segura a conversa). *Resumo junto* segue.
+
+**Decisões (não reabrir sem o dono pedir):**
+1. **Nulo contra lista vazia** (`features/salesAgents/gatilhosDoNumero.ts`): `triggers: null` num número = herda os do agente; `[]` = todo lead. `estadoDosGatilhos` lê, `gatilhosDoEstado` devolve o que gravar. **Voltar pra "Os do agente" grava `null`, nunca `[]`.** "Só alguns" sem condição completa NÃO grava (a linha em branco mora na tela; o cartão fica aberto até outra escolha).
+2. **Gatilho de número grava pela API própria dos números** (`useNumerosDoAgente.mudar`, que relê o agente); gatilho do agente, modo, palavra antiga e `openings` pelo `gravar`. O aviso do número dividido que o servidor devolve (`warnings`) aparece num aviso (toast) logo depois de gravar.
+3. **O modo "Qualquer um / Todos" é do agente**: o editor de condições do número não mostra o seletor (`semModo`).
+4. **Começo por campanha grava `openings` inteiro**, uma entrada por campanha com `ref: {kind: 'form' | 'link', id}` (formulário = id da ficha; campanha e anúncio = id da linha). As regras antigas (sem `ref`, por origem, formulário ou palavra) ficam intocadas; a entrada que fica só com o `ref` sai da lista. **Campanha sem linha** cria a linha antes (`criarLinha` com o par tipo + valor, sem imóvel) e grava o `ref` `link`; sem texto não cria nada. O bloco só existe com `campaign_links.read` (gerente e diretor; corretor não vê e a lista nem é pedida).
+5. **Destino sem trava de persona**: "Fica com o dono do número" grava `{handoff_target: 'number_owner', handoff_user_id: null, handoff_roleta_config_id: null}` no clique, sem `persona_kind`. Desabilitado (com a frase de sem dono) quando nenhum número tem dono.
+6. **Número de atendimento nunca grava pela metade**: o servidor exige número E mensagem de chegada. Escolher o cartão, o número ou digitar a mensagem espera o outro; só os dois gravam juntos. Mensagem vazia não grava e mostra "Escreva a mensagem de chegada: é ela que avisa o lead do número novo." Os números oferecidos são os do cliente que não são do próprio agente; a tela não filtra por dono (o `InboxOption` não traz): o servidor recusa número com dono ("Este número tem dono. Escolha um número sem dono pra continuar o atendimento.") e a tela mostra a frase que ele devolver. Apagar a mensagem não ressuscita a salva ao trocar o número. `handoff_continue_at` nulo lê **No número do corretor**.
+
+7. **Rodada 1 da T73:** no NÚMERO, "Só alguns" nunca grava lista vazia: tirar a última condição só mostra "Pra tirar a última condição, escolha Os do agente ou Todo lead do número." As escritas de número andam numa fila por agente (`useNumerosDoAgente`), e o cartão compara com o ÚLTIMO valor enviado, não com o do render (o blur da palavra grava antes do clique em "Os do agente"). Formulário sem ficha em Campanhas não tem Abrir. A linha da campanha é criada uma vez só, mesmo com blur e upload juntos. "Vende:" mostra os nomes dos imóveis (cai pra contagem se o cadastro não responde).
+
+**Armadilhas:**
+1. **`VariacaoDaCampanha` morreu** (janela de variação por campanha); as variações viraram o Começo por campanha, uma por linha de Campanhas.
+2. **Voltar o frontend** pra antes disso devolve a casca (sem gatilhos por número) e o Destino travado pela persona.
+3. A tela de Campanhas (Tarefa 77) ainda não existe: o link **editar em Campanhas** vai pro endereço dos Formulários (`/automations/origem`), que é onde ela vai morar.
+
+Código: `configurar/paginas/{CampanhasEGatilhos,GatilhosDoNumero,ComecoPorCampanha,Destino}.tsx`, `configurar/blocos/TriggersSection.tsx`, `features/salesAgents/gatilhosDoNumero.ts`.
+
+### IA Vendedora · Materiais (Tarefa 74, 01/11/2026)
+
+Fase 6, tela 3 do protótipo `agentes.html`, página **Materiais** do Configurar. Spec: `docs/superpowers/ia-reestruturacao/specs/2026-10-31-fase-6-tela-design.md` (Materiais e Localização como pino).
+
+**O que aparece na tela:**
+- **Da casa**: os materiais enviáveis sem imóvel ligado, cada um com o **Quando mandar** (ou "Sem "quando mandar": ela usa o próprio juízo.") e o botão **Editar**. **+ Material da casa** abre **Subir arquivo** ou **Colar um link** (nome e endereço); o arquivo ou link nasce enviável e a janela do "quando mandar" abre na hora, porque material sem regra fica mudo na prática.
+- **De cada imóvel**: um grupo por imóvel (nome, tipo e código). Linhas: **Book** (só se o cadastro tem book; chave `send_property_book_enabled` e a regra `book_send_rule` na janela "Quando ela manda o book"), **Fotos e vídeo** (chave `rich_media_enabled`, "quando" fixo no código), **Tour virtual** (só com `virtual_tour_url`, sem chave), **Localização** (chave `location_pin_enabled`) e os materiais ligados ao imóvel (`property_codes`), com **+ Material deste imóvel**. Material ligado a vários imóveis aparece em todos. O texto da seção avisa que as chaves de Book, Fotos e vídeo e Localização valem pra todos os imóveis.
+- **Quais imóveis**: o principal (`default_property_code`), os com material, os das campanhas do agente (`campanhasService.lista` + `property_ids`, até 30) e, pelo seletor **Ver outro imóvel**, os que a pessoa foi buscando. O seletor só acrescenta o imóvel à lista da página (estado local, não grava nada no agente). Código de material que o cadastro não achou aparece só com o material e a frase "não está entre os imóveis do cadastro".
+- **Localização como pino**: a linha explica por que o pino não sai quando é revenda, leilão ou locação ("Só empreendimento manda o pino..."), quando a restrição "Endereço exato" da Condução está ligada (com o botão **Abrir Condução**), quando falta o ponto no mapa e quando falta bairro ou cidade. Nesses casos a chave some.
+- **Janela do material** ("Quando ela manda"): Quando mandar, Quando não mandar, Mensagem junto e Uma vez só, com Salvar.
+
+**Decisões (não reabrir sem o dono pedir):**
+1. **A chave do pino é `location_pin_enabled` (C33)**, não o `rich_media_enabled`: "Fotos e vídeo" desligado não tira o pino. A página `materiais` grava só esses quatro campos (`rich_media_enabled`, `send_property_book_enabled`, `book_send_rule`, `location_pin_enabled`).
+2. **O pino segue a regra de privacidade de 03/10** (alfinete exato só pra empreendimento) e a restrição "endereço exato". `pinoPode` (`features/salesAgents/materiais.ts`) só espelha a regra do servidor pra explicar na tela; quem decide é o servidor (`Property#public_coordinates?`).
+3. **A janela do material salva sem `send_topics`.** O assunto continua gravado no servidor e saiu da tela. O vínculo com o imóvel é o `property_codes` de hoje (lista de códigos), nunca um `property_id`.
+4. **Material de outro imóvel não aparece**: o servidor tirou o "resgate" de arquivo restrito; a tela só lista o que tem o código do imóvel.
+5. **Upload**: `uploadFileDocument` (com a mesma validação do `docUpload`) e depois `updateDocument({ sendable: true })`, porque o upload não marca enviável. Link: `criarLink` (já nasce enviável). Em "Material deste imóvel" o link leva `property_codes` no mesmo POST (`criarLink(..., { propertyCodes })`, pra nunca nascer como material da casa se um segundo passo falhar); o arquivo leva `property_codes` no PATCH junto do `sendable`. Upload ok e PATCH falho avisa que o arquivo subiu e manda pro Ensinar > Arquivos.
+6. **"Ver outro imóvel"** é um seletor simples dos 100 imóveis ativos (a dúvida 2 do plano J falava em "a busca"; fica pra quando houver reclamação de carteira grande).
+
+**Armadilhas:**
+1. As três chaves aparecem em cada grupo mas são do agente: virar uma vira todas. Não trocar por chave por imóvel sem coluna nova.
+2. `ImovelDaPagina` sem `id` é o código que o cadastro não achou (a tela depende disso pra não desenhar as linhas do cadastro).
+3. Voltar o frontend pra antes desta tarefa devolve a casca da página Materiais; o servidor não muda.
+
+Código: `configurar/paginas/{Materiais,JanelaDoMaterial}.tsx`, `features/salesAgents/materiais.ts` (com specs).
+
+## IA Vendedora · Ensinar em 5 páginas (desde 01/11/2026)
+
+Reestruturação da IA, fase 6, Tarefa 75. Spec: `docs/superpowers/ia-reestruturacao/specs/2026-10-31-fase-6-tela-design.md` (seção 4).
+
+**O que aparece na tela:** *IA Vendedora → Ensinar* tem 5 páginas, nesta ordem: **Lições · Exemplos · Regras e objeções da casa · Conhecimentos de fábrica · Arquivos e prova social** (`?pagina=licoes|exemplos|casa|conhecimentos|arquivos`; sem página abre Lições).
+- **Lições:** cada lição é um cartão "Quando" / "Ela" com chave, tema e selo de origem (Sugestão, Correção de conversa, Escrita pela equipe). Lição nova pelos dois campos (os dois obrigatórios) e tema opcional. Filtro por tema (abas) e por origem. O contador vem do servidor: "N valendo de M · cabem até 40", "N pausadas" e, quando houver, o aviso "N fora por tamanho". Nada sai calado.
+- **Exemplos:** balões com o lead, o certo, o errado riscado (`bad_content`) e "Por quê" (`why`, até 200). O errado e o porquê só existem no exemplo bom; "Mover pra Não responda assim" limpa os dois (o servidor recusa no ruim). Contador "cabem até 20" (bons e ruins somados). As conversas reais seguem.
+- **Regras e objeções da casa** (no lugar das Instruções): regras até 30 linhas de 200 letras; objeções até 10 (objeção até 200 + resposta até 600). Grava na hora.
+  - 02/11/2026: as objeções de fábrica valem SEMPRE; as da casa entram junto, antes delas, e se falam do mesmo assunto vale a da casa (o texto da seção diz isso). Antes, uma só objeção da casa tirava as 4 de fábrica, e a migração ia tirar das IAs as versões que elas tinham dessas 4.
+- **Conhecimentos de fábrica:** um cartão por tópico, com a marca que liga. A chave põe/tira o tópico de `factory_knowledge_off`; sem marca ligada a chave fica apagada. "Ler o texto" abre só leitura, com o pé "Escrito pela Leal Mídia · conferido nas fontes oficiais em <data> · revisado a cada 180 dias · o documento da imobiliária vale mais.".
+- **Arquivos e prova social:** os arquivos que ela consulta (sem o envio, que foi pra Materiais) e, embaixo, os casos de prova social. O arquivo ganhou "Ligado a imóveis" (grava `property_codes`; o servidor normaliza em maiúsculas).
+
+**Decisões:**
+1. **Endereços antigos** caem no destino novo e o endereço é reescrito: `instrucoes` → `casa`, `regras` → `licoes`, `prova` → `arquivos` (`paginaDoEnsinarDaUrl` em `ensinar/paginas.ts`).
+2. **Apresentação nas Regras da casa (C30):** a tela recusa ANTES de gravar com a frase do servidor, "Regras da casa não aceita apresentação: quem a IA é fica na ficha, em Números e usuários." (`features/salesAgents/regrasDaCasa.ts`, espelho de `SalesAgent::HOUSE_RULE_IDENTITY_RE`). Se o servidor recusar, a gravação mostra a frase que veio. Valor em reais ou código de imóvel só avisa ("Condição e imóvel moram no cadastro ou na campanha."), não trava.
+3. **Instruções saíram:** `Instrucoes.tsx` gravava `instructions`, que é campo escondido (a página inicial recusava toda gravação, calada). `gravarDeTeste('ensinar')` roda a régua de campo de verdade (só `CAMPOS_DE_ENSINAR`, e campo escondido estoura) em todo spec do Ensinar, pra essa classe de quebra não se esconder de novo.
+4. **Selo de origem:** cada origem tem o seu (`ROTULO_DA_ORIGEM`). A lição com origem `correcao` deixou de aparecer como "Escrita à mão".
+5. **A bolinha do trilho** é "fora por tamanho" do servidor (Lições e Exemplos). Saiu a pendência "arquivo sem quando mandar" (foi pra Materiais).
+6. **Tirar número (C57):** a confirmação em *Números e usuários* avisa "As conversas que esta IA atendia por este número ficam com o corretor."
+7. "Ler o texto" é só leitura de propósito (pedido do Tony, 31/10): o cliente lê e desliga, nunca edita.
+
+**Armadilhas:**
+1. Os limites (40 regras, 20 exemplos, teto de caracteres) são do servidor; a tela só mostra o que ele conta (`meta.counter`). Não recontar no front.
+2. Errado e porquê no `bad_example` voltam 422; ao mover, mandar `bad_content: null, why: null` junto.
+3. O texto do conhecimento de fábrica é o mesmo pra todos os clientes (mora no `public`); não há edição.
+
+Código: `telas/ensinar/paginas/{Licoes,Exemplos,RegrasDaCasa,ConhecimentosDeFabrica,JanelaDoConhecimento,Arquivos,JanelaDoArquivo}.tsx`, `features/salesAgents/regrasDaCasa.ts` (com specs).
+
+## IA Vendedora · Minha ficha do corretor (desde 01/11/2026)
+
+O corretor dono de um número muda, só no número dele, o nome, "ele ou ela" e como se apresenta. A voz (quem fala) é do gestor: decisão do Tony na fase 2, "corretor mexe só na ficha".
+
+**O que aparece na tela** (`/ia-vendedora/minha-ficha`, item "Minha ficha da IA" em Vendas e automação)
+- Um cartão por número dele (número dividido = um cartão por IA): nome do número, IA, a voz só como texto ("A voz quem escolhe é o gestor."), campos Nome, Ele ou ela e Como se apresenta, e a prévia da primeira mensagem.
+- Grava na hora: texto ao sair do campo (Enter também), "Ele ou ela" no clique. Campo em branco volta pra ficha da casa (o placeholder mostra a da casa). Apresentação em uma linha, até 200 caracteres.
+- Erro do servidor aparece como veio, no cartão ("Este número não é seu."), e o campo volta ao valor anterior.
+
+**Decisões**
+1. O item do menu aparece com `sales_agent_numbers.own_ficha`, sem `sales_agents.read` e com pelo menos um número (`useMinhaFichaNoMenu`, mesmo padrão do `useProprietariosNoMenu`; `aplicarMinhaFichaNoMenu` tira o item do menu, da busca e das abas). Quem lê a IA (gestor) já tem a tela completa e não pergunta nada ao servidor.
+2. Sem número, nem item nem tela: a página manda pra `/dashboard`.
+3. Gravar manda só o campo que mudou (`{ voice: { name } }`); o servidor mistura no que já existe e mantém o `kind`.
+4. A prévia é o `previaDaApresentacao` de `features/salesAgents/fichas.ts`, com a voz efetiva do número (a dele por cima da casa).
+
+**Armadilhas**
+- Não usar `TextoNaHora` aqui: ele marca o texto digitado como salvo antes da resposta e não sabe voltar atrás no erro.
+- Voltar o frontend sozinho é seguro (a tela some); o servidor é o `own_fichas_controller` do backend (#65 do plano). Voltar o backend com a tela nova no ar faz a tela chamar um endereço que não existe (404 na Minha ficha): voltar a tela junto.
+
+Código: `MinhaFicha.tsx`, `features/salesAgents/useMinhasFichas.ts` (com specs), rota em `routes/index.tsx` e `routes/permissionRoutes.ts`.
+
+## Imóveis · Condições e argumentos, Aceita permuta, Sem vaga e fase não informada (Tarefa 78, 01/11/2026)
+
+Cadastro do imóvel (`/properties/new` e a edição). Segue com **Salvar** (não grava na hora). Spec: fases 3 e 4 da reestruturação da IA.
+
+**O que aparece na tela**
+- **Condições e argumentos**: seção nova logo depois de "Detalhes da venda", nos três tipos (e no índice). Cinco blocos: *Condição* (Entrada a partir de, Parcela a partir de, Renda mínima, em dinheiro como os outros valores; Fluxo de pagamento até 300 letras), *Pra quem serve* (os 4 caminhos de fábrica; a frase de como a IA pergunta é a `fraseDaIntencao(lista, 'deste imóvel')`), *O que nunca prometer* (até 6 linhas de 150), *Fato de urgência* (o fato até 150 letras e "Vale até") e *Objeções deste imóvel* (até 10, objeção e resposta).
+- **Finalidade** da revenda são duas caixinhas, "À venda" e "Para alugar" (uma, outra ou as duas). Temporada saiu da tela; imóvel `season` abre com "Para alugar" marcado e continua `season` enquanto só essa caixinha ficar. Nenhuma marcada: "Marque À venda, Para alugar ou os dois." e o Salvar não segue (seção Básico).
+- **Sem vaga** ao lado do campo Vagas: marcado grava 0 e trava o campo; desmarcado volta ao vazio (não informado). Imóvel com 0 abre marcado.
+- Terreno não mostra Vagas nem Sem vaga. Digitar 0 no campo não trava; só a caixinha trava (e o imóvel salvo com 0 abre travado). Rascunho com fato de urgência sem data também é barrado, com a frase do servidor.
+- **Aceita permuta** (revenda, em Detalhes da venda): Sim, Não, A conversar, Não informado.
+- **Fase não informada**: opção nova em "Fase da obra"; empreendimento novo nasce nela, sem "Previsão de entrega". O selo da lista de Imóveis diz "Fase não informada" e não mostra "· entrega". O que o público vê (filtro de fase do site, selo do portal e da ficha) não mostra essa fase.
+- **Preencher a partir de um texto** traz também entrada, parcela e renda mínima quando o texto diz (só campo vazio; o servidor devolve no `parse_text`). Fluxo, pra quem serve, nunca prometer, urgência e objeções ficam com o time.
+
+**Decisões**
+1. Fato de urgência sem data: a tela usa a frase do servidor (C31), "Fato de urgência precisa da data em que deixa de valer.", embaixo do campo e como erro do Salvar (seção Condições). Não existe outra frase.
+2. `FASES` ganhou `unknown` ("Fase não informada") e `FASES_DO_PUBLICO` é a lista sem ela; `rotuloDaFase` já reconhece o valor, então o recuo "Pronto para morar" só vale pra fase desconhecida de verdade. `seloDaFase` não põe entrega em `ready` nem em `unknown`; `payloadDoFormulario` zera a previsão nos dois.
+3. `finalidade.ts` (`marcasDaFinalidade`, `finalidadeDasMarcas`) guarda a regra das duas caixinhas; a tela só desenha.
+4. Os campos de condição do imóvel têm o mesmo nome do servidor (`down_payment_from`, `installment_from`, `min_income`, `payment_terms`, `serves_intents`, `never_promise`, `objections`, `urgency_fact`, `urgency_until`). A trava do site (`feed.locked_fields`) vale também pra eles.
+
+**Armadilhas**
+- Texto escrito no campo "nova linha" de Nunca prometer só entra com **Pôr** (ou Enter): sem isso o Salvar não leva.
+- Teste de cadastro de empreendimento que dependia de nascer em "Na planta" precisa escolher a fase antes (nasce `unknown`).
+- Voltar o backend pra antes da fase 3 com a tela nova no ar quebra o cadastro de empreendimento novo (nasce stage 'unknown', que o backend antigo não conhece): voltar a tela junto.
+
+Código: `features/properties/cadastro/finalidade.ts`, `pages/Customer/Properties/cadastro/secoes/SecaoCondicoes.tsx`, mudanças em `SecaoBasico`, `SecaoComposicao`, `SecaoDetalhesDaVenda`, `SecaoObra`, `PreencherPorTexto`, `listingKind.ts`, `formularioDoCadastro.ts`, `secoesDoCadastro.ts` (com specs).
+
+## Campanhas (era Formulários do Meta) (Tarefa 77, 01/11/2026)
+
+Configurações > Campanhas, no mesmo endereço de antes (`/automations/origem`, o que o "editar em Campanhas" da IA usa). O item do menu "Formulários" virou "Campanhas".
+
+**O que aparece na tela**
+- Título "Campanhas" e duas partes: **Formulários do Meta** (as fichas de sempre, com tudo o que já faziam) e **Anúncios de WhatsApp** (linhas de campanha e de anúncio que trouxeram lead). Cada linha mostra os leads dos últimos **90 dias** (é o corte do servidor; o protótipo falava em 30), **Vende** (nome do imóvel, "+N", "Todo o tipo Leilão", "Todo o catálogo" ou o selo **Não diz o que vende**), **Condição do anúncio** (só o que a linha preencheu, ou "A do imóvel") e **Qual IA atende**.
+- No topo, o aviso "N campanhas trouxeram lead esta semana e não dizem o que vendem" (lead dos últimos 7 dias, só ficha de formulário e anúncios; formulário sem ficha segue em "Disponíveis no Facebook").
+- **A janela da campanha** (a do formulário e a do anúncio são a mesma `JanelaDaCampanha`; segue com **Salvar**, não grava na hora): *O que esta campanha vende* (Imóveis escolhidos de 1 a 10, Um tipo inteiro ou Todo o catálogo; com 2 ou mais, "a conversa começa sem imóvel fixo"), *Condição* (entrada, parcela, renda mínima, fluxo e observação até 300; a dica do campo é a condição do imóvel quando é um só; **Preencher com o texto do anúncio** só no WhatsApp), *Pra quem é este anúncio* (as 4 caixinhas e a frase de `fraseDaIntencao(lista, 'desta campanha')`), *Qual IA atende* e, no formulário, a *entrada do lead* de sempre (funil, etapa, palavra, quem assume, etiquetas, ativo). **Excluir ficha** só aparece com `lead_ads_form_configs.delete`.
+- Por cargo: administrador vê tudo (inclusive **Conectar o Meta**, que leva a Integrações > Facebook, e Excluir ficha); gerente edita sem os dois; corretor não tem o item no menu e, se chegar pelo endereço, cai no `NoAccessState`; quem só lê vê o botão **Ver** e a janela sem Salvar.
+
+**Decisões**
+1. "Qual IA atende" é do servidor (C25): opções em `GET /campaigns/agent_options`, gravar em `PUT /campaigns/agent`, tirar em `DELETE`. A confirmação de mover vem do 409 (`conflicts`): a tela mostra "Esta campanha sai da IA <nome>." e reenvia com `confirm_move`. Sem regra de "uma opção por número" na tela: `features/campanhas/qualIaAtende.ts` só arruma rótulo, o que vem fixo (a IA que atende todo lead do número) e a frase. Os nomes `opcoesDeIa`/`gravacaoDaIa` do enunciado não existem.
+2. A escolha da IA grava **na hora** (é outro endereço) e vale a permissão da campanha, não a da IA (C26): `lead_ads_form_configs.update` no formulário, `campaign_links.update` no anúncio. Formulário novo ainda sem ficha pede salvar antes. Anúncio sem linha cria a linha (`criarLinha`) na primeira gravação, do Salvar ou da IA.
+3. "Preencher com o texto do anúncio" chama `POST /campaign_links/condition_from_text` (`condicaoDoTexto`); a tela não lê texto. Traz os números e pede a conferência.
+4. Formulário: `property_id` da ficha é o **primeiro** imóvel; a lista inteira vai em `property_ids`, junto com `sells_scope`, `sells_listing_kind`, `offer_condition` e `audience_intents`. O campo antigo "Imóvel vinculado" saiu: "O que esta campanha vende" o substitui.
+5. A condição da linha vence a do imóvel; vazio vem do imóvel; vazio nos dois é "não informado" (`condicaoDaLinha`, só apresentação).
+6. `LeadAdsForms` virou a parte Formulários: sozinho (sem `campanhas`) continua sendo a página de antes; `Campanhas` passa título, aviso, a parte dos anúncios e a lista do servidor.
+7. A permissão da página para gerente e diretor está numa parada do Tony; a tela segue as chaves (`lead_ads_form_configs.*` e `campaign_links.*`) e não depende disso.
+
+**Armadilhas**
+- O `id` do formulário em `PUT /campaigns/agent` é o `form_id` do Meta, não o id da ficha; o do anúncio é o da linha (`campaign_link`).
+- Os specs de `LeadAdsForms.*` renderizam a tela sozinha e só mockam `leadAdsFormsService`: a janela não pode chamar `campanhasService` sem a lista de opções vir de cima.
+- Servidor sem as chaves de Campanhas: `opcoesDeIa` falha em silêncio e o bloco "Qual IA atende" some; o resto da janela segue.
+- A régua da casa (`conferir-padrao`, glossário) barra "apagar": o botão se chama **Excluir ficha** (o enunciado e o protótipo diziam "Apagar ficha"), e a mensagem de "Nenhum…" solto também: a janela diz "Sem IA nesta campanha.".
+- **Dinheiro da condição é pt-BR nos dois sentidos.** O servidor guarda número com centavos (899.9). O campo mostra "899,90" e `numeroDoCampo` lê pt-BR: ponto é milhar, vírgula é centavos; sem vírgula, UM ponto com 1 ou 2 dígitos no fim é decimal (teclado de celular). Nunca `String(valor)` no campo: o "899.9" lido como milhar gravava 8.999 (a IA passaria esse preço pro lead). Apagar a condição manda o objeto com as chaves nulas, nunca `null` (o `permit(offer_condition: {})` descarta o nulo e a condição antiga ficava).
+
+Código: `pages/Customer/Settings/Campanhas/{Campanhas,LinhaDaCampanha,JanelaDaCampanha}.tsx`, `features/campanhas/{condicaoDaCampanha,qualIaAtende,itensDeCampanha}.ts` (com specs), `LeadAdsForms.tsx` (parte Formulários) e `Origem.tsx`.
+
+## Construtor: não mandar se a IA já estiver conversando (Tarefa 79, 01/11/2026)
+
+Reestruturação da IA, fase 5 (seção 3). No bloco **Mensagem** do construtor entra a caixinha **Não mandar se a IA já estiver conversando com o lead**, com a ajuda "Liga sozinha nos fluxos de entrada. Use quando o fluxo e a IA falam com o mesmo lead.".
+
+**O que aparece na tela**
+- A caixinha fica logo depois de *Marcar progresso*, no painel do bloco Mensagem. Marcar e desmarcar grava `skip_if_ai_talking` (`true`/`false`) no rascunho do bloco, e o Salvar do painel leva junto.
+- No **funil de conversa** não aparece (a mensagem sai com o corretor ao vivo). No **modo guiado** do corretor também não (o servidor não deixa o corretor mudar opção do gestor).
+- Bloco **novo** num fluxo cujo gatilho inclui "Lead criado" já nasce com a caixinha marcada, nos três tipos que mandam mensagem (`send_whatsapp`, `sequence`, `funnel`). Outro gatilho nasce desmarcada; bloco que não manda mensagem nunca recebe a chave.
+
+**Decisões**
+1. `configDoBlocoNovo(item, triggerEvent)` (`features/flowAutomations/palette.ts`) monta a config do bloco novo; o `insertNode` do canvas passa o gatilho (`lead.created` se algum evento do gatilho for esse). O servidor faz o mesmo na criação (`default_skip_if_ai_talking`), a tela só mostra já marcado.
+2. Bloco que já existe não muda, e o valor gravado (inclusive `false`) manda. A tela devolve a chave no `config` ao salvar, senão ela se perderia.
+3. Duplicar bloco copia a config como está (não reaplica o padrão).
+
+**Armadilhas**
+- Voltar o backend pra antes da fase 5 deixa a chave inerte (o motor antigo não a lê), sem quebrar a tela. Voltar só a tela é seguro pro servidor, mas ao salvar um bloco a tela antiga não devolve a chave, e ela se perde (o bloco volta ao padrão do servidor).
+
+Código: `components/flowAutomations/MessageBlockFields.tsx` (`PularSeIaConversandoField`), `features/flowAutomations/palette.ts`, `pages/Customer/Automations/FlowBuilder/FlowAutomationCanvas.tsx` (`insertNode`). Specs: `MessageBlockFields.spec.tsx`, `palette.spec.ts`.
+
+## IA Vendedora · Relatório semanal por campanha (Tarefa 79, 01/11/2026)
+
+Reestruturação da IA, fase 6. Em *IA Vendedora > Painel > Relatório semanal* o relatório da semana ganha a tabela **Por campanha**.
+
+**O que aparece na tela**
+- Entre os dois cartões (A IA e O time) e o texto do WhatsApp: tabela com **Campanha · Leads · Responderam · Passados · Visitas · Fora do perfil · Onde pararam**, uma linha por campanha, vinda de `stats.campanhas` do servidor. A conversa sem marca vem como **Sem campanha** (o servidor manda `key: 'none'` e `kind: 'none'`; a tela olha o `kind`).
+- **Onde pararam** mostra as etapas que têm lead, com a contagem ("Chegou 4 · Respondeu 3 · Passou 1 · Visita 2"). Cada lead conta uma vez, na etapa mais avançada que alcançou.
+- Uma frase embaixo avisa que são só leads novos da semana, então a soma pode ficar abaixo dos "Leads atendidos" do topo.
+- Servidor antigo (sem `stats.campanhas`) ou lista vazia: sem tabela e sem aviso. A tela não calcula nada, só mostra.
+
+**Decisões**
+1. A tabela é `telas/TabelaPorCampanha.tsx`, sem estado; o tipo `WeeklyReportCampaign` está no serviço. O texto do WhatsApp com as 3 maiores campanhas é montado pelo servidor.
+2. "Visitas" são conversas com visita da IA no período (não linhas de visita), por isso fecha com "Onde pararam".
+
+Código: `pages/Customer/Automations/SalesAgents/telas/{TelaRelatorioSemanal,TabelaPorCampanha}.tsx`, `services/salesAgents/salesAgentsService.ts`. Specs: `TelaRelatorioSemanal.spec.tsx`.
+
+## IA Vendedora · Escolha do agente no número dividido (Tarefa 79, 01/11/2026)
+
+Reestruturação da IA, fase 2 (C15 e C81). Num número dividido entre agentes, quem manda a IA assumir diz qual agente.
+
+**O que aparece na tela**
+- **Bloco "Passar para a IA"** (construtor): o bloco lista os agentes do **número pelo qual o fluxo fala** (quando o fluxo usa "Por um número específico"; senão, os do cliente inteiro). Com um agente só aparece "IA que assume: <nome>" e **nada é gravado** (o servidor, sem `sales_agent_id`, usa o agente do número). Com número dividido aparece **Escolha qual agente atende** (botões de escolha), o Salvar não deixa passar sem a escolha e a escolha grava `config.sales_agent_id`. No modo guiado do corretor a escolha some.
+- **Ativar IA pra este lead** (`ActivateAiDialog`): lista os agentes do número da conversa. Com um agente, vem marcado e a escolha some; com mais de um, pede **Escolha qual agente atende** e o *Ativar IA* só liga depois de escolher. O imóvel padrão acompanha o agente escolhido.
+- **Religar IA** no menu da conversa, no robô do topo da conversa e no botão de IA do cartão do funil: os três passam pelo mesmo hook (`useLigarIa`). Num número dividido abre a janela *ReligarIaDialog* pedindo o agente (vem marcado o que já está na conversa); com um agente só liga direto. A recusa do servidor ("Essa IA não atende o número desta conversa...") aparece na janela como veio.
+
+**Decisões**
+1. Quem atende o número é regra do servidor: `salesAgentsService.listForInbox(inboxId)` (`GET /sales_agents?inbox_id=`, na ordem do número). A tela não refaz a regra. Só o bloco, quando o fluxo não fala por um número, olha o cliente inteiro (`agentesParaOBloco`/`temNumeroDividido`).
+2. **O bloco não grava `sales_agent_id` sozinho** (decisão do controlador, vence o enunciado): gravar ao abrir deixava o painel "mudado" e prendia o bloco num agente que pode deixar de servir o número quando nascer o segundo agente. Só grava quando a pessoa escolhe.
+3. `useLigarIa` (`features/conversas`) devolve `pedirLigar` e as props da janela; cada tela renderiza `<ReligarIaDialog {...janela} />` e cuida do próprio estado em `aoLigar`. A conversa vem da tela (menu) ou de `GET /conversations/:id` (robô e cartão).
+4. A escolha usa `EscolhaDoAgente` (`components/base`), em `BotoesDeEscolha`.
+
+Código: `features/conversas/useLigarIa.ts`, `features/salesAgents/agentesDoNumero.ts`, `components/base/EscolhaDoAgente.tsx`, `components/flowAutomations/EscolhaDoAgenteDoBloco.tsx`, `components/chat/conversation/{ActivateAiDialog,ReligarIaDialog,ConversationActionsDropdown}.tsx`, `features/conversas/useIaDaConversa.ts`, `components/pipelines/card/LeadQuickActions.tsx`, `services/chat/chatService.ts`.
+
+## Agenda de Visitas: o tipo do compromisso (Tarefa 79, 01/11/2026)
+
+Spec C72. O aviso do servidor já diz "Visita, Videochamada, Reunião ou Ligação marcada" pelo `kind` do compromisso; a Agenda passa a mostrar o mesmo tipo.
+
+**O que aparece na tela**
+- Na lista da Agenda, a linha da situação ganha o tipo: "Agendada · Videochamada". Sem tipo, vale **Visita**.
+- No calendário (Semana e Dia), o bloco escreve o tipo ao lado da hora só quando não é Visita ("10:00 às 11:00 · Reunião"); a pílula do mês leva o tipo no nome acessível. Visita comum fica como sempre.
+
+**Armadilhas**
+- Servidor sem o `kind` na visita (antigo): toda linha mostra "Visita".
+
+Código: `features/visits/tipoDaVisita.ts`, `PecaDaVisita.tsx`, `pages/Customer/Visits/Visits.tsx`, `services/visits/visitsService.ts`. Specs: `tipoDaVisita.spec.ts`, `PecaDaVisita.spec.tsx`.
+
+## IA Vendedora · Correções da revisão final das telas (02/11/2026)
+
+Rodada de correção depois da revisão final do plano de reestruturação da IA. O que mudou pra quem usa:
+
+- **Novo agente com a voz Corretor** não trava mais: nasce com o destino "dono do número" (o servidor só aceita esse na voz Corretor). Nas outras vozes nasce com a roleta (não mais o destino antigo).
+- **A frase de recusa do servidor aparece** em Números e usuários, Campanhas e formulários: a tela lê `{error: "texto"}` e `{errors: [...]}` além dos formatos antigos (`motivoEscrito`, num ponto só).
+- **Passar para a IA** (construtor): a escolha do agente só é **obrigatória** quando o fluxo fala por um número específico e esse número é dividido. Nos outros casos é opcional, com a primeira opção **A IA do número da conversa** (não grava agente; é o padrão), e dá pra voltar a ela depois de escolher um agente.
+- **Motor**: saíram a reescrita de bloco, os pontos-chave e as objeções (o servidor não lê mais bloco reescrito nem `vars.objecoes`; as objeções são as da casa e o próximo passo vem das opções do agente). Ficou *O texto que a IA recebe* e a dor de quem procura (`dor_tipica`, que o servidor ainda lê). Vale pra equipe e pra cliente com `ia_playbook`.
+- **Minha ficha**: o 403 mostra uma mensagem só (`OWN_FICHA_NOT_OWNER` e `OWN_FICHA_FIELDS` entraram em `USER_FACING_CODES`).
+- **Novo agente**: a contagem por marca conta ativos e reservados, como o servidor; em Filtra e passa a frase diz o que falta pra ligar (marcar uma pergunta obrigatória em Condução), porque a IA nasce sem pergunta obrigatória.
+- **+ Material deste imóvel** (e da casa) com arquivo vai num POST só, já enviável e ligado ao código (`uploadFileDocument` aceita `config`); o segundo PATCH saiu.
+- **Excluir IA** leva pra página de agentes (não abre outro agente). Link salvo de agente **juntado** abre o agente que o absorveu (`absorbed_into_id`, seguindo a cadeia).
+- **Formulários antigos**: `/settings/lead-ads-forms` e `/automations/lead-ads-forms` redirecionam pra `/automations/origem` (Campanhas), mantendo busca e trecho (`RedirecionaComResto`).
+- O aviso "Não diz o que vende" da linha da campanha ganhou par no escuro.
+
+**Armadilhas**
+- Redirecionar com `<Navigate to="/x" />` solto joga fora o `?...#...`: usar `RedirecionaComResto`.
+- Excluir a IA aberta: o endereço ainda traz o id dela por um instante e cair na "primeira" abria outro agente; a casca guarda o id excluído e espera o endereço sair.
+- Voltar de versão: voltar só a tela é seguro pro servidor (nada muda no esquema nem nos endereços), mas devolve o Novo agente sem destino (a voz Corretor volta a travar), o Passar para a IA obrigatório pela conta inteira e os formulários antigos no endereço antigo. Voltar o backend não pede voltar a tela nesta rodada.
+
+Código: `features/salesAgents/{novoAgente,erroDoServidor,iaMenu}.ts`, `components/flowAutomations/EscolhaDoAgenteDoBloco.tsx`, `components/base/EscolhaDoAgente.tsx`, `components/salesAgents/PlaybookSection.tsx`, `pages/.../SalesAgents/SalesAgents.tsx`, `routes/RedirecionaComResto.tsx`.

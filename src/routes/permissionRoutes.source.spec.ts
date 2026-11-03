@@ -71,6 +71,13 @@ describe('follow-up como aba de Funis de mensagem (Fase 3, 21/10/2026)', () => {
   });
 });
 
+describe('Minha ficha da IA (corretor dono do número, 01/11/2026)', () => {
+  it('abre com sales_agent_numbers.own_ficha e a chave está no mapa', () => {
+    expect(trecho('/ia-vendedora/minha-ficha')).toContain('<PermissionRoute resource="sales_agent_numbers" action="own_ficha">');
+    expect(ROUTE_PERMISSIONS).toContainEqual({ path: '/ia-vendedora/minha-ficha', resource: 'sales_agent_numbers', action: 'own_ficha' });
+  });
+});
+
 describe('toda rota do CRM confere o cargo', () => {
   it.each([
     ['/ia-vendedora', 'sales_agents', 'read'],
@@ -100,8 +107,6 @@ describe('toda rota do CRM confere o cargo', () => {
     ['roleta-config/:id', 'roleta_configs', 'read'],
     // Rulings do controlador (X36/G5, 2026-09-26) — além da tabela do brief;
     // chave confirmada no backend via PermissionRegistry.
-    ['lead-ads-forms', 'lead_ads_form_configs', 'read'],
-    ['/settings/lead-ads-forms', 'lead_ads_form_configs', 'read'],
     // Listas da casa (E1 do funil): abre pra quem lê o funil; mudar é pipelines.update no servidor.
     ['/settings/listas', 'pipelines', 'read'],
     // Card completo (E4): a página do lead pede o mesmo que o quadro.

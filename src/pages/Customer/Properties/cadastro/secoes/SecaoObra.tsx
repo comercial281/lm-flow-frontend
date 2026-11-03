@@ -14,7 +14,7 @@ export default function SecaoObra({ form: f, setF }: PropsDaSecao) {
           {FASES.map(x => <option key={x.valor} value={x.valor}>{x.rotulo}</option>)}
         </Seletor>
       </div>
-      {f.stage !== 'ready' && (
+      {f.stage !== 'ready' && f.stage !== 'unknown' && (
         <div>
           <UILabel>Previsão de entrega</UILabel>
           <CampoMesAno rotulo="previsão de entrega" valor={f.delivery_forecast ?? ''}

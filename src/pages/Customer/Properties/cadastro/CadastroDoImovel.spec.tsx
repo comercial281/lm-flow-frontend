@@ -262,13 +262,17 @@ describe('CadastroDoImovel: campos por tipo (herdados da janela)', () => {
   it('empreendimento mostra fase da obra, previsão e tipologias', async () => {
     abrir('/properties/new?tipo=empreendimento');
     expect(await screen.findByText('Fase da obra')).toBeInTheDocument();
+    // Nasce com a fase não informada: não há entrega a prever até alguém escolher a fase.
+    expect(screen.getByDisplayValue('Fase não informada')).toBeInTheDocument();
+    expect(screen.queryByText('Previsão de entrega')).toBeNull();
+    fireEvent.change(screen.getByDisplayValue('Fase não informada'), { target: { value: 'launch' } });
     expect(screen.getByText('Previsão de entrega')).toBeInTheDocument();
     expect(screen.getByText('Tipologias do empreendimento')).toBeInTheDocument();
   });
 
   it('revenda mostra a finalidade e esconde fase, previsão e tipologias', async () => {
     abrir('/properties/new?tipo=revenda');
-    expect(await screen.findByRole('radiogroup', { name: 'Finalidade' })).toBeInTheDocument();
+    expect(await screen.findByRole('group', { name: 'Finalidade' })).toBeInTheDocument();
     expect(screen.queryByText('Fase da obra')).toBeNull();
     expect(screen.queryByText('Previsão de entrega')).toBeNull();
     expect(screen.queryByText('Tipologias do empreendimento')).toBeNull();
@@ -286,6 +290,7 @@ describe('CadastroDoImovel: campos por tipo (herdados da janela)', () => {
   it('previsão de entrega em mês e ano: dez + 2027 salva 2027-12', async () => {
     svc.create.mockResolvedValue({ id: 'n1', listing_kind: 'development' });
     abrir('/properties/new?tipo=empreendimento');
+    fireEvent.change(await screen.findByDisplayValue('Fase não informada'), { target: { value: 'launch' } });
     fireEvent.change(await screen.findByRole('combobox', { name: 'Mês da previsão de entrega' }), { target: { value: '12' } });
     fireEvent.change(screen.getByRole('combobox', { name: 'Ano da previsão de entrega' }), { target: { value: '2027' } });
     fireEvent.change(screen.getByPlaceholderText('450.000'), { target: { value: '389900' } });
@@ -297,6 +302,7 @@ describe('CadastroDoImovel: campos por tipo (herdados da janela)', () => {
   it('só o mês, sem ano, não é previsão', async () => {
     svc.create.mockResolvedValue({ id: 'n1', listing_kind: 'development' });
     abrir('/properties/new?tipo=empreendimento');
+    fireEvent.change(await screen.findByDisplayValue('Fase não informada'), { target: { value: 'launch' } });
     const mes = await screen.findByRole('combobox', { name: 'Mês da previsão de entrega' });
     fireEvent.change(mes, { target: { value: '12' } });
     expect(mes).toHaveValue('12');

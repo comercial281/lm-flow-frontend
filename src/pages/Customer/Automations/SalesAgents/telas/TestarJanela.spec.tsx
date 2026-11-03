@@ -457,3 +457,62 @@ describe('TestarJanela', () => {
     });
   });
 });
+
+describe('TestarJanela · Testar como (Tarefa 71)', () => {
+  const numero = (id: string, nome: string, extra = {}) => ({
+    id: `n-${id}`, inbox_id: id, phone: null, inbox_name: `Número ${nome}`, enabled: true, connected: true, voice: null, triggers: null, position: 0,
+    owner_user_id: null, owner_name: nome, ...extra,
+  });
+  const com = (numbers: unknown[]) => ({ ...agent, numbers } as unknown as SalesAgent);
+
+  it('com 2 números, "Testar como" manda o número escolhido no primeiro turno', async () => {
+    rehearsal.mockResolvedValueOnce(resposta('Oi!', estado()));
+    abrir(com([numero('inbox-1', 'Ana'), numero('inbox-2', 'Bia')]));
+    const seletor = screen.getByLabelText('Testar como');
+    expect(seletor).toHaveValue('inbox-1');
+    await userEvent.selectOptions(seletor, 'inbox-2');
+    await userEvent.type(screen.getByLabelText('Mensagem do lead'), 'oi{Enter}');
+    await screen.findByText('Oi!');
+    expect(rehearsal.mock.calls[0][1]).toMatchObject({ step: 'turn', inbox_id: 'inbox-2' });
+  });
+
+  it('sem escolher, vai o primeiro número', async () => {
+    rehearsal.mockResolvedValueOnce(resposta('Oi!', estado()));
+    abrir(com([numero('inbox-1', 'Ana'), numero('inbox-2', 'Bia')]));
+    await userEvent.type(screen.getByLabelText('Mensagem do lead'), 'oi{Enter}');
+    await screen.findByText('Oi!');
+    expect(rehearsal.mock.calls[0][1]).toMatchObject({ inbox_id: 'inbox-1' });
+  });
+
+  it('número desligado não entra na lista', () => {
+    abrir(com([numero('inbox-1', 'Ana'), numero('inbox-2', 'Bia', { enabled: false })]));
+    expect(screen.queryByLabelText('Testar como')).not.toBeInTheDocument();
+  });
+
+  it('2 números e só 1 ligado: sem seletor, mas vai o inbox_id do ligado', async () => {
+    rehearsal.mockResolvedValueOnce(resposta('Oi!', estado()));
+    abrir(com([numero('inbox-1', 'Ana', { enabled: false }), numero('inbox-2', 'Bia')]));
+    expect(screen.queryByLabelText('Testar como')).not.toBeInTheDocument();
+    await userEvent.type(screen.getByLabelText('Mensagem do lead'), 'oi{Enter}');
+    await screen.findByText('Oi!');
+    expect(rehearsal.mock.calls[0][1]).toMatchObject({ inbox_id: 'inbox-2' });
+  });
+
+  it('com 1 número nada muda: sem seletor e sem inbox_id', async () => {
+    rehearsal.mockResolvedValueOnce(resposta('Oi!', estado()));
+    abrir(com([numero('inbox-1', 'Ana')]));
+    expect(screen.queryByLabelText('Testar como')).not.toBeInTheDocument();
+    await userEvent.type(screen.getByLabelText('Mensagem do lead'), 'oi{Enter}');
+    await screen.findByText('Oi!');
+    expect(rehearsal.mock.calls[0][1]).not.toHaveProperty('inbox_id');
+  });
+
+  it('trocar o número recomeça o teste', async () => {
+    rehearsal.mockResolvedValueOnce(resposta('Oi!', estado()));
+    abrir(com([numero('inbox-1', 'Ana'), numero('inbox-2', 'Bia')]));
+    await userEvent.type(screen.getByLabelText('Mensagem do lead'), 'oi{Enter}');
+    await screen.findByText('Oi!');
+    await userEvent.selectOptions(screen.getByLabelText('Testar como'), 'inbox-2');
+    expect(screen.queryByText('Oi!')).not.toBeInTheDocument();
+  });
+});

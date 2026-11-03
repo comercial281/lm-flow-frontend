@@ -73,6 +73,10 @@ export default function PreencherPorTexto({ form, setF, texto, aoMudarTexto, tem
       put('parking_spaces', r.parking_spaces);
       put('useful_area_m2', r.useful_area_m2);
       put('total_area_m2', r.total_area_m2);
+      // Entrada, parcela e renda que o texto traz (o fluxo é texto livre: fica com o time). Pra quem serve, nunca prometer, urgência e objeções são do time.
+      put('down_payment_from', r.down_payment_from);
+      put('installment_from', r.installment_from);
+      put('min_income', r.min_income);
       put('address_neighborhood', r.address_neighborhood);
       put('address_city', r.address_city);
       put('address_state', r.address_state);

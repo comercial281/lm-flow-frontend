@@ -7,7 +7,7 @@ import { gravarDeTeste } from '@/test/salesAgents/gravarDeTeste';
 import Horario from './Horario';
 
 function abrir(agent: SalesAgent = agenteDeTeste()) {
-  const gravar = gravarDeTeste('horario');
+  const gravar = gravarDeTeste('numeros');
   render(<><Horario agent={agent} inboxes={[]} gravar={gravar} irPara={vi.fn()} diagnostico={null} /><button>fora</button></>);
   return gravar;
 }

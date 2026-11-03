@@ -5,7 +5,7 @@ import { Card, Button, Checkbox, Input, Label as UILabel } from '@/components/ui
 import { useConfirmacao } from '@/hooks/useConfirmacao';
 import { HOME_FABRICA, type HomeConfig, type RegrasVitrine, type Vitrine } from '@/features/siteBuilder/public/homeConfig';
 import { ROTULO_TIPO, opcoesDeTipo } from '@/features/siteBuilder/public/tiposDeImovel';
-import { FASES } from '@/features/properties/listingKind';
+import { FASES_DO_PUBLICO } from '@/features/properties/listingKind';
 import { Secao, Secoes } from '@/components/base/Secao';
 import { CLASSE_DO_CAMPO, CampoTexto } from '@/components/base/Campo';
 import type { FormProps } from './tipos';
@@ -213,7 +213,7 @@ function EditorDeRegra({ idBase, regras, mudar }: { idBase: string; regras: Regr
         <fieldset className="space-y-2">
           <legend className="text-sm font-medium">Fases</legend>
           <div className="grid gap-2 sm:grid-cols-2">
-            {FASES.map(f => (
+            {FASES_DO_PUBLICO.map(f => (
               <div key={f.valor} className="flex items-center gap-2">
                 <Checkbox id={`${idBase}-fase-${f.valor}`} checked={regras.stages.includes(f.valor)}
                   onCheckedChange={c => mudar({ stages: alternar(regras.stages, f.valor, c === true) })} />

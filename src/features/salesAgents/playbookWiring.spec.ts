@@ -39,12 +39,12 @@ describe('roteiro da IA na tela do cliente', () => {
     expect(src).toContain('isSuper || insightsToggle');
   });
 
-  // Os pontos-chave viajam DENTRO do `playbook`, como `vars`. Se alguém um dia os
+  // A dor típica viaja DENTRO do `playbook`, como `vars`. Se alguém um dia os
   // mover para campo próprio, ele precisa entrar na lista do PATCH — senão a tela
   // mostra, o aviso diz "Salvo", e nada foi salvo.
-  it('os pontos-chave viajam dentro do playbook (vars), não em campo solto', () => {
+  it('a dor típica viaja dentro do playbook (vars), não em campo solto', () => {
     const secao = read('src/components/salesAgents/PlaybookSection.tsx');
-    expect(secao).toContain('next_config.vars = cleaned');
+    expect(secao).toContain('next.vars = cleaned');
   });
 });
 
@@ -52,10 +52,10 @@ describe('roteiro da IA na tela do cliente', () => {
 // mesmo pra criar e editar). O que os testes dele protegiam (PATCH só do que
 // mudou, jsonb mesclado sobre o salvo) mora em patchDoPasso.spec.ts e
 // camposDaIa.spec.ts.
+// A criação de agente saiu da casca (Tarefa 68: o "+ Novo agente" leva ao fluxo de 4 passos, Tarefa 69).
+// O `novaIaRascunho` saiu junto (Tarefa 69); o `?agent=` do assistente segue abrindo a IA.
 describe('Nova IA', () => {
-  it('cria o rascunho pelo serviço, e o ?agent= de link antigo continua abrindo a IA', () => {
-    const tela = fonteDaIaVendedora();
-    expect(tela).toContain('salesAgentsService.create(novaIaRascunho())');
+  it('o ?agent= de link antigo continua abrindo a IA', () => {
     expect(read('src/features/salesAgents/iaMenu.ts')).toContain("params.get('agent')");
   });
 });

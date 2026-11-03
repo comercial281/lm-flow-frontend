@@ -1,4 +1,4 @@
-// Atendimento · Horário (onda 3). Quando ela responde (24 horas / fora do
+// Horário (onda 3; bloco de Números e usuários desde a Tarefa 71, sem página própria). Quando ela responde (24 horas / fora do
 // comercial / personalizado) e o aviso pra quem escreve fora do horário. O aviso
 // só aparece fora do "24 horas" (com 24 horas não existe "fora do horário").
 import { Secao, Secoes } from '@/components/base/Secao';

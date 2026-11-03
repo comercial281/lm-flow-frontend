@@ -11,6 +11,25 @@ export const ROTA_CONVERSAS = /^\/conversations(\/|$)/;
  */
 export const ROTA_RECOLHE_MENU = /^\/(conversations|properties\/new|properties\/[^/]+\/editar|pipelines\/[^/]+|automations\/(flow-builder|message-funnels|follow-ups)\/[^/]+)(\/|$)/;
 
+const ROTA_IA_NOVO = /^\/ia-vendedora\/novo\/?$/;
+const ROTA_IA_VENDEDORA = /^\/ia-vendedora\/?$/;
+
+/**
+ * Quem decide se o menu recolhe: as rotas de `ROTA_RECOLHE_MENU` (pelo pathname) e a
+ * IA Vendedora no Configurar e no Ensinar (Tarefa 70, 01/11/2026), que precisam da largura
+ * do índice mais a página, e o Novo agente em tela cheia. A página de agentes e o Painel
+ * não recolhem.
+ *
+ * ⚠️ A IA Vendedora é UMA rota (`/ia-vendedora`) e a tela vem no `?tela=`: por isso esta
+ * regra lê o `search`, e o MainLayout precisa passar `location.search` junto do pathname.
+ */
+export function recolheMenu(pathname: string, search = ''): boolean {
+  if (ROTA_RECOLHE_MENU.test(pathname) || ROTA_IA_NOVO.test(pathname)) return true;
+  if (!ROTA_IA_VENDEDORA.test(pathname)) return false;
+  const tela = new URLSearchParams(search).get('tela');
+  return tela === 'configurar' || tela === 'ensinar';
+}
+
 interface EntradaMenuRecolhido {
   /** Preferência salva da pessoa (localStorage). */
   salvo: boolean;

@@ -6,14 +6,13 @@ const listAll = vi.hoisted(() => vi.fn());
 const update = vi.hoisted(() => vi.fn());
 vi.mock('@/services/superAdmin/superAgentsService', () => ({
   superAgentsService: { listAll, update, inboxes: vi.fn().mockResolvedValue([]), models: vi.fn().mockResolvedValue([]) },
-  MODE_LABELS: { seller: 'Vendedor(a)' },
 }));
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
 import SuperAgents from './SuperAgents';
 
-const sara = { id: 'a1', tenant_slug: 'alfa', tenant_name: 'Imobiliária Alfa', name: 'Sara', enabled: true, mode: 'seller', updated_at: '' };
-const bia = { id: 'a2', tenant_slug: 'beta', tenant_name: 'Imobiliária Beta', name: 'Bia', enabled: false, mode: 'seller', updated_at: '' };
+const sara = { id: 'a1', tenant_slug: 'alfa', tenant_name: 'Imobiliária Alfa', name: 'Sara', enabled: true, updated_at: '' };
+const bia = { id: 'a2', tenant_slug: 'beta', tenant_name: 'Imobiliária Beta', name: 'Bia', enabled: false, updated_at: '' };
 
 describe('IA Vendedora → Agentes', () => {
   beforeEach(() => { listAll.mockReset(); update.mockReset(); });

@@ -1,0 +1,40 @@
+import BotoesDeEscolha from '@/components/base/BotoesDeEscolha';
+
+// A escolha do agente num número dividido (fase 2): usada no bloco "Passar para a IA"
+// do construtor e na janela "Ativar IA pra este lead". Com um agente só não se usa:
+// quem chama mostra o nome e pronto.
+
+export const ESCOLHA_DO_AGENTE = 'Escolha qual agente atende';
+
+export interface AgenteEscolhivel {
+  id: string;
+  name: string;
+}
+
+export default function EscolhaDoAgente({
+  agentes, valor, aoEscolher, desabilitado = false, opcaoPadrao,
+}: {
+  agentes: AgenteEscolhivel[];
+  valor: string | null;
+  aoEscolher: (id: string) => void;
+  desabilitado?: boolean;
+  /** Escolha opcional: o texto da primeira opção ("sem escolher"). Ela chama `aoEscolher('')`. */
+  opcaoPadrao?: string;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <p className="text-sm font-medium">{ESCOLHA_DO_AGENTE}</p>
+      <BotoesDeEscolha
+        rotulo={ESCOLHA_DO_AGENTE}
+        semNome
+        valor={opcaoPadrao && !valor ? '' : valor}
+        opcoes={[
+          ...(opcaoPadrao ? [{ valor: '', rotulo: opcaoPadrao }] : []),
+          ...agentes.map(a => ({ valor: a.id, rotulo: a.name })),
+        ]}
+        aoEscolher={aoEscolher}
+        desabilitado={desabilitado}
+      />
+    </div>
+  );
+}

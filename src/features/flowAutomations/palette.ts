@@ -69,6 +69,22 @@ export function freshBlockConfig(config: FlowNodeConfig): FlowNodeConfig {
   return copy;
 }
 
+/** Blocos que mandam mensagem e têm a opção "Não mandar se a IA já estiver conversando". */
+export const AI_TALKING_KINDS: FlowNodeKind[] = ['send_whatsapp', 'sequence', 'funnel'];
+
+/**
+ * A config de um bloco NOVO no canvas: a cópia própria do `freshBlockConfig` e,
+ * em fluxo de "Lead criado", a chave `skip_if_ai_talking` ligada nos blocos que
+ * mandam mensagem (o servidor faz o mesmo na criação). Bloco que já existe não passa aqui.
+ */
+export function configDoBlocoNovo(item: Pick<PaletteItem, 'kind' | 'config'>, triggerEvent: string | null | undefined): FlowNodeConfig {
+  const config = freshBlockConfig(item.config);
+  if (triggerEvent === 'lead.created' && AI_TALKING_KINDS.includes(item.kind)) {
+    config.skip_if_ai_talking = true;
+  }
+  return config;
+}
+
 function nativeItem(kind: FlowNodeKind): PaletteItem {
   const def = FLOW_NODE_DEF_BY_KIND[kind];
   return { key: kind, kind, label: def.label, group: def.group, config: freshBlockConfig(def.defaultConfig) };

@@ -46,7 +46,7 @@ import {
 import { businessHoursOnlyOf } from '@/features/flowAutomations/businessHours';
 import { FLOW_KIND_COPY, kindOf } from '@/features/flowAutomations/kind';
 import { avisoLeadsSaindo, leadsDentro, pedidoDesligarFollowup } from '@/features/flowAutomations/desligarFollowup';
-import { freshBlockConfig, paletteItems, podeSoltarBloco, type PaletteItem } from '@/features/flowAutomations/palette';
+import { configDoBlocoNovo, freshBlockConfig, paletteItems, podeSoltarBloco, type PaletteItem } from '@/features/flowAutomations/palette';
 import {
   modoPessoal, numeroFixoNaEquipe, personalAvailabilityState, personalBlockState, personalTriggerGroups,
   presaNaEquipe, tirarDaEquipe, useEhCorretorDeAutomacao,
@@ -361,7 +361,7 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
     const newId = newTempId();
     const newNode: FlowAutomationNode = {
       // Cópia própria do bloco: o mesmo botão escolhido duas vezes não divide a sequência.
-      id: newId, kind: item.kind, label: null, config: freshBlockConfig(item.config),
+      id: newId, kind: item.kind, label: null, config: configDoBlocoNovo(item, triggerEvents(trigger).includes('lead.created') ? 'lead.created' : trigger.event),
       next_node_id: null, next_yes_node_id: null, next_no_node_id: null,
       pos_x: position?.x ?? null, pos_y: position?.y ?? null, steps: [],
     };
@@ -371,7 +371,7 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
     // Escolher (ou soltar) um bloco fecha a lista.
     setBlocksOpen(false);
     requestPanel({ type: 'node', id: newId });
-  }, [nodes, initialNodeId, requestPanel]);
+  }, [nodes, initialNodeId, requestPanel, trigger]);
 
   // Grava no servidor: o cabeçalho (nome, gatilho, configurações) e os blocos.
   // No modo guiado vai só o nome (o servidor recusa o resto) e o fluxo do
@@ -1057,6 +1057,7 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
               donoDoEnvio={donoDoEnvio}
               numeroDoFluxo={numberView}
               numerosDiferentes={numeroDoFluxoVale && !numeroAtivo && numberDivergent}
+              inboxDoFluxo={numeroAtivo && numberSetting.mode === 'number' ? numberSetting.inboxId || null : null}
             />
           )}
           {openPanel?.type === 'trigger' && !semGatilho && (

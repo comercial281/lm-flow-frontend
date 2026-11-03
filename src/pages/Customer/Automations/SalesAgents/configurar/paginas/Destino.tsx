@@ -1,17 +1,19 @@
+// Tarefa 73 (01/11/2026): o Destino ganhou o cartão "Fica com o dono do número" (grava `number_owner`
+// na hora, sem `persona_kind`; a trava da persona saiu junto com a persona), "Onde o atendimento continua"
+// (`handoff_continue_at`, só com Roleta e Corretor fixo) e "Depois que ela passa" (texto fixo).
+// ⚠️ Número de atendimento NUNCA grava pela metade: o servidor exige número E mensagem de chegada
+// ({nome} do lead). Escolher o cartão, o número ou digitar a mensagem espera o outro; só os dois juntos gravam.
 // Repasse · Destino (onda 3, decisão 9). Roleta (escolhe) · Corretor fixo
 // (escolhe) · Sistema do cliente. "A roleta deste número" saiu (a rotina da onda
 // 2 troca as IAs antigas; a que sobrou mostra o aviso e nenhum cartão marcado).
 // Roleta nova (06/10/2026, vinda da main): a roleta não tem mais número. A IA que
 // sobrou com o valor antigo vê a roleta que atendia o número (GET for_inbox) e
 // confirma com um clique; sem roleta no número, o aviso pede a escolha.
-// Persona "O corretor" TRAVA o destino: o lead fica com o dono do número.
 //
 // ⚠️ GRAVAÇÃO NA HORA SEM DESTINO PELA METADE: trocar o cartão NÃO grava. Roleta e
 // corretor gravam quando alguém é escolhido; o Sistema do cliente com "Usar o
 // sistema do cliente", que só acende com endereço salvo e chave pronta. Gravar o
 // cartão sozinho faria uma IA ligada mandar o próximo lead pra ninguém.
-// ⚠️ A escolha pela metade some se a persona virar corretor com a página aberta
-// (Desfazer, outra aba): a trava manda.
 // ⚠️ Nunca "webhook" na tela (decisão de 05/10 + conferir-padrao).
 // Sistema do cliente → CVCRM (06/10/2026, #485 trazido do passo a passo antigo):
 // "Qual sistema" escolhe entre o CVCRM (conexão do cliente em Integrações → CVCRM,
@@ -27,7 +29,6 @@
 // ⚠️ O resumo grava só a subchave briefing_enabled: o hook monta o jsonb sobre o
 // último salvo, então o critério gravado em outra página não é pisado.
 import { useEffect, useRef, useState } from 'react';
-import { Lock } from 'lucide-react';
 import { Button } from '@/components/ui/ds';
 import { Secao, Secoes } from '@/components/base/Secao';
 import { Campo, CLASSE_DO_CAMPO } from '@/components/base/Campo';
@@ -36,30 +37,37 @@ import CartoesDeEscolha from '@/components/base/CartoesDeEscolha';
 import LinhaComChave from '@/components/base/LinhaComChave';
 import { roletaConfigService } from '@/services/roletaConfig/roletaConfigService';
 import agentsService from '@/services/channels/agentsService';
-import { lerEscolhas } from '@/features/salesAgents/tresEscolhas';
 import { briefingEnabled, toggleBriefing } from '@/features/salesAgents/handoffBriefing';
 import { problemaNoEndereco } from '@/features/salesAgents/sistemaDoCliente';
 import { FRASE_SEM_DONO } from '@/features/salesAgents/pendencias';
 import SistemaDoCliente from '../SistemaDoCliente';
 import SistemaDoClienteCvcrm from '../SistemaDoClienteCvcrm';
 import AvisoDeTeste from '../AvisoDeTeste';
-import type { HandoffCvcrm, SistemaDoEnvio } from '@/services/salesAgents/salesAgentsService';
+import type { ContinueAt, HandoffCvcrm, SistemaDoEnvio } from '@/services/salesAgents/salesAgentsService';
+import TextoNaHora from '../TextoNaHora';
 import Aviso from '@/components/base/Aviso';
 import type { PropsDaPagina } from '../paginas';
 
-type Escolha = 'roleta' | 'user' | 'webhook';
+type Escolha = 'roleta' | 'user' | 'number_owner' | 'webhook';
 const DESTINOS = [
   { valor: 'roleta' as const, rotulo: 'Roleta', descricao: 'Distribui entre os corretores da roleta escolhida.' },
   { valor: 'user' as const, rotulo: 'Corretor fixo', descricao: 'Sempre a mesma pessoa, com o botão de aceitar.' },
+  { valor: 'number_owner' as const, rotulo: 'Fica com o dono do número', descricao: 'Cada lead fica com o corretor dono do número em que ele escreveu.' },
   { valor: 'webhook' as const, rotulo: 'Sistema do cliente', descricao: 'Manda pro sistema que a imobiliária já usa, com o resumo. Ninguém da roleta recebe.' },
 ];
+const ONDE_CONTINUA: { valor: ContinueAt; rotulo: string; descricao: string }[] = [
+  { valor: 'corretor_number', rotulo: 'No número do corretor', descricao: 'É onde a resposta sai mais rápido.' },
+  { valor: 'same_number', rotulo: 'Neste número', descricao: 'O corretor atende pelo número da IA.' },
+  { valor: 'service_number', rotulo: 'Num número de atendimento', descricao: 'Com uma mensagem de chegada.' },
+];
+const FALTA_MENSAGEM = 'Escreva a mensagem de chegada: é ela que avisa o lead do número novo.';
+const FALTA_NUMERO = 'Escolha o número de atendimento onde a conversa continua.';
 const SISTEMAS = [
   { valor: 'cvcrm' as const, rotulo: 'CVCRM', descricao: 'O lead é cadastrado direto no CVCRM do cliente, no empreendimento e na fila que você escolher.' },
   { valor: 'generic' as const, rotulo: 'Outro sistema', descricao: 'O lead vai pro endereço que a equipe do sistema da imobiliária passar, com uma chave secreta.' },
 ];
 
-export default function Destino({ agent, gravar, irPara, aoChaveGerada }: PropsDaPagina) {
-  const persona = lerEscolhas(agent).persona;
+export default function Destino({ agent, inboxes, gravar, aoChaveGerada }: PropsDaPagina) {
   const gravado = agent.handoff_target;
   const [escolhendo, setEscolhendo] = useState<Escolha | null>(null);
   const [roletas, setRoletas] = useState<{ id: string; nome: string; ativa: boolean }[]>([]);
@@ -70,7 +78,6 @@ export default function Destino({ agent, gravar, irPara, aoChaveGerada }: PropsD
   const sistemaGravado: SistemaDoEnvio = agent.handoff_webhook_system === 'cvcrm' ? 'cvcrm' : 'generic';
   const [sistemaEscolhido, setSistemaEscolhido] = useState<SistemaDoEnvio | null>(null);
 
-  useEffect(() => { if (persona === 'broker') setEscolhendo(null); }, [persona]);
   useEffect(() => { if (!editandoUrl.current) setUrl(agent.handoff_webhook_url ?? ''); }, [agent.handoff_webhook_url]);
   // Leitura de fundo: cargo sem acesso a roletas ou à equipe só não vê a lista.
   useEffect(() => {
@@ -85,7 +92,7 @@ export default function Destino({ agent, gravar, irPara, aoChaveGerada }: PropsD
   }, []);
   // Valor antigo "a roleta deste número": leitura de fundo da roleta que atendia o
   // número. Sem roleta (ou sem acesso), o aviso só pede a escolha.
-  const naRoletaDoNumero = gravado === 'inbox_roleta' && persona !== 'broker' && !!agent.inbox_id;
+  const naRoletaDoNumero = gravado === 'inbox_roleta' && !!agent.inbox_id;
   useEffect(() => {
     setRoletaQueAtendia(null);
     if (!naRoletaDoNumero || !agent.inbox_id) return;
@@ -96,11 +103,58 @@ export default function Destino({ agent, gravar, irPara, aoChaveGerada }: PropsD
     return () => { vivo = false; };
   }, [naRoletaDoNumero, agent.inbox_id]);
 
-  const doGravado: Escolha | null = gravado === 'roleta' || gravado === 'user' || gravado === 'webhook' ? gravado : null;
-  // Com a persona corretor a trava manda, mesmo no primeiro render depois da troca.
-  const atual = persona === 'broker' ? null : escolhendo ?? doGravado;
+  const doGravado: Escolha | null = gravado === 'roleta' || gravado === 'user' || gravado === 'number_owner' || gravado === 'webhook' ? gravado : null;
+  const atual = escolhendo ?? doGravado;
   const fechar = (ok: boolean) => { if (ok) setEscolhendo(null); };
-  const escolherCartao = (v: Escolha) => setEscolhendo(v === doGravado ? null : v);
+  // O dono do número não pede mais nada: grava no clique. Os outros esperam a pessoa ser escolhida.
+  const escolherCartao = (v: Escolha) => {
+    if (v === 'number_owner') {
+      setEscolhendo(null);
+      void gravar({ handoff_target: 'number_owner', handoff_user_id: null, handoff_roleta_config_id: null });
+      return;
+    }
+    setEscolhendo(v === doGravado ? null : v);
+  };
+  const semDono = (agent.numbers ?? []).length > 0 && (agent.numbers ?? []).every((n) => !n.owner_user_id) && !agent.number_owner_id;
+  const opcoesDeDestino = DESTINOS.map((d) => (d.valor === 'number_owner' && semDono ? { ...d, desabilitada: true, motivo: FRASE_SEM_DONO } : d));
+
+  // Onde o atendimento continua. `handoff_continue_at` nulo lê corretor_number.
+  const continuaGravado: ContinueAt = agent.handoff_continue_at ?? 'corretor_number';
+  const [servicoAberto, setServicoAberto] = useState(false);
+  const [numeroDeAtendimento, setNumeroDeAtendimento] = useState('');
+  // Nulo = a pessoa ainda não digitou (vale a salva); '' = apagou de propósito (não ressuscita a salva).
+  const [mensagemDigitada, setMensagemDigitada] = useState<string | null>(null);
+  const [faltou, setFaltou] = useState<string | null>(null);
+  const continua: ContinueAt = servicoAberto ? 'service_number' : continuaGravado;
+  const numeroSalvo = agent.handoff_service_inbox_id ? String(agent.handoff_service_inbox_id) : '';
+  const numeroAtual = numeroDeAtendimento || numeroSalvo;
+  const mensagemSalva = agent.handoff_arrival_message ?? '';
+  const suasInboxes = new Set((agent.numbers ?? []).map((n) => String(n.inbox_id)));
+  const outrosNumeros = (inboxes ?? []).filter((i) => !suasInboxes.has(String(i.id)));
+  const escolherOndeContinua = (v: ContinueAt) => {
+    setFaltou(null);
+    if (v === 'service_number') { setServicoAberto(true); return; }
+    setServicoAberto(false);
+    void gravar({ handoff_continue_at: v });
+  };
+  // Só grava com o número E a mensagem (o servidor recusa sem eles); senão diz o que falta.
+  const gravarAtendimento = (numero: string, mensagem: string) => {
+    if (!numero) { setFaltou(FALTA_NUMERO); return; }
+    if (!mensagem.trim()) { setFaltou(FALTA_MENSAGEM); return; }
+    setFaltou(null);
+    void gravar({ handoff_continue_at: 'service_number', handoff_service_inbox_id: numero, handoff_arrival_message: mensagem })
+      .then((ok) => { if (ok) { setServicoAberto(false); setNumeroDeAtendimento(''); setMensagemDigitada(null); } });
+  };
+  const escolherNumeroDeAtendimento = (id: string) => {
+    setNumeroDeAtendimento(id);
+    if (!id) return;
+    gravarAtendimento(id, mensagemDigitada ?? mensagemSalva);
+  };
+  const gravarMensagem = (texto: string) => {
+    setMensagemDigitada(texto);
+    if (!texto.trim() && !numeroAtual) { setFaltou(FALTA_MENSAGEM); return; }
+    gravarAtendimento(numeroAtual, texto);
+  };
   const escolherRoleta = (id: string) => { if (id) void gravar({ handoff_target: 'roleta', handoff_roleta_config_id: id, handoff_user_id: null }).then(fechar); };
   const escolherCorretor = (id: string) => { if (id) void gravar({ handoff_target: 'user', handoff_user_id: id, handoff_roleta_config_id: null }).then(fechar); };
   // ⚠️ O endereço grava ao sair do campo E quando a página some com edição pendente
@@ -139,36 +193,8 @@ export default function Destino({ agent, gravar, irPara, aoChaveGerada }: PropsD
 
   return (
     <Secoes>
-      <Secao titulo="Destino" descricao="Quem recebe o lead quando ela termina. Lead que já tem responsável continua com ele.">
-        {persona === 'broker' ? (
-          <>
-            <div className="flex flex-wrap items-center gap-3 rounded-2xl border-[1.5px] border-border bg-muted/40 p-3.5">
-              <Lock className="h-4 w-4 text-muted-foreground" aria-hidden />
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold">Fica com o dono do número</p>
-                <p className="text-[13px] text-muted-foreground">
-                  A persona é "O corretor": ela fala como ele, então o lead é dele{agent.number_owner_name ? ` (${agent.number_owner_name})` : ''}.
-                </p>
-              </div>
-              <Button type="button" variant="outline" onClick={() => irPara('identidade')}>Mudar persona</Button>
-            </div>
-            {gravado === 'number_owner' && agent.number_owner_id && <AvisoDeTeste agentId={agent.id} />}
-            {gravado !== 'number_owner' && (
-              <Aviso tom="atencao">
-                <p>Hoje o lead vai para outro destino, e não para o dono do número.</p>
-                {agent.inbox_id && !agent.number_owner_id ? (
-                  <p className="mt-2 text-destructive">{FRASE_SEM_DONO}</p>
-                ) : (
-                  <Button type="button" size="sm" variant="outline" className="mt-2"
-                    onClick={() => void gravar({ persona_kind: 'broker', handoff_target: 'number_owner', handoff_user_id: null, handoff_roleta_config_id: null })}>
-                    Passar a entregar pro dono do número
-                  </Button>
-                )}
-              </Aviso>
-            )}
-          </>
-        ) : (
-          <>
+      <Secao titulo="Quem recebe" descricao="Quem recebe o lead quando ela termina. Lead que já tem responsável continua com ele.">
+        <>
             {gravado === 'inbox_roleta' && !escolhendo && (
               <Aviso tom="atencao">
                 {roletaQueAtendia ? (
@@ -187,7 +213,8 @@ export default function Destino({ agent, gravar, irPara, aoChaveGerada }: PropsD
                 )}
               </Aviso>
             )}
-            <CartoesDeEscolha<Escolha> rotulo="Destino" colunas={3} valor={atual} opcoes={DESTINOS} aoEscolher={escolherCartao} />
+            <CartoesDeEscolha<Escolha> rotulo="Destino" colunas={2} valor={atual} opcoes={opcoesDeDestino} aoEscolher={escolherCartao} />
+            {atual === 'number_owner' && gravado === 'number_owner' && !semDono && <AvisoDeTeste agentId={agent.id} />}
             {atual === 'roleta' && (
               <Campo id="destino-roleta" rotulo="Qual roleta">
                 <Seletor id="destino-roleta" className={`${CLASSE_DO_CAMPO} w-full`} value={gravado === 'roleta' ? agent.handoff_roleta_config_id ?? '' : ''}
@@ -241,8 +268,37 @@ export default function Destino({ agent, gravar, irPara, aoChaveGerada }: PropsD
                 )}
               </>
             )}
-          </>
-        )}
+        </>
+      </Secao>
+
+      {(atual === 'roleta' || atual === 'user') && (
+        <Secao titulo="Onde o atendimento continua"
+          descricao="Depois que o corretor aceita o lead, a conversa segue por aqui. Vale só pra lead que a IA passou.">
+          <CartoesDeEscolha<ContinueAt> rotulo="Onde o atendimento continua" colunas={3} valor={continua} opcoes={ONDE_CONTINUA}
+            aoEscolher={escolherOndeContinua} />
+          {continua === 'service_number' && (
+            <>
+              <Campo id="destino-numero-de-atendimento" rotulo="Número de atendimento">
+                <Seletor id="destino-numero-de-atendimento" className={`${CLASSE_DO_CAMPO} w-full`} value={numeroAtual}
+                  onChange={(e) => escolherNumeroDeAtendimento(e.target.value)}>
+                  <option value="">Escolha o número</option>
+                  {outrosNumeros.map((i) => <option key={i.id} value={String(i.id)}>{i.name}</option>)}
+                </Seletor>
+              </Campo>
+              <TextoNaHora id="destino-mensagem-de-chegada" rotulo="Mensagem de chegada" tipo="varias" salvo={mensagemSalva} maxLength={1000}
+                ajuda="Sai por este número, como está escrita. {nome} vira o primeiro nome do lead. É ela que avisa o lead do número novo."
+                aoGravar={gravarMensagem} />
+              {faltou && <p className="text-sm text-destructive">{faltou}</p>}
+            </>
+          )}
+        </Secao>
+      )}
+
+      <Secao titulo="Depois que ela passa" descricao="Vale pra todo destino. Não tem o que ligar nem desligar.">
+        <div className="rounded-xl bg-muted/50 p-3.5 text-sm leading-relaxed">
+          Se o lead escreve e ninguém responde em 15 minutos, a usuária recebe "lead esperando"; com 1 hora, o gerente também.
+          Quando a conversa está num número da IA e a voz não é Corretor, ela segura até alguém chegar.
+        </div>
       </Secao>
 
       <Secao titulo="Resumo junto" descricao="Quem recebe vê o que ela descobriu no aviso e no card do lead.">

@@ -59,3 +59,22 @@ describe('formularioDoCadastro', () => {
     expect(errosDoCadastro({ ...base, ...formularioNovo('auction') } as never)).toEqual([]);
   });
 });
+
+describe('Condições e argumentos no formulário', () => {
+  it('imóvel antigo abre com tudo vazio; o que está salvo volta', () => {
+    const vazio = formularioDoImovel({ ...base, id: '1', code: 'AB01' } as unknown as Property);
+    expect(vazio).toMatchObject({ accepts_swap: null, down_payment_from: null, serves_intents: [], never_promise: [], objections: [], urgency_fact: '', urgency_until: '' });
+    const cheio = formularioDoImovel({ ...base, id: '1', code: 'AB01', accepts_swap: 'a_conversar', down_payment_from: 500, parking_spaces: 0,
+      serves_intents: ['moradia'], urgency_fact: 'Tabela', urgency_until: '2027-01-31' } as unknown as Property);
+    expect(cheio).toMatchObject({ accepts_swap: 'a_conversar', down_payment_from: 500, serves_intents: ['moradia'], urgency_until: '2027-01-31' });
+  });
+  it('fato de urgência sem data aponta Condições com a frase do servidor', () => {
+    const erros = errosDoCadastro({ ...base, ...formularioNovo('resale'), sale_price: 1, urgency_fact: 'Tabela' });
+    expect(erros).toEqual([{ secao: 'condicoes', mensagem: 'Fato de urgência precisa da data em que deixa de valer.' }]);
+    expect(errosDoCadastro({ ...base, ...formularioNovo('resale'), sale_price: 1, urgency_fact: 'Tabela', urgency_until: '2027-01-31' })).toEqual([]);
+  });
+  it('revenda sem finalidade marcada aponta Básico', () => {
+    const erros = errosDoCadastro({ ...base, ...formularioNovo('resale'), transaction_type: '', sale_price: 1 });
+    expect(erros).toEqual([{ secao: 'basico', mensagem: 'Marque À venda, Para alugar ou os dois.' }]);
+  });
+});

@@ -1,4 +1,6 @@
 import api from '@/services/core/api';
+import type { CondicaoDaOferta, EscopoDaOferta, TipoDoImovel } from '@/services/campanhas/campanhasService';
+import type { Intencao } from '@/services/salesAgents/salesAgentsService';
 
 // Config de roteamento de um formulário Lead Ads (Meta) -> destino no CRM.
 export interface LeadAdsFormConfig {
@@ -20,6 +22,12 @@ export interface LeadAdsFormConfig {
   // Mensagem inicial disparada pelo número de plantão quando o lead chega FORA
   // do horário da roleta. Vazio = não manda nada (o comportamento de sempre).
   after_hours_message: string | null;
+  // O que a campanha vende (fase 4). Opcionais: cliente cujo servidor ainda não subiu não manda.
+  property_ids?: string[];
+  sells_scope?: EscopoDaOferta | null;
+  sells_listing_kind?: TipoDoImovel | null;
+  offer_condition?: CondicaoDaOferta | null;
+  audience_intents?: Intencao[];
   is_active: boolean;
   created_at: string;
 }
@@ -51,6 +59,12 @@ export interface LeadAdsFormConfigFormData {
   property_id?: string | null;
   match_keyword?: string | null;
   after_hours_message?: string | null;
+  // O que a campanha vende (fase 4); `property_id` segue sendo o primeiro imóvel.
+  property_ids?: string[];
+  sells_scope?: EscopoDaOferta | null;
+  sells_listing_kind?: TipoDoImovel | null;
+  offer_condition?: Partial<CondicaoDaOferta> | null;
+  audience_intents?: Intencao[];
 }
 
 // Erro de UMA página na listagem de formulários. Antes havia só um `error` no

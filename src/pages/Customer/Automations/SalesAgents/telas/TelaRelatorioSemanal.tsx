@@ -10,6 +10,7 @@ import Aviso from '@/components/base/Aviso';
 import Carregando from '@/components/base/Carregando';
 import EmptyState from '@/components/base/EmptyState';
 import { WEEKDAY_OPTIONS } from './TelaSugestoes';
+import TabelaPorCampanha from './TabelaPorCampanha';
 
 // ---------------- Relatórios (do CLIENTE, não da IA) ----------------
 
@@ -359,6 +360,13 @@ export default function TelaRelatorioSemanal() {
               ]}
             />
           </div>
+
+          {(atual.stats?.campanhas?.length ?? 0) > 0 && (
+            <div className="space-y-2">
+              <Label>Por campanha</Label>
+              <TabelaPorCampanha campanhas={atual.stats.campanhas ?? []} />
+            </div>
+          )}
 
           <div>
             <Label>O texto que vai no WhatsApp</Label>

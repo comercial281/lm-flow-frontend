@@ -11,6 +11,7 @@ import {
 import { Secao, Secoes } from '@/components/base/Secao';
 import { CampoTexto, CampoTextoLongo } from '@/components/base/Campo';
 import Abas from '@/components/base/Abas';
+import Aviso from '@/components/base/Aviso';
 import EmptyState from '@/components/base/EmptyState';
 import BotaoMaisAcoes from '@/components/base/BotaoMaisAcoes';
 import Carregando from '@/components/base/Carregando';
@@ -23,13 +24,15 @@ import type { PropsDaPaginaDoEnsinar } from './tipos';
 type Aba = 'bom' | 'ruim';
 
 type ItemDeExemplo =
-  | { chave: string; fonte: 'licao'; licao: SalesAgentLesson; lead: string | null; resposta: string; valendo: boolean }
+  | { chave: string; fonte: 'licao'; licao: SalesAgentLesson; lead: string | null; resposta: string; valendo: boolean; errado?: string | null; porque?: string | null }
   | { chave: string; fonte: 'conversa'; indice: number; lead: string | null; resposta: string; valendo: boolean };
 
 function itensDaAba(aba: Aba, licoes: SalesAgentLesson[], conversas: ConversaReal[], limiteDeConversas: number): ItemDeExemplo[] {
   const kind = aba === 'bom' ? 'good_example' : 'bad_example';
   const deLicoes: ItemDeExemplo[] = licoes.filter((l) => l.kind === kind).map((l) => ({
     chave: `l-${l.id}`, fonte: 'licao', licao: l, lead: l.context, resposta: l.content, valendo: l.enabled && l.in_use,
+    // Errado e porquê só moram no exemplo bom (no ruim o servidor recusa).
+    errado: kind === 'good_example' ? l.bad_content : null, porque: kind === 'good_example' ? l.why : null,
   }));
   if (aba === 'ruim') return deLicoes;
   // `posicao` entre as que o servidor lê (é o que o limite conta); `indice` é o cru.
@@ -49,7 +52,8 @@ const DICA: Record<Aba, string> = {
 };
 
 /** Estado do cartão de composição: `chave` null = exemplo novo. */
-interface Composicao { chave: string | null; lead: string; resposta: string }
+interface Composicao { chave: string | null; lead: string; resposta: string; errado: string; porque: string }
+const LIMITE_DO_PORQUE = 200;
 
 export default function Exemplos({ agent, gravar, licoes: L, confirmar }: PropsDaPaginaDoEnsinar) {
   const [aba, setAba] = useState<Aba>('bom');
@@ -62,6 +66,8 @@ export default function Exemplos({ agent, gravar, licoes: L, confirmar }: PropsD
   const bons = useMemo(() => itensDaAba('bom', L.licoes, reais, L.limites.conversations), [L.licoes, reais, L.limites.conversations]);
   const ruins = useMemo(() => itensDaAba('ruim', L.licoes, reais, L.limites.conversations), [L.licoes, reais, L.limites.conversations]);
   const itens = aba === 'bom' ? bons : ruins;
+  const c = L.contadores.exemplos;
+  const total = c.valendo + c.pausadas + c.fora_por_tamanho;
 
   const trocarAba = (a: Aba) => { setAba(a); setCompor(null); };
 
@@ -69,6 +75,8 @@ export default function Exemplos({ agent, gravar, licoes: L, confirmar }: PropsD
     if (!compor || !compor.resposta.trim() || gravando) return;
     const resposta = compor.resposta.trim();
     const lead = compor.lead.trim();
+    const errado = compor.errado.trim();
+    const porque = compor.porque.trim();
     const alvo = compor.chave === null ? null : itens.find((i) => i.chave === compor.chave) ?? null;
     // Editando um exemplo que saiu da lista (excluído, movido, lista relida): fecha.
     // Cair no "criar" aqui faria um exemplo novo que ninguém pediu.
@@ -76,8 +84,17 @@ export default function Exemplos({ agent, gravar, licoes: L, confirmar }: PropsD
     setGravando(true);
     try {
       let ok: boolean;
-      if (!alvo) ok = await L.criar(aba === 'bom' ? 'good_example' : 'bad_example', resposta, lead || undefined);
-      else if (alvo.fonte === 'licao') ok = await L.atualizar(alvo.licao.id, { content: resposta, context: lead || null });
+      if (!alvo) {
+        const extras = aba === 'bom' ? { ...(errado && { bad_content: errado }), ...(porque && { why: porque }) } : {};
+        ok = Object.keys(extras).length
+          ? await L.criar('good_example', resposta, lead || undefined, extras)
+          : await L.criar(aba === 'bom' ? 'good_example' : 'bad_example', resposta, lead || undefined);
+      } else if (alvo.fonte === 'licao') {
+        ok = await L.atualizar(alvo.licao.id, {
+          content: resposta, context: lead || null,
+          ...(alvo.licao.kind === 'good_example' && { bad_content: errado || null, why: porque || null }),
+        });
+      }
       else ok = await gravar({ example_conversations: conversas.map((c, i) => (i === alvo.indice ? { lead, resposta } : c)) });
       if (ok) setCompor(null);
     } finally { setGravando(false); }
@@ -93,7 +110,10 @@ export default function Exemplos({ agent, gravar, licoes: L, confirmar }: PropsD
     else await gravar({ example_conversations: conversas.filter((_, i) => i !== item.indice) });
   };
 
-  const mover = (l: SalesAgentLesson) => void L.atualizar(l.id, { kind: l.kind === 'good_example' ? 'bad_example' : 'good_example' });
+  // ⚠️ O servidor recusa errado e porquê no exemplo ruim: ao mover, os dois saem junto.
+  const mover = (l: SalesAgentLesson) => void L.atualizar(l.id, l.kind === 'good_example'
+    ? { kind: 'bad_example', ...((l.bad_content || l.why) && { bad_content: null, why: null }) }
+    : { kind: 'good_example' });
 
   const composicao = (c: Composicao) => (
     <div className="space-y-3 rounded-xl border border-primary/40 p-4 ring-2 ring-primary/15">
@@ -101,6 +121,14 @@ export default function Exemplos({ agent, gravar, licoes: L, confirmar }: PropsD
       <CampoTextoLongo id="en-ex-resp" maxLength={LIMITE_DO_TEXTO} rotulo={aba === 'bom' ? 'Como ela deve responder' : 'A resposta que ela não deve dar'}
         valor={c.resposta} aoMudar={(v) => setCompor({ ...c, resposta: v })} rows={3}
         placeholder={aba === 'bom' ? 'Ex.: Entendo! Muita gente usa o FGTS na entrada e a parcela cai bastante.' : 'Ex.: O valor é R$ 389.000.'} />
+      {aba === 'bom' && (
+        <>
+          <CampoTexto id="en-ex-errado" rotulo="O jeito errado" maxLength={LIMITE_DO_TEXTO} valor={c.errado} aoMudar={(v) => setCompor({ ...c, errado: v })}
+            ajuda="Opcional. Aparece riscado ao lado do certo." placeholder="Ex.: O valor é R$ 389.000." />
+          <CampoTexto id="en-ex-porque" rotulo="Por quê" maxLength={LIMITE_DO_PORQUE} valor={c.porque} aoMudar={(v) => setCompor({ ...c, porque: v })}
+            ajuda={`Opcional, até ${LIMITE_DO_PORQUE} letras.`} placeholder="Ex.: Acolhe antes de falar de condição." />
+        </>
+      )}
       <div className="flex gap-2">
         <Button type="button" size="sm" onClick={() => void salvar()} disabled={!c.resposta.trim() || gravando}>Salvar exemplo</Button>
         <Button type="button" size="sm" variant="outline" onClick={() => setCompor(null)}>Cancelar</Button>
@@ -118,14 +146,21 @@ export default function Exemplos({ agent, gravar, licoes: L, confirmar }: PropsD
                 { chave: 'bom', rotulo: 'Responda assim', contagem: bons.length },
                 { chave: 'ruim', rotulo: 'Não responda assim', contagem: ruins.length },
               ]} />
-            <Button type="button" onClick={() => setCompor({ chave: null, lead: '', resposta: '' })}>
+            <Button type="button" onClick={() => setCompor({ chave: null, lead: '', resposta: '', errado: '', porque: '' })}>
               <Plus className="mr-1 h-4 w-4" aria-hidden /> Novo exemplo
             </Button>
           </div>
           <p className="text-sm text-muted-foreground">{DICA[aba]}</p>
+          <p className="text-sm font-semibold">{`${c.valendo} valendo de ${total} · cabem até ${c.cabem}`}{c.pausadas > 0 && <span className="ml-3 font-normal text-muted-foreground">{c.pausadas} pausados</span>}</p>
           {compor?.chave === null && composicao(compor)}
         </Secao>
       </Secoes>
+
+      {c.fora_por_tamanho > 0 && (
+        <Aviso tom="atencao" titulo={`${c.fora_por_tamanho} fora por tamanho.`}>
+          Ela só lê o que cabe no texto dos exemplos. Pause os que não ajudam mais ou encurte os longos.
+        </Aviso>
+      )}
 
       {L.estado === 'erro' ? (
         <EmptyState tipo="erro" aoTentarDeNovo={() => void L.carregar()} />
@@ -150,6 +185,15 @@ export default function Exemplos({ agent, gravar, licoes: L, confirmar }: PropsD
                 <p className={cn('rounded-2xl rounded-tr-sm px-3.5 py-2.5 text-[15px] leading-snug',
                   aba === 'bom' ? 'bg-emerald-500/15' : 'bg-red-500/10')}>{item.resposta}</p>
               </div>
+              {item.fonte === 'licao' && item.errado && (
+                <div className="max-w-[85%] self-end">
+                  <p className="mb-1 text-right text-xs font-semibold text-muted-foreground">Ela (não assim)</p>
+                  <p className="rounded-2xl rounded-tr-sm bg-red-500/10 px-3.5 py-2.5 text-[15px] leading-snug text-muted-foreground line-through">{item.errado}</p>
+                </div>
+              )}
+              {item.fonte === 'licao' && item.porque && (
+                <p className="text-sm text-muted-foreground"><b className="font-semibold text-foreground">Por quê</b> {item.porque}</p>
+              )}
               <div className="mt-auto flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                 {item.fonte === 'licao' ? (
                   <>
@@ -166,7 +210,7 @@ export default function Exemplos({ agent, gravar, licoes: L, confirmar }: PropsD
                     <BotaoMaisAcoes aria-label={`Ações do exemplo ${n + 1}`} className="ml-auto text-muted-foreground" />
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem onSelect={() => setCompor({ chave: item.chave, lead: item.lead ?? '', resposta: item.resposta })}>
+                    <DropdownMenuItem onSelect={() => setCompor({ chave: item.chave, lead: item.lead ?? '', resposta: item.resposta, errado: (item.fonte === 'licao' && item.errado) || '', porque: (item.fonte === 'licao' && item.porque) || '' })}>
                       <Pencil className="h-4 w-4" aria-hidden /> Editar
                     </DropdownMenuItem>
                     {item.fonte === 'licao' && !item.licao.enabled && (

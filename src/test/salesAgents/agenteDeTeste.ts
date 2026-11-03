@@ -8,7 +8,7 @@ import type { SalesAgent } from '@/services/salesAgents/salesAgentsService';
  */
 export function agenteDeTeste(extra: Partial<SalesAgent> = {}): SalesAgent {
   return {
-    id: 'ia-1', name: 'IA de teste', enabled: true, mode: 'seller', trigger_keyword: null,
+    id: 'ia-1', name: 'IA de teste', enabled: true, trigger_keyword: null,
     persona_role: 'corretora de teste', persona_goal: null, instructions: 'Seja breve.', greeting: null,
     qualification_questions: ['Renda', 'Quartos'],
     transfer_config: { mode: 'checklist', required_questions: ['Renda'], voice: 'first_person' },
@@ -40,6 +40,15 @@ export function agenteDeTeste(extra: Partial<SalesAgent> = {}): SalesAgent {
     message_split_enabled: true, message_split_max_parts: 3, pipeline_move_enabled: false, pipeline_stage_map: {},
     send_property_book_enabled: true, book_send_rule: null, reaction_enabled: false, reaction_emojis: ['👍'],
     reaction_max_per_conversation: 3,
+    job: 'filtra_passa', next_steps: ['visita'], handoff_exceptions: null,
+    house_voice: { kind: 'consultora', name: 'Ana', gender: 'ela' }, absorbed_into_id: null,
+    numbers: [{
+      id: 'num-1', inbox_id: 'inbox-1', phone: '5511900000001', inbox_name: 'Número de teste', enabled: true, connected: true,
+      voice: null, triggers: null, position: 0, owner_user_id: 'user-7', owner_name: 'Dona do número',
+    }],
+    serves: ['venda'], catalog_marks: { venda: 0, locacao: 0, leilao: 0, empreendimento: 0 }, factory_knowledge_off: [],
+    house_rules: [], house_objections: [], house_rules_notices: [],
+    handoff_continue_at: null, handoff_service_inbox_id: null, handoff_arrival_message: null,
     persona_kind: 'broker', reach: 'visit', lead_facing_name: null, tone: null, emoji_use: null,
     number_owner_id: 'user-7', number_owner_name: 'Dona do número',
     documents_count: 0, created_at: '2026-09-01T10:00:00Z', updated_at: '2026-10-05T10:00:00Z',

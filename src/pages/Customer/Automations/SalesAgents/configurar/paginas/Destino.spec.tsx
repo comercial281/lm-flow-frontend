@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { SalesAgent } from '@/services/salesAgents/salesAgentsService';
 import { agenteDeTeste } from '@/test/salesAgents/agenteDeTeste';
@@ -85,22 +85,129 @@ describe('Destino', () => {
     expect(screen.queryByRole('button', { name: 'Usar o CVCRM' })).toBeNull();
   });
 
-  // Review Focus 5: a persona virou corretor com a página aberta.
-  it('persona virou O corretor com a página aberta: trava, e a escolha pela metade some sem gravar', async () => {
-    const { gravar, rerender, irPara } = await abrir(consultora());
-    await userEvent.click(screen.getByRole('radio', { name: 'Corretor fixo' }));
-    rerender(<Destino agent={agenteDeTeste({ handoff_target: 'number_owner', handoff_user_id: null })} inboxes={[]} gravar={gravar} irPara={irPara} diagnostico={null} />);
-    expect(screen.getByText('Fica com o dono do número')).toBeInTheDocument();
-    expect(screen.queryByRole('radio', { name: 'Corretor fixo' })).toBeNull();
-    expect(gravar).not.toHaveBeenCalled();
-    await userEvent.click(screen.getByRole('button', { name: 'Mudar persona' }));
-    expect(irPara).toHaveBeenCalledWith('identidade');
+  it('os quatro cartões; "Fica com o dono do número" grava number_owner sem persona_kind', async () => {
+    const { gravar } = await abrir(consultora());
+    ['Roleta', 'Corretor fixo', 'Fica com o dono do número', 'Sistema do cliente'].forEach((n) => expect(screen.getByRole('radio', { name: n })).toBeInTheDocument());
+    await userEvent.click(screen.getByRole('radio', { name: 'Fica com o dono do número' }));
+    expect(gravar).toHaveBeenCalledTimes(1);
+    expect(gravar.mock.calls[0]).toEqual([{ handoff_target: 'number_owner', handoff_user_id: null, handoff_roleta_config_id: null }]);
+    expect(Object.keys(gravar.mock.calls[0][0])).not.toContain('persona_kind');
   });
 
-  it('IA antiga de corretor com corretor fixo: aviso e conversão explícita', async () => {
-    const { gravar } = await abrir(agenteDeTeste()); // broker + handoff user
-    await userEvent.click(screen.getByRole('button', { name: 'Passar a entregar pro dono do número' }));
-    expect(gravar).toHaveBeenCalledWith({ persona_kind: 'broker', handoff_target: 'number_owner', handoff_user_id: null, handoff_roleta_config_id: null });
+  it('o dono do número já gravado vem marcado, com o aviso de teste, e sem escolha de roleta ou corretor', async () => {
+    await abrir(consultora({ handoff_target: 'number_owner', handoff_roleta_config_id: null }));
+    expect(screen.getByRole('radio', { name: 'Fica com o dono do número' })).toHaveAttribute('aria-checked', 'true');
+    expect(screen.getByRole('button', { name: 'Mandar um aviso de teste' })).toBeInTheDocument();
+    expect(screen.queryByLabelText('Qual roleta')).toBeNull();
+  });
+
+  it('sem dono em nenhum número, o cartão do dono fica desabilitado com o motivo', async () => {
+    const { gravar } = await abrir(consultora({
+      numbers: [{ ...agenteDeTeste().numbers[0], owner_user_id: null, owner_name: null }], number_owner_id: null,
+    }));
+    await userEvent.click(screen.getByRole('radio', { name: 'Fica com o dono do número' }));
+    expect(gravar).not.toHaveBeenCalled();
+    expect(screen.getByText(/não tem corretor dono/)).toBeInTheDocument();
+  });
+
+  describe('Onde o atendimento continua', () => {
+    const inboxes = [{ id: 'inbox-1', name: 'Número da IA', oficial: false }, { id: 'inbox-9', name: 'Atendimento Central', oficial: false }, { id: 'inbox-8', name: 'Atendimento Norte', oficial: false }];
+    const abrirCom = async (agent: SalesAgent) => {
+      const gravar = gravarDeTeste('destino');
+      const r = render(<Destino agent={agent} inboxes={inboxes} gravar={gravar} irPara={vi.fn()} diagnostico={null} />);
+      await waitFor(() => expect(roletaConfigService.getAll).toHaveBeenCalled());
+      await act(async () => { await Promise.resolve(); });
+      return { gravar, ...r };
+    };
+    const MENSAGEM = 'Escreva a mensagem de chegada: é ela que avisa o lead do número novo.';
+
+    it('só aparece com Roleta e Corretor fixo', async () => {
+      const { unmount } = await abrirCom(consultora());
+      expect(screen.getByRole('radiogroup', { name: 'Onde o atendimento continua' })).toBeInTheDocument();
+      unmount();
+      const outro = await abrirCom(consultora({ handoff_target: 'user', handoff_user_id: 'u1', handoff_roleta_config_id: null }));
+      expect(screen.getByRole('radiogroup', { name: 'Onde o atendimento continua' })).toBeInTheDocument();
+      outro.unmount();
+      for (const alvo of ['number_owner', 'webhook'] as const) {
+        const r = await abrirCom(consultora({ handoff_target: alvo, handoff_roleta_config_id: null }));
+        expect(screen.queryByRole('radiogroup', { name: 'Onde o atendimento continua' })).toBeNull();
+        r.unmount();
+      }
+    });
+
+    it('handoff_continue_at nulo aparece em "No número do corretor"', async () => {
+      await abrirCom(consultora({ handoff_continue_at: null }));
+      expect(screen.getByRole('radio', { name: 'No número do corretor' })).toHaveAttribute('aria-checked', 'true');
+      expect(screen.getByRole('radio', { name: 'Neste número' })).toHaveAttribute('aria-checked', 'false');
+    });
+
+    it('"Neste número" grava na hora', async () => {
+      const { gravar } = await abrirCom(consultora());
+      await userEvent.click(screen.getByRole('radio', { name: 'Neste número' }));
+      expect(gravar).toHaveBeenCalledWith({ handoff_continue_at: 'same_number' });
+    });
+
+    it('número de atendimento: sem a mensagem de chegada não grava e diz o que falta', async () => {
+      const { gravar } = await abrirCom(consultora());
+      await userEvent.click(screen.getByRole('radio', { name: 'Num número de atendimento' }));
+      expect(gravar).not.toHaveBeenCalled();
+      const opcoes = within(screen.getByLabelText('Número de atendimento')).getAllByRole('option').map((o) => o.textContent);
+      expect(opcoes).toEqual(['Escolha o número', 'Atendimento Central', 'Atendimento Norte']); // o número da própria IA não é "outro" número
+      await userEvent.selectOptions(screen.getByLabelText('Número de atendimento'), 'inbox-9');
+      expect(gravar).not.toHaveBeenCalled();
+      expect(screen.getByText(MENSAGEM)).toBeInTheDocument();
+    });
+
+    it('número + mensagem de chegada gravam juntos, com {nome}', async () => {
+      const { gravar } = await abrirCom(consultora());
+      await userEvent.click(screen.getByRole('radio', { name: 'Num número de atendimento' }));
+      await userEvent.selectOptions(screen.getByLabelText('Número de atendimento'), 'inbox-9');
+      await userEvent.type(screen.getByLabelText('Mensagem de chegada'), 'Oi, {{nome}! Agora é por aqui.');
+      expect(gravar).not.toHaveBeenCalled();
+      await userEvent.tab();
+      expect(gravar).toHaveBeenCalledWith({ handoff_continue_at: 'service_number', handoff_service_inbox_id: 'inbox-9', handoff_arrival_message: 'Oi, {nome}! Agora é por aqui.' });
+    });
+
+    it('mensagem escrita antes do número espera o número, sem gravar pela metade', async () => {
+      const { gravar } = await abrirCom(consultora());
+      await userEvent.click(screen.getByRole('radio', { name: 'Num número de atendimento' }));
+      await userEvent.type(screen.getByLabelText('Mensagem de chegada'), 'Oi!');
+      await userEvent.tab();
+      expect(gravar).not.toHaveBeenCalled();
+      await userEvent.selectOptions(screen.getByLabelText('Número de atendimento'), 'inbox-9');
+      expect(gravar).toHaveBeenCalledWith({ handoff_continue_at: 'service_number', handoff_service_inbox_id: 'inbox-9', handoff_arrival_message: 'Oi!' });
+    });
+
+    it('apagar a mensagem de um atendimento já gravado não grava e mostra o motivo', async () => {
+      const { gravar } = await abrirCom(consultora({ handoff_continue_at: 'service_number', handoff_service_inbox_id: 'inbox-9', handoff_arrival_message: 'Oi!' }));
+      expect(screen.getByRole('radio', { name: 'Num número de atendimento' })).toHaveAttribute('aria-checked', 'true');
+      await userEvent.clear(screen.getByLabelText('Mensagem de chegada'));
+      await userEvent.tab();
+      expect(gravar).not.toHaveBeenCalled();
+      expect(screen.getByText(MENSAGEM)).toBeInTheDocument();
+    });
+
+    it('apagar a mensagem e trocar o número não ressuscita a mensagem salva', async () => {
+      const { gravar } = await abrirCom(consultora({ handoff_continue_at: 'service_number', handoff_service_inbox_id: 'inbox-9', handoff_arrival_message: 'Oi!' }));
+      await userEvent.clear(screen.getByLabelText('Mensagem de chegada'));
+      await userEvent.tab();
+      await userEvent.selectOptions(screen.getByLabelText('Número de atendimento'), 'inbox-8');
+      expect(gravar).not.toHaveBeenCalled();
+      expect(screen.getByText(MENSAGEM)).toBeInTheDocument();
+    });
+
+    it('voltar pro número do corretor grava só o handoff_continue_at', async () => {
+      const { gravar } = await abrirCom(consultora({ handoff_continue_at: 'service_number', handoff_service_inbox_id: 'inbox-9', handoff_arrival_message: 'Oi!' }));
+      await userEvent.click(screen.getByRole('radio', { name: 'No número do corretor' }));
+      expect(gravar).toHaveBeenCalledWith({ handoff_continue_at: 'corretor_number' });
+    });
+  });
+
+  it('"Depois que ela passa" diz o prazo de 15 minutos e o de 1 hora', async () => {
+    await abrir(consultora());
+    expect(screen.getByText('Depois que ela passa')).toBeInTheDocument();
+    expect(screen.getByText(/ninguém responde em 15 minutos/)).toBeInTheDocument();
+    expect(screen.getByText(/com 1 hora, o gerente também/)).toBeInTheDocument();
   });
 
   it('"a roleta deste número" (antiga): nenhum cartão marcado e o aviso', async () => {
@@ -205,9 +312,5 @@ describe('Destino', () => {
       expect(await screen.findByText(/ficaria sem ninguém/)).toBeInTheDocument();
     });
 
-    it('persona O corretor com dono do número: o botão aparece no cartão travado', async () => {
-      await abrir(agenteDeTeste({ handoff_target: 'number_owner', handoff_user_id: null, number_owner_id: 'u1' }));
-      expect(screen.getByRole('button', { name: 'Mandar um aviso de teste' })).toBeInTheDocument();
-    });
   });
 });

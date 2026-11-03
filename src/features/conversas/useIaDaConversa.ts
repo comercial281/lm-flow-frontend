@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useLigarIa } from './useLigarIa';
 import { toast } from 'sonner';
 
 import { chatService } from '@/services/chat/chatService';
@@ -89,26 +90,38 @@ export function useIaDaConversa(conversationId: string | number | null | undefin
   const estado = atual.de === id ? atual.state : null;
   const ligada = iaLigada(estado);
 
+  // O estado novo (de quem ligou ou desligou) vira o da tela, se ainda é a mesma conversa.
+  const aplicar = useCallback((pedida: string, state: SalesAgentCardState, proximo: boolean) => {
+    avisarIaMudou(pedida, state);
+    // Só conta como escrita se ainda é a mesma conversa: senão derrubaria a busca da conversa nova.
+    if (pedida === idAtual.current) {
+      pedido.current += 1;
+      setAtual({ de: pedida, state });
+    }
+    toast.success(proximo ? 'IA reativada nesta conversa' : 'IA desativada nesta conversa');
+  }, []);
+
+  // Ligar passa pelo caminho que pede o agente num número dividido.
+  const ligarIa = useLigarIa({
+    aoLigar: (pedida, state) => aplicar(pedida, state, true),
+    erroPadrao: 'Não consegui mudar o status da IA',
+  });
+
   const trocar = useCallback(async () => {
     if (!id) return;
-    const pedida = id;
-    const proximo = !ligada;
+    if (!ligada) {
+      await ligarIa.pedirLigar(id);
+      return;
+    }
     setTrocando(true);
     try {
-      const state = await chatService.toggleSalesAgent(pedida, proximo);
-      avisarIaMudou(pedida, state);
-      // Só conta como escrita se ainda é a mesma conversa: senão derrubaria a busca da conversa nova.
-      if (pedida === idAtual.current) {
-        pedido.current += 1;
-        setAtual({ de: pedida, state });
-      }
-      toast.success(proximo ? 'IA reativada nesta conversa' : 'IA desativada nesta conversa');
+      aplicar(id, await chatService.toggleSalesAgent(id, false), false);
     } catch (e) {
       toast.error(apiErrorMessage(e, 'Não consegui mudar o status da IA'));
     } finally {
       setTrocando(false);
     }
-  }, [id, ligada]);
+  }, [id, ligada, aplicar, ligarIa.pedirLigar]);
 
-  return { estado, ligada, trocando, trocar };
+  return { estado, ligada, trocando: trocando || ligarIa.procurando, trocar, janela: ligarIa.janela };
 }

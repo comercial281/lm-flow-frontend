@@ -50,7 +50,7 @@ export default function TelaMotor({ agent, aoSalvo }: { agent: SalesAgent; aoSal
     }
   };
 
-  // A reescrita de blocos grava na hora, como sempre gravou, e só o `playbook`.
+  // Grava na hora, e só o `playbook`.
   const salvarRoteiro = async (patch: Partial<SalesAgent>) => {
     aoSalvo(await salesAgentsService.update(agent.id, { playbook: patch.playbook }));
   };
@@ -113,8 +113,8 @@ export default function TelaMotor({ agent, aoSalvo }: { agent: SalesAgent; aoSal
       </Secao>
 
       {roteiroLiberado && (
-        <Secao titulo="Reescrever partes do roteiro" descricao="Muda como ela atende todos os leads desta imobiliária.">
-          <PlaybookSection agentId={agent.id} playbook={agent.playbook} onSave={salvarRoteiro} />
+        <Secao titulo="Dor de quem procura" descricao="Entra nas perguntas da IA. O resto do roteiro agora se ajusta nas páginas do Configurar.">
+          <PlaybookSection playbook={agent.playbook} onSave={salvarRoteiro} />
         </Secao>
       )}
     </Secoes>

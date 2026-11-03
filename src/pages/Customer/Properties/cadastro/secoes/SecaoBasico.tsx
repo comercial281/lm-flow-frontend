@@ -1,17 +1,11 @@
-import { Input, Label as UILabel } from '@/components/ui/ds';
+import { useRef } from 'react';
+import { Checkbox, Input, Label as UILabel } from '@/components/ui/ds';
 import { Seletor } from '@/components/base/Seletor';
 import { opcoesDeTipoDeImovel } from '@/services/properties/propertiesService';
 import { SITUACOES, rotuloDaSituacao } from '@/features/properties/listingKind';
 import { dicaSe, useCampoTravado } from '@/features/properties/cadastro/travasDoSite';
-import { Pilulas } from './campos';
+import { AVISO_SEM_FINALIDADE, finalidadeDasMarcas, marcasDaFinalidade } from '@/features/properties/cadastro/finalidade';
 import { CLASSE_SELETOR, type PropsDaSecao } from './tipos';
-
-const FINALIDADES = [
-  { valor: 'sale', rotulo: 'Venda' },
-  { valor: 'rent', rotulo: 'Locação' },
-  { valor: 'sale_rent', rotulo: 'Venda e locação' },
-  { valor: 'season', rotulo: 'Temporada' },
-];
 
 export default function SecaoBasico({ form: f, setF }: PropsDaSecao) {
   const kind = f.listing_kind ?? 'resale';
@@ -38,8 +32,8 @@ export default function SecaoBasico({ form: f, setF }: PropsDaSecao) {
       {/* Empreendimento e Leilão são sempre venda: o tipo de negócio só aparece na revenda. */}
       {kind === 'resale' && (
         <div className="sm:col-span-2">
-          <Pilulas rotulo="Finalidade" valor={f.transaction_type} opcoes={FINALIDADES} desabilitado={finalidadeTravada}
-            aoMudar={v => setF({ transaction_type: v })} />
+          <FinalidadeEmMarcas valor={f.transaction_type} desabilitado={finalidadeTravada}
+            aoMudar={v => setF({ transaction_type: v ?? '' })} />
         </div>
       )}
 
@@ -59,6 +53,36 @@ export default function SecaoBasico({ form: f, setF }: PropsDaSecao) {
           )}
         </Seletor>
       </div>
+    </div>
+  );
+}
+
+/** "À venda" e "Para alugar": uma, outra ou as duas. Nenhuma marcada avisa e o cadastro não salva. */
+function FinalidadeEmMarcas({ valor, aoMudar, desabilitado }: {
+  valor: string | null | undefined;
+  aoMudar: (v: string | null) => void;
+  desabilitado: boolean;
+}) {
+  const marcas = marcasDaFinalidade(valor);
+  // Temporada não aparece na tela: lembra que o imóvel abriu assim pra não virar aluguel comum calado.
+  const eraTemporada = useRef(false);
+  if (valor === 'season') eraTemporada.current = true;
+  const trocar = (parte: Partial<typeof marcas>) =>
+    aoMudar(finalidadeDasMarcas({ ...marcas, ...parte }, eraTemporada.current ? 'season' : valor));
+  return (
+    <div title={dicaSe(desabilitado)}>
+      <p className="mb-1 block text-sm font-medium">Finalidade</p>
+      <div role="group" aria-label="Finalidade" className="flex flex-wrap gap-x-6 gap-y-2">
+        <label className="flex cursor-pointer items-center gap-2">
+          <Checkbox checked={marcas.venda} disabled={desabilitado} onCheckedChange={v => trocar({ venda: v === true })} />
+          <span className="text-sm">À venda</span>
+        </label>
+        <label className="flex cursor-pointer items-center gap-2">
+          <Checkbox checked={marcas.aluguel} disabled={desabilitado} onCheckedChange={v => trocar({ aluguel: v === true })} />
+          <span className="text-sm">Para alugar</span>
+        </label>
+      </div>
+      {!marcas.venda && !marcas.aluguel && <p role="alert" className="mt-1 text-xs text-destructive">{AVISO_SEM_FINALIDADE}</p>}
     </div>
   );
 }

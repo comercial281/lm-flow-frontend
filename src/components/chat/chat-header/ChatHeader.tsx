@@ -46,6 +46,7 @@ import { Conversation } from '@/types/chat/api';
 import ContactAvatar from '@/components/chat/contact/ContactAvatar';
 import BotaoMaisAcoes from '@/components/base/BotaoMaisAcoes';
 import ActivateAiDialog from '@/components/chat/conversation/ActivateAiDialog';
+import ReligarIaDialog from '@/components/chat/conversation/ReligarIaDialog';
 import { isPendingStatus } from '@/utils/chat/conversationStatus';
 import { linhaDoTopo } from '@/features/conversas/topoDaConversa';
 import { nomeNaTela } from '@/features/conversas/painelDoLead';
@@ -130,6 +131,7 @@ const ChatHeader = ({
     ligada: aiEnabled,
     trocando: togglingAi,
     trocar: handleToggleAi,
+    janela: janelaDaIa,
   } = useIaDaConversa(conversation.id);
 
   const currentStatus = conversation.status;
@@ -497,6 +499,7 @@ const ChatHeader = ({
 
       {/* Fora do menu de propósito: montada aqui, ela sobrevive ao menu fechar. */}
       <ActivateAiDialog conversation={conversation} open={aiOpen} onOpenChange={setAiOpen} />
+      <ReligarIaDialog {...janelaDaIa} />
 
       {agendando && contatoId != null && (
         <Suspense fallback={null}>

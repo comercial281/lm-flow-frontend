@@ -4,7 +4,7 @@ import { I, Ic, Select, type PortalProperty, type SiteInfo } from '../portalShar
 import { opcoesDeTipo } from '@/features/siteBuilder/public/tiposDeImovel';
 import { CAMPOS_BUSCA, TITULO_CAPA_FABRICA, type AbaId, type CampoBusca, type HomeConfig } from '@/features/siteBuilder/public/homeConfig';
 import { faixasDePreco, precoDaFaixa } from '@/features/siteBuilder/public/faixasDePreco';
-import { FASES } from '@/features/properties/listingKind';
+import { FASES_DO_PUBLICO } from '@/features/properties/listingKind';
 import { caminhoDoSite } from '@/features/siteBuilder/public/dominioDoSite';
 import { useCtxDoSite } from '@/features/siteBuilder/public/useTenantDoSite';
 import { filtroDaCapa, resolverAparencia } from '@/features/siteBuilder/public/aparenciaConfig';
@@ -80,7 +80,7 @@ export default function HomeCapa({ site, home, items, tenant, abas, cities, hood
     bedrooms: { label: 'Dormitórios', options: ATE_4 },
     suites: { label: 'Suítes', options: ATE_3 },
     parking: { label: 'Vagas', options: ATE_3 },
-    stage: { label: 'Fase', options: FASES.map(f => [f.valor, f.rotulo]) },
+    stage: { label: 'Fase', options: FASES_DO_PUBLICO.map(f => [f.valor, f.rotulo]) },
   };
 
   const titulo = home.search.title?.trim() || TITULO_CAPA_FABRICA;

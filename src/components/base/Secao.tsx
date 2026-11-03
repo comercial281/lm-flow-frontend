@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { createContext, useContext, type ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 
 // Layout "explicação ao lado" (decisão L1 do Meu site, 04/10/2026). Desde a
@@ -11,8 +11,15 @@ import { cn } from '@/lib/utils';
 // embaixo. As faixas de uma tela moram numa caixa só (`Secoes`), separadas por
 // divisória — caixa com borda por bloco fazia a tela virar uma pilha de cartões.
 
+/**
+ * A caixa já existe por fora (o `Card` da moldura do Configurar da IA): as `Secoes` de dentro
+ * entregam só os blocos, separados por linha, sem borda, fundo nem margem própria.
+ */
+export const DentroDaCaixa = createContext(false);
+
 /** A caixa única de uma tela do Meu site. As `Secao` dentro dela ganham divisória. */
 export function Secoes({ children, className }: { children: ReactNode; className?: string }) {
+  if (useContext(DentroDaCaixa)) return <div className={cn('divide-y divide-border', className)}>{children}</div>;
   return (
     <div className={cn('divide-y divide-border rounded-xl border border-border bg-card px-5 sm:px-8', className)}>
       {children}

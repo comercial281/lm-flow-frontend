@@ -23,28 +23,6 @@ export function briefingEnabled(cfg?: TransferConfig | null): boolean {
 }
 
 /**
- * ⚠️ Trocar o cenário de repasse SUBSTITUI o `transfer_config` inteiro, de
- * propósito (a temperatura mínima e as perguntas obrigatórias só significam algo
- * dentro do cenário delas). Sem esta função a escolha do resumo seria apagada
- * junto, em silêncio: o gestor desligava o resumo, trocava o cenário depois e o
- * resumo voltava a sair sem ninguém ver.
- *
- * Vale também para a voz do repasse (`voice`), pelo mesmo motivo.
- *
- * Só `false` viaja — é o único valor que é escolha de alguém; `true` é o padrão e
- * gravá-lo congelaria a escolha de hoje se o padrão da casa mudasse.
- */
-export function keepBriefing(cfg: TransferConfig | null | undefined, next: TransferConfig): TransferConfig {
-  const out: TransferConfig = cfg?.briefing_enabled === false ? { ...next, briefing_enabled: false } : { ...next };
-  // A VOZ do repasse (features/salesAgents/handoffVoice.ts) também não é de cenário
-  // nenhum e sofreria a mesma limpeza: o gestor marcava "fala como o próprio
-  // corretor", trocava o cenário, e a IA voltava a dizer "vou te passar pra um
-  // colega" sem ninguém ver.
-  if (cfg?.voice === 'first_person') out.voice = 'first_person';
-  return out;
-}
-
-/**
  * Liga/desliga preservando o cenário escolhido e o campo dele. Ligar REMOVE a
  * chave em vez de gravar `true`, pelo mesmo motivo acima.
  */

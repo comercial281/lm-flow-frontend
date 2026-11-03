@@ -118,8 +118,13 @@ class ChatService {
   async toggleSalesAgent(
     conversationId: string,
     enabled: boolean,
+    salesAgentId?: string,
   ): Promise<SalesAgentCardState> {
-    const response = await api.post(`/conversations/${conversationId}/sales_agent`, { enabled });
+    // Número dividido: ao ligar, o agente escolhido (sem ele o servidor usa o primeiro do número).
+    const response = await api.post(
+      `/conversations/${conversationId}/sales_agent`,
+      salesAgentId ? { enabled, sales_agent_id: salesAgentId } : { enabled },
+    );
     return (response.data as { data: SalesAgentCardState }).data;
   }
 

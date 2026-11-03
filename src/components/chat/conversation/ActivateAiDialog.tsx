@@ -22,6 +22,7 @@ import type { SalesAgentLeadReport } from '@/types/analytics/pipelines';
 import EmptyState from '@/components/base/EmptyState';
 import Aviso from '@/components/base/Aviso';
 import { avisarIaRecarregar } from '@/features/conversas/atalhosDoLead';
+import EscolhaDoAgente from '@/components/base/EscolhaDoAgente';
 
 interface Props {
   conversation: Conversation | null;
@@ -37,7 +38,11 @@ const ActivateAiDialog: React.FC<Props> = ({ conversation, open, onOpenChange })
   const [erro, setErro] = useState(false);
   const ultimaCarga = useRef(0);
   const [firing, setFiring] = useState(false);
-  const [agent, setAgent] = useState<SalesAgent | null>(null);
+  // Os agentes do número da conversa (número dividido: mais de um) e o escolhido.
+  const [agentes, setAgentes] = useState<SalesAgent[]>([]);
+  const [escolhidoId, setEscolhidoId] = useState<string | null>(null);
+  const dividido = agentes.length > 1;
+  const agent = agentes.length === 1 ? agentes[0] : agentes.find((a) => a.id === escolhidoId) ?? null;
   const [propertyCode, setPropertyCode] = useState('');
   const [fresh, setFresh] = useState(false);
   // Situação da IA NESTE lead, carregada junto: é a pergunta que se faz ao abrir
@@ -58,19 +63,16 @@ const ActivateAiDialog: React.FC<Props> = ({ conversation, open, onOpenChange })
       .then((r) => { if (vez === ultimaCarga.current) setReport(r); })
       .catch(() => { if (vez === ultimaCarga.current) setReport(null); });
     salesAgentsService
-      .list()
-      .then((agents) => {
+      .listForInbox(String(conversation.inbox_id))
+      .then((doNumero) => {
         if (vez !== ultimaCarga.current) return;
-        const match =
-          agents.find((a) => a.inbox_id === conversation.inbox_id && a.enabled) ||
-          agents.find((a) => a.inbox_id === conversation.inbox_id) ||
-          null;
-        setAgent(match);
-        setPropertyCode(match?.default_property_code ?? '');
+        setAgentes(doNumero);
+        setEscolhidoId(null);
+        setPropertyCode(doNumero.length === 1 ? doNumero[0].default_property_code ?? '' : '');
       })
       .catch(() => {
         if (vez !== ultimaCarga.current) return;
-        setAgent(null);
+        setAgentes([]);
         setErro(true);
       })
       .finally(() => { if (vez === ultimaCarga.current) setLoading(false); });
@@ -79,6 +81,11 @@ const ActivateAiDialog: React.FC<Props> = ({ conversation, open, onOpenChange })
   useEffect(() => {
     carregar();
   }, [carregar]);
+
+  const escolher = (id: string) => {
+    setEscolhidoId(id);
+    setPropertyCode(agentes.find((a) => a.id === id)?.default_property_code ?? '');
+  };
 
   const handleFire = async () => {
     if (!agent || !conversation) return;
@@ -118,7 +125,7 @@ const ActivateAiDialog: React.FC<Props> = ({ conversation, open, onOpenChange })
           </div>
         ) : erro ? (
           <EmptyState tipo="erro" tamanho="compacto" aoTentarDeNovo={carregar} />
-        ) : !agent ? (
+        ) : agentes.length === 0 ? (
           report ? (
             <Aviso tom="info" compacto titulo={report.why}>
               {report.next_step || undefined}
@@ -137,9 +144,13 @@ const ActivateAiDialog: React.FC<Props> = ({ conversation, open, onOpenChange })
           )
         ) : (
           <div className="space-y-4 py-2">
-            <div className="text-sm">
-              IA: <span className="font-medium">{agent.name}</span>
-            </div>
+            {dividido ? (
+              <EscolhaDoAgente agentes={agentes} valor={escolhidoId} aoEscolher={escolher} desabilitado={firing} />
+            ) : (
+              <div className="text-sm">
+                IA: <span className="font-medium">{agent?.name}</span>
+              </div>
+            )}
 
             {report && (
               <div className="rounded-md bg-muted/50 p-2 space-y-1">

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -91,16 +92,23 @@ describe('seções novas', () => {
     expect(setF).toHaveBeenLastCalledWith({ builder: { cnpj: '1', name: 'X' } });
   });
 
-  it('revenda escolhe finalidade em pílulas', async () => {
+  it('revenda escolhe À venda e Para alugar (sem Temporada)', async () => {
     const setF = vi.fn();
-    render(<SecaoBasico form={{ ...form, listing_kind: 'resale' }} setF={setF} editando={null} />);
-    await userEvent.click(within(screen.getByRole('radiogroup', { name: 'Finalidade' })).getByRole('radio', { name: 'Locação' }));
-    expect(setF).toHaveBeenCalledWith({ transaction_type: 'rent' });
+    const { rerender } = render(<SecaoBasico form={{ ...form, listing_kind: 'resale', transaction_type: 'sale' }} setF={setF} editando={null} />);
+    const grupo = screen.getByRole('group', { name: 'Finalidade' });
+    expect(within(grupo).getAllByRole('checkbox').map(c => c.nextElementSibling?.textContent)).toEqual(['À venda', 'Para alugar']);
+    expect(screen.queryByText('Temporada')).toBeNull();
+    await userEvent.click(within(grupo).getByRole('checkbox', { name: 'Para alugar' }));
+    expect(setF).toHaveBeenLastCalledWith({ transaction_type: 'sale_rent' });
+    await userEvent.click(within(grupo).getByRole('checkbox', { name: 'À venda' }));
+    expect(setF).toHaveBeenLastCalledWith({ transaction_type: '' });
+    rerender(<SecaoBasico form={{ ...form, listing_kind: 'resale', transaction_type: '' }} setF={setF} editando={null} />);
+    expect(screen.getByRole('alert')).toHaveTextContent('Marque À venda, Para alugar ou os dois.');
   });
 
   it('empreendimento não mostra finalidade', () => {
     render(<SecaoBasico form={{ ...form, listing_kind: 'development' }} setF={vi.fn()} editando={null} />);
-    expect(screen.queryByRole('radiogroup', { name: 'Finalidade' })).toBeNull();
+    expect(screen.queryByRole('group', { name: 'Finalidade' })).toBeNull();
   });
 
   it('obra: inteiros, vazio vira nulo', async () => {
@@ -162,5 +170,72 @@ describe('seções novas', () => {
     expect(campo).toBeEnabled();
     expect(campo).toHaveValue('450.000');
     expect(screen.queryByText(/A partir de: o menor preço das tipologias/)).toBeNull();
+  });
+
+  it('Sem vaga grava 0 e trava o campo; desmarcar volta ao vazio; imóvel com 0 abre marcado', async () => {
+    const setF = vi.fn();
+    const { rerender } = render(<SecaoComposicao form={{ ...form, listing_kind: 'resale', parking_spaces: null }} setF={setF} editando={null} />);
+    expect(screen.getByLabelText('Vagas')).toBeEnabled();
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Sem vaga' }));
+    expect(setF).toHaveBeenLastCalledWith({ parking_spaces: 0 });
+    rerender(<SecaoComposicao form={{ ...form, listing_kind: 'resale', parking_spaces: 0 }} setF={setF} editando={null} />);
+    expect(screen.getByRole('checkbox', { name: 'Sem vaga' })).toBeChecked();
+    expect(screen.getByLabelText('Vagas')).toBeDisabled();
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Sem vaga' }));
+    expect(setF).toHaveBeenLastCalledWith({ parking_spaces: null });
+    rerender(<SecaoComposicao form={{ ...form, listing_kind: 'resale', parking_spaces: null }} setF={setF} editando={null} />);
+    expect(screen.getByLabelText('Vagas')).toHaveValue(null);
+    await userEvent.type(screen.getByLabelText('Vagas'), '2');
+    expect(setF).toHaveBeenLastCalledWith({ parking_spaces: 2 });
+  });
+
+  it('Aceita permuta: Sim, Não, A conversar, Não informado', async () => {
+    const setF = vi.fn();
+    render(<SecaoDetalhesDaVenda form={{ ...form, listing_kind: 'resale', accepts_swap: 'sim' }} setF={setF} editando={null} />);
+    const grupo = screen.getByRole('radiogroup', { name: 'Aceita permuta' });
+    expect(within(grupo).getAllByRole('radio').map(r => r.textContent)).toEqual(['Sim', 'Não', 'A conversar', 'Não informado']);
+    expect(within(grupo).getByRole('radio', { name: 'Sim' })).toHaveAttribute('aria-checked', 'true');
+    await userEvent.click(within(grupo).getByRole('radio', { name: 'A conversar' }));
+    expect(setF).toHaveBeenLastCalledWith({ accepts_swap: 'a_conversar' });
+    await userEvent.click(within(grupo).getByRole('radio', { name: 'Não informado' }));
+    expect(setF).toHaveBeenLastCalledWith({ accepts_swap: null });
+  });
+
+  it('Fase da obra oferece "Fase não informada" e esconde a previsão de entrega nela', () => {
+    const { rerender } = render(<SecaoObra form={{ ...form, listing_kind: 'development', stage: 'unknown' }} setF={vi.fn()} editando={null} />);
+    expect(screen.getByRole('option', { name: 'Fase não informada' })).toBeInTheDocument();
+    expect(screen.queryByText('Previsão de entrega')).toBeNull();
+    rerender(<SecaoObra form={{ ...form, listing_kind: 'development', stage: 'launch' }} setF={vi.fn()} editando={null} />);
+    expect(screen.getByText('Previsão de entrega')).toBeInTheDocument();
+  });
+
+  it('Digitar 0 no campo de vagas não trava; terreno não mostra Vagas', async () => {
+    function Vivo({ inicial }: { inicial: Partial<PropertyFormData> }) {
+      const [f, setFo] = useState({ ...form, listing_kind: 'resale', ...inicial } as PropertyFormData);
+      return <SecaoComposicao form={f} setF={m => setFo(p => ({ ...p, ...(typeof m === 'function' ? m(p) : m) }))} editando={null} />;
+    }
+    const { unmount } = render(<Vivo inicial={{ parking_spaces: null }} />);
+    await userEvent.type(screen.getByLabelText('Vagas'), '0');
+    expect(screen.getByLabelText('Vagas')).toBeEnabled();
+    unmount();
+    render(<Vivo inicial={{ property_type: 'lot' }} />);
+    expect(screen.queryByLabelText('Vagas')).toBeNull();
+    expect(screen.queryByRole('checkbox', { name: 'Sem vaga' })).toBeNull();
+  });
+
+  it('temporada: desmarcar e remarcar Para alugar continua temporada', async () => {
+    function Vivo() {
+      const [t, setT] = useState('season');
+      return <SecaoBasico form={{ ...form, listing_kind: 'resale', transaction_type: t }} setF={m => setT((m as { transaction_type: string }).transaction_type)} editando={null} />;
+    }
+    render(<Vivo />);
+    const alugar = screen.getByRole('checkbox', { name: 'Para alugar' });
+    await userEvent.click(alugar);
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Para alugar' }));
+    expect(screen.getByRole('checkbox', { name: 'Para alugar' })).toBeChecked();
+    await userEvent.click(screen.getByRole('checkbox', { name: 'À venda' }));
+    await userEvent.click(screen.getByRole('checkbox', { name: 'À venda' }));
+    // voltou a só aluguel: segue temporada (nada mudou para 'rent')
+    expect(screen.getByRole('checkbox', { name: 'À venda' })).not.toBeChecked();
   });
 });

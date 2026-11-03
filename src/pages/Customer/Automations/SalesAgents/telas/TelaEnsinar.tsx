@@ -1,7 +1,8 @@
-// Ensinar (11/10/2026): 5 páginas curtas no mesmo arranjo do Configurar
-// (moldura/PaginasComTrilho). Lições e arquivos carregam UMA vez aqui (o trilho conta
-// e marca pendência) e descem pras páginas. Grava na hora; Excluir confirma.
-// Spec: LM FLOW/specs/2026-10-11-ia-ensinar-refatoracao-design.md.
+// Ensinar (Tarefa 75, 01/11/2026): 5 páginas curtas no mesmo arranjo do Configurar
+// (moldura/PaginasComTrilho, sem o emCard): Lições, Exemplos, Regras e objeções da casa,
+// Conhecimentos de fábrica e Arquivos e prova social. Lições e arquivos carregam UMA vez aqui
+// (o trilho conta e marca pendência) e descem pras páginas. Grava na hora; Excluir confirma.
+// Spec: LM FLOW/docs/superpowers/ia-reestruturacao/specs/2026-10-31-fase-6-tela-design.md §4.
 import { useCallback, useEffect, type ComponentType } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import type { SalesAgent } from '@/services/salesAgents/salesAgentsService';
@@ -9,20 +10,20 @@ import { useConfirmacao } from '@/hooks/useConfirmacao';
 import PaginasComTrilho from '../moldura/PaginasComTrilho';
 import { useGravarNaHora } from '../configurar/useGravarNaHora';
 import {
-  GRUPOS_DO_ENSINAR, PAGINAS_DO_ENSINAR, PAGINA_INICIAL_DO_ENSINAR, arquivosSemQuando, casosDe, conversasReais, paginaDoEnsinarDaUrl, regrasForaDoLimite,
+  GRUPOS_DO_ENSINAR, PAGINAS_DO_ENSINAR, PAGINA_INICIAL_DO_ENSINAR, casosDe, conversasReais, paginaDoEnsinarDaUrl,
   type PaginaDoEnsinar,
 } from './ensinar/paginas';
 import { useLicoes } from './ensinar/useLicoes';
 import { useArquivos } from './ensinar/useArquivos';
 import type { PropsDaPaginaDoEnsinar } from './ensinar/paginas/tipos';
-import Instrucoes from './ensinar/paginas/Instrucoes';
-import Regras from './ensinar/paginas/Regras';
+import Licoes from './ensinar/paginas/Licoes';
 import Exemplos from './ensinar/paginas/Exemplos';
+import RegrasDaCasa from './ensinar/paginas/RegrasDaCasa';
+import ConhecimentosDeFabrica from './ensinar/paginas/ConhecimentosDeFabrica';
 import Arquivos from './ensinar/paginas/Arquivos';
-import ProvaSocial from './ensinar/paginas/ProvaSocial';
 
 const COMPONENTES: Record<PaginaDoEnsinar, ComponentType<PropsDaPaginaDoEnsinar>> = {
-  instrucoes: Instrucoes, regras: Regras, exemplos: Exemplos, arquivos: Arquivos, prova: ProvaSocial,
+  licoes: Licoes, exemplos: Exemplos, casa: RegrasDaCasa, conhecimentos: ConhecimentosDeFabrica, arquivos: Arquivos,
 };
 
 export default function TelaEnsinar({ agent, onCountChange, aoSalvo }: { agent: SalesAgent; onCountChange: () => void; aoSalvo: (a: SalesAgent) => void }) {
@@ -48,15 +49,18 @@ export default function TelaEnsinar({ agent, onCountChange, aoSalvo }: { agent: 
 
   const irPara = useCallback((p: PaginaDoEnsinar) => { if (p !== atual) escrever(p, false); }, [atual, escrever]);
 
-  const regras = licoes.licoes.filter((l) => l.kind === 'rule').length;
-  // Conversas reais: só as que o servidor lê (resposta vazia não conta), igual à página.
+  // Contagem do trilho: as lições e exemplos que o servidor lê (a conversa real sem resposta não conta).
+  const { regras: contaRegras, exemplos: contaExemplos } = licoes.contadores;
   const exemplos = licoes.licoes.filter((l) => l.kind !== 'rule').length + conversasReais(agent.example_conversations).length;
   const contagem: Record<PaginaDoEnsinar, number | undefined> = {
-    instrucoes: undefined, regras, exemplos, arquivos: arquivos.docs.length, prova: casosDe(agent.social_proof).length,
+    licoes: licoes.licoes.filter((l) => l.kind === 'rule').length, exemplos,
+    casa: (agent.house_rules?.length ?? 0) + (agent.house_objections?.length ?? 0) || undefined,
+    conhecimentos: undefined, arquivos: arquivos.docs.length + casosDe(agent.social_proof).length,
   };
+  // A bolinha é lição (ou exemplo) que o servidor deixou de fora por tamanho: nada sai calado.
   const pendente: Record<PaginaDoEnsinar, boolean> = {
-    instrucoes: false, regras: regrasForaDoLimite(licoes.licoes) > 0, exemplos: false,
-    arquivos: arquivosSemQuando(arquivos.docs) > 0, prova: false,
+    licoes: contaRegras.fora_por_tamanho > 0, exemplos: contaExemplos.fora_por_tamanho > 0,
+    casa: false, conhecimentos: false, arquivos: false,
   };
   const grupos = GRUPOS_DO_ENSINAR.map((g) => ({
     id: g.id, rotulo: g.rotulo,
