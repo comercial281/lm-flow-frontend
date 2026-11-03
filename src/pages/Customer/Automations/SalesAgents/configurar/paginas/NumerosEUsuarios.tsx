@@ -110,7 +110,8 @@ export default function NumerosEUsuarios(props: PropsDaPagina) {
     <>
       <Secoes>
         <Secao titulo="Padrão da casa" descricao="Vale pra todo número sem ficha própria.">
-          <div role="region" aria-label="Padrão da casa" className="grid items-start gap-6 lg:grid-cols-2">
+          {/* Campos com 3/5 e a prévia com 2/5 (03/11/2026): meio a meio, "Como se apresenta" mal aparecia. */}
+          <div role="region" aria-label="Padrão da casa" className="grid items-start gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
             <FichaDaVoz idBase="casa" voz={casa} aoMudar={gravarCasa} />
             <div className="space-y-3">
               <Balao texto={previaDaApresentacao(vozCasa)} />

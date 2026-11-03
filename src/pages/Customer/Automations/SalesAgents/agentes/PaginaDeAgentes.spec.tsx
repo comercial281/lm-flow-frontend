@@ -5,6 +5,12 @@ import userEvent from '@testing-library/user-event';
 
 const resumos = vi.hoisted(() => vi.fn());
 vi.mock('@/services/salesAgents/salesAgentsService', () => ({ salesAgentsService: { resumos } }));
+// A janela de verdade lê o ensaio do servidor: aqui só importa que abre com o agente certo.
+vi.mock('../telas/TestarJanela', () => ({
+  default: ({ agent, aoFechar }: { agent: { name: string }; aoFechar: () => void }) => (
+    <div role="dialog" aria-label={`Testando ${agent.name}`}><button type="button" onClick={aoFechar}>Fechar</button></div>
+  ),
+}));
 import PaginaDeAgentes from './PaginaDeAgentes';
 import type { SalesAgent } from '@/services/salesAgents/salesAgentsService';
 
@@ -42,7 +48,9 @@ describe('PaginaDeAgentes', () => {
     expect(screen.getByRole('link', { name: /Agente B/ })).toBeInTheDocument();
     const links = screen.getAllByRole('link');
     expect(links[links.length - 1]).toHaveTextContent('+ Novo agente');
-    await screen.findByText(/74 conversas em 30 dias/);
+    await screen.findByText('Últimos 30 dias');
+    expect(screen.getByText('74')).toBeInTheDocument();
+    expect(screen.getByText('46')).toBeInTheDocument();
   });
 
   it('clicar leva a ?ia=<id>&tela=configurar, sem pagina', async () => {
@@ -53,14 +61,14 @@ describe('PaginaDeAgentes', () => {
 
   it('lê os resumos uma vez ao abrir', async () => {
     abrir([ag('ag-1', 'Agente A'), ag('ag-2', 'Agente B')]);
-    await screen.findByText(/74 conversas em 30 dias/);
+    await screen.findByText('Últimos 30 dias');
     expect(resumos).toHaveBeenCalledTimes(1);
   });
 
   it('agente sem conversa no resumo fica sem rodapé de números, o outro mostra', async () => {
     abrir([ag('ag-1', 'Agente A'), ag('ag-2', 'Agente B')]);
-    await screen.findByText(/74 conversas em 30 dias/);
-    expect(screen.getAllByText(/conversas em 30 dias/)).toHaveLength(1);
+    await screen.findByText('Últimos 30 dias');
+    expect(screen.getAllByText('Últimos 30 dias')).toHaveLength(1);
   });
 
   it('falha nos resumos tira só o rodapé, sem aviso', async () => {
@@ -68,8 +76,22 @@ describe('PaginaDeAgentes', () => {
     abrir([ag('ag-1', 'Agente A')]);
     await waitFor(() => expect(resumos).toHaveBeenCalled());
     expect(screen.getByRole('link', { name: /Agente A/ })).toBeInTheDocument();
-    expect(screen.queryByText(/conversas em 30 dias/)).toBeNull();
+    expect(screen.queryByText('Últimos 30 dias')).toBeNull();
     expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('o Testar do quadro abre a janela do agente, sem sair da página', async () => {
+    abrir([ag('ag-1', 'Agente A'), ag('ag-2', 'Agente B')]);
+    await userEvent.click(screen.getByRole('button', { name: 'Testar Agente B' }));
+    expect(screen.getByRole('dialog', { name: 'Testando Agente B' })).toBeInTheDocument();
+    expect(screen.getByLabelText('endereço').textContent).toBe('/ia-vendedora');
+    await userEvent.click(screen.getByRole('button', { name: 'Fechar' }));
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('um link só por quadro (o nome); o Testar não é link', () => {
+    abrir([ag('ag-1', 'Agente A')], false);
+    expect(screen.getAllByRole('link')).toHaveLength(1);
   });
 
   it('conta sem agente mostra só o "+ Novo agente", que leva ao Novo agente', async () => {
@@ -83,7 +105,7 @@ describe('PaginaDeAgentes', () => {
   it('sem a permissão de criar, o "+ Novo agente" não aparece', async () => {
     abrir([ag('ag-1', 'Agente A')], false);
     expect(screen.queryByText('+ Novo agente')).toBeNull();
-    await screen.findByText(/74 conversas/);
+    await screen.findByText('Últimos 30 dias');
   });
 
   it('conta sem agente e sem permissão de criar: frase curta, sem grade vazia', () => {

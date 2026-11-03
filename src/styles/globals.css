@@ -721,6 +721,33 @@ button[role='switch'][data-state='unchecked'],
   color: #fb923c;
 }
 
+/* ═══ Capa do quadro do agente (IA Vendedora, 03/11/2026) ═══
+   A faixa no topo de cada quadro da página de agentes, no molde dos cards de
+   marketplace que o dono trouxe. No claro: lavanda bem leve com uma trama de pontos
+   que some pra baixo (sem mancha roxa, regra do Vidro violeta). No escuro: o brilho
+   roxo da marca. Em hex/rgba (navegador antigo não lê oklch). */
+.capa-do-agente {
+  position: relative;
+  background: linear-gradient(135deg, #f7f5fe 0%, #ece7fb 100%);
+}
+.capa-do-agente::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(91, 52, 209, 0.2) 1px, transparent 1.4px);
+  background-size: 14px 14px;
+  -webkit-mask-image: linear-gradient(200deg, #000 15%, transparent 80%);
+  mask-image: linear-gradient(200deg, #000 15%, transparent 80%);
+}
+.dark .capa-do-agente {
+  background:
+    radial-gradient(circle at 85% 0%, rgba(140, 96, 244, 0.35), transparent 60%),
+    linear-gradient(135deg, rgba(75, 47, 226, 0.22) 0%, rgba(140, 96, 244, 0.06) 100%);
+}
+.dark .capa-do-agente::before {
+  background-image: radial-gradient(rgba(197, 143, 250, 0.25) 1px, transparent 1.4px);
+}
+
 /* ============================================================================
    MÓDULO ESPAÇO (Notion por tenant) — tokens lm-* portados do LM Hub.
    Os componentes portados usam classes utilitárias lm-* (bg-lm-card,

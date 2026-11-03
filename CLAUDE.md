@@ -10258,6 +10258,8 @@ Reestruturação da IA, fase 6, Tarefa 68 (a página de agentes; o fluxo do Novo
 
 **O que aparece na tela:** `/ia-vendedora` sem `ia` no endereço abre *Agentes de IA*: uma grade de quadros (um por agente, no visual do `CartaoDeLink` de Integrações) e, no fim, o quadro tracejado *+ Novo agente*. O quadro mostra as iniciais, o nome, *N números · nome de cada usuário*, o selo da situação, *Modo operante*, *Quem fala* (*Cada usuário, como ele mesmo* quando todos os números falam como Corretor), *Próximo passo* (*Visita ou Reunião por vídeo*), *Produto* (*Empreendimento (10)*) e, no rodapé, *74 conversas em 30 dias · 46 passadas · corretor responde em 4 min* e a primeira pendência. Clicar abre o agente em *Configurar* (`?ia=<id>&tela=configurar`, sem `pagina`: cai na primeira página com pendência). O nome ▾ da barra troca de agente direto e ganhou *Todos os agentes* (volta à página); *Nova IA* saiu do seletor.
 
+⚠️ Revista em 03/11/2026: o quadro ganhou capa, robô no centro e o Testar no pé; os números de 30 dias viraram colunas. Ver *IA Vendedora · Quadros com capa e moldura larga*.
+
 **Decisões (não reabrir sem o dono pedir):**
 1. **Revê a decisão 2 da casca (05/10).** Antes, sem `ia` a casca abria a última IA do navegador (`lmflow:ia-vendedora:ultima`). Agora a página de agentes é a entrada (decisão do Tony em 28/10): com vários agentes, abrir direto num deles escondia os outros e o quadro com os números do mês. A chave do `localStorage` não é mais lida nem gravada.
 2. Sem `ia` a casca não abre nem reescreve nada (nem `?tela=` solto: `?tela=testar` sem IA mostra a página, sem janela armada). `?agent=` do assistente segue abrindo em Configurar. IA do endereço que não existe mais cai na primeira.
@@ -10306,6 +10308,8 @@ No *⋯* da barra entra *Renomear* (janela com *Nome do agente*, grava só o `na
 Reestruturação da IA, fase 6, Tarefa 70 (o molde; as Tarefas 71 a 74 enchem as páginas). Spec: `docs/superpowers/ia-reestruturacao/specs/2026-10-31-fase-6-tela-design.md` (seção 3, tela 3 do protótipo `agentes.html`).
 
 **O que aparece na tela:** *IA Vendedora → Configurar* cai de 15 páginas pra 8, num índice só (sem grupos): **Modo operante · Números e usuários · Público-alvo e produto · Campanhas e gatilhos · Condução · Materiais · Destino · Funil e follow-up**. Página larga (`max-w-6xl`), índice de `lg:w-52` à esquerda com a página atual acesa e bolinha âmbar na que tem pendência, título e frase em cima, a área numa caixa e, no pé, **← Anterior** e **Próxima →** com o nome da página vizinha (a primeira não tem Anterior, a última não tem Próxima). O menu do LM Flow recolhe em Configurar, Ensinar e no Novo agente. **No celular (abaixo de 768 px)** o índice vira uma fileira de pílulas que quebra linha, e tudo fica numa coluna, sem rolar pro lado. O Ensinar usa a mesma moldura e ganhou o mesmo pé.
+
+⚠️ Revista em 03/11/2026: o teto `max-w-6xl` saiu; a moldura usa a largura toda da Pagina (até 1400 px). Ver *IA Vendedora · Quadros com capa e moldura larga*.
 
 **O que é casca hoje:** (Modo operante e Números e usuários foram enchidos na Tarefa 71, seção abaixo.) `PublicoEProduto`, `Conducao` e `FunilEFollowup` (em `configurar/paginas/`) empilham as páginas antigas que ainda cabem nos campos da página nova (Agendamento, Horário, Intenção, Qualificação + Personalidade + Restrições, Funil + Follow-up). `Materiais` só diz que os blocos entram na próxima entrega (`CampanhasEGatilhos` e o Destino foram feitos na Tarefa 73). Canal, Identidade, Objetivo, Critério, Abertura e Catálogo ficaram no repositório, sem uso, até as Tarefas 71 a 74 reaproveitarem ou apagarem (os specs delas usam `gravarDeTeste('legado')`).
 
@@ -10621,3 +10625,26 @@ Rodada de correção depois da revisão final do plano de reestruturação da IA
 - Voltar de versão: voltar só a tela é seguro pro servidor (nada muda no esquema nem nos endereços), mas devolve o Novo agente sem destino (a voz Corretor volta a travar), o Passar para a IA obrigatório pela conta inteira e os formulários antigos no endereço antigo. Voltar o backend não pede voltar a tela nesta rodada.
 
 Código: `features/salesAgents/{novoAgente,erroDoServidor,iaMenu}.ts`, `components/flowAutomations/EscolhaDoAgenteDoBloco.tsx`, `components/base/EscolhaDoAgente.tsx`, `components/salesAgents/PlaybookSection.tsx`, `pages/.../SalesAgents/SalesAgents.tsx`, `routes/RedirecionaComResto.tsx`.
+
+## IA Vendedora · Quadros com capa e moldura larga (03/11/2026)
+
+Pedido do dono depois da reestruturação ir ao ar: o Configurar ficava espremido no meio da tela mesmo com o menu recolhido, a barra de cima espalhava o seletor e o Testar pras pontas da tela, e os quadros da página de agentes deviam seguir uma referência de marketplace (cards com capa).
+
+**O que aparece na tela:**
+- **Configurar e Ensinar** usam a largura toda das outras telas (até 1400 px), sem o teto de antes (`max-w-6xl`, ~1150 px). Dentro do quadro, o título de cada bloco fica numa coluna fixa (16rem) e os campos levam o resto (antes 1/3 e 2/3). Em *Números e usuários → Padrão da casa*, os campos ficam com 3/5 e a prévia da mensagem com 2/5.
+- **A barra da IA** (seletor · Painel · Configurar · Ensinar · Testar · chave · ⋯) tem o fundo de ponta a ponta, mas o que tem dentro fica na largura do conteúdo: o seletor começa na linha do índice e o Testar e a chave terminam na borda do quadro.
+- **Quadro do agente:** capa no topo (lavanda clara com trama de pontos; no escuro, o brilho roxo), situação no canto da capa, **robô numa bolinha no centro** encostada na capa (pedido do dono: "um robozinho no meio e as infos embaixo"), e tudo centralizado embaixo: nome, modo operante em pílula, *Próximo passo* e *Produto*, **Últimos 30 dias** em colunas (conversas · passadas · corretor responde), *Quem fala* com os números, a pendência, e no pé **Configurar** + **Testar** (o celular, no lugar do coração da referência). O Testar abre a janela de teste ali mesmo, sem entrar no agente. O *+ Novo agente* tracejado ganhou o "+" na mesma altura do robô. Grade de 4 por linha em tela grande.
+
+**Decisões (não reabrir sem o dono pedir):**
+1. A moldura do Configurar/Ensinar não tem teto próprio: quem limita é a `Pagina` (1400 px), igual às outras telas. O teto de antes deixava sobra dos dois lados e cortava os campos ("Consult…").
+2. A coluna fixa do título só vale dentro da caixa da IA (`DentroDaCaixa` em `components/base/Secao.tsx`); o Meu site segue com 1/3 e 2/3.
+3. Sem campo de descrição do agente: a "frase" do quadro é o modo operante, o próximo passo e o produto que já existem.
+4. O robô é o mesmo pra todo agente: as iniciais saíram do quadro (e do `quadroDoAgente`).
+
+**Armadilhas:**
+1. **Um link só por quadro**: o nome é o link, esticado por cima do quadro inteiro (`after:absolute after:inset-0`). O *Configurar* do pé é só desenho (o clique cai no link); o Testar é o único botão e fica por cima (`relative z-10`). Botão dentro de link é HTML inválido, por isso o quadro não usa mais o `CartaoDeLink`.
+2. A capa tem posição (`.capa-do-agente` em `globals.css`, a trama é um `::before`): a bolinha do robô precisa de `relative`, senão a capa pinta por cima dela.
+3. A capa mora no CSS da casa, fora do Tailwind, em hex/rgba (navegador antigo não lê oklch; ver *Visual Vidro violeta*).
+4. Voltar de versão é só tela (nenhum endereço ou dado mudou).
+
+Código: `moldura/PaginasComTrilho.tsx`, `IaBarra.tsx`, `agentes/{PaginaDeAgentes,QuadroDoAgente}.tsx`, `configurar/paginas/NumerosEUsuarios.tsx`, `components/base/Secao.tsx`, `features/salesAgents/quadroDoAgente.ts` (`trintaDias` no lugar do `rodape`), `styles/globals.css` (`.capa-do-agente`).

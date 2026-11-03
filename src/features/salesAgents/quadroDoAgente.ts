@@ -4,17 +4,21 @@ import type { Marca, NextStep, QuemFala, ResumoDoAgente, SalesAgent } from '@/se
 import { pendenciasDaIa } from './situacao';
 
 export interface QuadroDoAgente {
-  iniciais: string;
   numeros: string;
   modo: string;
   quemFala: string;
   proximoPasso: string;
   produto: string;
-  /** Nulo sem o resumo de 30 dias (ainda não chegou ou falhou). */
-  rodape: string | null;
+  /**
+   * Os números de 30 dias, um por coluna do quadro (03/11/2026: colunas no lugar da
+   * frase corrida). Nulo sem o resumo (ainda não chegou ou falhou).
+   */
+  trintaDias: NumeroDoQuadro[] | null;
   /** A primeira pendência, quando há. */
   pendencia: string | null;
 }
+
+export interface NumeroDoQuadro { valor: string; rotulo: string }
 
 const MODOS: Record<string, string> = { filtra_passa: 'Filtra e passa', leva_visita: 'Leva até a visita' };
 const PASSOS: Record<NextStep, string> = {
@@ -23,12 +27,6 @@ const PASSOS: Record<NextStep, string> = {
 const MARCAS: Record<Marca, string> = { venda: 'Venda', locacao: 'Locação', leilao: 'Leilão', empreendimento: 'Empreendimento' };
 const VOZES: Record<QuemFala, string> = { consultora: 'Consultora', corretor: 'Corretor', dono_gerente: 'Dono ou gerente' };
 const ORDEM_DAS_MARCAS: Marca[] = ['venda', 'locacao', 'leilao', 'empreendimento'];
-
-export function iniciaisDe(nome: string): string {
-  const partes = nome.trim().split(/\s+/).filter(Boolean);
-  const letras = partes.length > 1 ? partes[0][0] + partes[1][0] : (partes[0] ?? '').slice(0, 2);
-  return letras.toUpperCase() || 'IA';
-}
 
 const plural = (n: number, um: string, varios: string) => `${n} ${n === 1 ? um : varios}`;
 
@@ -45,21 +43,22 @@ export function quadroDoAgente(
   const marcas = ORDEM_DAS_MARCAS.filter((m) => agent.serves?.includes(m));
   const passos = (agent.next_steps ?? []).map((p) => PASSOS[p]).filter(Boolean);
 
-  let rodape: string | null = null;
+  let trintaDias: NumeroDoQuadro[] | null = null;
   if (resumo) {
-    const partes = [`${plural(resumo.conversations, 'conversa', 'conversas')} em 30 dias`, plural(resumo.handoffs, 'passada', 'passadas')];
-    if (resumo.median_reply_minutes != null) partes.push(`corretor responde em ${resumo.median_reply_minutes} min`);
-    rodape = partes.join(' · ');
+    trintaDias = [
+      { valor: String(resumo.conversations), rotulo: resumo.conversations === 1 ? 'conversa' : 'conversas' },
+      { valor: String(resumo.handoffs), rotulo: resumo.handoffs === 1 ? 'passada' : 'passadas' },
+    ];
+    if (resumo.median_reply_minutes != null) trintaDias.push({ valor: `${resumo.median_reply_minutes} min`, rotulo: 'corretor responde' });
   }
 
   return {
-    iniciais: iniciaisDe(agent.name),
     numeros: numeros.length ? `${plural(numeros.length, 'número', 'números')} · ${nomes}` : 'sem número',
     modo: (agent.job && MODOS[agent.job]) || 'Ainda não escolhido',
     quemFala: todosCorretor ? 'Cada usuário, como ele mesmo' : VOZES[casa],
     proximoPasso: passos.length ? passos.join(' ou ') : 'Nenhum',
     produto: marcas.length ? marcas.map((m) => `${MARCAS[m]} (${contagem?.[m] ?? 0})`).join(', ') : 'Ainda não escolhido',
-    rodape,
+    trintaDias,
     // Agente sem número nenhum (ligado ou não) tem a pendência própria do quadro;
     // as outras usam o título que a `situacao.ts` devolve (não há texto mais curto).
     pendencia: numeros.length === 0 && !agent.inbox_id

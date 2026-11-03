@@ -1,9 +1,13 @@
 // Moldura das páginas da IA Vendedora (Configurar e Ensinar, 11/10/2026): índice
 // à esquerda, UM cabeçalho (grupo, título, frase), a página aberta e o pé com
 // "← Anterior · Próxima →" (Tarefa 70, 01/11/2026: molde do cadastro de imóveis,
-// largo, `max-w-6xl`, índice de `lg:w-52`). Peça única de propósito: as margens são as
-// da moldura da casa (Pagina + Secoes) e trocar de Configurar pra Ensinar não pode
-// mexer o índice nem o título de lugar.
+// índice de `lg:w-52`). Peça única de propósito: as margens são as da moldura da casa
+// (Pagina + Secoes) e trocar de Configurar pra Ensinar não pode mexer o índice nem o
+// título de lugar.
+//
+// LARGURA (03/11/2026, pedido do dono): a largura toda da Pagina (até 1400 px), sem
+// teto próprio. Com o `max-w-6xl` de antes a moldura ficava no meio, com sobra dos
+// dois lados, e os campos dos blocos eram cortados ("Consult…").
 //
 // CELULAR (abaixo de 768 px, `useCelular`): o índice vira uma fileira de PÍLULAS que
 // quebra linha (`flex-wrap`), sem rolar pro lado e sem grudar; tudo numa coluna.
@@ -96,7 +100,7 @@ export default function PaginasComTrilho<Id extends string>({ rotulo, grupos, at
   );
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-7 lg:flex-row lg:items-start">
+    <div className="flex w-full flex-col gap-7 lg:flex-row lg:items-start">
       <nav aria-label={rotulo} data-estilo={celular ? 'pilulas' : undefined}
         className={celular ? 'flex flex-wrap gap-2' : NAV_LATERAL}>
         {grupos.map((g) => (

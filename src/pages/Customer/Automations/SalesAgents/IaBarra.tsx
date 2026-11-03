@@ -4,6 +4,10 @@
 // Motor também pra quem tem `ia_playbook`).
 // O menu lateral do LM Flow não muda: isto é navegação DENTRO da página.
 //
+// LARGURA (03/11/2026, pedido do dono): o fundo vai de ponta a ponta, mas o que tem
+// dentro fica na largura do conteúdo da Pagina (até 1400 px, mesma folga): o seletor
+// começa na linha do índice e o Testar e a chave terminam na borda do quadro.
+//
 // ⚠️ A chave Ligada tem as MESMAS travas do Ligar de antes (`podeLigar`: sem
 // número, corretor sem dono do número, sistema do cliente sem chave). Travada,
 // fica desabilitada com o motivo no `title`, e um clique leva à página que
@@ -59,99 +63,101 @@ export default function IaBarra({
   const temMais = podeEditar || podeExcluir || verMotor || equipe;
 
   return (
-    <div className="flex flex-wrap items-center gap-x-5 gap-y-2 border-b bg-card px-4 py-2 sm:px-6">
-      <div className="flex min-w-0 items-center gap-2 py-1">
-        <Bot className="h-4 w-4 shrink-0 text-primary" aria-hidden />
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="max-w-[280px] px-2">
-              <span className="truncate text-sm font-semibold">{selecionada?.name ?? 'IA Vendedora'}</span>
-              <ChevronDown className="ml-1 h-4 w-4 shrink-0" aria-hidden />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="min-w-[300px]">
-            {agents.map((a) => (
-              <DropdownMenuItem key={a.id} onSelect={() => aoTrocarIa(a.id)} className="flex items-center justify-between gap-3">
-                <span className={`truncate text-sm ${a.id === selecionada?.id ? 'font-semibold' : ''}`}>{a.name}</span>
-                <SeloSituacao compacto situacao={a.id === selecionada?.id && situacao ? situacao : situacaoDaIa(a, null)} />
-              </DropdownMenuItem>
-            ))}
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onSelect={aoTodos}><Users className="mr-2 h-4 w-4" aria-hidden /> Todos os agentes</DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-        {situacao && <SeloSituacao soPonto situacao={situacao} />}
-      </div>
+    <div className="border-b bg-card px-4 sm:px-6">
+      <div className="mx-auto flex w-full max-w-[1400px] flex-wrap items-center gap-x-5 gap-y-2 py-2">
+        <div className="flex min-w-0 items-center gap-2 py-1">
+          <Bot className="h-4 w-4 shrink-0 text-primary" aria-hidden />
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="max-w-[280px] px-2">
+                <span className="truncate text-sm font-semibold">{selecionada?.name ?? 'IA Vendedora'}</span>
+                <ChevronDown className="ml-1 h-4 w-4 shrink-0" aria-hidden />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="min-w-[300px]">
+              {agents.map((a) => (
+                <DropdownMenuItem key={a.id} onSelect={() => aoTrocarIa(a.id)} className="flex items-center justify-between gap-3">
+                  <span className={`truncate text-sm ${a.id === selecionada?.id ? 'font-semibold' : ''}`}>{a.name}</span>
+                  <SeloSituacao compacto situacao={a.id === selecionada?.id && situacao ? situacao : situacaoDaIa(a, null)} />
+                </DropdownMenuItem>
+              ))}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onSelect={aoTodos}><Users className="mr-2 h-4 w-4" aria-hidden /> Todos os agentes</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          {situacao && <SeloSituacao soPonto situacao={situacao} />}
+        </div>
 
-      {selecionada && (
-        <nav aria-label="Menu da IA Vendedora" className="flex flex-1 flex-wrap items-center gap-1">
-          {GRUPOS.map((g) => {
-            const itens = itensDoGrupo(g.id, { insights });
-            const cls = grupoAtual === g.id ? 'bg-accent text-accent-foreground' : '';
-            // Grupo de uma tela só é botão direto; o Painel sem a chave fica só com a Visão geral.
-            if (itens.length === 1) {
-              return <Button key={g.id} variant="ghost" className={cls} onClick={() => aoIr(itens[0].id)}>{g.rotulo}</Button>;
-            }
-            return (
-              <DropdownMenu key={g.id}>
+        {selecionada && (
+          <nav aria-label="Menu da IA Vendedora" className="flex flex-1 flex-wrap items-center gap-1">
+            {GRUPOS.map((g) => {
+              const itens = itensDoGrupo(g.id, { insights });
+              const cls = grupoAtual === g.id ? 'bg-accent text-accent-foreground' : '';
+              // Grupo de uma tela só é botão direto; o Painel sem a chave fica só com a Visão geral.
+              if (itens.length === 1) {
+                return <Button key={g.id} variant="ghost" className={cls} onClick={() => aoIr(itens[0].id)}>{g.rotulo}</Button>;
+              }
+              return (
+                <DropdownMenu key={g.id}>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" className={cls}>{g.rotulo} <ChevronDown className="ml-1 h-4 w-4" aria-hidden /></Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="min-w-[240px]">
+                    {itens.map((t) => (
+                      <DropdownMenuItem key={t.id} onSelect={() => aoIr(t.id)} className="flex flex-col items-start gap-0.5">
+                        <span className="text-sm font-medium">{t.rotulo}</span>
+                        <span className="text-xs text-muted-foreground">{t.dica}</span>
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              );
+            })}
+          </nav>
+        )}
+
+        {selecionada && (
+          <div className="flex items-center gap-3">
+            <Button type="button" variant="outline" onClick={aoTestar}>
+              <Smartphone className="mr-1.5 h-4 w-4" aria-hidden /> Testar
+            </Button>
+            <div className="relative" title={travada ? travaDoLigar!.motivo : undefined}>
+              <Chave rotulo="Ligar ou desligar a IA" semRotuloVisivel genero="a" ligada={selecionada.enabled}
+                desabilitada={travada} aoMudar={aoLigar} />
+              {/* Chave desabilitada não recebe clique: a camada por cima leva à página que destrava. */}
+              {travada && (
+                <button type="button" className="absolute inset-0 cursor-pointer rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  aria-label={`Não dá pra ligar: ${travaDoLigar!.motivo} Abrir ${PAGINAS[travaDoLigar!.pagina].titulo}`}
+                  onClick={() => aoCorrigirLigar(travaDoLigar!.pagina)} />
+              )}
+            </div>
+            {temMais && (
+              <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className={cls}>{g.rotulo} <ChevronDown className="ml-1 h-4 w-4" aria-hidden /></Button>
+                  <BotaoMaisAcoes />
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="min-w-[240px]">
-                  {itens.map((t) => (
-                    <DropdownMenuItem key={t.id} onSelect={() => aoIr(t.id)} className="flex flex-col items-start gap-0.5">
-                      <span className="text-sm font-medium">{t.rotulo}</span>
-                      <span className="text-xs text-muted-foreground">{t.dica}</span>
-                    </DropdownMenuItem>
-                  ))}
+                <DropdownMenuContent align="end">
+                  {podeEditar && <DropdownMenuItem onSelect={() => setRenomeando(true)}><Pencil className="h-4 w-4" aria-hidden /> Renomear</DropdownMenuItem>}
+                  {podeEditar && (verMotor || equipe) && <DropdownMenuSeparator />}
+                  {verMotor && <DropdownMenuItem onSelect={() => aoIr('motor')}><Gauge className="h-4 w-4" aria-hidden /> Motor</DropdownMenuItem>}
+                  {equipe && <DropdownMenuItem onSelect={() => aoIr('diagnostico')}><Stethoscope className="h-4 w-4" aria-hidden /> Diagnóstico</DropdownMenuItem>}
+                  {podeExcluir && (
+                    <>
+                      {(podeEditar || verMotor || equipe) && <DropdownMenuSeparator />}
+                      <DropdownMenuItem variant="destructive" onSelect={aoExcluir}>
+                        <Trash2 className="h-4 w-4" aria-hidden /> Excluir IA
+                      </DropdownMenuItem>
+                    </>
+                  )}
                 </DropdownMenuContent>
               </DropdownMenu>
-            );
-          })}
-        </nav>
-      )}
-
-      {selecionada && (
-        <div className="flex items-center gap-3">
-          <Button type="button" variant="outline" onClick={aoTestar}>
-            <Smartphone className="mr-1.5 h-4 w-4" aria-hidden /> Testar
-          </Button>
-          <div className="relative" title={travada ? travaDoLigar!.motivo : undefined}>
-            <Chave rotulo="Ligar ou desligar a IA" semRotuloVisivel genero="a" ligada={selecionada.enabled}
-              desabilitada={travada} aoMudar={aoLigar} />
-            {/* Chave desabilitada não recebe clique: a camada por cima leva à página que destrava. */}
-            {travada && (
-              <button type="button" className="absolute inset-0 cursor-pointer rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                aria-label={`Não dá pra ligar: ${travaDoLigar!.motivo} Abrir ${PAGINAS[travaDoLigar!.pagina].titulo}`}
-                onClick={() => aoCorrigirLigar(travaDoLigar!.pagina)} />
             )}
           </div>
-          {temMais && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <BotaoMaisAcoes />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                {podeEditar && <DropdownMenuItem onSelect={() => setRenomeando(true)}><Pencil className="h-4 w-4" aria-hidden /> Renomear</DropdownMenuItem>}
-                {podeEditar && (verMotor || equipe) && <DropdownMenuSeparator />}
-                {verMotor && <DropdownMenuItem onSelect={() => aoIr('motor')}><Gauge className="h-4 w-4" aria-hidden /> Motor</DropdownMenuItem>}
-                {equipe && <DropdownMenuItem onSelect={() => aoIr('diagnostico')}><Stethoscope className="h-4 w-4" aria-hidden /> Diagnóstico</DropdownMenuItem>}
-                {podeExcluir && (
-                  <>
-                    {(podeEditar || verMotor || equipe) && <DropdownMenuSeparator />}
-                    <DropdownMenuItem variant="destructive" onSelect={aoExcluir}>
-                      <Trash2 className="h-4 w-4" aria-hidden /> Excluir IA
-                    </DropdownMenuItem>
-                  </>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
-        </div>
-      )}
-      {renomeando && selecionada && (
-        <RenomearAgente agent={selecionada} aoSalvo={aoSalvo} aoFechar={() => setRenomeando(false)} />
-      )}
+        )}
+        {renomeando && selecionada && (
+          <RenomearAgente agent={selecionada} aoSalvo={aoSalvo} aoFechar={() => setRenomeando(false)} />
+        )}
+      </div>
     </div>
   );
 }

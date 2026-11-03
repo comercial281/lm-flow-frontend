@@ -80,9 +80,9 @@ describe('PaginasComTrilho: o molde do Configurar', () => {
     expect(screen.getByRole('button', { name: 'Próxima → Condução' })).toBeInTheDocument();
   });
 
-  it('moldura larga (max-w-6xl) e índice de lg:w-52', () => {
+  it('moldura na largura toda da Pagina (sem teto próprio) e índice de lg:w-52', () => {
     const { container } = desenhar('b');
-    expect((container.firstChild as HTMLElement).className).toMatch(/max-w-6xl/);
+    expect((container.firstChild as HTMLElement).className).not.toMatch(/max-w-/);
     expect(screen.getByRole('navigation', { name: 'Páginas' }).className).toMatch(/lg:w-52/);
   });
 
