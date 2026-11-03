@@ -131,7 +131,8 @@ export default function NumerosEUsuarios(props: PropsDaPagina) {
               const aviso = avisoDoNumero(n.inbox_id, outros);
               const conv = conversas(n);
               return (
-                <article key={n.id} aria-label={nome} className="grid overflow-hidden rounded-2xl border border-border bg-card">
+                // `minmax(0,1fr)`: a coluna sem tamanho crescia até a linha mais comprida (texto que não quebra) e cortava a prévia na borda.
+                <article key={n.id} aria-label={nome} className="grid grid-cols-[minmax(0,1fr)] overflow-hidden rounded-2xl border border-border bg-card">
                   <div className="flex items-center gap-3 p-4">
                     <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary" aria-hidden>{iniciaisDoNome(nome)}</span>
                     <div className="min-w-0 flex-1">
