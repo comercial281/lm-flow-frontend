@@ -10733,7 +10733,7 @@ Testes: `Campanhas.spec.tsx`, `PraResolver.spec.tsx`, `TabelaDeFormularios.spec.
 **Como ficou:**
 
 - **Etiquetas nascem com o follow-up.** Criar, duplicar ou salvar cria as `<nome>-msg-N` que faltam (`ProgressTag.ensure_labels!`).
-- **Nome da etiqueta em Configurações**, só no follow-up e só pro gestor. Vai no Salvar do topo (`progress_tag_name` no `save_flow`), e o servidor replica nas mensagens e nas condições na mesma gravação. Follow-up misturado volta pra um nome só. Com lead dentro o campo trava: a etiqueta é o ponto de onde o lead continua. Nome de outro follow-up é recusado.
+- **Nome da etiqueta em Configurações**, só no follow-up e só pro gestor. Vai no Salvar do topo (`progress_tag_name` no `save_flow`), e o servidor replica nas mensagens e nas condições na mesma gravação. Follow-up misturado volta pra um nome só. Com lead dentro o campo trava: a etiqueta é o ponto de onde o lead continua. Nome de outro follow-up é recusado. A condição é reconhecida pelo formato `-msg-N`: o Follow-up Tikoa do Maradona tinha mensagens com um nome e condições com o da cópia, e mandar o nome conserta as duas.
 - **Condições de retomada travadas.** Condição por etiqueta `...-msg-N` num follow-up (`ehCondicaoAutomatica`) mostra o aviso "Automática: faz o lead que volta pro follow-up continuar de onde parou. Não precisa mexer.", sem editar, duplicar, renomear, "+ saída" nem excluir, e o clique não abre o painel. Condição com outra etiqueta continua normal, inclusive a que precisa de conserto.
 - **"Marcar progresso" saiu da mensagem do follow-up**, e o cartão não mostra o nome da etiqueta. Na automação continua igual.
 - **Duplicar** sai com um nome só, mesmo com original misturado. O nome nasce de "(cópia)": quem quiser outro define em Configurações.
