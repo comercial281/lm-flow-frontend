@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { PORTAL_MAX_PAGES, PORTAL_PAGE_SIZE, fetchAllPortalProperties } from './portalProperties';
+import { PORTAL_MAX_PAGES, PORTAL_PAGE_SIZE, chaveDaLista, fetchAllPortalProperties, fetchListaDoSite } from './portalProperties';
 import type { PortalProperty } from './portalShared';
 
 // A busca do catálogo recebe o `fetch` por parâmetro, então o teste não toca
@@ -78,5 +78,46 @@ describe('fetchAllPortalProperties', () => {
 
     expect(calls).toHaveLength(PORTAL_MAX_PAGES);
     expect(list).toHaveLength(PORTAL_PAGE_SIZE * PORTAL_MAX_PAGES);
+  });
+});
+
+describe('chaveDaLista', () => {
+  it.each([
+    ['/imoveis/a-venda/casa/sorocaba', 'a-venda/casa/sorocaba'],
+    ['/imoveis/para-alugar/', 'para-alugar'],
+    ['/portal/imob/imoveis/a-venda/apartamento', 'a-venda/apartamento'],
+    ['/imoveis', null],
+    ['/imoveis/', null],
+    ['/portal/imob/imoveis', null],
+    ['/imovel/casa-sorocaba/A1', null],
+  ])('%s → %s', (caminho, chave) => {
+    expect(chaveDaLista(caminho)).toBe(chave);
+  });
+});
+
+describe('fetchListaDoSite', () => {
+  const resp = (body: unknown, ok = true) => ({ ok, json: async () => body }) as unknown as Response;
+
+  it('manda o caminho ao servidor e devolve quem entra e o nome da lista', async () => {
+    const fetchImpl = vi.fn<(url: string, init?: RequestInit) => Promise<Response>>(async () => resp({
+      data: [prop(1), prop(2)], meta: { total: 2, listing_title: 'Casas à venda em Sorocaba' },
+    }));
+    const lista = await fetchListaDoSite('https://api.test', 'imob', 'a-venda/casa/sorocaba', fetchImpl);
+
+    expect(lista?.titulo).toBe('Casas à venda em Sorocaba');
+    expect([...lista!.ids]).toEqual(['id-1', 'id-2']);
+    const u = new URL(fetchImpl.mock.calls[0][0]);
+    expect(u.searchParams.get('listing_path')).toBe('a-venda/casa/sorocaba');
+    expect(fetchImpl).toHaveBeenCalledWith(expect.any(String), { headers: { 'X-Tenant': 'imob' } });
+  });
+
+  it('caminho que o servidor não reconhece (lista vazia, sem nome) = null', async () => {
+    const fetchImpl = vi.fn(async () => resp({ data: [], meta: { total: 0, listing_title: null } }));
+    expect(await fetchListaDoSite('https://api.test', 'imob', 'a-venda/nave-espacial', fetchImpl)).toBeNull();
+  });
+
+  it('servidor fora do ar na primeira página sobe como erro (não vira "não existe")', async () => {
+    const fetchImpl = vi.fn(async () => resp({}, false));
+    await expect(fetchListaDoSite('https://api.test', 'imob', 'a-venda', fetchImpl)).rejects.toThrow();
   });
 });

@@ -38,6 +38,8 @@ function ArticleCard({ tenant, a }: { tenant: string; a: PortalArticleSummary })
           <img
             src={a.cover_image_url}
             alt=""
+            loading="lazy"
+            decoding="async"
             className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
             onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
           />
@@ -98,7 +100,7 @@ export default function PortalBlogPage() {
   }, [site.name, manutencao]);
 
   if (state === 'loading') {
-    return <div className="flex min-h-screen items-center justify-center text-neutral-400" style={{ fontFamily: 'system-ui' }}>Carregando…</div>;
+    return <div data-carregando className="flex min-h-screen items-center justify-center text-neutral-400" style={{ fontFamily: 'system-ui' }}>Carregando…</div>;
   }
   // Em manutenção a página de manutenção vem antes do erro e das listas (que dão 404).
   if (manutencao) return <PaginaManutencao site={site} />;
@@ -122,7 +124,7 @@ export default function PortalBlogPage() {
         </header>
 
         {loading && articles.length === 0 ? (
-          <div className="flex items-center justify-center py-20 text-neutral-400">Carregando artigos…</div>
+          <div data-carregando className="flex items-center justify-center py-20 text-neutral-400">Carregando artigos…</div>
         ) : articles.length === 0 ? (
           <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-black/10 py-20 text-center text-neutral-500">
             <Ic d={I.arrow} s={28} cls="mb-3 opacity-40" />

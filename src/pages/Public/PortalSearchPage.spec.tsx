@@ -325,3 +325,56 @@ describe('PortalSearchPage', () => {
     });
   });
 });
+
+describe('PortalSearchPage — lista do servidor (/imoveis/a-venda/casa/campinas)', () => {
+  function servidorDaLista(items: PortalProperty[], lista: Record<string, { ids: string[]; titulo: string } | 'falha'>) {
+    vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+      // VITE_API_URL não existe no teste: a URL não tem origem, então nada de new URL().
+      const [caminho, query = ''] = url.split('?');
+      if (caminho.endsWith('/site/properties')) {
+        const chave = new URLSearchParams(query).get('listing_path');
+        if (!chave) return resposta({ data: items, meta: { total: items.length } });
+        const l = lista[chave];
+        if (l === 'falha') return { ok: false, json: async () => ({}) };
+        const dela = l ? items.filter(i => l.ids.includes(i.id)) : [];
+        return resposta({ data: dela, meta: { total: dela.length, listing_title: l?.titulo ?? null } });
+      }
+      if (caminho.endsWith('/site/articles')) return resposta({ data: [], meta: { total: 0 } });
+      if (caminho.endsWith('/site')) return resposta({ data: { name: 'Imob Teste' } });
+      return resposta({});
+    }));
+  }
+  const abrir = (url: string) => render(
+    <MemoryRouter initialEntries={[url]}>
+      <Routes><Route path="/portal/:tenant/imoveis/*" element={<PortalSearchPage />} /></Routes>
+    </MemoryRouter>,
+  );
+
+  it('título e imóveis vêm do servidor, sem as abas', async () => {
+    servidorDaLista(
+      [imovel('C1', { property_type: 'house' }), imovel('C2', { property_type: 'house' }), imovel('A1')],
+      { 'a-venda/casa/campinas': { ids: ['C1', 'C2'], titulo: 'Casas à venda em Campinas' } },
+    );
+    abrir('/portal/imob/imoveis/a-venda/casa/campinas');
+
+    await screen.findByRole('heading', { level: 1, name: 'Casas à venda em Campinas' });
+    expect(titulos()).toEqual(expect.arrayContaining(['Imóvel C1', 'Imóvel C2']));
+    expect(titulos()).not.toContain('Imóvel A1');
+    expect(screen.queryByRole('tab', { name: /alugar/i })).toBeNull();
+    expect(document.title).toBe('Casas à venda em Campinas | Imob Teste');
+  });
+
+  it('caminho que o servidor não conhece vira "Página não encontrada"', async () => {
+    servidorDaLista([imovel('A1')], {});
+    abrir('/portal/imob/imoveis/a-venda/nave-espacial');
+    await screen.findByRole('heading', { level: 1, name: 'Página não encontrada' });
+    expect(screen.getByRole('link', { name: 'Ver imóveis' }).getAttribute('href')).toBe('/portal/imob/imoveis');
+  });
+
+  it('servidor fora do ar na lista mostra erro, não "não encontrada"', async () => {
+    servidorDaLista([imovel('A1')], { 'a-venda': 'falha' });
+    abrir('/portal/imob/imoveis/a-venda');
+    await screen.findByText('Portal indisponível.');
+    expect(screen.queryByRole('heading', { name: 'Página não encontrada' })).toBeNull();
+  });
+});

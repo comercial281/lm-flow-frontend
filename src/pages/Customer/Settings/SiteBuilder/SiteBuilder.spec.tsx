@@ -458,7 +458,7 @@ describe('SiteBuilder (casca do Meu site)', () => {
       expect(barra()).toBeTruthy();
       fireEvent.click(screen.getByRole('button', { name: 'Salvar' }));
       await waitFor(() => expect(mocks.updateSite).toHaveBeenCalled());
-      expect(mocks.updateSite.mock.calls[0][1].google).toEqual({ indexable: true });
+      expect(mocks.updateSite.mock.calls[0][1].google).toEqual({ indexable: true, search_console: '', bing: '', clarity: '', business_profile_url: '', creci: '' });
       await waitFor(() => expect(barra()).toBeNull());
       expect(screen.getByRole('checkbox', { name: 'Aparecer no Google' })).toHaveAttribute('aria-checked', 'true');
     });

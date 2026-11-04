@@ -118,7 +118,7 @@ export default function PortalAnunciePage() {
   const waHref = wa ? `https://wa.me/${onlyDigits(wa)}?text=${encodeURIComponent(waText)}` : null;
 
   if (state === 'loading') {
-    return <div className="flex min-h-screen items-center justify-center text-neutral-400" style={{ fontFamily: 'system-ui' }}>Carregando…</div>;
+    return <div data-carregando className="flex min-h-screen items-center justify-center text-neutral-400" style={{ fontFamily: 'system-ui' }}>Carregando…</div>;
   }
   // Em manutenção a página de manutenção vem antes do erro e das listas (que dão 404).
   if (manutencao) return <PaginaManutencao site={site} />;

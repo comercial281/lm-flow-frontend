@@ -44,7 +44,7 @@ function BankBadge({ bank }: { bank: PortalBank }) {
         style={{ background: bank.color }}
       >
         {bank.logo_url ? (
-          <img src={bank.logo_url} alt={bank.name} className="h-full w-full object-contain p-4" />
+          <img src={bank.logo_url} alt={bank.name} loading="lazy" decoding="async" className="h-full w-full object-contain p-4" />
         ) : (
           <span
             className="px-3 text-center text-[15px] font-bold leading-tight"
@@ -70,7 +70,7 @@ export default function PortalFinanciamentoPage() {
   useIconeDaAba(site.branding?.favicon_url);
 
   if (state === 'loading') {
-    return <div className="flex min-h-screen items-center justify-center text-neutral-400" style={{ fontFamily: 'system-ui' }}>Carregando…</div>;
+    return <div data-carregando className="flex min-h-screen items-center justify-center text-neutral-400" style={{ fontFamily: 'system-ui' }}>Carregando…</div>;
   }
   // Em manutenção a página de manutenção vem antes do erro e das listas (que dão 404).
   if (manutencao) return <PaginaManutencao site={site} />;

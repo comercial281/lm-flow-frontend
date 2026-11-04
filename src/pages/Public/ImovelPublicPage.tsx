@@ -271,7 +271,7 @@ export default function ImovelPublicPage() {
     } catch { setFalhouEnvio(TEXTO_FALHA_DE_ENVIO); } finally { enviandoRef.current = false; setEnviando(false); }
   };
 
-  if (state === 'loading') return <div className="flex min-h-screen items-center justify-center text-neutral-400" style={{ fontFamily: 'system-ui' }}>Carregando…</div>;
+  if (state === 'loading') return <div data-carregando className="flex min-h-screen items-center justify-center text-neutral-400" style={{ fontFamily: 'system-ui' }}>Carregando…</div>;
   if (state === 'notfound' || !prop || !ficha) return <div className="flex min-h-screen items-center justify-center px-6 text-center text-neutral-500" style={{ fontFamily: 'system-ui' }}>Imóvel não encontrado.</div>;
 
   const photos = prop.photos ?? [];
@@ -403,7 +403,7 @@ export default function ImovelPublicPage() {
                 onClick={() => setLightbox(true)}
                 className="block w-full cursor-zoom-in"
               >
-                <img src={cover.file_url} alt={cover.alt_text || prop.title} className="h-[280px] w-full object-cover sm:h-[440px]" />
+                <img src={cover.file_url} alt={cover.alt_text || prop.title} fetchPriority="high" className="h-[280px] w-full object-cover sm:h-[440px]" />
               </button>
               <span className="pointer-events-none absolute left-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-black/45 text-white opacity-0 backdrop-blur transition-opacity group-hover:opacity-100 toque:opacity-100">
                 <Ic d={I.expand} s={16} />

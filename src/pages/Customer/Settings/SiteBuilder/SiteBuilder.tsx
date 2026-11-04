@@ -49,6 +49,7 @@ import TelaEndereco from './telas/TelaEndereco';
 import TelaDados from './telas/TelaDados';
 import TelaDestino from './telas/TelaDestino';
 import TelaGoogle from './telas/TelaGoogle';
+import { resolverGoogle } from '@/features/siteBuilder/contasDoGoogle';
 import TelaPaginas, { type MudancaDePagina } from './telas/TelaPaginas';
 import TelaMenus from './telas/TelaMenus';
 import TelaBlog from './telas/TelaBlog';
@@ -101,7 +102,7 @@ const EMPTY_SITE_FORM: SiteFormData = {
   watermark: { enabled: false, position: 'center', opacity: 60 },
   custom_head_html: '',
   custom_body_html: '',
-  google: { indexable: false },
+  google: resolverGoogle(null),
 };
 
 export default function SiteBuilder() {
@@ -225,7 +226,7 @@ export default function SiteBuilder() {
           custom_head_html: s.custom_code?.head ?? '',
           custom_body_html: s.custom_code?.body ?? '',
           // Servidor velho não manda `google`: desligado, o padrão de fábrica.
-          google: { indexable: s.google?.indexable === true },
+          google: resolverGoogle(s.google),
         });
         setHomeAlterado(false);
         setFichaAlterada(false);
@@ -278,9 +279,9 @@ export default function SiteBuilder() {
         };
       }
       if (!listaAlterada) delete payload.listing;
-      // `google` vai sempre INTEIRO (permit aninhado no servidor) e só se a caixinha mexeu.
+      // `google` vai sempre INTEIRO (permit aninhado no servidor) e só se a tela mexeu.
       if (!googleAlterado) delete payload.google;
-      else payload.google = { indexable: siteForm.google?.indexable === true };
+      else payload.google = resolverGoogle(siteForm.google);
       // Aparência e menu: só se a tela mexeu, e sempre o bloco inteiro. O menu vai
       // no formato do servidor (página SEMPRE com `enabled`, sem `page_title`).
       if (!aparenciaAlterada) delete payload.appearance;
@@ -308,8 +309,8 @@ export default function SiteBuilder() {
           home: resolverHome(updated.home),
           property_page: resolverFichaDoAdmin(updated.property_page),
           listing: resolverLista(updated.listing),
-          // A caixinha mostra o que ficou gravado; servidor velho sem `google` mantém a tela.
-          google: updated.google ? { indexable: updated.google.indexable === true } : prev.google,
+          // A tela mostra o que ficou gravado (o código limpo, sem a tag); servidor velho sem `google` mantém a tela.
+          google: updated.google ? resolverGoogle(updated.google) : prev.google,
           // Aparência e menu como ficaram gravados (o servidor limpa nome, link e texto).
           // Servidor velho sem os blocos mantém a tela.
           appearance: updated.appearance !== undefined ? resolverAparencia(updated.appearance) : prev.appearance,

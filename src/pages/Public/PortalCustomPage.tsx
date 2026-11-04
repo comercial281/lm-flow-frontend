@@ -46,7 +46,7 @@ export default function PortalCustomPage() {
   }, [page, site.name]);
 
   if (state === 'loading') {
-    return <div className="flex min-h-screen items-center justify-center text-neutral-400" style={{ fontFamily: 'system-ui' }}>Carregando…</div>;
+    return <div data-carregando className="flex min-h-screen items-center justify-center text-neutral-400" style={{ fontFamily: 'system-ui' }}>Carregando…</div>;
   }
   // Em manutenção a página de manutenção vem antes do erro e das listas (que dão 404).
   if (manutencao) return <PaginaManutencao site={site} />;
@@ -62,7 +62,7 @@ export default function PortalCustomPage() {
       <PortalHeader site={site} tenant={tenant!} abas={abas} />
 
       {loading ? (
-        <div className="flex items-center justify-center py-24 text-neutral-400">Carregando página…</div>
+        <div data-carregando className="flex items-center justify-center py-24 text-neutral-400">Carregando página…</div>
       ) : !page ? (
         <div className="mx-auto flex max-w-3xl flex-col items-center justify-center px-4 py-24 text-center text-neutral-500">
           <p className="text-[15px]">Página não encontrada.</p>
