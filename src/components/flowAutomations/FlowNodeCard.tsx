@@ -59,7 +59,7 @@ export interface FlowNodeCardData {
   condicaoAutomatica?: boolean;
   /** Mensagem do follow-up: o nome da etiqueta de progresso é do sistema, não aparece. */
   ocultarProgresso?: boolean;
-  /** Só no cartão da última espera do follow-up com condições de retomada: abre a janela "Adicionar mensagem". */
+  /** Só no cartão da última MENSAGEM (`last_node_id` do servidor) do follow-up com condições de retomada, embaixo dela: abre a janela "Adicionar mensagem". */
   onAdicionarMensagem?: () => void;
   onEdit: (id: string) => void;
   onDuplicate: (id: string) => void;

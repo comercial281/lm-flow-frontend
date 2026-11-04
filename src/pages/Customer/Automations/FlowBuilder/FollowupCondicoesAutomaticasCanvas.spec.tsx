@@ -163,7 +163,7 @@ describe('travas da sequência (follow-up com condições de retomada)', () => {
     ...fluxo('followup'),
     initial_node_id: 'm1',
     nodes: [msg, espera, retomadaYes],
-    followup_messages: { supported: true, count: 1, limit: 25, last_node_id: 'w1', locked_ids: ['m1', 'n1'] },
+    followup_messages: { supported: true, count: 1, limit: 25, last_node_id: 'm1', locked_ids: ['m1', 'n1'] },
     ...over,
   });
 

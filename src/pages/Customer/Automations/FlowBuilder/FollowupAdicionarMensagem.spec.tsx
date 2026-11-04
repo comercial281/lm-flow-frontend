@@ -83,7 +83,7 @@ const fluxo = (over: Record<string, unknown> = {}) => ({
   initial_node_id: 'm1', nodes: [msg, espera, retomada],
   team: true, owner_user_id: 'u1', owner_name: 'Gestor', live_count: 0, my_default: false, account_default: false,
   permissions: permissoes,
-  followup_messages: { supported: true, count: 1, limit: 25, last_node_id: 'w1', locked_ids: ['m1', 'n1'] },
+  followup_messages: { supported: true, count: 1, limit: 25, last_node_id: 'm1', locked_ids: ['m1', 'n1'] },
   ...over,
 });
 
@@ -130,11 +130,13 @@ describe('botão "+ Adicionar mensagem"', () => {
     await screen.findByText('Primeira mensagem');
     const botoes = await screen.findAllByText(BOTAO);
     expect(botoes).toHaveLength(1);
-    expect(botoes[0].closest('.fluxo-bloco')?.textContent).toContain('Esperar 1 dia');
+    const cartao = botoes[0].closest('.fluxo-bloco')?.textContent ?? '';
+    expect(cartao).toContain('Primeira mensagem');
+    expect(cartao).not.toContain('Esperar 1 dia');
   });
 
   it('no limite (count 25) não aparece', async () => {
-    get.mockResolvedValue(fluxo({ followup_messages: { supported: true, count: 25, limit: 25, last_node_id: 'w1', locked_ids: ['m1', 'n1'] } }));
+    get.mockResolvedValue(fluxo({ followup_messages: { supported: true, count: 25, limit: 25, last_node_id: 'm1', locked_ids: ['m1', 'n1'] } }));
     renderCanvas();
     await screen.findByText('Primeira mensagem');
     expect(screen.queryByText(BOTAO)).toBeNull();
@@ -171,7 +173,7 @@ describe('botão "+ Adicionar mensagem"', () => {
   });
 
   it('sem a condição (limite), a lista de Blocos não traz o item', async () => {
-    get.mockResolvedValue(fluxo({ followup_messages: { supported: true, count: 25, limit: 25, last_node_id: 'w1', locked_ids: ['m1', 'n1'] } }));
+    get.mockResolvedValue(fluxo({ followup_messages: { supported: true, count: 25, limit: 25, last_node_id: 'm1', locked_ids: ['m1', 'n1'] } }));
     renderCanvas();
     fireEvent.click(await screen.findByRole('button', { name: /Blocos/ }));
     await screen.findByText('Esperar');
@@ -242,7 +244,7 @@ describe('janela da nova mensagem', () => {
 
 describe('tirar mensagem pelo servidor', () => {
   it('gestor: pede confirmação, chama removeMessage e não chama saveFlow (mesmo estando em locked_ids)', async () => {
-    removeMessage.mockResolvedValue(fluxo({ nodes: [espera, retomada], initial_node_id: 'w1', followup_messages: { supported: true, count: 0, limit: 25, last_node_id: 'w1', locked_ids: ['n1'] } }));
+    removeMessage.mockResolvedValue(fluxo({ nodes: [espera, retomada], initial_node_id: 'w1', followup_messages: { supported: true, count: 0, limit: 25, last_node_id: null, locked_ids: ['n1'] } }));
     renderCanvas();
     fireEvent.click(await screen.findByLabelText('Excluir Primeira mensagem'));
     fireEvent.click(await screen.findByRole('button', { name: 'Tirar' }));
@@ -267,7 +269,7 @@ describe('tirar mensagem pelo servidor', () => {
   });
 
   it('locked_ids segue travando Excluir na espera que ele cobre; a tecla Delete segue off na mensagem', async () => {
-    get.mockResolvedValue(fluxo({ followup_messages: { supported: true, count: 1, limit: 25, last_node_id: 'w1', locked_ids: ['m1', 'w1', 'n1'] } }));
+    get.mockResolvedValue(fluxo({ followup_messages: { supported: true, count: 1, limit: 25, last_node_id: 'm1', locked_ids: ['m1', 'w1', 'n1'] } }));
     renderCanvas();
     await screen.findByText('Primeira mensagem');
     expect(screen.queryByLabelText('Excluir Esperar 1 dia')).toBeNull();
