@@ -7,6 +7,7 @@ import {
   Contact,
   SquareKanban,
   Inbox,
+  KeyRound,
   ListChecks,
   Hand,
   Bot,
@@ -296,6 +297,11 @@ export const getCustomerMenuSections = (): MenuSection[] => [
       // no MainLayout): o gestor sempre vê, o corretor só com algum
       // proprietário liberado para ele. A bolinha é captação nova não vista.
       { id: 'proprietarios', name: 'Gestão de proprietários', href: '/property-owners', icon: UserRoundCheck, ...permissionFromRoute('/property-owners'), featureKey: 'properties' },
+      // Locação — contratos, boletos, repasses e reajustes de aluguel.
+      // clientToggleKey (e não featureKey): nasce DESLIGADA para o cliente e a
+      // Leal Mídia sempre vê, como o Bolsão. A outra metade da trava é `locacao`
+      // estar em ClientInstance::DEFAULT_OFF_FEATURES no backend.
+      { name: 'Locação', href: '/locacao', icon: KeyRound, ...permissionFromRoute('/locacao'), clientToggleKey: 'locacao' },
       // Gestão do site: pede `sites.update` além da leitura (ver `gestao`).
       { name: 'Meu site', href: '/settings/site-builder', icon: Globe, ...gestao('/settings/site-builder', 'sites.update'), featureKey: 'site_builder', foraDoCelular: true },
     ],

@@ -1,0 +1,99 @@
+/* A folha do contrato: papel branco com texto escuro, igual ao que sai impresso, em qualquer tema da tela. */
+.locacao-documento {
+  background: #fff;
+  color: #1a1a1a;
+  border: 1px solid var(--border, #e4e4e7);
+  border-radius: 0.5rem;
+  padding: 2.5rem 3rem;
+  max-width: 52rem;
+  margin: 0 auto;
+  width: 100%;
+  font-family: 'Times New Roman', Times, serif;
+  font-size: 12pt;
+  line-height: 1.55;
+  text-align: justify;
+  outline: none;
+}
+.locacao-documento:focus-visible {
+  box-shadow: 0 0 0 2px var(--ring, #7c3aed);
+}
+.locacao-documento h1 {
+  font-size: 15pt;
+  text-align: center;
+  margin: 0 0 1.25rem;
+  letter-spacing: 0.02em;
+}
+.locacao-documento h3 {
+  font-size: 12pt;
+  margin: 1.25rem 0 0.4rem;
+  break-after: avoid;
+}
+.locacao-documento p {
+  margin: 0 0 0.6rem;
+}
+.locacao-documento .blank {
+  background: #fde68a;
+  border-radius: 2px;
+  padding: 0 2px;
+}
+.locacao-documento .ct-data {
+  text-align: right;
+  margin: 1.5rem 0;
+}
+.locacao-documento .ct-ass {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2.5rem 2rem;
+  margin-top: 3rem;
+  break-inside: avoid;
+}
+.locacao-documento .ct-ass > div {
+  text-align: center;
+}
+.locacao-documento .ct-ass > div > span {
+  display: block;
+  border-top: 1px solid #1a1a1a;
+  margin-bottom: 0.25rem;
+}
+.locacao-documento .ct-ass small {
+  display: block;
+  font-size: 9pt;
+  color: #52525b;
+}
+
+@media (max-width: 640px) {
+  .locacao-documento {
+    padding: 1.25rem 1rem;
+    font-size: 11pt;
+  }
+}
+
+/* "Baixar PDF" é a impressão do navegador: só a folha vai pro papel, sem os campos em amarelo. */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .locacao-documento,
+  .locacao-documento * {
+    visibility: visible;
+  }
+  .locacao-documento {
+    position: absolute;
+    inset: 0 auto auto 0;
+    width: 100%;
+    max-width: none;
+    border: 0;
+    border-radius: 0;
+    padding: 0;
+    margin: 0;
+  }
+  .locacao-documento .blank {
+    background: none;
+  }
+  .locacao-fora-da-impressao {
+    display: none !important;
+  }
+  @page {
+    margin: 2cm;
+  }
+}
