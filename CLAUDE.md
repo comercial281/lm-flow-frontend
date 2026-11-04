@@ -10756,3 +10756,11 @@ Armadilhas:
 3. **Ainda dá pra cortar a linha de uma condição travada.** E mensagem nova adicionada no follow-up não marca progresso, então a retomada não a reconhece. Próxima conversa: 7ª mensagem e prazos. Ver `LM FLOW/_MELHORIAS.md`.
 
 Testes: `CondicoesAutomaticasDoFollowup.spec.tsx`, `FollowupCondicoesAutomaticasCanvas.spec.tsx`. Servidor: `spec/requests/api/v1/flow_automations_followup_progress_labels_spec.rb`.
+
+## Quais leads do follow-up: a roleta antes da IA não tira mais (desde 2026-11-05)
+
+Pedido do dono do produto (04/11/2026, caso Pandora). A regra mora no servidor (ver o CLAUDE.md do `lm-flow`): o lead que passou pela roleta antes de falar com a IA pode receber follow-up e retomada; o que ela já passou pra um corretor, não.
+
+Na tela só muda a frase de *IA Vendedora › Follow-up › Quais leads*: *"Só quem ela atendeu e ainda não passou pra um corretor."* A antiga ("ainda não foi pra um corretor") ficaria falsa num lead que já tem corretor e segue com a IA.
+
+Voltar é seguro: a frase não chama nada no servidor.

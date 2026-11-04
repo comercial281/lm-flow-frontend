@@ -39,11 +39,11 @@ describe('de quais leads a IA vai atrás', () => {
   });
 
   // Decisão do dono (29/09/2026): o follow-up só vai atrás de lead que a IA
-  // atendeu e que não foi para a roleta — quem aplica é o servidor, e a tela
+  // atendeu e ainda não passou (desde 04/11, roleta antes da IA não conta) — quem aplica é o servidor, e a tela
   // tem que DIZER isso. "Todos os leads deste número" voltaria a prometer o
   // comportamento antigo, que deixou de existir.
-  it('diz que o público é quem a IA atendeu e que não foi pra um corretor', () => {
-    expect(src).toContain('Só quem ela atendeu e que ainda não foi pra um corretor.');
+  it('diz que o público é quem a IA atendeu e ainda não passou pra um corretor', () => {
+    expect(src).toContain('Só quem ela atendeu e ainda não passou pra um corretor.');
     expect(src).toContain('ela continua indo atrás de todos os leads que ela atendeu');
     expect(src).not.toContain('Todos os leads deste número');
   });

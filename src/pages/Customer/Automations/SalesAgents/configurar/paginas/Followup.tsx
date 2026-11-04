@@ -113,7 +113,7 @@ export default function Followup({ agent, gravar, irPara }: PropsDaPagina) {
 
       {mostrarResto && (
         <>
-          <Secao titulo="Quais leads" descricao="Só quem ela atendeu e que ainda não foi pra um corretor.">
+          <Secao titulo="Quais leads" descricao="Só quem ela atendeu e ainda não passou pra um corretor.">
             <BotoesDeEscolha rotulo="Quais leads" valor={recortado ? 'funis' : 'todos'}
               opcoes={[{ valor: 'todos', rotulo: 'Todos esses' }, { valor: 'funis', rotulo: 'Só os destes funis' }]}
               aoEscolher={(v) => {
