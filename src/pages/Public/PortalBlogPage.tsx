@@ -38,6 +38,8 @@ function ArticleCard({ tenant, a }: { tenant: string; a: PortalArticleSummary })
           <img
             src={a.cover_image_url}
             alt=""
+            loading="lazy"
+            decoding="async"
             className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
             onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
           />

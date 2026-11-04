@@ -109,6 +109,18 @@ describe('montarHead', () => {
     expect(d.querySelector('link[rel="canonical"]')?.getAttribute('href')).toBe('https://www.imob.com.br/imovel/AP1');
   });
 
+  it('códigos de verificação do Search Console e do Bing do cliente', () => {
+    const d = doc(montarHead(INDEX_HTML, { ...DADOS, verification: { google: 'abcDEF123_-xyz', bing: '0123456789ABCDEF' } }, DOMINIO));
+    expect(meta(d, 'meta[name="google-site-verification"]')).toBe('abcDEF123_-xyz');
+    expect(meta(d, 'meta[name="msvalidate.01"]')).toBe('0123456789ABCDEF');
+    const sem = doc(montarHead(INDEX_HTML, DADOS, DOMINIO));
+    expect(sem.querySelector('meta[name="google-site-verification"]')).toBeNull();
+    expect(sem.querySelector('meta[name="msvalidate.01"]')).toBeNull();
+    const lixo = montarHead(INDEX_HTML, { ...DADOS, verification: { google: '"><script>x</script>', bing: 'curto' } }, DOMINIO);
+    expect(lixo).not.toContain('google-site-verification');
+    expect(lixo).not.toContain('msvalidate.01');
+  });
+
   it('robots do servidor troca o noindex do index.html (uma tag só)', () => {
     const d = doc(montarHead(INDEX_HTML, DADOS, DOMINIO));
     expect(d.querySelectorAll('meta[name="robots"]')).toHaveLength(1);

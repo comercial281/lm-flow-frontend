@@ -215,9 +215,22 @@ export interface Site {
   updated_at: string;
 }
 
-/** Caixinha "Aparecer no Google". Viaja sempre o bloco inteiro. */
+/**
+ * "Aparecer no Google". Viaja sempre o bloco inteiro. As contas são do CLIENTE
+ * (Search Console, Bing, Clarity e Perfil da Empresa dele), nunca da Leal Mídia.
+ */
 export interface SiteGoogle {
   indexable: boolean;
+  /** Código (ou a tag inteira) de verificação do Search Console. */
+  search_console?: string | null;
+  /** Código (ou a tag `msvalidate.01`) do Bing Webmaster Tools. */
+  bing?: string | null;
+  /** ID do projeto do Microsoft Clarity (ou o script inteiro). */
+  clarity?: string | null;
+  /** Link do Perfil da Empresa no Google. */
+  business_profile_url?: string | null;
+  /** CRECI da imobiliária (vai nos dados estruturados). */
+  creci?: string | null;
 }
 
 /** Link da prévia antes de publicar (`POST /sites/:id/preview_link`), vale 24 h. */

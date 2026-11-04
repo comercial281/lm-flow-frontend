@@ -1,7 +1,7 @@
 // src/features/siteBuilder/public/siteTracking.ts
 // Rastreamento do site público (Meu site · Rastreamento).
-// REGRA DE HOST (não reabrir): GA4 e Pixel em qualquer endereço; GTM e Códigos
-// avançados SÓ em domínio próprio. Em *.lmflow.com.br o site divide o endereço
+// REGRA DE HOST (não reabrir): GA4 e Pixel em qualquer endereço; GTM, Clarity
+// (grava a tela) e Códigos avançados SÓ em domínio próprio. Em *.lmflow.com.br o site divide o endereço
 // com o CRM, e a sessão de quem está logado fica no localStorage desse endereço:
 // código de terceiro ali leria a sessão.
 //
@@ -12,13 +12,19 @@ import { installPixel } from '@/features/landing/public/metaPixel';
 import { dominioConfirmado, ehEnderecoDoSistema, limparHost } from './dominioDoSite';
 
 export interface SiteTrackingConfig {
-  tracking?: { gtm_id?: string | null; ga4?: string | null; facebook_pixel?: string | null } | null;
+  tracking?: { gtm_id?: string | null; ga4?: string | null; facebook_pixel?: string | null; clarity?: string | null } | null;
   custom_code?: { head?: string | null; body?: string | null } | null;
   /** Prévia antes de publicar: não instala nada (a prévia não é visita). */
   preview?: boolean | null;
 }
 
-type W = Window & { dataLayer?: unknown[]; gtag?: (...a: unknown[]) => void; fbq?: (...a: unknown[]) => void; __lmfTracking?: boolean };
+type W = Window & {
+  dataLayer?: unknown[];
+  gtag?: (...a: unknown[]) => void;
+  fbq?: (...a: unknown[]) => void;
+  clarity?: ((...a: unknown[]) => void) & { q?: unknown[] };
+  __lmfTracking?: boolean;
+};
 
 export function isOwnDomain(host: string): boolean {
   const h = limparHost(host);
@@ -29,7 +35,7 @@ export function isOwnDomain(host: string): boolean {
 
 // Valores antigos nunca passaram pela validação da tela: id fora do formato
 // (ex.: um GTM colado no campo do GA4) é ignorado em vez de virar script.
-const FORMATO = { ga4: /^G-[A-Z0-9]+$/, pixel: /^\d+$/, gtm: /^GTM-[A-Z0-9]+$/ };
+const FORMATO = { ga4: /^G-[A-Z0-9]+$/, pixel: /^\d+$/, gtm: /^GTM-[A-Z0-9]+$/, clarity: /^[a-z0-9]{6,20}$/ };
 function idValido(v: string | null | undefined, formato: RegExp): string | null {
   const n = (v ?? '').trim();
   return formato.test(n) ? n : null;
@@ -69,8 +75,10 @@ export function installSiteTracking(cfg: SiteTrackingConfig, deps: { win?: Windo
   const ga4 = idValido(t.ga4, FORMATO.ga4);
   const pixel = idValido(t.facebook_pixel, FORMATO.pixel);
   const gtm = idValido(t.gtm_id, FORMATO.gtm);
+  // Clarity do CLIENTE (o da plataforma é outro, nunca entra no site dele).
+  const clarity = idValido(t.clarity, FORMATO.clarity);
   const own = isOwnDomain(host);
-  const hasAdvanced = !!(gtm || cfg.custom_code?.head || cfg.custom_code?.body);
+  const hasAdvanced = !!(gtm || clarity || cfg.custom_code?.head || cfg.custom_code?.body);
   // Config vazia (site que falhou ao carregar) não trava a instalação da próxima tentativa.
   if (!ga4 && !pixel && !(own && hasAdvanced)) return;
   w.__lmfTracking = true;
@@ -95,6 +103,14 @@ export function installSiteTracking(cfg: SiteTrackingConfig, deps: { win?: Windo
       w.dataLayer = w.dataLayer || [];
       w.dataLayer.push({ 'gtm.start': Date.now(), event: 'gtm.js' });
       addScript(doc, `https://www.googletagmanager.com/gtm.js?id=${encodeURIComponent(gtm)}`);
+    }
+    if (clarity) {
+      // Fila do snippet oficial: o que chamar antes do script carregar não se perde.
+      const fila: unknown[] = [];
+      const fn = ((...a: unknown[]) => { fila.push(a); }) as NonNullable<W['clarity']>;
+      fn.q = fila;
+      w.clarity = w.clarity || fn;
+      addScript(doc, `https://www.clarity.ms/tag/${encodeURIComponent(clarity)}`);
     }
     if (cfg.custom_code?.head) injectHtml(doc, cfg.custom_code.head, doc.head, true);
     if (cfg.custom_code?.body) injectHtml(doc, cfg.custom_code.body, doc.body, true);
