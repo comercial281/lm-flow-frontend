@@ -9,7 +9,8 @@
 // Config: `progress_tag_prefix` (texto) + `progress_step` (número N). Sem
 // `progress_tag_prefix` = não marca.
 
-import type { FlowAutomationKind, FlowAutomationNode, FlowNodeConfig } from '@/types/flowAutomations';
+import type { FlowAutomation, FlowAutomationKind, FlowAutomationNode, FlowNodeConfig } from '@/types/flowAutomations';
+import type { PaletteItem } from './palette';
 
 /**
  * As condições de retomada do follow-up ("Já recebeu todas", "Continuar da mensagem
@@ -26,6 +27,24 @@ export function ehCondicaoAutomatica(
   if (flowKind !== 'followup' || node.kind !== 'condition') return false;
   const config = node.config ?? {};
   return config.criterion === 'has_label' && /-msg-\d+$/.test(String(config.label ?? ''));
+}
+
+/**
+ * Follow-up com condições de retomada: a sequência (mensagens, prazos, linhas das
+ * condições) só muda pelo "Adicionar mensagem"/"Excluir" do servidor, que religa
+ * as pontas e a etiqueta. Sem isso o desenho solto deixa o lead calado.
+ */
+export function sequenciaTravada(
+  automation: Pick<FlowAutomation, 'kind' | 'followup_messages'> | null | undefined,
+): boolean {
+  return automation?.kind === 'followup' && automation.followup_messages?.supported === true;
+}
+
+/** O bloco da paleta manda mensagem ao lead (grupo Mensagem: o bloco Mensagem e as ações `send_*`). */
+export function itemEnviaAoLead(item: Pick<PaletteItem, 'kind' | 'group' | 'config'>): boolean {
+  if (item.group !== 'message') return false;
+  if (item.kind === 'send_whatsapp') return true;
+  return item.kind === 'lead_action' && String(item.config?.action_type ?? '').startsWith('send_');
 }
 
 export interface ProgressMark {

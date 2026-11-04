@@ -22,6 +22,19 @@ vi.mock('@/services/messageFunnels/messageFunnelsService', () => ({
 vi.mock('@/services/numbers/numbersService', () => ({
   default: { sendNumbers: vi.fn().mockResolvedValue({ number_owner_rule: false, numbers: [] }) },
 }));
+// Espia as props que o canvas passa pro React Flow (as linhas e os blocos), sem trocar o componente.
+const reactFlowProps = vi.hoisted(() => ({ last: null as null | { edges: Array<{ id: string; deletable?: boolean }>; nodes: Array<{ id: string; deletable?: boolean }> } }));
+vi.mock('@xyflow/react', async importOriginal => {
+  const original = await importOriginal<typeof import('@xyflow/react')>();
+  const Original = original.ReactFlow;
+  return {
+    ...original,
+    ReactFlow: (props: React.ComponentProps<typeof Original>) => {
+      reactFlowProps.last = props as never;
+      return <Original {...props} />;
+    },
+  };
+});
 vi.mock('sonner', () => ({ toast: { error: vi.fn(), success: vi.fn() } }));
 vi.mock('@/hooks/useCan', () => ({ useCan: () => () => true }));
 vi.mock('@/store/authStore', () => ({
@@ -139,5 +152,81 @@ describe('nome da etiqueta no salvar do follow-up', () => {
     fireEvent.click(await screen.findByRole('button', { name: /Salvar/ }));
     await waitFor(() => expect(saveFlow).toHaveBeenCalled());
     expect(saveFlow.mock.calls[0][1]).not.toHaveProperty('progress_tag_name');
+  });
+});
+
+describe('travas da sequência (follow-up com condições de retomada)', () => {
+  const msg = bloco({ id: 'm1', kind: 'send_whatsapp', label: 'Primeira mensagem', config: { text: 'Oi' }, next_node_id: 'w1' });
+  const espera = bloco({ id: 'w1', kind: 'wait', label: 'Esperar 1 dia', config: { amount: 1, unit: 'days' }, pos_y: 150, next_node_id: 'n1' });
+  const retomadaYes = { ...retomada, next_yes_node_id: 'm1', pos_y: 300 };
+  const travado = (over: Record<string, unknown> = {}) => ({
+    ...fluxo('followup'),
+    initial_node_id: 'm1',
+    nodes: [msg, espera, retomadaYes],
+    followup_messages: { supported: true, count: 1, limit: 25, last_node_id: 'w1', locked_ids: ['m1', 'n1'] },
+    ...over,
+  });
+
+  const abrirBlocos = async () => {
+    const botao = await screen.findByRole('button', { name: /Blocos/ });
+    if (botao.getAttribute('aria-expanded') !== 'true') fireEvent.click(botao);
+  };
+
+  it('a lista de Blocos não oferece mandar WhatsApp nem áudio', async () => {
+    get.mockResolvedValue(travado());
+    renderCanvas();
+    await abrirBlocos();
+    await screen.findByText('Esperar');
+    expect(screen.queryByRole('button', { name: /^Mensagem/ })).toBeNull();
+    expect(screen.queryByText('Disparar funil de mensagens')).toBeNull();
+  });
+
+  it('na automação a lista segue com Mandar WhatsApp', async () => {
+    get.mockResolvedValue({ ...travado(), kind: 'automation' });
+    renderCanvas();
+    await abrirBlocos();
+    expect(await screen.findByRole('button', { name: /^Mensagem/ })).toBeTruthy();
+    expect(screen.getByText('Disparar funil de mensagens')).toBeTruthy();
+  });
+
+  it('sem supported, a lista segue com Mandar WhatsApp', async () => {
+    get.mockResolvedValue(travado({ followup_messages: { supported: false, count: 0, limit: 25, last_node_id: null, locked_ids: [] } }));
+    renderCanvas();
+    await abrirBlocos();
+    expect(await screen.findByRole('button', { name: /^Mensagem/ })).toBeTruthy();
+    expect(screen.getByText('Disparar funil de mensagens')).toBeTruthy();
+  });
+
+  it('mensagem sem Duplicar e sem Excluir (locked); espera fora de locked_ids pode Excluir', async () => {
+    get.mockResolvedValue(travado());
+    renderCanvas();
+    await screen.findByText('Primeira mensagem');
+    expect(screen.queryByLabelText('Duplicar Primeira mensagem')).toBeNull();
+    expect(screen.queryByLabelText('Excluir Primeira mensagem')).toBeNull();
+    expect(screen.queryByLabelText('Excluir Esperar 1 dia')).toBeTruthy();
+  });
+
+  it('as teclas Delete não apagam mensagem nem bloco travado, e as linhas do Início e da condição travada não cortam', async () => {
+    get.mockResolvedValue(travado());
+    renderCanvas();
+    await screen.findByText('Primeira mensagem');
+    const { nodes, edges } = reactFlowProps.last!;
+    const byId = (id: string) => nodes.find(n => n.id === id)!;
+    expect(byId('m1').deletable).toBe(false);
+    expect(byId('n1').deletable).toBe(false);
+    expect(byId('w1').deletable).not.toBe(false);
+    expect(edges.find(e => e.id === 'trigger:out')!.deletable).toBe(false);
+    expect(edges.find(e => e.id === 'n1:yes')!.deletable).toBe(false);
+    expect(edges.find(e => e.id === 'm1:out')!.deletable).toBe(true);
+  });
+
+  it('sem supported tudo como hoje: mensagem duplica e linha da condição corta', async () => {
+    get.mockResolvedValue(travado({ followup_messages: { supported: false, count: 0, limit: 25, last_node_id: null, locked_ids: [] } }));
+    renderCanvas();
+    await screen.findByText('Primeira mensagem');
+    const { nodes, edges } = reactFlowProps.last!;
+    expect(nodes.find(n => n.id === 'm1')!.deletable).not.toBe(false);
+    expect(edges.find(e => e.id === 'n1:yes')!.deletable).toBe(true);
+    expect(screen.queryByLabelText('Duplicar Primeira mensagem')).toBeTruthy();
   });
 });

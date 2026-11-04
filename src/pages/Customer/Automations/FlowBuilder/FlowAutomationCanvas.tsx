@@ -20,7 +20,7 @@ import {
   normalizeLoadedNodes, buildSaveFlowPayload, outputLabel, NODE_WIDTH, STEP_X, calculateLayout, outputSide, targetSide,
   type OutputHandle,
 } from '@/lib/flowAutomationGraph';
-import { flowNodeTypes, type FlowLookups, type FlowStartNodeData } from '@/components/flowAutomations/FlowNodeCard';
+import { flowNodeTypes, type FlowLookups, type FlowNodeCardData, type FlowStartNodeData } from '@/components/flowAutomations/FlowNodeCard';
 import { flowEdgeTypes, type FlowEdgeData } from '@/components/flowAutomations/FlowEdge';
 import { BLOCK_DRAG_TYPE, FlowBlocksMenu } from '@/components/flowAutomations/FlowBlocksMenu';
 import { FlowNodePanel } from '@/components/flowAutomations/FlowNodePanel';
@@ -53,7 +53,7 @@ import {
 } from '@/features/flowAutomations/personal';
 import { usePersonalCapabilities } from '@/features/flowAutomations/usePersonalCapabilities';
 import { enableProblem, hasOwnTrigger, nodeProblem } from '@/features/flowAutomations/readiness';
-import { ehCondicaoAutomatica } from '@/features/flowAutomations/progress';
+import { ehCondicaoAutomatica, itemEnviaAoLead, sequenciaTravada } from '@/features/flowAutomations/progress';
 import {
   reentryOf, reentrySummary, reentryWarning, serializeReentry, type ReentrySetting,
 } from '@/features/flowAutomations/reentry';
@@ -246,13 +246,19 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
   // '' = de outra pessoa sem nome conhecido; null = não é o caso.
   const donoDoEnvio = modo === 'de_outro' ? automation?.owner_name ?? '' : null;
   const capacidades = usePersonalCapabilities(peloMeuNumero);
+  // Follow-up com condições de retomada: mensagem só entra pelo "Adicionar mensagem" (o servidor
+  // religa as pontas e a etiqueta), então a lista de Blocos não oferece as que mandam ao lead.
+  const travada = sequenciaTravada(automation);
+  const lockedIds = useMemo(() => new Set(automation?.followup_messages?.locked_ids ?? []), [automation]);
   const estadoDoBloco = useMemo(() => {
     const ctx = { temNumero: capacidades.temNumero, temIA: capacidades.temIA };
     const porCargo = modo === 'corretor'
       ? (item: PaletteItem) => personalBlockState(item, ctx)
       : modo === 'dono' ? (item: PaletteItem) => personalAvailabilityState(item, ctx) : undefined;
-    return kind === 'conversation' ? foraDoFunilDeConversa(porCargo) : porCargo;
-  }, [kind, modo, capacidades.temNumero, capacidades.temIA]);
+    if (kind === 'conversation') return foraDoFunilDeConversa(porCargo);
+    if (!travada) return porCargo;
+    return (item: PaletteItem) => (itemEnviaAoLead(item) ? 'fora' : porCargo ? porCargo(item) : 'ok');
+  }, [kind, modo, capacidades.temNumero, capacidades.temIA, travada]);
   // Número do fluxo (Entrega 4): só na automação da equipe. Follow-up, funil
   // de conversa e automação pessoal seguem como estão.
   const numeroDoFluxoVale = kind === 'automation' && modo === null;
@@ -527,13 +533,15 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
   const onConnect = useCallback((connection: Connection) => {
     if (!builderTools) return;
     if (!connection.source || !connection.target) return;
+    if (travada && connection.source === TRIGGER_NODE_ID) return;
+    if (travada && nodes.some(n => n.id === connection.source && ehCondicaoAutomatica(n, kind))) return;
     if (connection.source === TRIGGER_NODE_ID) {
       setInitialNodeId(connection.target);
       return;
     }
     const handle = (connection.sourceHandle as OutputHandle) || 'out';
     setNodes(prev => link(prev, connection.source!, handle, connection.target!));
-  }, [builderTools]);
+  }, [builderTools, travada, nodes, kind]);
 
   const scheduleSavePositions = useCallback(() => {
     if (positionTimer.current) clearTimeout(positionTimer.current);
@@ -611,18 +619,25 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
     const rest: Node[] = nodes.map(n => {
       const st = stepByNode.get(n.id);
       const condicaoAutomatica = ehCondicaoAutomatica(n, kind);
-      const allow = readOnly || condicaoAutomatica
+      const naSequencia = travada && lockedIds.has(n.id);
+      const mensagemTravada = travada && isMessageNode(n);
+      let allow: FlowNodeCardData['allow'] = readOnly || condicaoAutomatica
         ? { edit: false, duplicate: false, remove: false, add: false, rename: false }
         : guided
           ? { edit: true, duplicate: false, remove: isMessageNode(n), add: false, rename: false }
           : undefined;
+      if (travada && !readOnly && !condicaoAutomatica && (mensagemTravada || naSequencia)) {
+        const cur = allow ?? { edit: true, duplicate: true, remove: true, add: true, rename: true };
+        allow = { ...cur, duplicate: mensagemTravada ? false : cur.duplicate, remove: naSequencia ? false : cur.remove };
+      }
       return {
         id: n.id,
         type: 'flowNode',
         position: positions[n.id] || { x: 0, y: 0 },
         draggable: builderTools,
         connectable: builderTools,
-        deletable: !condicaoAutomatica,
+        // Delete não pede confirmação: mensagem e bloco da sequência só saem pelo servidor.
+        deletable: !condicaoAutomatica && !mensagemTravada && !naSequencia,
         data: {
           node: n, lookups, pessoal: peloMeuNumero, donoDoEnvio,
           problem: problems[n.id] ?? null,
@@ -637,15 +652,21 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
       };
     });
     return [startNode, ...rest];
-  }, [nodes, positions, startPosition, startData, lookups, problems, openPanel, highlighted, steps, step, readOnly, guided, builderTools, openNode, handleDuplicate, handleRemove, handleRename, addFrom, peloMeuNumero, donoDoEnvio, kind]);
+  }, [nodes, positions, startPosition, startData, lookups, problems, openPanel, highlighted, steps, step, readOnly, guided, builderTools, openNode, handleDuplicate, handleRemove, handleRename, addFrom, peloMeuNumero, donoDoEnvio, kind, travada, lockedIds]);
 
   // As linhas são derivadas de `nodes`: selecionar e cortar passam por aqui, senão
   // o React Flow descarta o clique e o Delete (era só apagando o bloco).
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
+  // Com a sequência travada, a linha do Início e as que saem de condição travada não se cortam.
+  const arestaTravada = useCallback((e: { source: string }) => (
+    travada && (e.source === TRIGGER_NODE_ID || nodes.some(n => n.id === e.source && ehCondicaoAutomatica(n, kind)))
+  ), [travada, nodes, kind]);
   const handleCutEdge = useCallback((edgeId: string) => {
+    const aresta = graphEdges.find(e => e.id === edgeId);
+    if (aresta && arestaTravada(aresta)) return;
     setNodes(prev => cutEdge(prev, edgeId));
     setSelectedEdgeId(null);
-  }, []);
+  }, [graphEdges, arestaTravada]);
   const onEdgesChange = useCallback((changes: EdgeChange[]) => {
     if (!builderTools) return;
     changes.forEach(c => {
@@ -669,14 +690,14 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
       return {
         id: e.id, type: 'flowEdge', source: e.source, target: e.target, sourceHandle: e.sourceHandle,
         targetHandle: entersTop ? 'in-top' : 'in',
-        deletable: e.deletable && builderTools, selected: e.id === selectedEdgeId,
+        deletable: e.deletable && builderTools && !arestaTravada(e), selected: e.id === selectedEdgeId,
         label: e.label || undefined,
         labelStyle: { fontSize: 10, fill: e.color },
         style: { stroke: e.color },
         data: { onCut: handleCutEdge, labelAtEnd: source?.kind === 'randomizer' } satisfies FlowEdgeData,
       };
     });
-  }, [graphEdges, nodes, positions, startPosition, builderTools, selectedEdgeId, handleCutEdge]);
+  }, [graphEdges, nodes, positions, startPosition, builderTools, selectedEdgeId, handleCutEdge, arestaTravada]);
 
   // Organizar (29/10/2026): redesenha o fluxo inteiro (caminho reto, desvio
   // embaixo) e grava as posições na hora, como no arraste. Desfazer devolve
