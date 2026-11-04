@@ -1,11 +1,12 @@
 // Peças comuns das duas tabelas de Campanhas (Tarefa 8, 04/11/2026). De 1280 px pra cima é tabela (cabeçalho e colunas
 // alinhadas); abaixo disso cada linha vira um cartão de uma coluna (duas no tablet), com o nome de cada campo em cima.
 // Largura fixa em fração, com `minmax(0, ...)`: texto longo quebra dentro da coluna e nunca alarga a página.
+// A coluna Ativo cabe "Desligada" + a chave (96 px): menos que isso, a chave invade o botão Editar.
 import type { KeyboardEvent, MouseEvent, ReactNode } from 'react';
 import { Card } from '@/components/ui/ds';
 import { cn } from '@/lib/utils';
 
-export const GRADE_DOS_FORMULARIOS = 'xl:grid-cols-[minmax(0,2.4fr)_minmax(0,1.3fr)_minmax(0,1.7fr)_minmax(0,2fr)_5.5rem_4rem_4.5rem]';
+export const GRADE_DOS_FORMULARIOS = 'xl:grid-cols-[minmax(0,2.4fr)_minmax(0,1.3fr)_minmax(0,1.7fr)_minmax(0,2fr)_5.5rem_6.25rem_4.5rem]';
 export const GRADE_DOS_ANUNCIOS = 'xl:grid-cols-[minmax(0,2.4fr)_minmax(0,2fr)_minmax(0,2fr)_5.5rem_7rem_4.5rem]';
 
 export function CabecalhoDaTabela({ grade, colunas }: { grade: string; colunas: string[] }) {
