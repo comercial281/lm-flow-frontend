@@ -18,7 +18,7 @@ import notificationPolicyService, {
 } from '@/services/notifications/notificationPolicyService';
 
 /**
- * Comunicação → Avisos na tela: o que CADA CLIENTE recebe.
+ * Comunicação → Notificações: o que CADA CLIENTE recebe.
  *
  * O push que chega para a Leal Mídia mora em Push. Aqui é outra pergunta: o que
  * a equipe de cada cliente recebe dentro do CRM dela.

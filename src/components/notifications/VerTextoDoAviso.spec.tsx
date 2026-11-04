@@ -12,6 +12,12 @@ describe('VerTextoDoAviso', () => {
     expect(container).toBeEmptyDOMElement();
   });
 
+  it('o botão fica em linha própria, sem colar na frase de baixo', () => {
+    render(<VerTextoDoAviso titulo="Lead sem responsável" texto={TEXTO} />);
+
+    expect(screen.getByRole('button', { name: 'Ver texto' })).toHaveClass('flex');
+  });
+
   it('abre a janela com o texto do WhatsApp, avisando que os dados são de exemplo', async () => {
     render(<VerTextoDoAviso titulo="Lead sem responsável" texto={TEXTO} />);
 
