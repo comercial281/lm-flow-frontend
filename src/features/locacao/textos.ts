@@ -54,3 +54,8 @@ export const LEI_CONDOMINIO =
 
 export const LEI_MES_VENCIDO =
   'Por padrão o boleto cobra o mês que passou (mês vencido): o boleto de dezembro cobra novembro. Cobrar adiantado só é permitido em contrato sem garantia (Lei 8.245, arts. 20 e 42).';
+
+/** O total do acerto vem do servidor do ponto de vista do inquilino: positivo = ele ainda deve;
+ *  zero ou negativo = a caução cobriu e a sobra volta para ele. */
+export const rotuloDoTotalDoAcerto = (total: number) =>
+  total > 0 ? 'Total que o inquilino ainda deve' : 'Total a devolver ao inquilino';
