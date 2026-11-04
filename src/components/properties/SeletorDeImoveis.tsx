@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { Check, Search, X } from 'lucide-react';
 import { Button, Input } from '@/components/ui/ds';
+import BotoesDeEscolha from '@/components/base/BotoesDeEscolha';
+import Carregando from '@/components/base/Carregando';
+import EmptyState from '@/components/base/EmptyState';
 import { cn } from '@/lib/utils';
 import { propertiesService } from '@/services/properties/propertiesService';
 import type { ListingKind } from '@/features/properties/listingKind';
@@ -147,18 +150,16 @@ export function SeletorDeImoveis({ id, selecionados, max = 10, sugestaoQ, disabl
         <Input id={id} value={texto} onChange={e => setTexto(e.target.value)} placeholder={TEXTOS.buscar} className="pl-9" disabled={disabled} />
       </div>
 
-      <div className="flex flex-wrap gap-1.5">
-        {TIPOS.map(t => (
-          <Button key={t.valor} type="button" size="sm" variant={tipo === t.valor ? 'default' : 'outline'} aria-pressed={tipo === t.valor} disabled={disabled} onClick={() => setTipo(t.valor)}>
-            {t.rotulo}
-          </Button>
-        ))}
-      </div>
+      <BotoesDeEscolha<'' | ListingKind>
+        rotulo="Tipo de imóvel" valor={tipo} opcoes={TIPOS} aoEscolher={setTipo} desabilitado={disabled}
+      />
 
-      {erro ? (
+      {!pronto ? (
+        <Carregando variante="lista" linhas={3} rotulo="Carregando imóveis…" />
+      ) : erro ? (
         <p className="px-2 text-sm text-muted-foreground">{TEXTOS.erro}</p>
       ) : itens.length === 0 ? (
-        <p className="px-2 text-sm text-muted-foreground">{TEXTOS.nenhum}</p>
+        <EmptyState tamanho="compacto" title={TEXTOS.nenhum} />
       ) : (
         <ul className="max-h-60 min-w-0 overflow-y-auto overflow-x-hidden rounded-md border border-border">
           {itens.map(p => {

@@ -25,25 +25,35 @@ describe('QuemAtende', () => {
     mostrar([dono({ kind: 'broad', reason: 'atende todo lead que entra no funil Leads (Marketing)', removable: false })]);
     expect(screen.getByText('Agente A')).toBeInTheDocument();
     expect(screen.getByText('Atende todo lead que entra no funil Leads (Marketing)')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Tirar a IA' })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Tirar a IA/ })).toBeNull();
   });
 
   it('campaign removível mostra Tirar a IA e chama aoTirar', () => {
     const d = dono({ kind: 'campaign', reason: 'esta campanha está na lista dela', removable: true });
     const p = mostrar([d]);
-    fireEvent.click(screen.getByRole('button', { name: 'Tirar a IA' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Tirar a IA/ }));
     expect(p.aoTirar).toHaveBeenCalledWith(d);
+  });
+
+  it('dois botões Tirar se distinguem pelo nome da IA (aria-label), com o texto visível igual', () => {
+    const a = dono({ kind: 'campaign', reason: 'esta campanha está na lista dela', removable: true });
+    const b = dono({ sales_agent_id: 'b1', name: 'Agente B', kind: 'campaign', reason: 'esta campanha está na lista dela', removable: true });
+    const p = mostrar([a, b]);
+    const botoes = screen.getAllByRole('button', { name: /^Tirar a IA/ });
+    expect(botoes.map((x) => x.textContent)).toEqual(['Tirar a IA', 'Tirar a IA']);
+    fireEvent.click(screen.getByRole('button', { name: 'Tirar a IA Agente B' }));
+    expect(p.aoTirar).toHaveBeenCalledWith(b);
   });
 
   it('campaign sem removable (false) não mostra Tirar', () => {
     mostrar([dono({ kind: 'campaign', reason: 'esta campanha está na lista dela', removable: false })]);
-    expect(screen.queryByRole('button', { name: 'Tirar a IA' })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Tirar a IA/ })).toBeNull();
   });
 
   it('depends: mostra o motivo, sem Tirar, e a própria IA continua no seletor', () => {
     mostrar([dono({ kind: 'depends', reason: 'pode atender se a conversa trouxer a palavra casa', removable: false })]);
     expect(screen.getByText('Pode atender se a conversa trouxer a palavra casa')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Tirar a IA' })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Tirar a IA/ })).toBeNull();
     expect(screen.getByRole('option', { name: 'Agente A' })).toBeInTheDocument();
   });
 
@@ -57,12 +67,12 @@ describe('QuemAtende', () => {
 
   it('servidor antigo (sem kind): sem note mostra Tirar; com note não', () => {
     mostrar([dono()]);
-    expect(screen.getByRole('button', { name: 'Tirar a IA' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Tirar a IA/ })).toBeInTheDocument();
   });
   it('servidor antigo (sem kind): com note, nome e nota, sem Tirar', () => {
     mostrar([dono({ note: 'atende todo anúncio' })]);
     expect(screen.getByText('Agente A · atende todo anúncio')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Tirar a IA' })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Tirar a IA/ })).toBeNull();
   });
 
   it('formulário novo: diz que a escolha grava no Criar; existente diz que vale na hora', () => {
@@ -83,7 +93,7 @@ describe('QuemAtende', () => {
   it('sem permissão: sem seletor nem Tirar', () => {
     mostrar([dono({ kind: 'campaign', removable: true })], { podeMexer: false });
     expect(screen.queryByLabelText('Pôr numa IA')).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Tirar a IA' })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Tirar a IA/ })).toBeNull();
   });
 
   it('409: mostra a frase e Mover / Deixar como está', () => {

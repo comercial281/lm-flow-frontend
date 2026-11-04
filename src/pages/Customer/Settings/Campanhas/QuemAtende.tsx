@@ -50,7 +50,7 @@ export default function QuemAtende({
                 <span className="min-w-0 truncate">{donoEmTexto(d)}</span>
               )}
               {podeMexer && podeTirar(d) && (
-                <Button type="button" variant="ghost" size="sm" disabled={ocupado} onClick={() => aoTirar(d)}>Tirar a IA</Button>
+                <Button type="button" variant="ghost" size="sm" disabled={ocupado} aria-label={`Tirar a IA ${d.name}`} onClick={() => aoTirar(d)}>Tirar a IA</Button>
               )}
             </li>
           ))}

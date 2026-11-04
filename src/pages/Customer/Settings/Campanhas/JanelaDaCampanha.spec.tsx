@@ -57,20 +57,20 @@ beforeEach(() => {
 describe('JanelaDaCampanha · o que vende', () => {
   it('imóveis escolhidos: de 1 a 10, o 11º não entra', async () => {
     const dez = Array.from({ length: 10 }, (_, i) => `p${i + 1}`);
+    props.list.mockResolvedValue({ data: [IMOVEIS.p11], meta: { total: 1 } });
     abrir({ item: item({ sells_scope: 'properties', property_ids: dez }) });
-    expect(await screen.findAllByTestId('cartao-do-imovel')).toHaveLength(10);
-    expect(screen.queryByPlaceholderText('Buscar por título ou código')).toBeNull();
+    const escolhidos = await screen.findByTestId('selecionados');
+    await waitFor(() => expect(within(escolhidos).getAllByRole('button', { name: /^Tirar/ })).toHaveLength(10));
+    expect(await screen.findByRole('button', { name: /Imóvel 11/ })).toBeDisabled();
     expect(screen.getByText(/Chegou em 10 imóveis/)).toBeInTheDocument();
   });
 
-  it('com 9 ainda dá pra buscar e adicionar o décimo', async () => {
+  it('com 9 ainda dá pra marcar o décimo na lista aberta', async () => {
     const nove = Array.from({ length: 9 }, (_, i) => `p${i + 1}`);
+    props.list.mockResolvedValue({ data: [{ id: 'p10', title: 'Imóvel 10', code: 'AB10' }], meta: { total: 1 } });
     abrir({ item: item({ sells_scope: 'properties', property_ids: nove }) });
-    await screen.findAllByTestId('cartao-do-imovel');
-    fireEvent.change(screen.getByPlaceholderText('Buscar por título ou código'), { target: { value: 'imóvel 10' } });
-    props.list.mockResolvedValue({ data: [{ id: 'p10', title: 'Imóvel 10', code: 'AB10' }] });
-    fireEvent.click(await screen.findByRole('button', { name: /Imóvel 10/ }));
-    await waitFor(() => expect(screen.getAllByTestId('cartao-do-imovel')).toHaveLength(10));
+    fireEvent.click(await screen.findByRole('button', { name: /^Imóvel 10/ }));
+    await waitFor(() => expect(within(screen.getByTestId('selecionados')).getAllByRole('button', { name: /^Tirar/ })).toHaveLength(10));
   });
 
   it('um tipo inteiro pede o tipo; o catálogo inteiro explica que a IA não fixa imóvel', async () => {
@@ -186,7 +186,7 @@ describe('JanelaDaCampanha · qual IA atende', () => {
   it('tirar usa o endereço de tirar', async () => {
     camp.tirarIa.mockResolvedValue({ holders: [], left_empty: ['Formulário Teste'], warning: null });
     comIa({ item: item({ kind: 'form', form_config_id: 'cfg-1', agents: [{ sales_agent_id: 'a1', name: 'Agente A', sales_agent_number_id: null, number_label: null, whole_number: false, note: null }] }) });
-    fireEvent.click(screen.getByRole('button', { name: 'Tirar a IA' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Tirar a IA/ }));
     await waitFor(() => expect(camp.tirarIa).toHaveBeenCalledWith({ ref: { kind: 'form', id: 'f-1' }, sales_agent_id: 'a1', number_id: null }));
     expect(await screen.findByText(/Ficou sem IA: Formulário Teste/)).toBeInTheDocument();
   });
@@ -356,5 +356,198 @@ describe('JanelaDaCampanha · rodada 1', () => {
     fireEvent.change(screen.getByLabelText('Pôr numa IA'), { target: { value: 'a1|' } });
     fireEvent.click(screen.getByRole('button', { name: 'Pôr' }));
     await waitFor(() => expect(aoCriarLinha).toHaveBeenCalledWith(expect.objectContaining({ key: 'campaign:Campanha A' }), 'l9'));
+  });
+});
+
+const entradaFalsa = <div>Campos da entrada</div>;
+const formNovo = (extra: Partial<React.ComponentProps<typeof JanelaDaCampanha>> = {}) =>
+  abrir({
+    tipo: 'form', config: null, entrada: entradaFalsa, opcoesDeIa: opcoes, item: item({ kind: 'form', key: 'form:f-9', label: 'Novo' }),
+    montarEntrada: () => ({ form_id: 'f-9', form_name: 'Novo', pipeline_id: 'p', pipeline_stage_id: 's', is_active: true, label_ids: [] }),
+    ...extra,
+  });
+
+describe('JanelaDaCampanha · janela nova (Tarefa 6)', () => {
+  it('é a janela larga da casa, com o miolo em duas colunas que podem encolher', () => {
+    const { dialogo } = formNovo();
+    expect(dialogo.className).toContain('sm:max-w-[1400px]');
+    const esq = screen.getByTestId('coluna-entrada');
+    const dir = screen.getByTestId('coluna-direita');
+    expect(esq.parentElement?.className).toMatch(/lg:grid-cols-\[7fr_5fr\]/);
+    expect(esq.className).toContain('min-w-0');
+    expect(dir.className).toContain('min-w-0');
+  });
+
+  it('formulário: entrada do lead à esquerda; Quem atende e Oferta à direita', () => {
+    formNovo();
+    const esq = screen.getByTestId('coluna-entrada');
+    const dir = screen.getByTestId('coluna-direita');
+    expect(within(esq).getByText('Campos da entrada')).toBeInTheDocument();
+    expect(within(esq).getByRole('radio', { name: 'Imóveis escolhidos' })).toBeInTheDocument();
+    expect(within(dir).getByRole('group', { name: 'Quem atende' })).toBeInTheDocument();
+    expect(within(dir).getByRole('group', { name: /Oferta do anúncio/ })).toBeInTheDocument();
+    expect(within(dir).queryByText('Campos da entrada')).toBeNull();
+    expect(screen.queryByLabelText(/Nome do imóvel para reconhecer os formulários/)).toBeNull();
+  });
+
+  it('a oferta vem fechada com a frase da condição do imóvel; Personalizar abre', async () => {
+    formNovo({ item: item({ kind: 'form', sells_scope: 'properties', property_ids: ['p1'] }) });
+    expect(await screen.findByText(/Vale a do cadastro do imóvel: entrada a partir de R\$ 500/)).toBeInTheDocument();
+    expect(screen.queryByLabelText('Entrada a partir de')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Personalizar a oferta' }));
+    expect(screen.getByLabelText('Entrada a partir de')).toBeInTheDocument();
+    expect(screen.getByLabelText('Observação do formulário')).toBeInTheDocument();
+    expect(screen.getByTestId('frase-da-intencao')).toBeInTheDocument();
+  });
+
+  it('ficha que já tem condição abre a oferta aberta', () => {
+    formNovo({ item: item({ kind: 'form', offer_condition: { down_payment_from: 300, installment_from: null, min_income: null, payment_terms: null, note: null } }) });
+    expect(screen.getByLabelText('Entrada a partir de')).toHaveValue('300');
+    expect(screen.queryByRole('button', { name: 'Personalizar a oferta' })).toBeNull();
+  });
+
+  it('ficha que já tem intenção abre a oferta aberta', () => {
+    formNovo({ item: item({ kind: 'form', audience_intents: ['investimento'] }) });
+    expect(screen.getByLabelText('Investimento')).toBeChecked();
+  });
+
+  it('anúncio de WhatsApp: sem entrada do lead, com o preencher e a condição já aberta', () => {
+    abrir({ opcoesDeIa: opcoes });
+    expect(screen.queryByTestId('coluna-entrada')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Preencher com o texto do anúncio' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Entrada a partir de')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Personalizar a oferta' })).toBeNull();
+  });
+
+  it('ficha por "nome contém": mostra a palavra só leitura', () => {
+    abrir({ tipo: 'form', config: { ...ficha(), form_id: 'nome_contem:x', match_keyword: 'alma' }, entrada: entradaFalsa, item: item({ kind: 'form', form_config_id: 'cfg-1', keyword_rule: true }) });
+    expect(screen.getByTestId('regra-por-nome')).toHaveTextContent('Nome contém alma');
+    expect(within(screen.getByTestId('regra-por-nome')).queryByRole('textbox')).toBeNull();
+  });
+
+  it('o Salvar do formulário não manda match_keyword', async () => {
+    forms.update.mockResolvedValue(ficha());
+    abrir({ tipo: 'form', config: ficha(), entrada: entradaFalsa, item: item({ kind: 'form', form_config_id: 'cfg-1' }),
+      montarEntrada: () => ({ form_id: 'f-1', form_name: 'Formulário Teste', pipeline_id: 'p', pipeline_stage_id: 's', is_active: true, label_ids: [] }) });
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+    await waitFor(() => expect(forms.update).toHaveBeenCalled());
+    expect(forms.update.mock.calls[0][1]).not.toHaveProperty('match_keyword');
+  });
+
+  it('o rodapé resume o imóvel, a entrada e a IA', async () => {
+    formNovo({ resumoDaEntrada: 'Leads > Novo', item: item({ kind: 'form', sells_scope: 'catalog' }) });
+    expect(screen.getByTestId('resumo-do-rodape')).toHaveTextContent('Todo o catálogo');
+    expect(screen.getByTestId('resumo-do-rodape')).toHaveTextContent('Leads > Novo');
+    expect(screen.getByTestId('resumo-do-rodape')).toHaveTextContent('Sem IA');
+  });
+});
+
+describe('JanelaDaCampanha · criar com IA escolhida', () => {
+  const criada = () => ({ ...ficha(), id: 'cfg-9', form_id: 'f-9', form_name: 'Novo' });
+  const escolhaDaIa = (valor: string) => {
+    fireEvent.change(screen.getByLabelText('Pôr numa IA'), { target: { value: valor } });
+    fireEvent.click(screen.getByRole('button', { name: 'Pôr' }));
+  };
+
+  it('formulário novo: escolher a IA não grava nada ainda e avisa que grava no Criar', () => {
+    formNovo();
+    escolhaDaIa('a1|');
+    expect(camp.escolherIa).not.toHaveBeenCalled();
+    expect(screen.getByText('A escolha grava junto quando você clicar em Criar.')).toBeInTheDocument();
+    expect(within(screen.getByTestId('coluna-direita')).getByText('Agente A', { selector: 'span' })).toBeInTheDocument();
+    expect(screen.getByTestId('resumo-do-rodape')).toHaveTextContent('Agente A');
+  });
+
+  it('Criar grava a ficha e depois a IA, com o form_id; fecha quando as duas deram certo', async () => {
+    forms.create.mockResolvedValue(criada());
+    camp.escolherIa.mockResolvedValue({ ok: true, holders: [], left_empty: [], warning: null });
+    const { aoFechar, aoSalvar } = formNovo();
+    escolhaDaIa('b1|n1');
+    fireEvent.click(screen.getByRole('button', { name: 'Criar' }));
+    await waitFor(() => expect(camp.escolherIa).toHaveBeenCalled());
+    expect(camp.escolherIa).toHaveBeenCalledWith({ ref: { kind: 'form', id: 'f-9' }, sales_agent_id: 'b1', number_id: 'n1' });
+    expect(forms.create.mock.invocationCallOrder[0]).toBeLessThan(camp.escolherIa.mock.invocationCallOrder[0]);
+    await waitFor(() => expect(aoFechar).toHaveBeenCalled());
+    expect(aoSalvar).toHaveBeenCalledWith({ config: expect.objectContaining({ id: 'cfg-9' }) });
+  });
+
+  it('sem IA escolhida, Criar não chama o endereço da IA', async () => {
+    forms.create.mockResolvedValue(criada());
+    const { aoFechar } = formNovo();
+    fireEvent.click(screen.getByRole('button', { name: 'Criar' }));
+    await waitFor(() => expect(aoFechar).toHaveBeenCalled());
+    expect(camp.escolherIa).not.toHaveBeenCalled();
+  });
+
+  it('a IA falhou: a ficha fica, a janela segue aberta em edição e o erro diz que a IA não foi gravada; tentar de novo não cria outra ficha', async () => {
+    forms.create.mockResolvedValue(criada());
+    forms.update.mockResolvedValue(criada());
+    camp.escolherIa.mockRejectedValueOnce(new Error('500')).mockResolvedValue({ ok: true, holders: [], left_empty: [], warning: null });
+    const { aoFechar, aoSalvar } = formNovo();
+    escolhaDaIa('a1|');
+    fireEvent.click(screen.getByRole('button', { name: 'Criar' }));
+    expect(await screen.findByText(/a IA não foi gravada/i)).toBeInTheDocument();
+    expect(aoFechar).not.toHaveBeenCalled();
+    expect(aoSalvar).toHaveBeenCalledWith({ config: expect.objectContaining({ id: 'cfg-9' }) });
+    expect(screen.queryByRole('button', { name: 'Criar' })).toBeNull();
+    // em edição: a IA grava na hora, pela ficha criada, e o Salvar atualiza
+    escolhaDaIa('a1|');
+    await waitFor(() => expect(camp.escolherIa).toHaveBeenCalledTimes(2));
+    expect(camp.escolherIa.mock.calls[1][0].ref).toEqual({ kind: 'form', id: 'f-9' });
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+    await waitFor(() => expect(forms.update).toHaveBeenCalled());
+    expect(forms.update.mock.calls[0][0]).toBe('cfg-9');
+    expect(forms.create).toHaveBeenCalledTimes(1);
+  });
+
+  it('Criar de novo depois da falha da IA não cria segunda ficha (o Salvar atualiza a criada)', async () => {
+    forms.create.mockResolvedValue(criada());
+    forms.update.mockResolvedValue(criada());
+    camp.escolherIa.mockRejectedValue(new Error('500'));
+    formNovo();
+    escolhaDaIa('a1|');
+    fireEvent.click(screen.getByRole('button', { name: 'Criar' }));
+    await screen.findByText(/a IA não foi gravada/i);
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+    await waitFor(() => expect(forms.update).toHaveBeenCalled());
+    expect(forms.create).toHaveBeenCalledTimes(1);
+  });
+
+  it('409: pergunta "Esta campanha sai da IA X." e Mover reenvia com confirm_move e fecha', async () => {
+    forms.create.mockResolvedValue(criada());
+    camp.escolherIa
+      .mockResolvedValueOnce({ ok: false, moveNeeded: true, message: 'esta campanha sai da IA Agente C', conflicts: [{ sales_agent_id: 'c1', number_id: null }] })
+      .mockResolvedValueOnce({ ok: true, holders: [], left_empty: [], warning: null });
+    const { aoFechar } = formNovo();
+    escolhaDaIa('a1|');
+    fireEvent.click(screen.getByRole('button', { name: 'Criar' }));
+    expect(await screen.findByText('Esta campanha sai da IA Agente C.')).toBeInTheDocument();
+    expect(aoFechar).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Mover' }));
+    await waitFor(() => expect(camp.escolherIa).toHaveBeenCalledTimes(2));
+    expect(camp.escolherIa.mock.calls[1][0]).toMatchObject({ ref: { kind: 'form', id: 'f-9' }, sales_agent_id: 'a1', confirm_move: true });
+    await waitFor(() => expect(aoFechar).toHaveBeenCalled());
+    expect(forms.create).toHaveBeenCalledTimes(1);
+  });
+
+  it('409 e "Deixar como está": a ficha fica, a janela segue aberta e nada mais é pedido', async () => {
+    forms.create.mockResolvedValue(criada());
+    camp.escolherIa.mockResolvedValueOnce({ ok: false, moveNeeded: true, message: 'esta campanha sai da IA Agente C', conflicts: [] });
+    const { aoFechar } = formNovo();
+    escolhaDaIa('a1|');
+    fireEvent.click(screen.getByRole('button', { name: 'Criar' }));
+    await screen.findByText('Esta campanha sai da IA Agente C.');
+    fireEvent.click(screen.getByRole('button', { name: 'Deixar como está' }));
+    expect(screen.queryByText('Esta campanha sai da IA Agente C.')).toBeNull();
+    expect(camp.escolherIa).toHaveBeenCalledTimes(1);
+    expect(aoFechar).not.toHaveBeenCalled();
+  });
+
+  it('tirar a escolha antes do Criar desfaz sem chamar o servidor', () => {
+    formNovo();
+    escolhaDaIa('a1|');
+    fireEvent.click(screen.getByRole('button', { name: /^Tirar a IA/ }));
+    expect(camp.tirarIa).not.toHaveBeenCalled();
+    expect(screen.getByText('Sem IA')).toBeInTheDocument();
   });
 });

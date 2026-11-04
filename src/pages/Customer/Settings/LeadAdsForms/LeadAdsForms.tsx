@@ -13,8 +13,6 @@ import {
   DialogTitle,
   Label as UILabel,
   Badge,
-  Input,
-  Checkbox,
 } from '@/components/ui/ds';
 import {
   RefreshCw, Edit, ToggleLeft, ToggleRight, ArrowRight, Download,
@@ -25,7 +23,7 @@ import { Pagina, BaseHeader } from '@/components/base';
 import EmptyState from '@/components/base/EmptyState';
 import Carregando from '@/components/base/Carregando';
 import Aviso from '@/components/base/Aviso';
-import { CampoDaJanela, GradeDaJanela, GrupoDaJanela } from '@/components/base/janela';
+import { CampoDaJanela } from '@/components/base/janela';
 import IconActionButton from '@/components/base/IconActionButton';
 import {
   leadAdsFormsService,
@@ -41,14 +39,14 @@ import { metaPagesService, type MetaPage } from '@/services/integrations/metaPag
 import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
 import { useAutomationResources } from '@/features/flowAutomations/editores/LeadAutomationsEditors';
 import { roletaConfigService, roletaLabel, type RoletaConfig } from '@/services/roletaConfig/roletaConfigService';
-import CampoQuemAssume, { type QuemAssume } from '@/components/roleta/CampoQuemAssume';
+import { type QuemAssume } from '@/components/roleta/CampoQuemAssume';
 import { regraQuePega } from './regraPorPalavra';
 import JanelaDaCampanha from '../Campanhas/JanelaDaCampanha';
+import EntradaDoLead from '../Campanhas/EntradaDoLead';
 import { ResumoDaCampanha, contagemDeLeads } from '../Campanhas/LinhaDaCampanha';
 import { itemDaFicha, itemEmBranco } from '@/features/campanhas/itensDeCampanha';
 import type { ItemDeCampanha, OpcaoDeIa } from '@/services/campanhas/campanhasService';
 import { useCan } from '@/hooks/useCan';
-import LabelMultiSelect from '@/components/labels/LabelMultiSelect';
 
 import { useConfirmacao } from '@/hooks/useConfirmacao';
 import { connectedPagesFrom } from './connectedPages';
@@ -70,21 +68,8 @@ interface FormState {
   label_ids: string[];
   // Quem assume: corretor fixo OU roleta (no máximo um dos dois).
   quem: QuemAssume;
-  match_keyword: string;
   is_active: boolean;
 }
-
-// Palavra-chave padrão pro casamento: o nome do formulário sem a data (começo/fim).
-// O usuário pode encurtar pro nome do imóvel (ex.: "capri") pra pegar todas as
-// variações de campanha ("CAPRI 2.0 INT COND", "CAPRI INT COND"...).
-const defaultKeyword = (formName = ''): string =>
-  formName
-    .replace(/[[(][^\])]*\d[^\])]*[)\]]/g, ' ')          // [08/07], (jun/25)
-    .replace(/^\s*\d{1,4}([/.-]\d{1,4}){1,2}\b\s*/, ' ') // data no começo
-    .replace(/[\s–—/.-]+\d{1,4}([\s–—/.-]+\d{1,4})+\s*$/, ' ') // data no fim
-    .replace(/[[\]()]/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
 
 const emptyFormState = (form_id = '', form_name = '', meta_page_id = ''): FormState => ({
   form_id,
@@ -94,7 +79,6 @@ const emptyFormState = (form_id = '', form_name = '', meta_page_id = ''): FormSt
   pipeline_stage_id: '',
   label_ids: [],
   quem: { default_assignee_id: null, roleta_config_id: null },
-  match_keyword: defaultKeyword(form_name),
   is_active: true,
 });
 
@@ -428,7 +412,6 @@ export default function LeadAdsForms({ titulo = 'Formulários', subtitulo = 'Pra
       pipeline_stage_id: cfg.pipeline_stage_id ?? '',
       label_ids:         cfg.label_ids ?? [],
       quem:              quemDe(cfg),
-      match_keyword:     cfg.match_keyword ?? defaultKeyword(cfg.form_name),
       is_active:         cfg.is_active,
     });
     setModalOpen(true);
@@ -455,8 +438,15 @@ export default function LeadAdsForms({ titulo = 'Formulários', subtitulo = 'Pra
       default_assignee_id: assign.default_assignee_id,
       roleta_config_id:    assign.roleta_config_id,
       property_id:         editing?.property_id ?? null,
-      match_keyword:       form.match_keyword.trim() || null,
     };
+  };
+
+  // O rodapé da janela resume pra onde o lead vai (nomes, não ids).
+  const resumoDaEntrada = (): string => {
+    const funil = resources.pipelines.find(p => p.id === form.pipeline_id)?.name;
+    if (!funil) return 'Funil ainda não escolhido';
+    const etapa = (resources.stagesByPipeline[form.pipeline_id] ?? []).find(e => e.id === form.pipeline_stage_id)?.name;
+    return etapa ? `${funil} > ${etapa}` : `${funil} (falta a etapa)`;
   };
 
   const aposSalvarJanela = ({ config }: { config?: LeadAdsFormConfig }) => {
@@ -1300,107 +1290,14 @@ export default function LeadAdsForms({ titulo = 'Formulários', subtitulo = 'Pra
           aoSalvar={aposSalvarJanela}
           aoMudarIa={() => campanhas?.aoMudar()}
           aoApagar={excluirFicha}
+          resumoDaEntrada={resumoDaEntrada()}
           entrada={(
-            <>
-            <GrupoDaJanela titulo="Para onde vai">
-              <GradeDaJanela>
-                <CampoDaJanela rotulo="Funil" htmlFor="destino_funil" obrigatorio colunas={form.pipeline_id ? 2 : 4}>
-                  <Seletor
-                    id="destino_funil"
-                    value={form.pipeline_id}
-                    onChange={e =>
-                      setForm(f => ({ ...f, pipeline_id: e.target.value, pipeline_stage_id: '' }))
-                    }
-                    className={campoDaJanelaClass}
-                  >
-                    <option value="">Escolha um funil</option>
-                    {resources.pipelines.map(p => (
-                      <option key={p.id} value={p.id}>{p.name}</option>
-                    ))}
-                  </Seletor>
-                </CampoDaJanela>
-
-                {form.pipeline_id && (
-                  <CampoDaJanela rotulo="Etapa" htmlFor="destino_etapa" obrigatorio colunas={2}>
-                    <Seletor
-                      id="destino_etapa"
-                      value={form.pipeline_stage_id}
-                      onChange={e => setForm(f => ({ ...f, pipeline_stage_id: e.target.value }))}
-                      className={campoDaJanelaClass}
-                    >
-                      <option value="">Escolha uma etapa</option>
-                      {(resources.stagesByPipeline[form.pipeline_id] ?? []).map(s => (
-                        <option key={s.id} value={s.id}>{s.name}</option>
-                      ))}
-                    </Seletor>
-                  </CampoDaJanela>
-                )}
-              </GradeDaJanela>
-            </GrupoDaJanela>
-
-            {/* Palavra-chave do imóvel: casa TODAS as campanhas desse imóvel. O Meta
-                cria um formulário novo por campanha (nome com data/versão diferente),
-                então casar pelo nome do imóvel evita reconfigurar toda campanha. */}
-            <GrupoDaJanela titulo="Como identificar">
-              <CampoDaJanela
-                rotulo="Nome do imóvel para reconhecer os formulários"
-                htmlFor="match_keyword"
-                ajuda={<>Todo formulário cujo nome <strong>contiver</strong> isto entra com esta configuração. Cobre <strong>todas as campanhas</strong> do imóvel (datas e versões diferentes), sem configurar de novo. Deixe curto, só o nome do imóvel.</>}
-              >
-                <Input
-                  id="match_keyword"
-                  type="text"
-                  placeholder="Ex.: capri, torres dos topázios"
-                  value={form.match_keyword}
-                  onChange={e => setForm(f => ({ ...f, match_keyword: e.target.value }))}
-                />
-              </CampoDaJanela>
-            </GrupoDaJanela>
-
-            {/* Quem assume o lead na entrada: corretor fixo OU roleta, numa lista
-                só com as abas Corretores | Roleta. A tela só ESCOLHE a roleta. */}
-            <GrupoDaJanela titulo="Quem assume">
-              <CampoDaJanela
-                rotulo="Quem assume o lead"
-                htmlFor="quem_assume"
-                ajuda="O corretor recebe todo lead deste formulário. A roleta oferece cada lead ao próximo da fila."
-              >
-                <CampoQuemAssume
-                  id="quem_assume"
-                  aria-label="Quem assume o lead"
-                  value={form.quem}
-                  onChange={quem => setForm(f => ({ ...f, quem }))}
-                  pessoas={resources.users.filter(u => !u.deactivated).map(u => ({ id: String(u.id), nome: u.name }))}
-                  roletas={roletas}
-                />
-              </CampoDaJanela>
-            </GrupoDaJanela>
-
-            <GrupoDaJanela titulo="Complemento">
-              <CampoDaJanela
-                rotulo="Etiquetas"
-                ajuda={<>Já vem com <strong>tráfego pago</strong> por padrão. Busque ou crie a etiqueta do imóvel deste formulário.</>}
-              >
-                <LabelMultiSelect
-                  labels={resources.labels}
-                  selectedIds={form.label_ids}
-                  onChange={ids => setForm(f => ({ ...f, label_ids: ids }))}
-                  onLabelCreated={() => resources.reloadLabels()}
-                />
-              </CampoDaJanela>
-            </GrupoDaJanela>
-
-            <GrupoDaJanela titulo="Estado">
-              <div className="flex items-center gap-2">
-                <Checkbox
-                  id="is_active"
-                  checked={form.is_active}
-                  onCheckedChange={v => setForm(f => ({ ...f, is_active: v === true }))}
-                />
-                <UILabel htmlFor="is_active" className="cursor-pointer">Ativo</UILabel>
-              </div>
-            </GrupoDaJanela>
-            </>
+            <EntradaDoLead
+              valor={form}
+              aoMudar={parcial => setForm(f => ({ ...f, ...parcial }))}
+              recursos={resources}
+              roletas={roletas}
+            />
           )}
         />
       )}

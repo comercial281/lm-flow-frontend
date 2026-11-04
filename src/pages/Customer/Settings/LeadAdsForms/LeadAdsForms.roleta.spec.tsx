@@ -156,7 +156,7 @@ describe('Formulários do Meta · formulário pego por regra "nome contém"', ()
   it('a janela do destino tem os grupos do miolo', async () => {
     svc.getAll.mockResolvedValue([cadastro()]);
     const dialogo = await abrirEdicao();
-    for (const nome of ['Para onde vai', 'Como identificar', 'Quem assume', 'Complemento', 'Estado']) {
+    for (const nome of ['Para onde vai', 'Quem assume', 'Complemento', 'Estado']) {
       expect(within(dialogo).getByRole('group', { name: nome })).toBeInTheDocument();
     }
   });
