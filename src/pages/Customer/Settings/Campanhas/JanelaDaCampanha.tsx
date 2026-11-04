@@ -143,6 +143,8 @@ export default function JanelaDaCampanha({
   const [ficouSemIa, setFicouSemIa] = useState<string[]>([]);
   /** Formulário novo copiado de outra ficha: a IA da origem, que só grava no Criar. */
   const [pendente, setPendente] = useState<string | null>(null);
+  // A IA copiada que o Criar não conseguiu gravar: guarda o nome e o id pra mensagem e pro link não se perderem.
+  const [iaQueFalhou, setIaQueFalhou] = useState<{ id: string; label: string } | null>(null);
   /** O 409 veio do Criar: se o Mover der certo, não sobra nada pra fazer na janela. */
   const fechaAoGravar = useRef(false);
 
@@ -196,11 +198,13 @@ export default function JanelaDaCampanha({
   const opcaoPendente = pendente ? opcoesDeIa?.find((o) => chaveDaIa(o.sales_agent_id, o.number_id) === pendente) : undefined;
   const donoPendente = novo ? opcaoPendente : undefined;
   // O link leva pra IA quando só uma atende (ou vem da cópia); com várias ou nenhuma, pra lista. Só com a permissão da rota.
-  const idsDasIas = [...new Set([...donos.map((d) => d.sales_agent_id), ...(donoPendente ? [donoPendente.sales_agent_id] : [])])];
+  const idsDasIas = [...new Set([...donos.map((d) => d.sales_agent_id), ...(donoPendente ? [donoPendente.sales_agent_id] : []), ...(iaQueFalhou ? [iaQueFalhou.id] : [])])];
   const linkDaIa = can('sales_agents', 'read')
     ? `/ia-vendedora${idsDasIas.length === 1 ? `?${new URLSearchParams(paramsDaIa(idsDasIas[0], 'configurar', 'campanhas'))}` : ''}`
     : null;
 
+  // Lista de campanhas chegando ou que falhou: o item pode estar sem as IAs, então a janela não afirma "Sem IA" (a linha mostra "—").
+  const semLista = listaCarregando || listaFalhou;
   const aplicarDonos = (r: { holders: IaDaCampanha[]; left_empty: string[]; warning: string | null }) => {
     setDonos(r.holders);
     setAvisoDaIa(r.warning);
@@ -236,6 +240,7 @@ export default function JanelaDaCampanha({
 
   /** Depois do Criar: grava a IA copiada. Devolve se a janela pode fechar. */
   const gravarIaDoCriar = async (ficha: LeadAdsFormConfig, chave: string): Promise<boolean> => {
+    const copiada = opcoesDeIa?.find((x) => chaveDaIa(x.sales_agent_id, x.number_id) === chave);
     setPendente(null);
     try {
       if (await gravarIa(ficha.form_id, chave, false)) return true;
@@ -243,7 +248,10 @@ export default function JanelaDaCampanha({
       return false;
     } catch (e) {
       const motivo = motivoEscrito(e);
-      setAvisoDaIa(`A ficha foi criada, mas a IA não foi gravada${motivo ? `: ${motivo}` : ''}. Marque este formulário na IA.`);
+      if (copiada) setIaQueFalhou({ id: copiada.sales_agent_id, label: copiada.label });
+      setAvisoDaIa(copiada
+        ? `A ficha foi criada, mas a IA ${copiada.label} não foi gravada${motivo ? `: ${motivo}` : ''}. Marque este formulário nela.`
+        : `A ficha foi criada, mas a IA não foi gravada${motivo ? `: ${motivo}` : ''}. Marque este formulário na IA.`);
       toast.error('A ficha foi criada, mas a IA não foi gravada.');
       return false;
     }
@@ -355,7 +363,7 @@ export default function JanelaDaCampanha({
     imovelEmTexto,
     eForm ? resumoDaEntrada : null,
     // Formulário novo sem IA copiada: não afirma "Sem IA" (uma IA por funil ou por anúncio ainda pode atender).
-    opcoesDeIa ? (donoPendente ? donoPendente.label : donos.length ? donos.map((d) => d.name).join(', ') : novo ? null : 'Sem IA') : null,
+    donoPendente ? donoPendente.label : donos.length ? donos.map((d) => d.name).join(', ') : novo || semLista ? null : 'Sem IA',
   ].filter(Boolean).join(' · ');
 
   // Quem atende e a oferta saem em cada janela do mesmo jeito; o que muda é a esquerda.
@@ -448,13 +456,11 @@ export default function JanelaDaCampanha({
           </section>
 
           <section aria-label="IA que atende e oferta" data-testid="coluna-direita" className="grid min-w-0 content-start gap-5">
-            {opcoesDeIa && (
-              <GrupoDaJanela titulo="IA que atende">
-                <QuemAtende donos={donos} linkDaIa={linkDaIa} novo={novo} daCopia={donoPendente?.label ?? null}
-                  ocupado={iaOcupada || salvando} movendo={movendo} aoMover={() => movendo && mover(movendo.chave)}
-                  aoDeixar={() => { setMovendo(null); fechaAoGravar.current = false; }} aviso={avisoDaIa} ficouSemIa={ficouSemIa} />
-              </GrupoDaJanela>
-            )}
+            <GrupoDaJanela titulo="IA que atende">
+              <QuemAtende donos={donos} linkDaIa={linkDaIa} novo={novo} semLista={semLista} semLinha={tipo === 'whats' && !item.link_id} daCopia={donoPendente?.label ?? null}
+                ocupado={iaOcupada || salvando} movendo={movendo} aoMover={() => movendo && mover(movendo.chave)}
+                aoDeixar={() => { setMovendo(null); fechaAoGravar.current = false; }} aviso={avisoDaIa} ficouSemIa={ficouSemIa} />
+            </GrupoDaJanela>
 
             <fieldset disabled={!podeEditar || salvando} className="m-0 grid min-w-0 content-start gap-5 border-0 p-0">
               <GrupoDaJanela titulo={eForm ? 'Oferta do anúncio (opcional)' : 'Condição e pra quem é este anúncio'}>

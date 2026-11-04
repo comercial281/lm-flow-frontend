@@ -46,6 +46,22 @@ describe('QuemAtende (só leitura)', () => {
     expect(screen.queryByText(AVISO_DA_LISTA)).toBeNull();
   });
 
+  it('lista não pronta: não afirma "Sem IA", mostra "—"', () => {
+    mostrar([], { semLista: true });
+    expect(screen.queryByText('Sem IA')).toBeNull();
+    expect(screen.getByText('—')).toBeInTheDocument();
+  });
+
+  it('anúncio sem linha: pede pra salvar antes de aparecer na lista da IA', () => {
+    mostrar([], { semLinha: true });
+    expect(screen.getByText('Salve este anúncio para ele aparecer na lista da IA.')).toBeInTheDocument();
+  });
+
+  it('anúncio com linha: sem a frase de salvar', () => {
+    mostrar([]);
+    expect(screen.queryByText(/Salve este anúncio/)).toBeNull();
+  });
+
   it('formulário novo sem cópia: avisa que IA de lista precisa marcar o formulário, e que IA por funil ou anúncio segue atendendo; sem "Sem IA"', () => {
     mostrar([], { novo: true });
     expect(screen.getByText(AVISO_DA_LISTA)).toBeInTheDocument();

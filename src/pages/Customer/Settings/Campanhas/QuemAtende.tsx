@@ -17,6 +17,10 @@ export interface QuemAtendeProps {
   novo?: boolean;
   /** Formulário novo copiado de outra ficha: a IA que vem junto e entra no Criar. */
   daCopia?: string | null;
+  /** A lista de campanhas ainda não chegou (ou falhou): não afirma "Sem IA", mostra "—" como a linha. */
+  semLista?: boolean;
+  /** Anúncio que ainda não tem linha: a página da IA só lista anúncio com linha. */
+  semLinha?: boolean;
   ocupado?: boolean;
   /** A pergunta do 409: a campanha sai de outra IA. */
   movendo?: { chave: string; frase: string } | null;
@@ -27,12 +31,12 @@ export interface QuemAtendeProps {
 }
 
 export default function QuemAtende({
-  donos, linkDaIa, novo = false, daCopia = null, ocupado = false, movendo = null, aoMover, aoDeixar, aviso, ficouSemIa = [],
+  donos, linkDaIa, novo = false, semLista = false, semLinha = false, daCopia = null, ocupado = false, movendo = null, aoMover, aoDeixar, aviso, ficouSemIa = [],
 }: QuemAtendeProps) {
   return (
     <div className="grid gap-3">
       {donos.length === 0 ? (
-        !novo && <p className="text-sm text-muted-foreground">Sem IA</p>
+        !novo && <p className="text-sm text-muted-foreground">{semLista ? '—' : 'Sem IA'}</p>
       ) : (
         <ul className="grid gap-2">
           {donos.map((d) => (
@@ -61,6 +65,7 @@ export default function QuemAtende({
           <p className="mt-1 text-xs">IA que atende por funil ou por todo anúncio continua atendendo.</p>
         </Aviso>
       )}
+      {semLinha && !novo && <p className="text-xs text-muted-foreground">Salve este anúncio para ele aparecer na lista da IA.</p>}
       {movendo && (
         <Aviso tom="atencao" titulo="Mover a campanha de IA?">
           <p>{movendo.frase}</p>

@@ -669,6 +669,40 @@ describe('JanelaDaCampanha · copiar de outra ficha (Tarefa 7)', () => {
     expect(camp.escolherIa).not.toHaveBeenCalled();
   });
 
+  it('sem a lista de opções, o bloco "IA que atende" e o aviso do formulário novo continuam na tela', () => {
+    novoParecido({ opcoesDeIa: undefined });
+    expect(screen.getByText('IA que atende')).toBeInTheDocument();
+    expect(screen.getByText(AVISO_DA_LISTA)).toBeInTheDocument();
+  });
+
+  it('sem a lista de opções, ficha existente mostra as IAs do item', () => {
+    formNovo({ item: itemOrigem(), opcoesDeIa: undefined, config: origem() });
+    expect(screen.getByText('IA que atende')).toBeInTheDocument();
+    expect(screen.getAllByText(/Agente B/).length).toBeGreaterThan(0);
+  });
+
+  it('lista de campanhas chegando: a janela não diz "Sem IA"', () => {
+    formNovo({ item: itemOrigem({ agents: [] }), config: origem(), listaCarregando: true });
+    expect(screen.getByText('IA que atende')).toBeInTheDocument();
+    expect(screen.queryByText('Sem IA')).toBeNull();
+  });
+
+  it('anúncio ainda sem linha pede pra salvar antes de a IA poder pegá-lo', () => {
+    abrir();
+    expect(screen.getByText('Salve este anúncio para ele aparecer na lista da IA.')).toBeInTheDocument();
+  });
+
+  it('a IA falhou no Criar: a mensagem nomeia a IA e o link vai pra página dela', async () => {
+    permissoes.tem.add('sales_agents.read');
+    forms.create.mockResolvedValue(criada());
+    camp.escolherIa.mockRejectedValue(new Error('500'));
+    novoParecido();
+    copiar();
+    fireEvent.click(screen.getByRole('button', { name: 'Criar' }));
+    expect(await screen.findByText('A ficha foi criada, mas a IA Agente B · Ana não foi gravada. Marque este formulário nela.')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Configurar na IA' })).toHaveAttribute('href', '/ia-vendedora?ia=b1&tela=configurar&pagina=campanhas');
+  });
+
   it('Criar fecha quando a ficha e a IA copiada foram gravadas, nessa ordem', async () => {
     forms.create.mockResolvedValue(criada());
     camp.escolherIa.mockResolvedValue({ ok: true, holders: [], left_empty: [], warning: null });
@@ -696,7 +730,7 @@ describe('JanelaDaCampanha · copiar de outra ficha (Tarefa 7)', () => {
     const { aoFechar, aoSalvar } = novoParecido();
     copiar();
     fireEvent.click(screen.getByRole('button', { name: 'Criar' }));
-    expect(await screen.findByText(/a IA não foi gravada/i)).toBeInTheDocument();
+    expect(await screen.findByText(/A ficha foi criada, mas a IA Agente B · Ana não foi gravada/)).toBeInTheDocument();
     expect(aoFechar).not.toHaveBeenCalled();
     expect(aoSalvar).toHaveBeenCalledWith({ config: expect.objectContaining({ id: 'cfg-9' }) });
     expect(screen.queryByRole('button', { name: 'Criar' })).toBeNull();
