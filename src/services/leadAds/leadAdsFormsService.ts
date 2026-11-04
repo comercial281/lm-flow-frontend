@@ -19,6 +19,8 @@ export interface LeadAdsFormConfig {
   roleta_config_id: string | null;
   property_id: string | null;
   match_keyword: string | null;
+  /** Ficha "nome contém" da Roleta (form_id `nome_contem:`). Opcional: servidor antigo não manda. */
+  keyword_rule?: boolean;
   // Mensagem inicial disparada pelo número de plantão quando o lead chega FORA
   // do horário da roleta. Vazio = não manda nada (o comportamento de sempre).
   after_hours_message: string | null;

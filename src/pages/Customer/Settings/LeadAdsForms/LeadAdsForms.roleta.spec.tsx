@@ -38,7 +38,7 @@ import LeadAdsForms from './LeadAdsForms';
 const cadastro = (extra: Partial<LeadAdsFormConfig> = {}): LeadAdsFormConfig => ({
   id: 'cfg-1', form_id: 'f-1', form_name: '21/08 - ALMA', meta_page_id: null, page_name: null,
   pipeline_id: 'p1', pipeline_stage_id: 's1', label_ids: [], default_assignee_id: null,
-  roleta_config_id: null, property_id: null, match_keyword: 'alma', after_hours_message: null,
+  roleta_config_id: null, property_id: null, match_keyword: 'alma', keyword_rule: true, after_hours_message: null,
   is_active: true, created_at: '2026-10-01', ...extra,
 });
 
