@@ -49,6 +49,7 @@ import SecaoCaracteristicas from './secoes/SecaoCaracteristicas';
 import SecaoMidia from './secoes/SecaoMidia';
 import SecaoDescricao from './secoes/SecaoDescricao';
 import SecaoEquipe from './secoes/SecaoEquipe';
+import { useCaptadorPadrao } from '@/features/properties/cadastro/captadorPadrao';
 import SecaoDadosInternos from './secoes/SecaoDadosInternos';
 import SecaoConstrutora from './secoes/SecaoConstrutora';
 import SecaoComissao from './secoes/SecaoComissao';
@@ -106,6 +107,15 @@ function Cadastro() {
     ...(proprietarioDaUrl ? { owner_id: proprietarioDaUrl } : {}),
   }));
   const [inicial, setInicial] = useState(form);
+  // Corretor que cadastra já nasce Captador (e pode tirar). Entra no "inicial" também:
+  // abrir a página e sair não pode perguntar se quer salvar.
+  const captadorPadrao = useCaptadorPadrao();
+  useEffect(() => {
+    if (editandoId || !captadorPadrao) return;
+    const preencher = (f: PropertyFormData) => (f.captor_id ? f : { ...f, captor_id: captadorPadrao });
+    setForm(preencher);
+    setInicial(preencher);
+  }, [editandoId, captadorPadrao]);
   const setF = (patch: MudancaDoFormulario) =>
     setForm(prev => ({ ...prev, ...(typeof patch === 'function' ? patch(prev) : patch) }));
 

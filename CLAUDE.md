@@ -10671,6 +10671,27 @@ Pedido do dono com o print de um aviso que chegou como `Fulano: escreveu: "Vou c
 
 Testes: `src/components/notifications/VerTextoDoAviso.spec.tsx`.
 
+## Imóveis: "Só os meus" e o corretor como Captador (04/11/2026)
+
+Pedido de um corretor de cliente ("tem algum lugar que aparecem os meus imóveis?"), depois que uma migração levou a carteira de ~25 para ~1.000 imóveis e o dele ficou enterrado na lista.
+
+- **Botão "Só os meus"** na barra de Meus imóveis, pra todos os cargos. Mostra os imóveis em que a pessoa é Captador ou Corretor responsável; recorta a lista, a contagem das abas e os seletores do painel. Nasce desligado (o catálogo inteiro é ferramenta de venda do corretor) e lembra a última escolha neste navegador.
+- **O link manda.** Vindo da Dashboard ou da Atividades, a escolha lembrada não vale: o número clicado tem que bater com a lista. Mexer no botão com link aberto tira o link.
+- **Indo atrás de um imóvel específico (Ctrl+K, card do funil), o botão fica desligado** nessa abertura, sem apagar a escolha guardada. Senão, imóvel de colega dá "Nada encontrado" pro corretor que está vendendo.
+- **Mexer no botão muda de aba se a atual zerou** e outra tem imóvel.
+- **No Mapa o botão some** e as abas contam a imobiliária inteira, porque o mapa mostra a aba inteira.
+- **Topo da tela:** com o botão ligado não soma "N cadastros" (a soma seria só dos dele).
+- **Sem imóvel no nome, em nenhuma aba:** "Nenhum imóvel no seu nome", com *Ver todos os imóveis*. Não usa o convite de "cadastrar o primeiro": a imobiliária tem imóvel, só não está no nome dele.
+- **Corretor que cadastra já nasce Captador** (cargo sem `dashboard.team`, a mesma régua da Dashboard), e pode tirar. O gestor segue começando em Nenhum: ele costuma cadastrar imóvel dos outros. Espera as permissões chegarem antes de decidir, senão gestor com internet lenta nasceria Captador. Vale só pro cadastro pela tela; o lote não passa por aqui.
+- **Antes disso o corretor não conseguia se marcar:** ele não tem `users.read`, a lista de pessoas volta recusada e os seletores de Captador e Corretor responsável só tinham "Nenhum". Editando imóvel de outro, mostrava "Nenhum" mesmo com alguém escolhido.
+- **O que o corretor vê nos seletores agora.** Captador: Nenhum, quem já está no imóvel e, só se o imóvel ainda não tem captador, ele mesmo. Corretor responsável: Nenhum e quem já está no imóvel.
+
+Decisões (não reabrir sem o dono pedir):
+
+- **O corretor não se oferece em imóvel de outro captador**, pra não tomar a captação de um colega. É trava de tela: quem edita imóvel ainda consegue tirar o captador, salvar e se colocar, e o servidor aceita.
+- **O corretor não se oferece como Corretor responsável:** a chave "Leads deste imóvel vão direto para o responsável" fica colada nesse campo, e ele poderia tirar os leads do imóvel da roleta pra si.
+- **O corretor não escolhe colega** nos seletores: ele não lê a equipe, e abrir a lista é decisão de permissão, não desta tela.
+
 ## Campanhas: tela por tipo e plugar formulário (04/11/2026)
 
 Spec: `LM FLOW/specs/2026-11-04-campanhas-tela-e-plugar-design.md`. Esta seção é a parte da tela (PR 2). O servidor (Quem atende de verdade, contagem de lead barrado) é o PR 1, e a regra do nome desligada é o PR 3.

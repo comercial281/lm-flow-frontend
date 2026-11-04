@@ -10,11 +10,14 @@ import {
   leadDestinationWarning,
 } from '@/features/properties/leadDestination';
 import { VISITAS_JUNTAS_HELP, VISITAS_JUNTAS_LABEL, aceitaVisitasJuntas } from '@/features/properties/visitasJuntas';
+import { opcoesDoSeletor } from '@/features/properties/cadastro/captadorPadrao';
+import { useAuthStore } from '@/store/authStore';
 import { CLASSE_SELETOR, type PropsDaSecao } from './tipos';
 
 type UsuarioDaLista = { id: string | number; name?: string | null; email?: string | null };
 
-export default function SecaoEquipe({ form: f, setF }: PropsDaSecao) {
+export default function SecaoEquipe({ form: f, setF, editando }: PropsDaSecao) {
+  const eu = useAuthStore(s => s.currentUser);
   // Usuários do tenant (responsável/captador) e etiquetas. Toleram falha (ficam vazios).
   const [tenantUsers, setTenantUsers] = useState<Array<{ id: string; name: string }>>([]);
   const [labels, setLabels] = useState<Array<{ id: string; title: string }>>([]);
@@ -76,6 +79,14 @@ export default function SecaoEquipe({ form: f, setF }: PropsDaSecao) {
   };
 
   const avisoDeDestino = leadDestinationWarning(f);
+  // Quem já está no imóvel aparece mesmo para quem não lê a equipe. A própria pessoa só
+  // entra no Captador, e só se o imóvel ainda não tem um: não toma captação de colega, e
+  // no Responsável a chave acima mandaria os leads do imóvel direto pra ela.
+  const euNoSeletor = eu?.id && !editando?.captor_id
+    ? { id: String(eu.id), name: eu.name || eu.email || '' }
+    : null;
+  const opcoesDeCaptador = opcoesDoSeletor(tenantUsers, [editando?.captor, euNoSeletor]);
+  const opcoesDeResponsavel = opcoesDoSeletor(tenantUsers, [editando?.responsible]);
 
   return (
     <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -87,7 +98,7 @@ export default function SecaoEquipe({ form: f, setF }: PropsDaSecao) {
           className={CLASSE_SELETOR}
         >
           <option value="">Nenhum</option>
-          {tenantUsers.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+          {opcoesDeResponsavel.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
         </Seletor>
 
         {/* A exceção por IMÓVEL: tira este anúncio da roleta / do destino
@@ -132,7 +143,7 @@ export default function SecaoEquipe({ form: f, setF }: PropsDaSecao) {
           className={CLASSE_SELETOR}
         >
           <option value="">Nenhum</option>
-          {tenantUsers.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+          {opcoesDeCaptador.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
         </Seletor>
       </div>
       {/* Etiqueta do imóvel: o lead que entra pela página deste imóvel é etiquetado
