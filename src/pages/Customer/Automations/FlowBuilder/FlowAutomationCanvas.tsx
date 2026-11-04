@@ -456,7 +456,7 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
   // A resposta do servidor (mensagem entrou ou saiu) vira o desenho, já reorganizado.
   const aplicarRespostaDaMensagem = useCallback((resposta: FlowAutomation) => {
     applyFlow(resposta);
-    applyPositions(calculateLayout(resposta.nodes, resposta.initial_node_id));
+    applyPositions(calculateLayout(resposta.nodes ?? [], resposta.initial_node_id));
   }, [applyFlow, applyPositions]);
 
   const handleRemove = useCallback(async (nodeId: string) => {

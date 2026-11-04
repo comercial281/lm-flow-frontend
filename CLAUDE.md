@@ -32,7 +32,8 @@ backend (ex.: deletar contato, endpoints, jobs) vai nesse outro repo, com base
   equipe · Meus · Dos corretores** (esta só pro gestor, com selo "De <nome>").
   - **Corretor** cria o dele a partir do modelo "Follow-up padrão" ou **duplicando um
     da equipe**, e edita no **modo guiado**: troca texto por áudio/foto/vídeo e muda o
-    tempo das esperas; **não acrescenta mensagem nem troca a coluna de resposta**. O
+    tempo das esperas; **acrescenta mensagem no dele, até 25, com pelo menos 1 hora entre
+    elas** (desde 04/11/2026), e **não troca a coluna de resposta**. O
     número é sempre o **do responsável pelo lead** (a tela diz "Sai pelo WhatsApp do
     responsável pelo lead."). O follow-up da equipe, pro corretor, abre só pra ver.
   - **"Meu padrão" × "padrão da conta"**: cada pessoa marca o seu (**alfinete**); o **padrão
@@ -10753,7 +10754,7 @@ Armadilhas:
 
 1. **O nome só vai no Salvar do topo, junto dos blocos.** Trocar por outro caminho e depois salvar os blocos velhos daria 422 na trava do servidor.
 2. **Etiquetas do nome antigo ficam na conta**, sem lead novo. Não apagar junto: lead antigo pode ter a etiqueta.
-3. **Ainda dá pra cortar a linha de uma condição travada.** E mensagem nova adicionada no follow-up não marca progresso, então a retomada não a reconhece. Próxima conversa: 7ª mensagem e prazos. Ver `LM FLOW/_MELHORIAS.md`.
+3. **Cortar a linha de uma condição travada e adicionar mensagem que não marca progresso foram resolvidos** na seção "Follow-up: adicionar e tirar mensagem (04/11/2026)", logo abaixo.
 
 Testes: `CondicoesAutomaticasDoFollowup.spec.tsx`, `FollowupCondicoesAutomaticasCanvas.spec.tsx`. Servidor: `spec/requests/api/v1/flow_automations_followup_progress_labels_spec.rb`.
 
@@ -10798,3 +10799,31 @@ Pedido do dono do produto (04/11/2026, caso Pandora). A regra mora no servidor (
 Na tela só muda a frase de *IA Vendedora › Follow-up › Quais leads*: *"Só quem ela atendeu e ainda não passou pra um corretor."* A antiga ("ainda não foi pra um corretor") ficaria falsa num lead que já tem corretor e segue com a IA.
 
 Voltar é seguro: a frase não chama nada no servidor.
+
+## Follow-up: adicionar e tirar mensagem (04/11/2026)
+
+**O caso.** Acrescentar mensagem num follow-up não funcionava: o corretor era recusado ("peça ao gestor") e, pro gestor, a mensagem entrava solta, sem espera, sem linha e sem etiqueta. Como a 7ª não marcava progresso, a janela "Colocar em follow-up" achava que quem parou na 6 já recebeu tudo e só oferecia "Começar do início". Tirar mensagem derrubava o lead parado nela e deixava buraco na numeração. Spec: `LM FLOW/specs/2026-11-04-follow-up-adicionar-mensagem-design.md`.
+
+**Como ficou** (a lógica mora no servidor; a tela manda o conteúdo e recebe o follow-up atualizado):
+
+- **"+ Adicionar mensagem"** fica embaixo da última mensagem, antes do "Marcar follow-up encerrado". Na lista de Blocos do follow-up os blocos de mandar mensagem saem e entra "Adicionar mensagem" no lugar. A mensagem só entra ao salvar, preenchida (`JanelaNovaMensagem`); fechar não cria nada.
+- **Sem mais clique:** nasce a espera "Depois da mensagem N" (copia a anterior; sem anterior, 1 dia em horário comercial), a mensagem "(última)", a condição "Continuar da mensagem N" e o fim vai pra depois dela. Tela e servidor renumeram os nomes; nome personalizado fica.
+- **Quem pode:** gestor em qualquer follow-up, corretor só no dele. No da equipe o corretor só vê.
+- **Limites:** 25 mensagens por follow-up, pra todos (o botão some e o servidor recusa). Corretor: pelo menos 1 hora entre mensagens, ao adicionar e ao editar a espera; follow-up já com menos continua valendo até mexerem naquela espera. Gestor sem mínimo.
+- **Tirar mensagem** pede confirmação e grava na hora, pra gestor e corretor. Sai a mensagem e a espera antes dela; o prazo depois dela **não sai** (o bloco "Depois da mensagem N" não é excluível, só editável; pra tirar o prazo, tira-se a mensagem). Mensagem do follow-up não tem "Duplicar" (a cópia dividiria a etiqueta).
+- **Linhas das condições travadas:** não dá pra cortar, na tela nem no servidor. Mensagem fora da sequência (caminho "Respondeu") não entra mais.
+- **Número e etiqueta nunca são reaproveitados:** a nova usa o maior número já usado + 1. Tirou a 6 e adicionou outra: marca a etiqueta 7.
+- **A condição da mensagem tirada fica**, travada: quem tem a etiqueta segue pra próxima mensagem que existe (ou encerra), em vez de voltar pra Mensagem 1.
+- **Lead parado:** na espera antes da mensagem tirada, passa pra espera seguinte mantendo a hora marcada (se era a última, vai pro encerramento). No bloco da mensagem, passa pro seguinte. Tirar a Mensagem 1 com lead esperando é recusado com a contagem.
+- **A janela "Colocar em follow-up"** acha a próxima mensagem de número maior que o da etiqueta e mostra a posição na ordem atual (`next_position`, "Continuar da mensagem 4"); servidor antigo sem o campo cai em `step + 1`. **Só a janela oferece "Continuar"**: coluna Follow-up, automação e IA começam sempre do início. Quem recebeu todas e é colocado de novo recomeça da Mensagem 1.
+- **Adicionar e tirar refazem o layout** como o "Organizar", pra o bloco novo não cair em cima de outro.
+
+**Decisão do Tony, não reabrir:** as condições ficam visíveis e travadas. Eliminá-las e deixar o servidor retomar sozinho (opção C) foi rejeitado: "é uma condicional". O prazo continua nos blocos "Depois da mensagem N".
+
+Armadilhas:
+
+1. **O "Follow-up Automático" da Meu Imóvel não tem condições de retomada e fica livre**: sem botão, sem trava de linha. Só vale pra follow-up com condições.
+2. **Sequência com linha solta:** o botão aparece, mas ao salvar o servidor recusa ("A sequência deste follow-up tem uma linha solta. Ligue os blocos antes de adicionar mensagem.").
+3. **Voltar o backend com a tela nova no ar** faz o botão dar erro: voltar a tela junto (ver armadilha 4 do `LM FLOW/CLAUDE.md`).
+
+Testes: `FollowupAdicionarMensagem.spec.tsx`, `FollowupCondicoesAutomaticasCanvas.spec.tsx`, `JanelaColocarEmFollowup.spec.tsx`.

@@ -159,7 +159,7 @@ export default function JanelaColocarEmFollowup({ lead, aoCancelar, aoConcluir }
                         disabled={salvando}
                         onClick={() => setModo('continue')}
                       >
-                        {`Continuar da mensagem ${progresso.step + 1}`}
+                        {`Continuar da mensagem ${progresso.next_position ?? progresso.step + 1}`}
                       </Button>
                     )}
                     {podeContinuar && (

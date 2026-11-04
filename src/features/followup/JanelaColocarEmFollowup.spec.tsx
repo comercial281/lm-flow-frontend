@@ -69,6 +69,18 @@ describe('JanelaColocarEmFollowup', () => {
     expect(screen.queryByText('O card vai para a coluna Follow-up.')).not.toBeInTheDocument();
   });
 
+  it('continua pela posição do próximo, mesmo com mensagem tirada ou acrescentada', async () => {
+    placePreview.mockResolvedValue(preview({ progress: progresso({ step: 3, next_position: 3 }) }));
+    abrir();
+    expect(await screen.findByRole('button', { name: 'Continuar da mensagem 3' })).toBeInTheDocument();
+  });
+
+  it('com next_position diferente de step + 1 mostra a posição do servidor', async () => {
+    placePreview.mockResolvedValue(preview({ progress: progresso({ step: 2, next_position: 4 }) }));
+    abrir();
+    expect(await screen.findByRole('button', { name: 'Continuar da mensagem 4' })).toBeInTheDocument();
+  });
+
   it('com progresso oferece continuar da N+1 com a prévia', async () => {
     placePreview.mockResolvedValue(preview({ progress: progresso() }));
     place.mockResolvedValue({ message: 'Follow-up "Follow-up longo" iniciado.', started: true });
