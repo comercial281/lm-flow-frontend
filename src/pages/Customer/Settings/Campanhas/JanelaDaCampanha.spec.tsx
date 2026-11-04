@@ -703,4 +703,35 @@ describe('JanelaDaCampanha · copiar de outra ficha (Tarefa 7)', () => {
     copiar();
     expect(within(screen.getByTestId('coluna-direita')).getByText('Agente B · Ana', { selector: 'span' })).toBeInTheDocument();
   });
+
+  it('lista de campanhas chegando: Copiar espera, não copia nada; quando chega, habilita e copia a IA', async () => {
+    const aoCopiarEntrada = vi.fn();
+    const base = { item: item({ kind: 'form', key: 'form:f-9', label: '[03/11] [CASTELO 2.0]' }), fichas: [origem()], aoCopiarEntrada, entrada: entradaFalsa };
+    const mont = () => ({ form_id: 'f-9', form_name: 'Novo', pipeline_id: 'p', pipeline_stage_id: 's', is_active: true, label_ids: [] });
+    const { rerender } = render(<JanelaDaCampanha tipo="form" config={null} aoFechar={vi.fn()} montarEntrada={mont} opcoesDeIa={undefined} itensDaLista={[]} listaCarregando {...base} />);
+    const botao = screen.getByRole('button', { name: 'Copiar a configuração' });
+    expect(botao).toBeDisabled();
+    expect(screen.getByText(/Esperando a lista de campanhas/)).toBeInTheDocument();
+    fireEvent.click(botao);
+    expect(aoCopiarEntrada).not.toHaveBeenCalled();
+    rerender(<JanelaDaCampanha tipo="form" config={null} aoFechar={vi.fn()} montarEntrada={mont} opcoesDeIa={opcoes} itensDaLista={[itemOrigem()]} {...base} />);
+    expect(screen.getByRole('button', { name: 'Copiar a configuração' })).toBeEnabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Copiar a configuração' }));
+    expect(aoCopiarEntrada).toHaveBeenCalled();
+    expect(within(screen.getByTestId('coluna-direita')).getByText('Agente B · Ana', { selector: 'span' })).toBeInTheDocument();
+  });
+
+  it('lista que falhou: Copiar vale e a janela avisa que a IA não foi copiada', () => {
+    const { aoCopiarEntrada } = novoParecido({ opcoesDeIa: undefined, itensDaLista: [], listaCarregando: true, listaFalhou: true });
+    expect(screen.getByRole('button', { name: 'Copiar a configuração' })).toBeEnabled();
+    copiar();
+    expect(aoCopiarEntrada).toHaveBeenCalled();
+    expect(screen.getByText(/A IA não foi copiada: a lista de campanhas não carregou/)).toBeInTheDocument();
+  });
+
+  it('ficha de origem fora da lista carregada: copia o resto e avisa', () => {
+    novoParecido({ itensDaLista: [] });
+    copiar();
+    expect(screen.getByText(/A IA não foi copiada: não achei a ficha de origem/)).toBeInTheDocument();
+  });
 });

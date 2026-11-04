@@ -30,6 +30,7 @@ export interface LeadAdsFormConfig {
   audience_intents?: Intencao[];
   is_active: boolean;
   created_at: string;
+  /** O servidor manda (`config_json`); opcional só pra fixtures antigas. */
   updated_at?: string;
 }
 

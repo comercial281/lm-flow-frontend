@@ -1293,6 +1293,8 @@ export default function LeadAdsForms({ titulo = 'Formulários', subtitulo = 'Pra
           montarEntrada={montarEntrada}
           fichas={configs}
           itensDaLista={campanhas?.itens}
+          listaCarregando={campanhas?.listaPronta === false}
+          listaFalhou={!!campanhas?.listaFalhou}
           aoCopiarEntrada={copiarEntrada}
           aoFechar={() => setModalOpen(false)}
           aoSalvar={aposSalvarJanela}

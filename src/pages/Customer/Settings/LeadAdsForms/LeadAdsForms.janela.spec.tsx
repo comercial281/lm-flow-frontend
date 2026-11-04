@@ -136,4 +136,24 @@ describe('Formulários do Meta · janela da campanha', () => {
     expect(within(dialogo).queryByLabelText(/Etapa/)).toBeNull();
     expect(rodape()).toHaveTextContent('Funil ainda não escolhido');
   });
+
+  it('Copiar a configuração leva funil, etapa, etiquetas e quem assume ao que o Criar manda, sem mexer na identidade do formulário', async () => {
+    recursos.labels = [{ id: 'l1', title: 'Castelo' }] as never;
+    svc.getAll.mockResolvedValue([cadastro({
+      id: 'cfg-o', form_id: 'f-o', form_name: '[06/10] [CASTELO]', label_ids: ['l1'], default_assignee_id: 'u1', pipeline_id: 'p1', pipeline_stage_id: 's1',
+    })]);
+    svc.syncMetaForms.mockResolvedValue({ data: [{ id: 'f-2', name: '[03/11] [CASTELO 2.0]', status: 'ACTIVE', leads_count: 3, meta_page_id: 'pg-2' }], errors: [], ignored_leads: [] });
+    render(<MemoryRouter><LeadAdsForms /></MemoryRouter>);
+    fireEvent.click(await screen.findByRole('button', { name: 'Configurar destino' }));
+    const dialogo = await screen.findByRole('dialog');
+    fireEvent.click(await within(dialogo).findByRole('button', { name: 'Copiar a configuração' }));
+    await waitFor(() => expect(within(dialogo).getByLabelText(/Funil/)).toHaveValue('p1'));
+    fireEvent.click(within(dialogo).getByRole('button', { name: 'Criar' }));
+    await waitFor(() => expect(svc.create).toHaveBeenCalled());
+    expect(svc.create.mock.calls[0][0]).toMatchObject({
+      form_id: 'f-2', form_name: '[03/11] [CASTELO 2.0]', meta_page_id: 'pg-2',
+      pipeline_id: 'p1', pipeline_stage_id: 's1', label_ids: ['l1'], default_assignee_id: 'u1', roleta_config_id: null,
+    });
+    recursos.labels = [];
+  });
 });

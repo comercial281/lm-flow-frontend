@@ -71,6 +71,10 @@ export interface JanelaDaCampanhaProps {
   itensDaLista?: ItemDeCampanha[];
   /** Copiar: quem guarda a entrada do lead (funil, etapa, quem assume, etiquetas) recebe a ficha de origem. */
   aoCopiarEntrada?: (origem: LeadAdsFormConfig) => void;
+  /** A lista de Campanhas (IA e oferta das fichas) ainda está chegando: Copiar espera, pra não perder a IA calado. */
+  listaCarregando?: boolean;
+  /** A lista não carregou: Copiar vale, mas a IA não vem e a janela avisa. */
+  listaFalhou?: boolean;
 }
 
 type Imovel = Property | 'erro';
@@ -89,7 +93,7 @@ function fraseDoCadastro(escopo: EscopoDaOferta | null, qtd: number, umSo: Prope
 const temCondicao = (c: CondicaoDaOferta | null) => Object.values(c ?? {}).some((v) => v != null && String(v).trim() !== '');
 
 export default function JanelaDaCampanha({
-  tipo, item, config = null, entrada, resumoDaEntrada, montarEntrada, opcoesDeIa, aoFechar, aoSalvar, aoMudarIa, aoCriarLinha, aoApagar, fichas, itensDaLista, aoCopiarEntrada,
+  tipo, item, config = null, entrada, resumoDaEntrada, montarEntrada, opcoesDeIa, aoFechar, aoSalvar, aoMudarIa, aoCriarLinha, aoApagar, fichas, itensDaLista, aoCopiarEntrada, listaCarregando = false, listaFalhou = false,
 }: JanelaDaCampanhaProps) {
   const can = useCan();
   const recurso = tipo === 'form' ? 'lead_ads_form_configs' : 'campaign_links';
@@ -283,6 +287,8 @@ export default function JanelaDaCampanha({
   // ---- Copiar de outra ficha ----
   // Só sugere: nada grava até o Criar. Não toca na identidade do formulário (form_id, nome, página), que fica com quem chama.
   const [copiou, setCopiou] = useState(false);
+  const [avisoDaCopia, setAvisoDaCopia] = useState<string | null>(null);
+  const esperaALista = listaCarregando && !listaFalhou;
   const parecida = novo && !copiou && fichas ? fichaParecida(nomeDoItem(item), fichas) : null;
   const copiarDe = (origem: LeadAdsFormConfig) => {
     const ori = itemDaFicha(origem, origem.form_name, itensDaLista?.find((i) => i.form_config_id === origem.id));
@@ -298,11 +304,20 @@ export default function JanelaDaCampanha({
     if (temCondicao(ori.offer_condition) || (ori.audience_intents ?? []).length > 0) setOfertaAberta(true);
     aoCopiarEntrada?.(origem);
     // A IA: só a que está na lista desta campanha. A de regra mais ampla atende o formulário novo do mesmo jeito.
-    const dela = ori.agents.find((a) => a.kind === 'campaign');
-    if (dela) {
-      const op = opcoes.find((o) => o.chave === chaveDaIa(dela.sales_agent_id, dela.sales_agent_number_id));
-      if (op && !op.fixa) { setPendente(op.chave); setAvisoDaIa(null); }
-      else setAvisoDaIa('A IA não foi copiada: a opção dela não está mais disponível. Escolha em Pôr numa IA, se quiser.');
+    // Nunca cala: sem a lista, sem o item da origem ou sem a opção, copia o resto e diz que a IA ficou de fora.
+    const naoCopiou = (motivo: string) => setAvisoDaCopia(`A IA não foi copiada: ${motivo}. Escolha em Pôr numa IA, se quiser.`);
+    const daLista = itensDaLista?.find((i) => i.form_config_id === origem.id);
+    if (listaFalhou) naoCopiou('a lista de campanhas não carregou');
+    else if (opcoesDeIa) {
+      if (!daLista) naoCopiou('não achei a ficha de origem na lista de campanhas');
+      else {
+        const dela = ori.agents.find((a) => a.kind === 'campaign');
+        if (dela) {
+          const op = opcoes.find((o) => o.chave === chaveDaIa(dela.sales_agent_id, dela.sales_agent_number_id));
+          if (op && !op.fixa) { setPendente(op.chave); setAvisoDaIa(null); setAvisoDaCopia(null); }
+          else naoCopiou('a opção dela não está mais disponível');
+        }
+      }
     }
     setCopiou(true);
   };
@@ -438,11 +453,15 @@ export default function JanelaDaCampanha({
               {parecida && (
                 <Aviso tom="neutro" compacto>
                   <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
-                    <p className="min-w-0 break-words">Parece com a ficha <strong>{parecida.form_name}</strong>.</p>
-                    <Button type="button" variant="outline" size="sm" onClick={() => copiarDe(parecida)}>Copiar a configuração</Button>
+                    <p className="min-w-0 break-words">
+                      Parece com a ficha <strong>{parecida.form_name}</strong>.
+                      {esperaALista && <span className="block text-xs text-muted-foreground">Esperando a lista de campanhas chegar...</span>}
+                    </p>
+                    <Button type="button" variant="outline" size="sm" disabled={esperaALista} onClick={() => copiarDe(parecida)}>Copiar a configuração</Button>
                   </div>
                 </Aviso>
               )}
+              {avisoDaCopia && <Aviso tom="atencao" compacto>{avisoDaCopia}</Aviso>}
               {oQueVende}
               {eForm && entrada}
             </fieldset>
