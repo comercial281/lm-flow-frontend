@@ -3,7 +3,7 @@
 // contagem, aba padrão, troca de aba, aba vazia e a visão Mapa.
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { MemoryRouter, useLocation } from 'react-router-dom';
+import { Link, MemoryRouter, useLocation } from 'react-router-dom';
 import userEvent from '@testing-library/user-event';
 import type { Property } from '@/services/properties/propertiesService';
 
@@ -65,6 +65,7 @@ function abrir(endereco = '/properties') {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  localStorage.clear();
   svc.facets.mockResolvedValue({ neighborhoods: [], property_types: [], captors: [] });
   svc.list.mockImplementation(async (p: { listing_kind: string }) =>
     (p.listing_kind === 'resale'
@@ -173,8 +174,11 @@ describe('Tela de Imóveis', () => {
 
   describe('Só os meus', () => {
     const botao = () => screen.findByRole('button', { name: 'Só os meus' });
+    const lembrado = () => localStorage.setItem('imoveis:so-os-meus', '1');
+    // A contagem depende do recorte: a imobiliária tem uma coisa, a pessoa tem outra.
+    const contagens = (dela: object, imobiliaria: object) =>
+      svc.contarPorTipo.mockImplementation(async (p: { mine?: string }) => (p.mine ? dela : imobiliaria));
     beforeEach(() => {
-      localStorage.clear();
       svc.contarPorTipo.mockResolvedValue({ development: 0, resale: 38, auction: 0 });
     });
 
@@ -200,11 +204,12 @@ describe('Tela de Imóveis', () => {
     });
 
     it('sem nenhum imóvel no nome, diz isso e oferece ver todos', async () => {
-      localStorage.setItem('imoveis:so-os-meus', '1');
+      lembrado();
       svc.contarPorTipo.mockResolvedValue({ development: 0, resale: 0, auction: 0 });
       svc.list.mockResolvedValue(resposta([], 0));
       abrir();
       expect(await screen.findByText('Nenhum imóvel no seu nome')).toBeInTheDocument();
+      expect(screen.queryByText(/^0 /)).toBeNull();
       fireEvent.click(screen.getByRole('button', { name: 'Ver todos os imóveis' }));
       await waitFor(() => expect(svc.list.mock.calls.at(-1)![0].mine).toBeUndefined());
       expect(localStorage.getItem('imoveis:so-os-meus')).toBeNull();
@@ -223,6 +228,114 @@ describe('Tela de Imóveis', () => {
       fireEvent.click(await botao().then(b => { expect(b).toHaveAttribute('aria-pressed', 'true'); return b; }));
       await waitFor(() => expect(svc.list.mock.calls.at(-1)![0].mine).toBeUndefined());
       expect(screen.getByTestId('onde').textContent).not.toContain('recorte');
+    });
+
+    it('imóveis só em outra aba: muda pra ela, sem dizer que não tem nada no nome', async () => {
+      contagens({ development: 0, resale: 3, auction: 0 }, { development: 800, resale: 200, auction: 0 });
+      svc.list.mockResolvedValue(resposta([], 0));
+      abrir();
+      expect(await screen.findByRole('tab', { name: 'Empreendimentos (800)' })).toHaveAttribute('aria-selected', 'true');
+      fireEvent.click(await botao());
+      await waitFor(() => expect(screen.getByRole('tab', { name: 'Revenda (3)' })).toHaveAttribute('aria-selected', 'true'));
+      await waitFor(() => expect(screen.getByTestId('onde').textContent).toContain('aba=revenda'));
+      expect(screen.queryByText('Nenhum imóvel no seu nome')).toBeNull();
+    });
+
+    it('aberto numa aba zerada, com imóvel no nome em outra, não diz "nada no seu nome"', async () => {
+      lembrado();
+      svc.contarPorTipo.mockResolvedValue({ development: 0, resale: 3, auction: 0 });
+      svc.list.mockResolvedValue(resposta([], 0));
+      abrir('/properties?aba=empreendimentos');
+      expect(await screen.findByText('Nada encontrado')).toBeInTheDocument();
+      expect(screen.queryByText('Nenhum imóvel no seu nome')).toBeNull();
+    });
+
+    it('Ver todos sai da aba vazia pra aba que tem imóvel', async () => {
+      lembrado();
+      contagens({ development: 0, resale: 0, auction: 0 }, { development: 0, resale: 1000, auction: 0 });
+      svc.list.mockResolvedValue(resposta([], 0));
+      abrir();
+      fireEvent.click(await screen.findByRole('button', { name: 'Ver todos os imóveis' }));
+      await waitFor(() => expect(screen.getByRole('tab', { name: 'Revenda (1.000)' })).toHaveAttribute('aria-selected', 'true'));
+      expect(screen.queryByText('Você ainda não tem empreendimento cadastrado')).toBeNull();
+    });
+
+    it('recontagem que não veio do botão não troca a aba da pessoa', async () => {
+      contagens({ development: 0, resale: 3, auction: 0 }, { development: 0, resale: 3, auction: 0 });
+      abrir('/properties?aba=empreendimentos');
+      expect(await screen.findByRole('tab', { name: 'Empreendimentos (0)' })).toHaveAttribute('aria-selected', 'true');
+      await waitFor(() => expect(svc.list).toHaveBeenCalled());
+      expect(screen.getByRole('tab', { name: 'Empreendimentos (0)' })).toHaveAttribute('aria-selected', 'true');
+    });
+
+    it('o topo só soma os cadastros com o botão desligado', async () => {
+      svc.contarPorTipo.mockResolvedValue({ development: 0, resale: 38, auction: 0 });
+      abrir();
+      expect(await screen.findByText(/· 38 cadastros/)).toBeInTheDocument();
+      fireEvent.click(await botao());
+      await waitFor(() => expect(screen.queryByText(/· 38 cadastros/)).toBeNull());
+    });
+
+    it('imóvel específico pelo endereço (?q=) procura na imobiliária inteira e guarda a escolha', async () => {
+      lembrado();
+      abrir('/properties?aba=revenda&q=AP0461');
+      await waitFor(() => expect(svc.list).toHaveBeenCalledWith(expect.objectContaining({ q: 'AP0461' })));
+      expect(svc.list.mock.calls.at(-1)![0].mine).toBeUndefined();
+      expect(await botao()).toHaveAttribute('aria-pressed', 'false');
+      expect(localStorage.getItem('imoveis:so-os-meus')).toBe('1');
+    });
+
+    it('Ctrl+K com a tela aberta também procura na imobiliária inteira', async () => {
+      lembrado();
+      render(<MemoryRouter initialEntries={['/properties?aba=revenda']}><Link to="/properties?aba=revenda&q=AP9">buscar</Link><Properties /></MemoryRouter>);
+      await waitFor(() => expect(svc.list.mock.calls.at(-1)?.[0].mine).toBe('1'));
+      fireEvent.click(screen.getByRole('link', { name: 'buscar' }));
+      await waitFor(() => expect(svc.list.mock.calls.at(-1)![0]).toMatchObject({ q: 'AP9' }));
+      expect(svc.list.mock.calls.at(-1)![0].mine).toBeUndefined();
+    });
+
+    it('Limpar filtros também desliga o botão', async () => {
+      lembrado();
+      svc.contarPorTipo.mockResolvedValue({ development: 0, resale: 5, auction: 0 });
+      svc.list.mockResolvedValue(resposta([], 0));
+      abrir('/properties?aba=revenda');
+      fireEvent.click(await screen.findByRole('button', { name: /Limpar filtros/ }));
+      await waitFor(() => expect(svc.list.mock.calls.at(-1)![0].mine).toBeUndefined());
+      expect(localStorage.getItem('imoveis:so-os-meus')).toBeNull();
+    });
+
+    it('busca sem resultado com o botão ligado é "Nada encontrado", não "nada no seu nome"', async () => {
+      lembrado();
+      svc.contarPorTipo.mockResolvedValue({ development: 0, resale: 0, auction: 0 });
+      svc.list.mockResolvedValue(resposta([], 0));
+      abrir('/properties?aba=revenda');
+      fireEvent.change(await screen.findByRole('textbox', { name: 'Buscar' }), { target: { value: 'xyz' } });
+      expect(await screen.findByText('Nada encontrado')).toBeInTheDocument();
+      expect(screen.queryByText('Nenhum imóvel no seu nome')).toBeNull();
+    });
+
+    it('link "seus" zerado é "Nada encontrado": o chip é que explica o recorte', async () => {
+      svc.contarPorTipo.mockResolvedValue({ development: 0, resale: 0, auction: 0 });
+      svc.list.mockResolvedValue(resposta([], 0));
+      abrir('/properties?aba=revenda&recorte=ativos&meus=1');
+      expect(await screen.findByText('Nada encontrado')).toBeInTheDocument();
+      expect(screen.queryByText('Nenhum imóvel no seu nome')).toBeNull();
+    });
+
+    it('trocar Lista por Grade não reconta as abas', async () => {
+      abrir();
+      await botao();
+      await waitFor(() => expect(svc.contarPorTipo).toHaveBeenCalled());
+      const antes = svc.contarPorTipo.mock.calls.length;
+      fireEvent.click(screen.getByRole('button', { name: 'Ver em grade' }));
+      await waitFor(() => expect(screen.getByTestId('onde').textContent).toContain('visao=grade'));
+      expect(svc.contarPorTipo).toHaveBeenCalledTimes(antes);
+    });
+
+    it('no Mapa, com link aberto, as abas também contam a imobiliária inteira', async () => {
+      abrir('/properties?visao=mapa&aba=revenda&recorte=ativos&meus=1');
+      await screen.findByTestId('mapa');
+      await waitFor(() => expect(svc.contarPorTipo).toHaveBeenLastCalledWith({}));
     });
 
     it('no Mapa o botão some e as abas contam a imobiliária inteira, como o mapa mostra', async () => {

@@ -75,12 +75,46 @@ describe('Captador no cadastro de imóvel', () => {
     expect(svc.create.mock.calls[0][0].captor_id).toBe('ana');
   });
 
-  it('corretor pode trocar para Nenhum, e a escolha fica', async () => {
+  it('corretor pode trocar para Nenhum, e salva sem captador', async () => {
+    svc.create.mockResolvedValue({ id: 'n2', listing_kind: 'resale' });
     abrir('/properties/new', { isReady: true, temTime: false });
     const s = await seletor('Captador');
     await waitFor(() => expect(s.value).toBe('ana'));
     await userEvent.selectOptions(s, '');
     expect(s.value).toBe('');
+    await userEvent.type(screen.getByLabelText(/^Título/), 'Apartamento');
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar rascunho' }));
+    await waitFor(() => expect(svc.create).toHaveBeenCalled());
+    expect(svc.create.mock.calls[0][0].captor_id ?? null).toBeNull();
+  });
+
+  it('abrir o cadastro e cancelar não pergunta se quer salvar', async () => {
+    abrir('/properties/new', { isReady: true, temTime: false });
+    const s = await seletor('Captador');
+    await waitFor(() => expect(s.value).toBe('ana'));
+    await userEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
+    await waitFor(() => expect(screen.queryByText('Captador', { selector: 'label' })).toBeNull());
+    expect(screen.queryByText('Sair sem salvar?')).toBeNull();
+  });
+
+  it('editando, permissão que chega depois não marca o corretor como Captador', async () => {
+    svc.get.mockResolvedValue({ id: 'i3', title: 'Apto', listing_kind: 'resale', captor_id: null, responsible_id: null });
+    const t = abrir('/properties/i3/editar', { isReady: false, temTime: false });
+    await seletor('Captador');
+    t.atualizar({ isReady: true, temTime: false });
+    await new Promise(r => setTimeout(r, 0));
+    expect((await seletor('Captador')).value).toBe('');
+  });
+
+  it('escolha feita antes das permissões chegarem é respeitada', async () => {
+    equipe.getUsers.mockResolvedValue({ data: [{ id: 'c', name: 'Carla' }] });
+    const t = abrir('/properties/new', { isReady: false, temTime: false });
+    const s = await seletor('Captador');
+    await within(s).findByRole('option', { name: 'Carla' });
+    await userEvent.selectOptions(s, 'c');
+    t.atualizar({ isReady: true, temTime: false });
+    await new Promise(r => setTimeout(r, 0));
+    expect((await seletor('Captador')).value).toBe('c');
   });
 
   it('gestor em imóvel novo segue começando em Nenhum', async () => {
@@ -89,6 +123,8 @@ describe('Captador no cadastro de imóvel', () => {
     const s = await seletor('Captador');
     await within(s).findByRole('option', { name: 'Carla' });
     expect(s.value).toBe('');
+    // Quem está na lista da equipe não aparece duas vezes.
+    expect(nomes(s)).toEqual(['Nenhum', 'Ana Souza', 'Carla']);
   });
 
   it('não decide antes das permissões chegarem: gestor lento não vira Captador', async () => {

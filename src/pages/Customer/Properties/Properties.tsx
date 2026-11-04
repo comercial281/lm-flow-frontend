@@ -90,6 +90,8 @@ const TEXTO_DE_MOVER: Record<ListingKind, string> = {
   auction: 'Ele passa a ser um imóvel de leilão e ganha ocupação e valor de avaliação para preencher. O desconto é calculado sozinho.',
 };
 
+const SEM_RECORTE: Record<string, string | string[]> = {};
+
 export default function Properties() {
   const navigate = useNavigate();
   const pode           = useCan();
@@ -112,7 +114,9 @@ export default function Properties() {
   // A busca que a lista usa: anda 400 ms atrás do que a pessoa digita.
   const [buscaAtiva, setBuscaAtiva]           = useState(search);
   // Botão "Só os meus" (captador ou responsável). Com link aberto, quem manda é o link.
-  const [soOsMeusEscolhido, setSoOsMeusEscolhido] = useState(lerSoOsMeus);
+  // ?q= é alguém indo atrás de um imóvel específico (Ctrl+K, card do funil), talvez de
+  // colega: nessa abertura o botão fica desligado, sem mexer na escolha guardada.
+  const [soOsMeusEscolhido, setSoOsMeusEscolhido] = useState(() => lerSoOsMeus() && !searchParams.get('q'));
   const recorteAtivo = useMemo(() => recorteDaLista(recorte?.params ?? null, soOsMeusEscolhido), [recorte, soOsMeusEscolhido]);
   const soOsMeus = recorteAtivo?.mine === '1';
 
@@ -150,6 +154,7 @@ export default function Properties() {
   }> | null>(null);
 
   const searchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const botaoMexeu = useRef(false);
   // Só a resposta do último pedido vale: trocar de aba rápido não pode deixar a
   // lista da aba anterior aparecer por cima da atual.
   const ultimoPedido = useRef(0);
@@ -189,11 +194,8 @@ export default function Properties() {
 
   // Quantos há em cada aba, com o mesmo recorte da lista (link da Dashboard e
   // "só os meus"), mas sem os filtros do painel: é o total da aba. O Mapa mostra a
-  // aba inteira e não tem o botão: lá ele não entra na conta.
-  const paramsDaContagem = useMemo(
-    () => (visao === 'mapa' ? recorte?.params : recorteAtivo) ?? {},
-    [visao, recorte, recorteAtivo],
-  );
+  // aba inteira e não tem o botão nem o link: lá nenhum dos dois entra na conta.
+  const paramsDaContagem = visao === 'mapa' ? SEM_RECORTE : recorteAtivo ?? SEM_RECORTE;
   const contar = useCallback(
     () => propertiesService.contarPorTipo(paramsDaContagem),
     [paramsDaContagem],
@@ -253,6 +255,7 @@ export default function Properties() {
     if (qDoEndereco === ultimoQ.current) return;
     ultimoQ.current = qDoEndereco;
     if (qDoEndereco == null) return;
+    setSoOsMeusEscolhido(false);
     if (searchTimeout.current) clearTimeout(searchTimeout.current);
     setSearch(qDoEndereco);
     setBuscaAtiva(qDoEndereco);
@@ -306,9 +309,19 @@ export default function Properties() {
   };
 
   const escolherSoOsMeus = (ligado: boolean) => {
+    botaoMexeu.current = ligado !== soOsMeus;
     setSoOsMeusEscolhido(ligado);
     gravarSoOsMeus(ligado);
   };
+
+  // A aba só é decidida na abertura: mexer no botão pode deixar a pessoa numa aba com
+  // zero e os imóveis na outra. Vale só pra recontagem que veio do botão.
+  useEffect(() => {
+    if (!botaoMexeu.current || !contagem || !kind) return;
+    botaoMexeu.current = false;
+    if (contagem[kind] === 0 && totalDeCadastros(contagem) > 0) trocarAba(abaPadrao(contagem));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [contagem]);
 
   // Mexer no botão com um link aberto troca o link pela escolha da pessoa.
   const alternarSoOsMeus = () => {
@@ -477,7 +490,7 @@ export default function Properties() {
       ? plural(n, 'imóvel de leilão', 'imóveis de leilão')
       : plural(n, 'imóvel de revenda', 'imóveis de revenda'));
   const abaVazia = totalDaAba === 0 && !temFiltro && !recorteAtivo && properties.length === 0;
-  const semNadaNoNome = totalDaAba === 0 && !temFiltro && !recorte && soOsMeus && properties.length === 0;
+  const semNadaNoNome = !!contagem && totalDeCadastros(contagem) === 0 && !temFiltro && !recorte && soOsMeus && properties.length === 0;
 
   const esqueleto = (
     <div role="status" className="mt-4 flex flex-col gap-2.5">
@@ -557,8 +570,8 @@ export default function Properties() {
       cabecalho={
         <BaseHeader
           title="Meus imóveis"
-          // Com recorte da Dashboard a soma seria do recorte; o chip já diz o que está filtrado.
-          subtitle={contagem && !recorte
+          // Com link ou "Só os meus" a soma seria do recorte, não da imobiliária. No Mapa ela é a inteira.
+          subtitle={contagem && (visao === 'mapa' || !recorteAtivo)
             ? `${subtituloDosImoveis(contagem)} · ${plural(totalDeCadastros(contagem), 'cadastro', 'cadastros')}`
             : subtituloDosImoveis(contagem)}
           aDireita={kind && canAiBatch && !ehCelular && (
@@ -649,7 +662,7 @@ export default function Properties() {
               />
             )}
 
-            {visao !== 'mapa' && !(loading && properties.length === 0) && !erroDeCarga && totalDaAba != null && !abaVazia && (
+            {visao !== 'mapa' && !(loading && properties.length === 0) && !erroDeCarga && totalDaAba != null && !abaVazia && !semNadaNoNome && (
               <p className="mt-4 text-sm text-muted-foreground">
                 {temFiltro ? `${numero(total)} de ${nomeDaAba(totalDaAba)}` : nomeDaAba(totalDaAba)}
               </p>
