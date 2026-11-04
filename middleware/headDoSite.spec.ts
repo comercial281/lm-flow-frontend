@@ -2,7 +2,21 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import middleware from '../middleware';
-import { montarHead, paginaDoSite, robotsTxt, sitemapXml, subdominioDoCliente, type DadosDoHead } from './headDoSite';
+import {
+  caminhoLimpo,
+  htmlDoConteudo,
+  llmsTxt,
+  montarHead,
+  paginaDoSite,
+  respostaDaPagina,
+  ROBOS,
+  robotsTxt,
+  sitemapXml,
+  subdominioDoCliente,
+  type ConteudoDaPagina,
+  type DadosDoHead,
+  type ResultadoDoHead,
+} from './headDoSite';
 
 /* ────────────────────────────────────────────────────────────────────────────
    O <head> do site, o robots.txt e o sitemap.xml montados na borda. O HTML é o
@@ -229,11 +243,13 @@ describe('paginaDoSite', () => {
     ['/portal/imob/blog/meu-artigo', { tenant: 'imob', path: '/blog/meu-artigo' }],
     ['/portal/imob/p/sobre', { tenant: 'imob', path: '/p/sobre' }],
     ['/imovel/imob/AP0042', { tenant: 'imob', path: '/imovel/AP0042' }],
+    // Caminho que o site não tem também vai ao servidor: ele responde o 404 de verdade.
+    ['/portal/imob/qualquer', { tenant: 'imob', path: '/qualquer' }],
   ])('lmflow %s', (p, esperado) => {
     expect(paginaDoSite(LMFLOW, p)).toEqual(esperado);
   });
 
-  it.each(['/', '/imoveis', '/login', '/conversas', '/portal/imob/settings', '/imovel/AP1', '/blog'])(
+  it.each(['/', '/imoveis', '/login', '/conversas', '/imovel/AP1', '/blog'])(
     'lmflow %s é do CRM (nada a fazer)', p => {
       expect(paginaDoSite(LMFLOW, p)).toBeNull();
     },
@@ -249,8 +265,151 @@ describe('paginaDoSite', () => {
     expect(paginaDoSite(DOMINIO, '/blog/caf%C3%A9')).toEqual({ tenant: null, path: '/blog/café' });
   });
 
-  it.each(['/login', '/settings/x', '/imovel/imob/AP1', '/portal/imob'])('domínio %s não é página do site', p => {
-    expect(paginaDoSite(DOMINIO, p)).toBeNull();
+  it('domínio: qualquer caminho vai ao servidor (ele diz 404), menos a landing /lp', () => {
+    expect(paginaDoSite(DOMINIO, '/qualquer/coisa/')).toEqual({ tenant: null, path: '/qualquer/coisa/' });
+    expect(paginaDoSite(DOMINIO, '/imoveis/a-venda/casa/sorocaba')).toEqual({ tenant: null, path: '/imoveis/a-venda/casa/sorocaba' });
+    expect(paginaDoSite(DOMINIO, '/lp/oferta')).toBeNull();
+  });
+});
+
+describe('caminhoLimpo (endereço antigo colado no domínio)', () => {
+  it.each([
+    ['/portal/imob', '/'],
+    ['/portal/imob/', '/'],
+    ['/portal/imob/imoveis', '/imoveis'],
+    ['/portal/imob/blog/a', '/blog/a'],
+    ['/imoveis', null],
+    ['/imovel/imob/AP1', null],
+    ['/portal', null],
+  ])('%s → %s', (p, esperado) => {
+    expect(caminhoLimpo(p)).toBe(esperado);
+  });
+});
+
+describe('htmlDoConteudo (o texto que o robô lê)', () => {
+  const C: ConteudoDaPagina = {
+    h1: 'Casa <b>com</b> quintal',
+    intro: 'Em Sorocaba',
+    price: 'R$ 500.000',
+    facts: ['3 quartos', '130 m²'],
+    image: { url: 'https://cdn.test/f.jpg', alt: 'Fachada "da" casa' },
+    breadcrumbs: [{ name: 'Início', url: '/' }, { name: 'Imóveis', url: '/imoveis' }, { name: 'Casa', url: null }],
+    items: [{ title: 'Outra casa', url: '/imovel/casa-sorocaba/A02', price: 'R$ 400.000', image: { url: 'https://cdn.test/g.jpg', alt: 'g' } }],
+    faq: [{ q: 'Aceita financiamento?', a: 'Sim.' }, { q: 'Sem resposta', a: '' }],
+    links: [{ name: 'Mau', url: 'javascript:alert(1)' }, { name: 'Protocolo relativo', url: '//mal.com/x' }, { name: 'Busca', url: '/imoveis' }],
+  };
+
+  it('um <h1> só, escapado, com migalhas, preço, fatos, foto sem lazy e cartões com lazy', () => {
+    const d = doc(`<div>${htmlDoConteudo(C)}</div>`);
+    expect(d.querySelectorAll('h1')).toHaveLength(1);
+    expect(d.querySelector('h1')!.textContent).toBe('Casa <b>com</b> quintal');
+    expect(d.querySelectorAll('nav[aria-label="Você está em"] li')).toHaveLength(3);
+    expect(d.body.textContent).toContain('R$ 500.000');
+    expect(Array.from(d.querySelectorAll('ul li')).map(l => l.textContent)).toContain('130 m²');
+    const [principal, cartao] = Array.from(d.querySelectorAll('img'));
+    expect(principal.getAttribute('alt')).toBe('Fachada "da" casa');
+    expect(principal.hasAttribute('loading')).toBe(false);
+    expect(cartao.getAttribute('loading')).toBe('lazy');
+    expect(d.querySelector('section h3 a')!.getAttribute('href')).toBe('/imovel/casa-sorocaba/A02');
+  });
+
+  it('FAQ sem resposta não sai; link javascript: e // perdem o href', () => {
+    const d = doc(`<div>${htmlDoConteudo(C)}</div>`);
+    expect(Array.from(d.querySelectorAll('section h3')).map(h => h.textContent)).toContain('Aceita financiamento?');
+    expect(d.body.textContent).not.toContain('Sem resposta');
+    const hrefs = Array.from(d.querySelectorAll('nav[aria-label="Veja também"] a')).map(a => a.getAttribute('href'));
+    expect(hrefs).toEqual(['/imoveis']);
+    expect(d.body.textContent).toContain('Mau');
+  });
+
+  it('sem h1 não sai nada (página sem conteúdo não ganha texto pela metade)', () => {
+    expect(htmlDoConteudo({ intro: 'x' })).toBe('');
+    expect(htmlDoConteudo(null)).toBe('');
+  });
+
+  it('montarHead põe o texto antes do #root, o estilo e um JSON-LD por item (sem </script> vazando)', () => {
+    const html = montarHead(INDEX_HTML, {
+      ...DADOS,
+      content: C,
+      jsonld: [{ '@type': 'RealEstateListing', name: '</script><script>alert(1)</script>' }, 'lixo', [1]],
+    }, DOMINIO);
+    const d = doc(html);
+    const ssr = d.getElementById('lmf-ssr')!;
+    expect(ssr).not.toBeNull();
+    expect(ssr.nextElementSibling?.id).toBe('root');
+    const ld = Array.from(d.querySelectorAll('script[type="application/ld+json"]'));
+    expect(ld).toHaveLength(1);
+    expect(JSON.parse(ld[0].textContent!)).toEqual({ '@type': 'RealEstateListing', name: '</script><script>alert(1)</script>' });
+    expect(html).toContain('[data-carregando]{display:none!important}');
+  });
+});
+
+describe('respostaDaPagina (o código que o Google recebe)', () => {
+  const u = (s: string) => new URL(s);
+  const ok = (dados: DadosDoHead): ResultadoDoHead => ({ tipo: 'ok', dados });
+
+  it('servidor caiu: 503 com Retry-After e sem cache; sem HTML, deixa passar', () => {
+    expect(respostaDaPagina(INDEX_HTML, DOMINIO, u(`https://${DOMINIO}/`), { tipo: 'falhou' }))
+      .toEqual({ status: 503, body: INDEX_HTML, cache: 'no-store', retryAfter: '120' });
+    expect(respostaDaPagina(null, DOMINIO, u(`https://${DOMINIO}/`), { tipo: 'falhou' })).toBeNull();
+  });
+
+  it('sem site neste domínio: 404 noindex', () => {
+    const r = respostaDaPagina(INDEX_HTML, DOMINIO, u(`https://${DOMINIO}/`), { tipo: 'sem-site' })!;
+    expect(r.status).toBe(404);
+    expect(meta(doc(r.body!), 'meta[name="robots"]')).toBe('noindex');
+  });
+
+  it('sem www → com www (e o contrário), mantendo caminho e query', () => {
+    const r = respostaDaPagina(INDEX_HTML, 'imob.com.br', u('https://imob.com.br/imoveis?utm_source=meta'), ok(DADOS))!;
+    expect(r).toMatchObject({ status: 301, location: `https://${DOMINIO}/imoveis?utm_source=meta` });
+  });
+
+  it('redirect do servidor no mesmo domínio: 301 com a query do pedido; de outro domínio é ignorado', () => {
+    const certo = `https://${DOMINIO}/imovel/casa-sorocaba/A01`;
+    expect(respostaDaPagina(INDEX_HTML, DOMINIO, u(`https://${DOMINIO}/imovel/A01?gclid=x`), ok({ ...DADOS, redirect: certo })))
+      .toMatchObject({ status: 301, location: `${certo}?gclid=x` });
+    expect(respostaDaPagina(INDEX_HTML, DOMINIO, u(`https://${DOMINIO}/imovel/A01`), ok({ ...DADOS, redirect: 'https://mal.com/x' }))!.status)
+      .toBe(200);
+  });
+
+  it('endereço lmflow de um site com domínio: 301 pro domínio; na prévia do editor, não', () => {
+    const dados = { ...DADOS, canonical: `https://${DOMINIO}/blog/a` };
+    expect(respostaDaPagina(INDEX_HTML, LMFLOW, u(`https://${LMFLOW}/portal/imob/blog/a?x=1`), ok(dados)))
+      .toMatchObject({ status: 301, location: `https://${DOMINIO}/blog/a?x=1` });
+    expect(respostaDaPagina(INDEX_HTML, LMFLOW, u(`https://${LMFLOW}/portal/imob/blog/a?previa=1`), ok(dados))!.status).toBe(200);
+  });
+
+  it('410 do vendido e 404 do servidor saem com o HTML; código estranho vira 200', () => {
+    expect(respostaDaPagina(INDEX_HTML, DOMINIO, u(`https://${DOMINIO}/imovel/V01`), ok({ ...DADOS, status: 410 }))!.status).toBe(410);
+    expect(respostaDaPagina(INDEX_HTML, DOMINIO, u(`https://${DOMINIO}/x`), ok({ ...DADOS, status: 404 }))!.status).toBe(404);
+    expect(respostaDaPagina(INDEX_HTML, DOMINIO, u(`https://${DOMINIO}/`), ok({ ...DADOS, status: 302 }))!.status).toBe(200);
+    expect(respostaDaPagina(INDEX_HTML, DOMINIO, u(`https://${DOMINIO}/`), ok({ ...DADOS, status: 503 })))
+      .toMatchObject({ status: 503, cache: 'no-store', retryAfter: '120' });
+  });
+});
+
+describe('llmsTxt', () => {
+  it('domínio com o Google ligado: nome, descrição, páginas, imóveis e sitemap', () => {
+    const txt = llmsTxt(DOMINIO, {
+      ...DADOS,
+      site_name: 'Imob Teste',
+      content: { items: [{ title: 'Casa A01', url: '/imovel/casa-sorocaba/A01', price: 'R$ 500.000' }], links: [{ name: 'Mau', url: 'javascript:x' }] },
+    })!;
+    expect(txt.startsWith('# Imob Teste\n')).toBe(true);
+    expect(txt).toContain(`> ${DADOS.description}`);
+    expect(txt).toContain(`- [Todos os imóveis](https://${DOMINIO}/imoveis)`);
+    expect(txt).toContain(`- [Casa A01](https://${DOMINIO}/imovel/casa-sorocaba/A01): R$ 500.000`);
+    expect(txt).toContain(`- [sitemap.xml](https://${DOMINIO}/sitemap.xml)`);
+    expect(txt).not.toContain('javascript');
+  });
+
+  it.each([
+    ['endereço lmflow', LMFLOW, DADOS],
+    ['Google desligado', DOMINIO, { ...DADOS, robots: 'noindex' }],
+    ['sem dados', DOMINIO, null],
+  ])('%s: null', (_n, host, dados) => {
+    expect(llmsTxt(host, dados)).toBeNull();
   });
 });
 
@@ -269,13 +428,13 @@ describe('robotsTxt', () => {
     expect(robotsTxt(DOMINIO, dados)).toBe('User-agent: *\nDisallow: /\n');
   });
 
-  it('domínio com o Google ligado: libera as páginas do site e aponta o sitemap', () => {
-    const txt = robotsTxt(DOMINIO, DADOS);
-    for (const linha of ['Allow: /$', 'Allow: /imoveis', 'Allow: /imovel/', 'Allow: /blog', 'Allow: /p/',
-      'Allow: /financiamento', 'Allow: /anuncie', 'Allow: /assets/', 'Disallow: /']) {
-      expect(txt.split('\n')).toContain(linha);
-    }
-    expect(txt).toContain(`Sitemap: https://${DOMINIO}/sitemap.xml`);
+  it('domínio com o Google ligado: o site inteiro aberto (menos /lp), os robôs de IA nomeados e o sitemap', () => {
+    const linhas = robotsTxt(DOMINIO, DADOS).split('\n');
+    for (const r of ROBOS) expect(linhas).toContain(`User-agent: ${r}`);
+    expect(linhas).toContain('Allow: /');
+    expect(linhas).toContain('Disallow: /lp/');
+    expect(linhas).not.toContain('Disallow: /');
+    expect(linhas).toContain(`Sitemap: https://${DOMINIO}/sitemap.xml`);
   });
 });
 
@@ -410,15 +569,62 @@ describe('middleware: páginas do site', () => {
     expect(html).toContain('window.__LMF_SITE__=');
   });
 
-  it('endereço lmflow: /portal/<cliente>/blog/<slug> pergunta com o tenant e o caminho limpo, sem __LMF_SITE__', async () => {
+  it('endereço lmflow: /portal/<cliente>/blog/<slug> pergunta com o tenant e o caminho limpo e manda 301 pro domínio', async () => {
     servidor(url => (url.includes('/head') ? json({ ...DADOS, canonical: `https://${DOMINIO}/blog/a` }) : undefined));
-    const res = await pedir(`https://${LMFLOW}/portal/imob/blog/a`);
-    expect(res.status).toBe(200);
+    const res = await pedir(`https://${LMFLOW}/portal/imob/blog/a?utm_source=x`);
     expect(chamadas.find(c => c.url.includes('/head'))!.url)
       .toBe(`${API}/api/public/v1/head?host=${LMFLOW}&path=%2Fblog%2Fa&tenant=imob`);
+    expect(res.status).toBe(301);
+    expect(res.headers.get('location')).toBe(`https://${DOMINIO}/blog/a?utm_source=x`);
+  });
+
+  it('endereço lmflow na prévia do editor: a página, com o canonical do domínio e sem __LMF_SITE__', async () => {
+    servidor(url => (url.includes('/head') ? json({ ...DADOS, canonical: `https://${DOMINIO}/blog/a` }) : undefined));
+    const res = await pedir(`https://${LMFLOW}/portal/imob/blog/a?previa=1`);
+    expect(res.status).toBe(200);
     const html = await res.text();
     expect(html).toContain(`<link rel="canonical" href="https://${DOMINIO}/blog/a" />`);
     expect(html).not.toContain('__LMF_SITE__');
+  });
+
+  it('endereço lmflow com o servidor fora: passa direto (é o CRM também)', async () => {
+    servidor(url => (url.includes('/head') ? json({}, 500) : undefined));
+    seguiuDireto(await pedir(`https://${LMFLOW}/portal/imob`));
+  });
+
+  it('domínio sem www: 301 pro www', async () => {
+    servidor(url => (url.includes('/head') ? json({ data: DADOS }) : undefined));
+    const res = await pedir('https://imob.com.br/imoveis?gclid=1');
+    expect(res.status).toBe(301);
+    expect(res.headers.get('location')).toBe(`https://${DOMINIO}/imoveis?gclid=1`);
+  });
+
+  it('endereço antigo /portal/<cliente>/... no domínio: 301 pro limpo, sem perguntar ao servidor', async () => {
+    servidor(() => json(DADOS));
+    const res = await pedir(`https://${DOMINIO}/portal/imob/imoveis?x=1`);
+    expect(res.status).toBe(301);
+    expect(res.headers.get('location')).toBe('/imoveis?x=1');
+    expect(chamadas).toEqual([]);
+  });
+
+  it('imóvel vendido: 410 com o texto da página e o noindex', async () => {
+    servidor(url => (url.includes('/head') ? json({ data: {
+      ...DADOS, status: 410, robots: 'noindex', content: { h1: 'Este imóvel não está mais disponível', links: [{ name: 'Ver imóveis', url: '/imoveis' }] },
+    } }) : undefined));
+    const res = await pedir(`https://${DOMINIO}/imovel/V01`);
+    expect(res.status).toBe(410);
+    const d = doc(await res.text());
+    expect(d.querySelector('#lmf-ssr h1')!.textContent).toBe('Este imóvel não está mais disponível');
+    expect(meta(d, 'meta[name="robots"]')).toBe('noindex');
+  });
+
+  it('llms.txt do domínio: texto pras IAs; no endereço lmflow, 404', async () => {
+    servidor(url => (url.includes('/head') ? json({ data: { ...DADOS, site_name: 'Imob' } }) : undefined));
+    const res = await pedir(`https://${DOMINIO}/llms.txt`);
+    expect(res.status).toBe(200);
+    expect(res.headers.get('content-type')).toContain('text/plain');
+    expect(await res.text()).toContain('# Imob');
+    expect((await pedir(`https://${LMFLOW}/llms.txt`)).status).toBe(404);
   });
 
   it.each(['/', '/imoveis', '/blog'])('tela do CRM no endereço lmflow (%s) passa direto, sem buscar nada', async p => {
@@ -427,24 +633,28 @@ describe('middleware: páginas do site', () => {
     expect(chamadas).toEqual([]);
   });
 
-  it('500 do head: devolve o HTML de hoje', async () => {
+  /** Servidor fora no domínio: o visitante vê o app; o Google ouve "volte depois" e não tira a página do índice. */
+  const voltaDepois = async (res: Response) => {
+    expect(res.status).toBe(503);
+    expect(res.headers.get('retry-after')).toBe('120');
+    expect(res.headers.get('cache-control')).toBe('no-store');
+    expect(await res.text()).toBe(INDEX_HTML);
+  };
+
+  it('500 do head no domínio: 503 com o HTML do app', async () => {
     servidor(url => (url.includes('/head') ? json({ error: 'x' }, 500) : undefined));
-    const res = await pedir(`https://${DOMINIO}/`);
-    seguiuDireto(res);
-    expect(res.body).toBeNull();
+    await voltaDepois(await pedir(`https://${DOMINIO}/`));
   });
 
-  it('head 200 que não é JSON: devolve o HTML de hoje', async () => {
+  it('head 200 que não é JSON: 503', async () => {
     servidor(url => (url.includes('/head') ? new Response('<html>erro do proxy</html>', { status: 200 }) : undefined));
-    const res = await pedir(`https://${DOMINIO}/`);
-    seguiuDireto(res);
-    expect(res.body).toBeNull();
+    await voltaDepois(await pedir(`https://${DOMINIO}/`));
   });
 
   it.each([['{}', {}], ['{ data: {} }', { data: {} }], ['{ data: null }', { data: null }]])(
-    'head 200 com %s: devolve o HTML de hoje', async (_n, corpo) => {
+    'head 200 com %s: 503', async (_n, corpo) => {
       servidor(url => (url.includes('/head') ? json(corpo) : undefined));
-      seguiuDireto(await pedir(`https://${DOMINIO}/imoveis`));
+      await voltaDepois(await pedir(`https://${DOMINIO}/imoveis`));
     },
   );
 
@@ -455,22 +665,24 @@ describe('middleware: páginas do site', () => {
     expect(html).not.toContain('<title>LM Flow</title>');
   });
 
-  it('404 do head (domínio sem site ativo): devolve o HTML de hoje', async () => {
+  it('404 do head (domínio sem site ativo): 404 noindex', async () => {
     servidor(() => undefined);
-    seguiuDireto(await pedir(`https://${DOMINIO}/`));
+    const res = await pedir(`https://${DOMINIO}/`);
+    expect(res.status).toBe(404);
+    expect(meta(doc(await res.text()), 'meta[name="robots"]')).toBe('noindex');
   });
 
-  it('head que demora mais de 1,2 s: desiste e devolve o HTML de hoje', async () => {
+  it('head que demora mais de 3 s: desiste e responde 503', async () => {
     vi.useFakeTimers();
     servidor((url, init) => (url.includes('/head') ? (pendurado(init) as Promise<Response>) : undefined));
     const pendente = pedir(`https://${DOMINIO}/imoveis`);
-    await vi.advanceTimersByTimeAsync(1199);
+    await vi.advanceTimersByTimeAsync(2999);
     let pronto = false;
     void pendente.then(() => { pronto = true; });
     await Promise.resolve();
     expect(pronto).toBe(false);
     await vi.advanceTimersByTimeAsync(1);
-    seguiuDireto(await pendente);
+    await voltaDepois(await pendente);
   });
 
   it('sem a variável da API: passa direto', async () => {
@@ -494,7 +706,7 @@ describe('middleware: robots.txt e sitemap.xml', () => {
     servidor(url => (url.includes('/head') ? json({ data: DADOS }) : undefined));
     const res = await pedir(`https://${DOMINIO}/robots.txt`);
     const txt = await res.text();
-    expect(txt).toContain('Allow: /imoveis');
+    expect(txt.split('\n')).toContain('Allow: /');
     expect(txt).toContain(`Sitemap: https://${DOMINIO}/sitemap.xml`);
     expect(chamadas[0].url).toBe(`${API}/api/public/v1/head?host=${DOMINIO}&path=%2F`);
     expect(res.headers.get('cache-control')).toContain('s-maxage=60');
@@ -507,13 +719,13 @@ describe('middleware: robots.txt e sitemap.xml', () => {
     expect(res.headers.get('cache-control')).toBe('no-store');
   });
 
-  it('servidor que não responde: Disallow: / depois de 1,2 s', async () => {
+  it('servidor que não responde: Disallow: / depois de 3 s', async () => {
     vi.useFakeTimers();
     servidor((url, init) => (url.includes('/head') ? (pendurado(init) as Promise<Response>) : undefined));
     const pendente = pedir(`https://${DOMINIO}/robots.txt`);
     let pronto = false;
     void pendente.then(() => { pronto = true; });
-    await vi.advanceTimersByTimeAsync(1199);
+    await vi.advanceTimersByTimeAsync(2999);
     expect(pronto).toBe(false);
     await vi.advanceTimersByTimeAsync(1);
     expect(await (await pendente).text()).toBe('User-agent: *\nDisallow: /\n');

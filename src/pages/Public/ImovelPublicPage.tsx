@@ -271,7 +271,7 @@ export default function ImovelPublicPage() {
     } catch { setFalhouEnvio(TEXTO_FALHA_DE_ENVIO); } finally { enviandoRef.current = false; setEnviando(false); }
   };
 
-  if (state === 'loading') return <div className="flex min-h-screen items-center justify-center text-neutral-400" style={{ fontFamily: 'system-ui' }}>Carregando…</div>;
+  if (state === 'loading') return <div data-carregando className="flex min-h-screen items-center justify-center text-neutral-400" style={{ fontFamily: 'system-ui' }}>Carregando…</div>;
   if (state === 'notfound' || !prop || !ficha) return <div className="flex min-h-screen items-center justify-center px-6 text-center text-neutral-500" style={{ fontFamily: 'system-ui' }}>Imóvel não encontrado.</div>;
 
   const photos = prop.photos ?? [];

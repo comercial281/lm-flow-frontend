@@ -9,6 +9,8 @@ export interface PortalProperty {
   id: string;
   code: string;
   title: string;
+  /** Endereço legível da ficha no domínio (`/imovel/casa-sorocaba/A01`). Servidor velho não manda. */
+  site_path?: string;
   transaction_type: string;
   property_type: string;
   display_price?: string;
