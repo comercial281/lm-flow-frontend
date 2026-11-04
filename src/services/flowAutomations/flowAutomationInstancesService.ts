@@ -58,7 +58,7 @@ export interface ProgressoDoFollowup {
   flow_automation_id: string;
   step: number;
   total: number;
-  /** Existe a mensagem `step + 1`: é ISTO que oferece "Continuar" (não o texto). */
+  /** Existe uma próxima mensagem, de número maior que `step` (não precisa ser `step + 1`: pode ter mensagem tirada): é ISTO que oferece "Continuar" (não o texto). */
   has_next: boolean;
   /** O texto da próxima; nulo quando ela é só mídia (ou não existe). */
   next_text: string | null;
