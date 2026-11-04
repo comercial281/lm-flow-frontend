@@ -186,7 +186,7 @@ describe('JanelaDaCampanha · qual IA atende', () => {
   it('tirar usa o endereço de tirar', async () => {
     camp.tirarIa.mockResolvedValue({ holders: [], left_empty: ['Formulário Teste'], warning: null });
     comIa({ item: item({ kind: 'form', form_config_id: 'cfg-1', agents: [{ sales_agent_id: 'a1', name: 'Agente A', sales_agent_number_id: null, number_label: null, whole_number: false, note: null }] }) });
-    fireEvent.click(screen.getByRole('button', { name: 'Tirar Agente A' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Tirar a IA' }));
     await waitFor(() => expect(camp.tirarIa).toHaveBeenCalledWith({ ref: { kind: 'form', id: 'f-1' }, sales_agent_id: 'a1', number_id: null }));
     expect(await screen.findByText(/Ficou sem IA: Formulário Teste/)).toBeInTheDocument();
   });

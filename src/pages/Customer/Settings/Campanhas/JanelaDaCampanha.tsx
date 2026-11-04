@@ -31,7 +31,8 @@ import {
   type CampoDaCondicao, type CondicaoEmEdicao,
 } from '@/features/campanhas/condicaoDaCampanha';
 import { MAX_DE_IMOVEIS, TIPOS_DE_IMOVEL, nomeDoItem } from '@/features/campanhas/itensDeCampanha';
-import { donoEmTexto, fraseDeMover, opcoesDaTela } from '@/features/campanhas/qualIaAtende';
+import { fraseDeMover, opcoesDaTela } from '@/features/campanhas/qualIaAtende';
+import QuemAtende from './QuemAtende';
 
 /** O que o servidor escreveu no 409 ("esta campanha sai da IA X"), com maiúscula e ponto. Vazio = monta pelo rótulo. */
 function fraseDoServidor(msg?: string | null): string | null {
@@ -93,7 +94,6 @@ export default function JanelaDaCampanha({
   // "Qual IA atende"
   const [donos, setDonos] = useState<IaDaCampanha[]>(item.agents);
   const [linkId, setLinkId] = useState<string | null>(item.link_id);
-  const [escolhida, setEscolhida] = useState('');
   const [movendo, setMovendo] = useState<{ chave: string; frase: string } | null>(null);
   const [iaOcupada, setIaOcupada] = useState(false);
   const [avisoDaIa, setAvisoDaIa] = useState<string | null>(null);
@@ -216,7 +216,6 @@ export default function JanelaDaCampanha({
       });
       if (!r.ok) { setMovendo({ chave, frase: fraseDoServidor(r.message) ?? fraseDeMover(r.conflicts, opcoesDeIa ?? []) }); return; }
       aplicarDonos(r);
-      setEscolhida('');
       toast.success('IA da campanha gravada');
     } catch (e) {
       toast.error(motivoEscrito(e) ?? 'Não consegui mudar a IA desta campanha.');
@@ -375,48 +374,10 @@ export default function JanelaDaCampanha({
 
         {opcoesDeIa && (
           <Bloco titulo="Qual IA atende">
-            {donos.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Sem IA nesta campanha.</p>
-            ) : (
-              <ul className="grid gap-2">
-                {donos.map((d) => (
-                  <li key={`${d.sales_agent_id}|${d.sales_agent_number_id ?? ''}`} className="flex items-center justify-between gap-2 rounded-md border border-border px-3 py-2 text-sm">
-                    <span className="min-w-0 truncate">{donoEmTexto(d)}</span>
-                    {podeMexerNaIa && !d.whole_number && !d.note && (
-                      <Button type="button" variant="ghost" size="sm" disabled={iaOcupada} aria-label={`Tirar ${d.name}`} onClick={() => tirar(d)}>Tirar</Button>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            )}
-            {podeMexerNaIa && (
-              <div className="flex flex-wrap items-end gap-2">
-                <div className="min-w-0 flex-1">
-                  <Seletor aria-label="Pôr numa IA" value={escolhida} disabled={iaOcupada}
-                    onChange={(e) => { setEscolhida(e.target.value); setMovendo(null); }}
-                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
-                    <option value="">Pôr numa IA...</option>
-                    {opcoes.filter((o) => !o.jaAtende).map((o) => (
-                      <option key={o.chave} value={o.chave} disabled={o.fixa}>{o.rotulo}</option>
-                    ))}
-                  </Seletor>
-                </div>
-                <Button type="button" variant="outline" disabled={!escolhida || iaOcupada} onClick={() => pedir(escolhida, false)}>Pôr</Button>
-              </div>
-            )}
+            <QuemAtende donos={donos} opcoes={opcoes} podeMexer={podeMexerNaIa} aoEscolher={(c) => pedir(c, false)} aoTirar={tirar}
+              ocupado={iaOcupada} movendo={movendo} aoMover={() => movendo && pedir(movendo.chave, true)} aoDeixar={() => setMovendo(null)}
+              aviso={avisoDaIa} ficouSemIa={ficouSemIa} />
             {tipo === 'form' && !config && <p className="text-xs text-muted-foreground">Salve o formulário primeiro; depois dá pra escolher a IA.</p>}
-            {movendo && (
-              <Aviso tom="atencao" titulo="Mover a campanha de IA?">
-                <p>{movendo.frase}</p>
-                <div className="mt-2 flex gap-2">
-                  <Button type="button" size="sm" disabled={iaOcupada} onClick={() => pedir(movendo.chave, true)}>Mover</Button>
-                  <Button type="button" size="sm" variant="ghost" onClick={() => setMovendo(null)}>Deixar como está</Button>
-                </div>
-              </Aviso>
-            )}
-            {avisoDaIa && <Aviso tom="atencao" compacto>{avisoDaIa}</Aviso>}
-            {ficouSemIa.length > 0 && <Aviso tom="atencao" compacto>Ficou sem IA: {ficouSemIa.join(', ')}.</Aviso>}
-            {podeMexerNaIa && <p className="text-xs text-muted-foreground">Esta escolha vale na hora, sem esperar o Salvar.</p>}
           </Bloco>
         )}
 

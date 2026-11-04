@@ -26,6 +26,12 @@ export interface IaDaCampanha {
   number_label: string | null;
   whole_number: boolean;
   note: string | null;
+  /** Do servidor novo: 'broad' = regra mais ampla, 'campaign' = esta campanha está na lista da IA, 'depends' = só se saberá na conversa. */
+  kind?: 'broad' | 'campaign' | 'depends';
+  /** O motivo em frase, em minúscula (a tela põe a primeira letra maiúscula). */
+  reason?: string;
+  /** Tirar a IA da lista de fato tira a IA. */
+  removable?: boolean;
 }
 
 /** Um item da lista de Campanhas: formulário (`form:<id>`), campanha (`campaign:<nome>`) ou anúncio (`ad:<id>`). */
