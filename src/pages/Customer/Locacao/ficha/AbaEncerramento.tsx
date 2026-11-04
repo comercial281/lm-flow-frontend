@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { rotuloDoTotalDoAcerto } from '@/features/locacao/textos';
 import { toast } from 'sonner';
 import { Button, Card, Checkbox, Input } from '@/components/ui/ds';
 import Aviso from '@/components/base/Aviso';
@@ -149,7 +150,7 @@ export default function AbaEncerramento({ contrato: c, aoMudar }: { contrato: Co
               </Dado>
             ))}
             <div className="mt-2 flex items-center justify-between border-t border-border pt-3 text-sm font-semibold">
-              <span>{acerto.total >= 0 ? 'Total a devolver ao inquilino' : 'Total que o inquilino ainda deve'}</span>
+              <span>{rotuloDoTotalDoAcerto(acerto.total)}</span>
               <span>{dinheiro(Math.abs(acerto.total))}</span>
             </div>
             {acerto.antes_do_prazo && <p className="mt-2 text-xs text-muted-foreground">A saída é antes do fim do prazo do contrato.</p>}

@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 vi.mock('@/services/core/api', () => ({ default: {} }));
 
 import { aluguelHoje, dePainel, deReajuste, deRepasses, deSegundaVia, diasAte, reajusteSemIndice } from './locacaoService';
+import { rotuloDoTotalDoAcerto } from './textos';
 import type { Contrato, Repasse } from './tipos';
 
 const contrato = (over: Partial<Contrato> = {}) =>
@@ -99,5 +100,12 @@ describe('aluguelHoje', () => {
     expect(aluguelHoje(resumo)).toBe(3162);
     expect(aluguelHoje(contrato({ historico_aluguel: [{ desde: '2026-12-10', valor: 2040 }] } as Partial<Contrato>))).toBe(2040);
     expect(aluguelHoje({ aluguel_inicial: 2000 } as unknown as Contrato)).toBe(2000);
+  });
+});
+
+describe('rotuloDoTotalDoAcerto', () => {
+  it('total negativo é devolução ao inquilino (a caução sobrou); positivo é dívida dele', () => {
+    expect(rotuloDoTotalDoAcerto(-5699.55)).toBe('Total a devolver ao inquilino');
+    expect(rotuloDoTotalDoAcerto(320)).toBe('Total que o inquilino ainda deve');
   });
 });
