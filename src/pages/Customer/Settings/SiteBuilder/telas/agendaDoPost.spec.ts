@@ -14,6 +14,14 @@ describe('agenda do post', () => {
     expect(new Date(r.published_at!).getTime()).toBe(new Date('2030-01-15T09:30').getTime());
   });
 
+  it('reeditar post publicado sem mexer na data não reenvia a data (não zera os segundos)', () => {
+    const publicado = new Date('2030-01-15T09:30:47').toISOString();
+    expect(camposDePublicacao(paraCampo(publicado), publicado)).toEqual({});
+    const r = camposDePublicacao('2030-01-16T10:00', publicado);
+    expect(r.status).toBe('published');
+    expect(new Date(r.published_at!).getTime()).toBe(new Date('2030-01-16T10:00').getTime());
+  });
+
   it('ida e volta do campo preserva a data e a hora', () => {
     const iso = new Date('2030-01-15T09:30').toISOString();
     expect(paraCampo(iso)).toBe('2030-01-15T09:30');

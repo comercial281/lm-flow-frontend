@@ -19,10 +19,12 @@ export function paraCampo(iso: string | null | undefined): string {
  * O que o campo acrescenta ao salvar. Vazio = não mexe na data nem no status
  * (mandar null apagaria a data de um post já publicado). Preenchido = publica
  * com aquela data: no futuro fica agendado, no passado sai na hora.
+ * `publicadoEm` é a data do post já publicado: campo igual a ela também não
+ * mexe (o campo só mostra até o minuto; reenviar zeraria os segundos).
  */
-export function camposDePublicacao(campo: string): Pick<ArticleFormData, 'status' | 'published_at'> {
+export function camposDePublicacao(campo: string, publicadoEm?: string | null): Pick<ArticleFormData, 'status' | 'published_at'> {
   const t = campo.trim();
-  if (!t) return {};
+  if (!t || (publicadoEm && paraCampo(publicadoEm) === t)) return {};
   const d = new Date(t);
   if (Number.isNaN(d.getTime())) return {};
   return { status: 'published', published_at: d.toISOString() };

@@ -140,7 +140,7 @@ export default function TelaBlog({ site }: { site: Site }) {
     const payload: ArticleFormData = {
       ...articleForm,
       body_html: articleEditorRef.current?.getContent() ?? articleForm.body_html ?? '',
-      ...camposDePublicacao(publicarEm),
+      ...camposDePublicacao(publicarEm, editingArticle?.status === 'published' ? editingArticle.published_at : null),
     };
     setSaving(true);
     try {

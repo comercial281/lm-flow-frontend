@@ -67,7 +67,7 @@ export default function TelaGoogle({ site, siteForm, setF }: FormProps) {
         <CampoTexto id="google-search-console" rotulo="Search Console (verificação do site)" classeDoControle="font-mono"
           placeholder='<meta name="google-site-verification" content="..." />'
           valor={google.search_console ?? ''}
-          ajuda={<>Prova pro Google que o site é seu e libera os relatórios de busca. Onde achar: search.google.com/search-console › Adicionar propriedade › <strong>Prefixo do URL</strong> (o endereço do site) › Outros métodos de verificação › <strong>Tag HTML</strong> › Copiar. Cole aqui a tag inteira, salve o site e só depois clique em Verificar no Search Console.</>}
+          ajuda={<>Prova pro Google que o site é seu e libera os relatórios de busca. Onde achar: search.google.com/search-console › Adicionar propriedade › <strong>Prefixo do URL</strong> (o endereço do site) › Outros métodos de verificação › <strong>Tag HTML</strong> › Copiar. Cole aqui o código inteiro, salve o site e só depois clique em Verificar no Search Console.</>}
           erro={erro(google.search_console, lerContas.searchConsole, 'Não reconheci esse código. Cole a tag que começa com <meta name="google-site-verification" ou só o código dentro de content.')}
           aoMudar={search_console => mudar({ search_console })} />
         <CampoTexto id="google-bing" rotulo="Bing (verificação do site)" classeDoControle="font-mono"

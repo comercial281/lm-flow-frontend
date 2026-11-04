@@ -102,6 +102,22 @@ export interface PaginaDoSite {
   path: string;
 }
 
+/**
+ * Trava: no endereço do sistema (lmflow) só passam as páginas que já passavam
+ * antes do "site que ranqueia" — o resto segue direto pro app, como sempre.
+ * O comportamento novo (qualquer caminho, 404/410 de verdade) é só do domínio.
+ */
+const LIMPOS_DO_SISTEMA = [
+  /^\/$/,
+  /^\/imoveis$/,
+  /^\/imovel\/[^/]+$/,
+  /^\/blog$/,
+  /^\/blog\/[^/]+$/,
+  /^\/p\/[^/]+$/,
+  /^\/financiamento$/,
+  /^\/anuncie$/,
+];
+
 function decodificar(s: string): string {
   try {
     return decodeURIComponent(s);
@@ -112,8 +128,8 @@ function decodificar(s: string): string {
 
 /**
  * Lê o caminho e diz se é página do site:
- * - endereço do sistema: `/portal/<cliente>(/<resto>)` e `/imovel/<cliente>/<código>`
- *   (o resto é o CRM, null: nada a fazer);
+ * - endereço do sistema: `/portal/<cliente>/<página de LIMPOS_DO_SISTEMA>` e
+ *   `/imovel/<cliente>/<código>` (o resto é o CRM, null: nada a fazer);
  * - domínio do cliente: QUALQUER caminho. Quem diz se a página existe é o
  *   servidor (404 de verdade, nunca o início com código 200). `/lp` tem
  *   tratamento próprio e não chega aqui.
@@ -122,7 +138,8 @@ export function paginaDoSite(host: string, pathname: string): PaginaDoSite | nul
   const partes = pathname.split('/').filter(Boolean).map(decodificar);
   if (ehEnderecoDoSistema(host)) {
     if (partes[0] === 'portal' && partes[1]) {
-      return { tenant: partes[1], path: `/${partes.slice(2).join('/')}` };
+      const path = `/${partes.slice(2).join('/')}`;
+      return LIMPOS_DO_SISTEMA.some(r => r.test(path)) ? { tenant: partes[1], path } : null;
     }
     if (partes[0] === 'imovel' && partes.length === 3) {
       return { tenant: partes[1], path: `/imovel/${partes[2]}` };
@@ -346,15 +363,18 @@ export function montarHead(html: string, dados: DadosDoHead, host: string): stri
   if (url) tags.push(`<meta property="og:url" content="${escapeHtml(url)}" />`);
   tags.push(`<meta name="twitter:card" content="${imagem ? 'summary_large_image' : 'summary'}" />`);
   if (canonical) tags.push(`<link rel="canonical" href="${escapeHtml(canonical)}" />`);
-  const verificacao = dados.verification;
+  // Trava: verificação, JSON-LD e texto do servidor só no domínio do cliente.
+  // No endereço lmflow o head fica o de antes.
+  const novo = !ehEnderecoDoSistema(limparHost(host));
+  const verificacao = novo ? dados.verification : null;
   const codigoGoogle = codigoDeVerificacao(verificacao?.google);
   const codigoBing = codigoDeVerificacao(verificacao?.bing);
   if (codigoGoogle) tags.push(`<meta name="google-site-verification" content="${escapeHtml(codigoGoogle)}" />`);
   if (codigoBing) tags.push(`<meta name="msvalidate.01" content="${escapeHtml(codigoBing)}" />`);
   if (dominio) tags.push(scriptDoSite(texto(dados.tenant)!, texto(dados.site_slug)));
-  tags.push(...scriptsDeDados(dados.jsonld));
+  if (novo) tags.push(...scriptsDeDados(dados.jsonld));
 
-  const conteudo = htmlDoConteudo(dados.content);
+  const conteudo = novo ? htmlDoConteudo(dados.content) : null;
   if (conteudo && RAIZ.test(out)) {
     tags.push(ESTILO_DO_TEXTO);
     out = out.replace(RAIZ, () => `<div id="lmf-ssr">${conteudo}</div>\n    <div id="root"></div>`);
@@ -555,6 +575,25 @@ function comQuery(destino: string, search: string): string {
  *
  * null = não mexe (o middleware deixa passar).
  */
+/**
+ * Trava do endereço lmflow: a resposta de antes do "site que ranqueia".
+ * Falha ou site que não existe → null (segue pro app, como sempre); senão 200
+ * com o head, ignorando o status do servidor. Única novidade: com domínio
+ * próprio ATIVO, a página vai em 301 pro domínio (hoje nenhum cliente tem).
+ */
+function respostaDoSistema(html: string | null, h: string, url: URL, resultado: ResultadoDoHead): RespostaDaPagina | null {
+  if (resultado.tipo !== 'ok') return null;
+  const dados = resultado.dados;
+  const dominio = texto(dados.domain);
+  const canonical = texto(dados.canonical);
+  const previa = url.searchParams.has('previa') || url.searchParams.has('modelo');
+  const status = typeof dados.status === 'number' ? dados.status : 200;
+  if (dominio && status === 200 && !previa && noMesmoDominio(canonical, dominio)) {
+    return { status: 301, location: comQuery(canonical, url.search), cache: CACHE_DA_BORDA };
+  }
+  return html ? { status: 200, body: montarHead(html, dados, h), cache: CACHE_DA_BORDA } : null;
+}
+
 export function respostaDaPagina(
   html: string | null,
   host: string,
@@ -562,6 +601,7 @@ export function respostaDaPagina(
   resultado: ResultadoDoHead,
 ): RespostaDaPagina | null {
   const h = limparHost(host);
+  if (ehEnderecoDoSistema(h)) return respostaDoSistema(html, h, url, resultado);
   if (resultado.tipo === 'falhou') {
     return html ? { status: 503, body: html, cache: SEM_CACHE, retryAfter: '120' } : null;
   }
@@ -572,19 +612,13 @@ export function respostaDaPagina(
   const dados = resultado.dados;
   const dominio = texto(dados.domain);
   const status = typeof dados.status === 'number' && CODIGOS.has(dados.status) ? dados.status : 200;
-  const sistema = ehEnderecoDoSistema(h);
-  const previa = url.searchParams.has('previa') || url.searchParams.has('modelo');
 
-  if (dominio && !sistema && limparHost(dominio) !== h) {
+  if (dominio && limparHost(dominio) !== h) {
     return { status: 301, location: `https://${limparHost(dominio)}${url.pathname}${url.search}`, cache: CACHE_DA_BORDA };
   }
   const redirect = texto(dados.redirect);
-  if (dominio && !sistema && noMesmoDominio(redirect, dominio)) {
+  if (dominio && noMesmoDominio(redirect, dominio)) {
     return { status: 301, location: comQuery(redirect, url.search), cache: CACHE_DA_BORDA };
-  }
-  const canonical = texto(dados.canonical);
-  if (dominio && sistema && status === 200 && !previa && noMesmoDominio(canonical, dominio)) {
-    return { status: 301, location: comQuery(canonical, url.search), cache: CACHE_DA_BORDA };
   }
   if (!html) return null;
   return {

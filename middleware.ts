@@ -76,6 +76,12 @@ export const config = {
     '/robots.txt',
     '/sitemap.xml',
     '/llms.txt',
+    // Endereço lmflow, como era: código de imóvel ou post com ponto no nome
+    // escaparia da regra de baixo (ela pula "arquivo com extensão").
+    '/imovel/:path*',
+    '/blog/:path*',
+    '/p/:path*',
+    '/portal/:path*',
     // Toda página (no domínio do cliente, qualquer endereço é do site; quem diz
     // se ela existe é o servidor). Fora: arquivos com extensão (inclui o
     // `/index.html` e o `/lp.html` que este arquivo busca — laço), `/assets`,
@@ -93,6 +99,11 @@ const API_TIMEOUT_MS = 2500;
  * acima dela, no domínio, sai 503 (o Google volta depois) com a página de hoje.
  */
 const HEAD_TIMEOUT_MS = 3000;
+
+/** No endereço lmflow fica o prazo de antes: lá a página é do CRM também e não pode esperar 3 s. */
+const HEAD_TIMEOUT_SISTEMA_MS = 1200;
+
+const prazoDoHead = (host: string) => (ehEnderecoDoSistema(host) ? HEAD_TIMEOUT_SISTEMA_MS : HEAD_TIMEOUT_MS);
 
 const JSON_HEADERS = { Accept: 'application/json' };
 
@@ -216,12 +227,12 @@ function headEndpoint(base: string, host: string, path: string, tenant: string |
 }
 
 /** O `index.html` da própria implantação (sem cache próprio: a borda já guarda a resposta pronta). */
-async function htmlDoApp(url: URL): Promise<string | null> {
+async function htmlDoApp(url: URL, ms: number): Promise<string | null> {
   try {
     return await comPrazo(async signal => {
       const res = await fetch(new URL('/index.html', url.origin).toString(), { signal });
       return res.ok ? await res.text() : null;
-    }, HEAD_TIMEOUT_MS);
+    }, ms);
   } catch {
     return null;
   }
@@ -229,6 +240,7 @@ async function htmlDoApp(url: URL): Promise<string | null> {
 
 /** Pergunta o `/head`: 404 = não há site neste endereço; erro, tempo ou resposta torta = falhou. */
 async function headDaPagina(base: string, host: string, pg: PaginaDoSite): Promise<ResultadoDoHead> {
+  const ms = prazoDoHead(host);
   try {
     return await comPrazo(async signal => {
       const res = await fetch(headEndpoint(base, host, pg.path, pg.tenant), { headers: JSON_HEADERS, signal });
@@ -236,7 +248,7 @@ async function headDaPagina(base: string, host: string, pg: PaginaDoSite): Promi
       if (!res.ok) return { tipo: 'falhou' } as const;
       const dados = dadosDaResposta(await res.json());
       return dados ? ({ tipo: 'ok', dados } as const) : ({ tipo: 'falhou' } as const);
-    }, HEAD_TIMEOUT_MS);
+    }, ms);
   } catch {
     return { tipo: 'falhou' };
   }
@@ -259,9 +271,8 @@ async function pagina(url: URL, host: string): Promise<Response> {
       headers: { location: `${limpo}${url.search}`, 'cache-control': CACHE_DA_BORDA, 'x-lm-site': 'head' },
     });
   }
-  const [html, resultado] = await Promise.all([htmlDoApp(url), headDaPagina(base, host, pg)]);
-  // No endereço lmflow, servidor fora não vira 503: lá a página é do CRM também.
-  if (resultado.tipo !== 'ok' && ehEnderecoDoSistema(host)) return passThrough();
+  const [html, resultado] = await Promise.all([htmlDoApp(url, prazoDoHead(host)), headDaPagina(base, host, pg)]);
+  // No endereço lmflow, servidor fora não vira 503: `respostaDaPagina` devolve null e a página segue.
   const r = respostaDaPagina(html, host, url, resultado);
   if (!r) return passThrough();
   const headers: Record<string, string> = { 'cache-control': r.cache, 'x-lm-site': 'head' };
@@ -275,7 +286,9 @@ async function pagina(url: URL, host: string): Promise<Response> {
 async function llms(host: string): Promise<Response> {
   const base = apiBase();
   const naoTem = () => resposta('Not found\n', 404, 'text/plain; charset=utf-8', CACHE_DA_BORDA);
-  if (ehEnderecoDoSistema(host) || !base) return naoTem();
+  // Endereço lmflow: segue como antes (o arquivo não existia lá).
+  if (ehEnderecoDoSistema(host)) return passThrough();
+  if (!base) return naoTem();
   const r = await headDaPagina(base, host, { tenant: null, path: '/' });
   if (r.tipo === 'falhou') return resposta('Service unavailable\n', 503, 'text/plain; charset=utf-8', 'no-store');
   const corpo = r.tipo === 'ok' ? llmsTxt(host, r.dados) : null;
@@ -306,7 +319,7 @@ async function robots(host: string): Promise<Response> {
         if (res.status === 404) return null;
         if (!res.ok) throw new Error(`head ${res.status}`);
         return dadosDaResposta(await res.json());
-      }, HEAD_TIMEOUT_MS);
+      }, prazoDoHead(host));
     } catch {
       falhou = true;
     }
