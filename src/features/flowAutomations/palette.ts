@@ -44,7 +44,7 @@ const NATIVE_BY_GROUP: Record<FlowNodeGroup, FlowNodeKind[]> = {
   ai: ['hand_to_ai', 'disable_ai'],
   distribution: [],
   notify: [],
-  control: ['wait', 'wait_for_reply', 'condition'],
+  control: ['wait', 'wait_for_reply', 'condition', 'randomizer'],
 };
 
 /** Um botão da paleta: o bloco que ele cria, já com a config inicial. */
@@ -65,6 +65,10 @@ export function freshBlockConfig(config: FlowNodeConfig): FlowNodeConfig {
   const copy = structuredClone(config);
   if (Array.isArray(copy.items)) {
     copy.items = copy.items.map(item => ({ ...(item as Record<string, unknown>), id: crypto.randomUUID() }));
+  }
+  // Randomizador: a cópia mantém a divisão, mas nasce com os caminhos soltos.
+  if (Array.isArray(copy.branches)) {
+    copy.branches = copy.branches.map(branch => ({ ...(branch as Record<string, unknown>), id: crypto.randomUUID(), next_node_id: null }));
   }
   return copy;
 }
@@ -144,6 +148,16 @@ export function paletteGroups(query = ''): Array<{ group: FlowNodeGroup; label: 
   return GROUP_ORDER
     .map(group => ({ group, label: PALETTE_GROUP_LABELS[group], items: visible.filter(i => i.group === group) }))
     .filter(g => g.items.length > 0);
+}
+
+/**
+ * O funil de mensagem roda em linha reta (o Disparo em massa e a conversa leem a
+ * sequência dele), então não tem como sortear caminho: o Randomizador fica fora.
+ */
+export function foraDoFunilDeConversa(
+  estado?: (item: PaletteItem) => 'ok' | 'indisponivel' | 'fora',
+): (item: PaletteItem) => 'ok' | 'indisponivel' | 'fora' {
+  return item => (item.kind === 'randomizer' ? 'fora' : estado?.(item) ?? 'ok');
 }
 
 /** Guarda do arraste: só solta no canvas o bloco que a paleta deixa usar. */

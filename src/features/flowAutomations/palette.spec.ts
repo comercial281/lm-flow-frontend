@@ -21,7 +21,7 @@ describe('paleta da sprint 2', () => {
       ['IA', ['Passar para a IA', 'Desligar a IA']],
       ['Distribuição', ['Definir corretor', 'Distribuir pela roleta']],
       ['Notificação', ['Notificação']],
-      ['Controle', ['Esperar', 'Aguardar resposta', 'Condição']],
+      ['Controle', ['Esperar', 'Aguardar resposta', 'Condição', 'Randomizador']],
     ]);
   });
 

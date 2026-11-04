@@ -34,6 +34,7 @@ export const PERSONAL_NATIVE_KINDS: FlowNodeKind[] = [
   'wait',
   'wait_for_reply',
   'condition',
+  'randomizer',
   'filter_label',
   'add_label',
   'remove_label',

@@ -2,9 +2,22 @@
 // `grafo.ts` do Hub. Nada aqui conhece React nem @xyflow/react: só o
 // FlowAutomationCanvas traduz o resultado pra Node/Edge da lib.
 import type { FlowAutomationNode, FlowNodeKind, SaveFlowPayload } from '@/types/flowAutomations';
+import { branchLetter, branchesOf, mapBranchTargets } from '@/features/flowAutomations/randomizer';
 
-export type OutputHandle = 'out' | 'yes' | 'no';
-export type BranchHandle = 'yes' | 'no';
+/** A saída de um caminho do Randomizador: uma por caminho, pelo id dele. */
+export type PathHandle = `path:${string}`;
+export type OutputHandle = 'out' | 'yes' | 'no' | PathHandle;
+export type BranchHandle = 'yes' | 'no' | PathHandle;
+
+export function pathHandle(branchId: string): PathHandle {
+  return `path:${branchId}`;
+}
+
+function isPathHandle(handle: OutputHandle): handle is PathHandle {
+  return handle.startsWith('path:');
+}
+
+const branchIdOf = (handle: PathHandle) => handle.slice('path:'.length);
 
 // Blocos com duas saídas. "Condição": Sim / Não. "Aguardar resposta"
 // (sprint 1 das Automações, 02/10/2026): Respondeu / Não respondeu, gravados
@@ -13,23 +26,47 @@ export type BranchHandle = 'yes' | 'no';
 export function branchHandles(node: Pick<FlowAutomationNode, 'kind' | 'config'>): BranchHandle[] {
   if (node.kind === 'condition') return ['yes', 'no'];
   if (node.kind === 'wait_for_reply') return node.config?.indefinite === true ? ['yes'] : ['yes', 'no'];
+  if (node.kind === 'randomizer') return branchesOf(node.config).map(branch => pathHandle(branch.id));
   return [];
 }
 
 export function isBranching(node: Pick<FlowAutomationNode, 'kind'>): boolean {
-  return node.kind === 'condition' || node.kind === 'wait_for_reply';
+  return node.kind === 'condition' || node.kind === 'wait_for_reply' || node.kind === 'randomizer';
 }
 
 /** O nome da saída na tela. */
 export function handleLabel(kind: FlowNodeKind, handle: OutputHandle): string {
+  if (isPathHandle(handle)) return 'Caminho';
   if (kind === 'wait_for_reply') return handle === 'no' ? 'Não respondeu' : 'Respondeu';
   if (handle === 'yes') return 'Sim';
   if (handle === 'no') return 'Não';
   return 'Continuar';
 }
 
-/** Cor da saída e da linha: sim/respondeu verde, não vermelho, não respondeu cinza. */
+/** A letra e a % do caminho do Randomizador, na ordem da lista (null = caminho que não existe mais). */
+function pathInfo(node: Pick<FlowAutomationNode, 'config'>, handle: PathHandle): { letter: string; percent: number } | null {
+  const branches = branchesOf(node.config);
+  const index = branches.findIndex(branch => branch.id === branchIdOf(handle));
+  return index < 0 ? null : { letter: branchLetter(index), percent: branches[index].percent };
+}
+
+/** O nome da saída de um bloco: no Randomizador, o caminho e a %. */
+export function outputLabel(node: Pick<FlowAutomationNode, 'kind' | 'config'>, handle: OutputHandle): string {
+  if (!isPathHandle(handle)) return handleLabel(node.kind, handle);
+  const info = pathInfo(node, handle);
+  return info ? `Caminho ${info.letter} · ${info.percent}%` : 'Caminho';
+}
+
+/** O nome na linha do mapa: curto, a saída já mostra que é um caminho. */
+function edgeLabel(node: FlowAutomationNode, handle: OutputHandle): string {
+  if (!isPathHandle(handle)) return handleLabel(node.kind, handle);
+  const info = pathInfo(node, handle);
+  return info ? `${info.letter} · ${info.percent}%` : '';
+}
+
+/** Cor da saída e da linha: sim/respondeu verde, não vermelho, não respondeu cinza, caminho na cor do grupo Controle. */
 export function handleColor(kind: FlowNodeKind, handle: OutputHandle): string {
+  if (isPathHandle(handle)) return '#475569';
   if (handle === 'yes') return '#059669';
   if (handle === 'no') return kind === 'wait_for_reply' ? '#64748b' : '#dc2626';
   return '#94a3b8';
@@ -39,6 +76,9 @@ export const NODE_WIDTH = 260;
 // 100 px entre colunas: cabe o nome da linha ("Não respondeu") sem encostar no cartão.
 export const STEP_X = 360;
 const STEP_Y = 200;
+// Altura aproximada do cartão do Randomizador: cresce com os caminhos.
+const RANDOMIZER_BASE_HEIGHT = 120;
+const RANDOMIZER_ROW_HEIGHT = 32;
 
 export interface Point {
   x: number;
@@ -151,9 +191,16 @@ export function calculateLayout(nodes: FlowAutomationNode[], initialNodeId: stri
   const lane: Record<string, number> = {};
   const taken = new Set<string>();
   let lastLane = -1;
+  // Quantas linhas o bloco ocupa: só o Randomizador com muitos caminhos passa de uma.
+  const laneSpan = (id: string) => {
+    const n = byId.get(id)!;
+    if (n.kind !== 'randomizer') return 1;
+    return Math.max(1, Math.ceil((RANDOMIZER_BASE_HEIGHT + branchesOf(n.config).length * RANDOMIZER_ROW_HEIGHT) / STEP_Y));
+  };
   const freeFrom = (id: string, from: number) => {
     let l = from;
-    while (taken.has(`${column[id]}:${l}`)) l += 1;
+    const span = laneSpan(id);
+    while (Array.from({ length: span }, (_, i) => `${column[id]}:${l + i}`).some(key => taken.has(key))) l += 1;
     return l;
   };
   order.forEach(id => {
@@ -161,8 +208,9 @@ export function calculateLayout(nodes: FlowAutomationNode[], initialNodeId: stri
     const parent = placed.sort((a, b) => column[b.from] - column[a.from] || lane[b.from] - lane[a.from])[0];
     const wanted = !parent ? lastLane + 1 : parent.side === 'right' && !parent.down ? lane[parent.from] : lane[parent.from] + 1;
     lane[id] = freeFrom(id, wanted);
-    taken.add(`${column[id]}:${lane[id]}`);
-    lastLane = Math.max(lastLane, lane[id]);
+    const span = laneSpan(id);
+    for (let i = 0; i < span; i += 1) taken.add(`${column[id]}:${lane[id] + i}`);
+    lastLane = Math.max(lastLane, lane[id] + span - 1);
   });
 
   return Object.fromEntries(nodes.map(n => [n.id, { x: column[n.id] * STEP_X, y: lane[n.id] * STEP_Y }]));
@@ -199,8 +247,8 @@ export function buildEdges(nodes: FlowAutomationNode[], initialNodeId: string | 
   nodes.forEach(n => {
     if (isBranching(n)) {
       branchHandles(n).forEach(h => {
-        const target = h === 'yes' ? n.next_yes_node_id : n.next_no_node_id;
-        if (target) edges.push({ id: `${n.id}:${h}`, source: n.id, target, sourceHandle: h, deletable: true, label: handleLabel(n.kind, h), color: handleColor(n.kind, h) });
+        const target = targetOf(n, h);
+        if (target) edges.push({ id: `${n.id}:${h}`, source: n.id, target, sourceHandle: h, deletable: true, label: edgeLabel(n, h), color: handleColor(n.kind, h) });
       });
     } else if (n.next_node_id) {
       edges.push({ id: `${n.id}:out`, source: n.id, target: n.next_node_id, sourceHandle: 'out', deletable: true, label: '', color: handleColor(n.kind, 'out') });
@@ -218,6 +266,7 @@ export function cutEdge(nodes: FlowAutomationNode[], edgeId: string): FlowAutoma
 
 /** O bloco que uma saída aponta hoje (null = saída vazia). */
 function targetOf(node: FlowAutomationNode, handle: OutputHandle): string | null {
+  if (isPathHandle(handle)) return branchesOf(node.config).find(branch => branch.id === branchIdOf(handle))?.next_node_id ?? null;
   if (handle === 'yes') return node.next_yes_node_id;
   if (handle === 'no') return node.next_no_node_id;
   return node.next_node_id;
@@ -258,6 +307,10 @@ export function insertAt(
 export function link(nodes: FlowAutomationNode[], sourceId: string, handle: OutputHandle, targetId: string | null): FlowAutomationNode[] {
   return nodes.map(n => {
     if (n.id !== sourceId) return n;
+    if (isPathHandle(handle)) {
+      const branches = branchesOf(n.config).map(branch => (branch.id === branchIdOf(handle) ? { ...branch, next_node_id: targetId } : branch));
+      return { ...n, config: { ...n.config, branches } };
+    }
     if (handle === 'yes') return { ...n, next_yes_node_id: targetId };
     if (handle === 'no') return { ...n, next_no_node_id: targetId };
     return { ...n, next_node_id: targetId };
@@ -270,7 +323,7 @@ export function removeNode(nodes: FlowAutomationNode[], id: string): FlowAutomat
   return nodes
     .filter(n => n.id !== id)
     .map(n => ({
-      ...n,
+      ...mapBranchTargets(n, target => (target === id ? null : target)),
       next_node_id: n.next_node_id === id ? null : n.next_node_id,
       next_yes_node_id: n.next_yes_node_id === id ? null : n.next_yes_node_id,
       next_no_node_id: n.next_no_node_id === id ? null : n.next_no_node_id,
@@ -285,7 +338,7 @@ export function moveNode(nodes: FlowAutomationNode[], id: string, x: number, y: 
 // mostrar o botão "+" no rodapé do cartão.
 export function looseOutputs(node: FlowAutomationNode): OutputHandle[] {
   if (isBranching(node)) {
-    return branchHandles(node).filter(h => !(h === 'yes' ? node.next_yes_node_id : node.next_no_node_id));
+    return branchHandles(node).filter(h => !targetOf(node, h));
   }
   return node.next_node_id ? [] : ['out'];
 }
