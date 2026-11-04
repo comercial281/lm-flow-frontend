@@ -10,8 +10,8 @@ import {
 import type { FlowNodeConfig } from '@/types/flowAutomations';
 
 // Miolo da janela do Randomizador. Uma linha por caminho, na mesma ordem do cartão
-// no mapa: letra, %, a fatia e o remover. O aviso da soma acompanha a digitação, e
-// a janela só salva com 100% (readiness.ts).
+// no mapa: letra, %, a fatia e o remover. O total acompanha a digitação, e a janela
+// só salva com 100% (readiness.ts).
 export function RandomizerFields({ config, onChange, readOnly = false }: {
   config: FlowNodeConfig;
   onChange: (next: FlowNodeConfig) => void;
@@ -63,29 +63,32 @@ export function RandomizerFields({ config, onChange, readOnly = false }: {
             );
           })}
         </ul>
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          {/* As ações vêm depois dos campos: a janela abre com o foco na primeira %,
-              e um Enter nunca desfaz a divisão que a pessoa montou. */}
-          {readOnly ? <span /> : (
-            <div className="flex flex-wrap items-center gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                disabled={branches.length >= MAX_BRANCHES}
-                onClick={() => onChange(addBranch(config))}
-              >
-                <Plus className="h-4 w-4" />
-                Adicionar caminho
-              </Button>
-              <Button type="button" variant="ghost" size="sm" onClick={() => onChange(splitConfigEvenly(config))}>
-                Dividir igual
-              </Button>
-            </div>
-          )}
-          <p className="text-[13px] font-medium tabular-nums text-foreground/80">Total: {percentTotal(config)}%</p>
+        {/* As ações vêm depois dos campos: a janela abre com o foco na primeira %,
+            e um Enter nunca desfaz a divisão que a pessoa montou. */}
+        {!readOnly && (
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={branches.length >= MAX_BRANCHES}
+              onClick={() => onChange(addBranch(config))}
+            >
+              <Plus className="h-4 w-4" />
+              Adicionar caminho
+            </Button>
+            <Button type="button" variant="ghost" size="sm" onClick={() => onChange(splitConfigEvenly(config))}>
+              Dividir igual
+            </Button>
+          </div>
+        )}
+        {/* Sempre a mesma caixa, só muda a cor e o texto: se ela aparecesse só com a
+            soma errada, a janela mudaria de altura e os campos pulariam embaixo do mouse. */}
+        <div data-testid="total-dos-caminhos">
+          <Aviso tom={problem ? 'atencao' : 'sucesso'} compacto>
+            {problem ? `Total: ${percentTotal(config)}%. ${problem}` : 'Total: 100%'}
+          </Aviso>
         </div>
-        {problem && <Aviso tom="atencao" compacto>{problem}</Aviso>}
       </GrupoDaJanela>
       <div className="space-y-1 text-xs text-muted-foreground">
         <p>Cada lead cai em um caminho sorteado. Com poucos leads, a divisão fica aproximada.</p>

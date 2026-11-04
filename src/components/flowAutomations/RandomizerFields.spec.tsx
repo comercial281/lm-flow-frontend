@@ -37,6 +37,16 @@ describe('janela do Randomizador', () => {
     expect(screen.getByText('Total: 100%')).toBeInTheDocument();
   });
 
+  it('o total mora na mesma caixa com a soma certa ou errada: a janela não muda de altura enquanto digita', () => {
+    render(<Janela start={dois} />);
+    const caixa = () => screen.getByTestId('total-dos-caminhos');
+    expect(caixa()).toHaveTextContent('Total: 100%');
+    const antes = caixa();
+    fireEvent.change(screen.getByLabelText('% do Caminho A'), { target: { value: '30' } });
+    expect(caixa()).toBe(antes);
+    expect(caixa()).toHaveTextContent('Total: 80%. Faltam 20% pra fechar 100%.');
+  });
+
   it('com 2 caminhos não tem remover; com 3, sim', () => {
     render(<Janela start={dois} />);
     expect(screen.queryByRole('button', { name: 'Remover Caminho A' })).toBeNull();
