@@ -5,11 +5,10 @@ import BotoesDeEscolha from '@/components/base/BotoesDeEscolha';
 import Carregando from '@/components/base/Carregando';
 import EmptyState from '@/components/base/EmptyState';
 import { dinheiro, hojeEmSaoPaulo, plural } from '@/lib/formato';
-import { locacaoService } from '@/features/locacao/locacaoService';
+import { aluguelHoje as aluguelAtual, locacaoService } from '@/features/locacao/locacaoService';
 import { passaNoFiltro, situacaoDoContrato, type FiltroDeContratos } from '@/features/locacao/chips';
 import { imovelCurto } from '@/features/locacao/contratoDoc';
 import { GARANTIA } from '@/features/locacao/textos';
-import type { Contrato } from '@/features/locacao/tipos';
 import { Falha, Selo } from './comum';
 import { useCarga } from './usoComum';
 
@@ -19,8 +18,6 @@ const FILTROS: { valor: FiltroDeContratos; rotulo: string }[] = [
   { valor: 'em_dia', rotulo: 'Em dia' },
   { valor: 'encerrados', rotulo: 'Encerrados' },
 ];
-
-const aluguelAtual = (c: Contrato): number => c.historico_aluguel.at(-1)?.valor ?? c.aluguel_inicial;
 
 export default function Contratos({ aoAbrir, aoNovo }: { aoAbrir: (id: string) => void; aoNovo: () => void }) {
   const { dados, erro, recarregar } = useCarga(() => locacaoService.contratos(), 'contratos');
