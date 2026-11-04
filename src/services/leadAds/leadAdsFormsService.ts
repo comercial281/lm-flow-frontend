@@ -30,6 +30,7 @@ export interface LeadAdsFormConfig {
   audience_intents?: Intencao[];
   is_active: boolean;
   created_at: string;
+  updated_at?: string;
 }
 
 // Formulário vindo do Facebook (GET meta_forms). `id` = form_id.

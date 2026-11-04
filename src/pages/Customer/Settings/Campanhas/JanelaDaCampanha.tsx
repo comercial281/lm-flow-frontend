@@ -32,8 +32,9 @@ import {
   CAMPOS_DA_CONDICAO, TETO_DA_OBSERVACAO, condicaoDaLinha, condicaoEmEdicao, condicaoParaGravar, dinheiro, dinheiroNoCampo,
   type CampoDaCondicao, type CondicaoEmEdicao,
 } from '@/features/campanhas/condicaoDaCampanha';
-import { MAX_DE_IMOVEIS, TIPOS_DE_IMOVEL, nomeDoItem } from '@/features/campanhas/itensDeCampanha';
-import { fraseDeMover, maiuscula, opcoesDaTela } from '@/features/campanhas/qualIaAtende';
+import { MAX_DE_IMOVEIS, TIPOS_DE_IMOVEL, itemDaFicha, nomeDoItem } from '@/features/campanhas/itensDeCampanha';
+import { fichaParecida } from '@/features/campanhas/fichaParecida';
+import { chaveDaIa, fraseDeMover, maiuscula, opcoesDaTela } from '@/features/campanhas/qualIaAtende';
 import { normalizarNome } from '../LeadAdsForms/regraPorPalavra';
 import QuemAtende from './QuemAtende';
 
@@ -64,6 +65,12 @@ export interface JanelaDaCampanhaProps {
   /** O anúncio ganhou linha ao escolher a IA: a lista guarda o id, pra reabrir não criar de novo (o servidor recusa em dobro). */
   aoCriarLinha?: (item: ItemDeCampanha, linkId: string) => void;
   aoApagar?: () => void;
+  /** Formulário novo: as fichas do cliente, pra sugerir "Parece com a ficha X". */
+  fichas?: LeadAdsFormConfig[];
+  /** A lista do servidor (traz a IA e a oferta de cada ficha). Sem ela, a cópia leva só o que a ficha sabe. */
+  itensDaLista?: ItemDeCampanha[];
+  /** Copiar: quem guarda a entrada do lead (funil, etapa, quem assume, etiquetas) recebe a ficha de origem. */
+  aoCopiarEntrada?: (origem: LeadAdsFormConfig) => void;
 }
 
 type Imovel = Property | 'erro';
@@ -82,7 +89,7 @@ function fraseDoCadastro(escopo: EscopoDaOferta | null, qtd: number, umSo: Prope
 const temCondicao = (c: CondicaoDaOferta | null) => Object.values(c ?? {}).some((v) => v != null && String(v).trim() !== '');
 
 export default function JanelaDaCampanha({
-  tipo, item, config = null, entrada, resumoDaEntrada, montarEntrada, opcoesDeIa, aoFechar, aoSalvar, aoMudarIa, aoCriarLinha, aoApagar,
+  tipo, item, config = null, entrada, resumoDaEntrada, montarEntrada, opcoesDeIa, aoFechar, aoSalvar, aoMudarIa, aoCriarLinha, aoApagar, fichas, itensDaLista, aoCopiarEntrada,
 }: JanelaDaCampanhaProps) {
   const can = useCan();
   const recurso = tipo === 'form' ? 'lead_ads_form_configs' : 'campaign_links';
@@ -273,6 +280,33 @@ export default function JanelaDaCampanha({
     }
   };
 
+  // ---- Copiar de outra ficha ----
+  // Só sugere: nada grava até o Criar. Não toca na identidade do formulário (form_id, nome, página), que fica com quem chama.
+  const [copiou, setCopiou] = useState(false);
+  const parecida = novo && !copiou && fichas ? fichaParecida(nomeDoItem(item), fichas) : null;
+  const copiarDe = (origem: LeadAdsFormConfig) => {
+    const ori = itemDaFicha(origem, origem.form_name, itensDaLista?.find((i) => i.form_config_id === origem.id));
+    const escopoDaOrigem = ori.sells_scope ?? (ori.property_ids.length ? 'properties' : null);
+    if (escopoDaOrigem) {
+      escopoImplicito.current = false;
+      setEscopo(escopoDaOrigem);
+      setIds(ori.property_ids.map(String));
+      if (ori.sells_listing_kind) setTipoDeImovel(ori.sells_listing_kind);
+    }
+    setCond(condicaoEmEdicao(ori.offer_condition));
+    setIntencoes(ori.audience_intents ?? []);
+    if (temCondicao(ori.offer_condition) || (ori.audience_intents ?? []).length > 0) setOfertaAberta(true);
+    aoCopiarEntrada?.(origem);
+    // A IA: só a que está na lista desta campanha. A de regra mais ampla atende o formulário novo do mesmo jeito.
+    const dela = ori.agents.find((a) => a.kind === 'campaign');
+    if (dela) {
+      const op = opcoes.find((o) => o.chave === chaveDaIa(dela.sales_agent_id, dela.sales_agent_number_id));
+      if (op && !op.fixa) { setPendente(op.chave); setAvisoDaIa(null); }
+      else setAvisoDaIa('A IA não foi copiada: a opção dela não está mais disponível. Escolha em Pôr numa IA, se quiser.');
+    }
+    setCopiou(true);
+  };
+
   // ---- Salvar ----
   const semImovel = escopo === 'properties' && ids.length === 0;
   const corpoDaOferta = () => ({
@@ -400,6 +434,14 @@ export default function JanelaDaCampanha({
                 <p data-testid="regra-por-nome" className="rounded-md bg-muted/50 px-3 py-2 text-sm">
                   Nome contém <strong>{configAtual?.match_keyword || nomeDoItem(item)}</strong>
                 </p>
+              )}
+              {parecida && (
+                <Aviso tom="neutro" compacto>
+                  <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
+                    <p className="min-w-0 break-words">Parece com a ficha <strong>{parecida.form_name}</strong>.</p>
+                    <Button type="button" variant="outline" size="sm" onClick={() => copiarDe(parecida)}>Copiar a configuração</Button>
+                  </div>
+                </Aviso>
               )}
               {oQueVende}
               {eForm && entrada}

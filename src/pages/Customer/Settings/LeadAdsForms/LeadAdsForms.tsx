@@ -441,6 +441,11 @@ export default function LeadAdsForms({ titulo = 'Formulários', subtitulo = 'Pra
     };
   };
 
+  // Copiar de outra ficha: só a entrada do lead. A identidade do formulário novo (id, nome, página) fica como está.
+  const copiarEntrada = (o: LeadAdsFormConfig) => setForm(f => ({
+    ...f, pipeline_id: o.pipeline_id ?? '', pipeline_stage_id: o.pipeline_stage_id ?? '', label_ids: o.label_ids ?? [], quem: quemDe(o),
+  }));
+
   // O rodapé da janela resume pra onde o lead vai (nomes, não ids).
   const resumoDaEntrada = (): string => {
     const funil = resources.pipelines.find(p => p.id === form.pipeline_id)?.name;
@@ -1286,6 +1291,9 @@ export default function LeadAdsForms({ titulo = 'Formulários', subtitulo = 'Pra
             : itemEmBranco({ key: `form:${form.form_id}`, kind: 'form', label: form.form_name })}
           opcoesDeIa={campanhas?.listaPronta === false ? undefined : campanhas?.opcoesDeIa}
           montarEntrada={montarEntrada}
+          fichas={configs}
+          itensDaLista={campanhas?.itens}
+          aoCopiarEntrada={copiarEntrada}
           aoFechar={() => setModalOpen(false)}
           aoSalvar={aposSalvarJanela}
           aoMudarIa={() => campanhas?.aoMudar()}

@@ -615,3 +615,92 @@ describe('JanelaDaCampanha · lista de imóveis aberta e só o miolo rola (fix 1
   });
 });
 
+
+describe('JanelaDaCampanha · copiar de outra ficha (Tarefa 7)', () => {
+  const origem = (): LeadAdsFormConfig => ({ ...ficha(), id: 'cfg-o', form_id: 'f-o', form_name: '[06/10] [CASTELO]' });
+  const itemOrigem = (extra: Partial<ItemDeCampanha> = {}): ItemDeCampanha => item({
+    kind: 'form', key: 'form:f-o', label: '[06/10] [CASTELO]', form_config_id: 'cfg-o', sells_scope: 'properties', property_ids: ['p1', 'p2'],
+    offer_condition: { down_payment_from: 1500, note: 'Oferta do Castelo' }, audience_intents: ['investimento'],
+    agents: [{ sales_agent_id: 'b1', name: 'Agente B', sales_agent_number_id: 'n1', number_label: 'Ana', whole_number: false, note: null, kind: 'campaign', reason: 'esta campanha está na lista dela', removable: true }],
+    ...extra,
+  });
+  const novoParecido = (extra: Partial<React.ComponentProps<typeof JanelaDaCampanha>> = {}) => {
+    const aoCopiarEntrada = vi.fn();
+    const r = formNovo({
+      item: item({ kind: 'form', key: 'form:f-9', label: '[03/11] [CASTELO 2.0]' }),
+      fichas: [origem()], itensDaLista: [itemOrigem()], aoCopiarEntrada, ...extra,
+    });
+    return { ...r, aoCopiarEntrada };
+  };
+  const copiar = () => fireEvent.click(screen.getByRole('button', { name: 'Copiar a configuração' }));
+
+  it('formulário novo com nome parecido mostra a faixa "Parece com a ficha X"', () => {
+    novoParecido();
+    expect(screen.getByText(/Parece com a ficha/)).toHaveTextContent('[06/10] [CASTELO]');
+  });
+
+  it('formulário que já existe não mostra a faixa', () => {
+    abrir({ tipo: 'form', config: ficha(), opcoesDeIa: opcoes, fichas: [origem()], itensDaLista: [itemOrigem()], item: item({ kind: 'form', label: '[03/11] [CASTELO 2.0]', form_config_id: 'cfg-1' }) });
+    expect(screen.queryByText(/Parece com a ficha/)).toBeNull();
+  });
+
+  it('nome sem ficha parecida não mostra a faixa', () => {
+    novoParecido({ item: item({ kind: 'form', key: 'form:f-9', label: '[03/11] [VIVANT]' }) });
+    expect(screen.queryByText(/Parece com a ficha/)).toBeNull();
+  });
+
+  it('Copiar preenche imóveis, escopo, oferta, intenções e a IA, entrega a entrada à tela e esconde a faixa, sem gravar nada', async () => {
+    const { aoCopiarEntrada } = novoParecido();
+    copiar();
+    expect(aoCopiarEntrada).toHaveBeenCalledWith(expect.objectContaining({ id: 'cfg-o' }));
+    expect(screen.queryByText(/Parece com a ficha/)).toBeNull();
+    await waitFor(() => expect(within(screen.getByTestId('selecionados')).getAllByRole('button', { name: /^Tirar/ })).toHaveLength(2));
+    expect(screen.getByLabelText('Entrada a partir de')).toHaveValue('1.500');
+    expect(screen.getByLabelText('Observação do formulário')).toHaveValue('Oferta do Castelo');
+    expect(screen.getByLabelText('Investimento')).toBeChecked();
+    expect(within(screen.getByTestId('coluna-direita')).getByText('Agente B · Ana', { selector: 'span' })).toBeInTheDocument();
+    expect(forms.create).not.toHaveBeenCalled();
+    expect(camp.escolherIa).not.toHaveBeenCalled();
+  });
+
+  it('depois de copiar, Criar grava a ficha com o form_id próprio e a IA da origem', async () => {
+    forms.create.mockResolvedValue({ ...ficha(), id: 'cfg-9', form_id: 'f-9' });
+    camp.escolherIa.mockResolvedValue({ ok: true, holders: [], left_empty: [], warning: null });
+    novoParecido();
+    copiar();
+    fireEvent.click(screen.getByRole('button', { name: 'Criar' }));
+    await waitFor(() => expect(camp.escolherIa).toHaveBeenCalled());
+    expect(forms.create.mock.calls[0][0]).toMatchObject({
+      form_id: 'f-9', sells_scope: 'properties', property_ids: ['p1', 'p2'], audience_intents: ['investimento'], offer_condition: { down_payment_from: 1500 },
+    });
+    expect(camp.escolherIa).toHaveBeenCalledWith({ ref: { kind: 'form', id: 'f-9' }, sales_agent_id: 'b1', number_id: 'n1' });
+  });
+
+  it('origem sem escopo não inventa escopo na cópia', () => {
+    novoParecido({ itensDaLista: [itemOrigem({ sells_scope: null, property_ids: [], offer_condition: null, audience_intents: [] })] });
+    copiar();
+    expect(screen.getByText(/Ainda não diz/)).toBeInTheDocument();
+  });
+
+  it('IA por regra mais ampla na origem: nada a escolher, nenhum aviso', () => {
+    novoParecido({ itensDaLista: [itemOrigem({ agents: [{ sales_agent_id: 'a1', name: 'Agente A', sales_agent_number_id: null, number_label: null, whole_number: false, note: null, kind: 'broad', reason: 'atende todo lead do funil', removable: false }] })] });
+    copiar();
+    expect(screen.getByText('Sem IA')).toBeInTheDocument();
+    expect(screen.queryByText(/IA não foi copiada/)).toBeNull();
+  });
+
+  it('IA da origem sem opção no seletor: copia o resto e avisa em uma linha', () => {
+    novoParecido({ opcoesDeIa: opcoes.filter((o) => o.sales_agent_id !== 'b1') });
+    copiar();
+    expect(screen.getByText(/A IA não foi copiada/)).toBeInTheDocument();
+    expect(screen.getByText('Sem IA')).toBeInTheDocument();
+    expect(screen.getByLabelText('Investimento')).toBeChecked();
+  });
+
+  it('origem com duas IAs da campanha: copia a primeira', () => {
+    const ag = (id: string, num: string | null) => ({ sales_agent_id: id, name: id === 'b1' ? 'Agente B' : 'Agente A', sales_agent_number_id: num, number_label: null, whole_number: false, note: null, kind: 'campaign' as const, reason: 'na lista', removable: true });
+    novoParecido({ itensDaLista: [itemOrigem({ agents: [ag('b1', 'n1'), ag('a1', null)] })] });
+    copiar();
+    expect(within(screen.getByTestId('coluna-direita')).getByText('Agente B · Ana', { selector: 'span' })).toBeInTheDocument();
+  });
+});
