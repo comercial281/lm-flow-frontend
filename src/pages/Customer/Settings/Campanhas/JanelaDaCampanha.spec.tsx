@@ -734,4 +734,12 @@ describe('JanelaDaCampanha · copiar de outra ficha (Tarefa 7)', () => {
     copiar();
     expect(screen.getByText(/A IA não foi copiada: não achei a ficha de origem/)).toBeInTheDocument();
   });
+
+  it('lista pronta mas sem opções de IA: copia o resto e avisa que a IA não foi copiada', () => {
+    const { aoCopiarEntrada } = novoParecido({ opcoesDeIa: undefined });
+    copiar();
+    expect(aoCopiarEntrada).toHaveBeenCalled();
+    expect(screen.getByLabelText('Investimento')).toBeChecked();
+    expect(screen.getByText(/A IA não foi copiada: as opções de IA não carregaram/)).toBeInTheDocument();
+  });
 });

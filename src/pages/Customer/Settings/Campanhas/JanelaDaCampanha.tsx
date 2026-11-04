@@ -308,7 +308,10 @@ export default function JanelaDaCampanha({
     const naoCopiou = (motivo: string) => setAvisoDaCopia(`A IA não foi copiada: ${motivo}. Escolha em Pôr numa IA, se quiser.`);
     const daLista = itensDaLista?.find((i) => i.form_config_id === origem.id);
     if (listaFalhou) naoCopiou('a lista de campanhas não carregou');
-    else if (opcoesDeIa) {
+    else if (!opcoesDeIa) {
+      // As opções da IA vêm de outra chamada: ainda chegando ou falhou. Só avisa se a origem tinha IA da campanha.
+      if (ori.agents.some((a) => a.kind === 'campaign')) naoCopiou('as opções de IA não carregaram');
+    } else {
       if (!daLista) naoCopiou('não achei a ficha de origem na lista de campanhas');
       else {
         const dela = ori.agents.find((a) => a.kind === 'campaign');
