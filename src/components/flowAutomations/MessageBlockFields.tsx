@@ -112,6 +112,35 @@ export function LinhaDoEnvio({ pessoal = false, numeroPessoal = null, numeroPess
   return <p className="text-sm font-medium" data-testid="sai-pelo-whatsapp-do-dono">{saiPeloWhatsAppDe(donoDoEnvio)}</p>;
 }
 
+/**
+ * O editor da sequência do bloco Mensagem (texto, mídia, contato, espera e, fora
+ * do funil de conversa, o book), com a barra de variáveis e o envio de arquivo.
+ * É o mesmo do painel do bloco e da janela "Adicionar mensagem" do follow-up.
+ */
+export function SequenciaDaMensagem({ config, onChange, conversation = false, guided = false }: {
+  config: FlowNodeConfig;
+  onChange: React.Dispatch<React.SetStateAction<FlowNodeConfig>>;
+  conversation?: boolean;
+  guided?: boolean;
+}) {
+  return (
+    <div className="space-y-1">
+      <p className="text-xs text-muted-foreground">
+        Toque numa variável pra pôr o dado do lead no texto, onde o cursor estiver.
+      </p>
+      <MessageSequenceEditor
+        items={draftsOf(config)}
+        onChange={drafts => onChange(c => withItems(c, drafts))}
+        variables={NO_VARIABLES}
+        variableBar={variableBar}
+        uploadMedia={uploadMedia}
+        extraKinds={conversation ? NO_EXTRA : BOOK_EXTRA}
+        guided={guided}
+      />
+    </div>
+  );
+}
+
 interface Props extends EnvioPessoal {
   config: FlowNodeConfig;
   /** O `setConfig` do painel: as mudanças vão sobre o rascunho mais novo. */
@@ -144,20 +173,7 @@ export function MessageBlockFields({
   const doResponsavel = guided && !conversation;
   return (
     <>
-      <div className="space-y-1">
-        <p className="text-xs text-muted-foreground">
-          Toque numa variável pra pôr o dado do lead no texto, onde o cursor estiver.
-        </p>
-        <MessageSequenceEditor
-          items={draftsOf(config)}
-          onChange={drafts => onChange(c => withItems(c, drafts))}
-          variables={NO_VARIABLES}
-          variableBar={variableBar}
-          uploadMedia={uploadMedia}
-          extraKinds={conversation ? NO_EXTRA : BOOK_EXTRA}
-          guided={guided}
-        />
-      </div>
+      <SequenciaDaMensagem config={config} onChange={onChange} conversation={conversation} guided={guided} />
       {conversation ? (
         <p className="text-xs text-muted-foreground">Sai pelo número da conversa em que você disparar o funil.</p>
       ) : (

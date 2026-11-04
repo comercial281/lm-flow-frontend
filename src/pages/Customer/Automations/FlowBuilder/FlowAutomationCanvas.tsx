@@ -10,11 +10,12 @@ import { ArrowLeft, Save, Play, Loader2, Settings2, LayoutGrid, Copy, Users, Wor
 import { Badge, Button, Input } from '@/components/ui/ds';
 import Chave from '@/components/base/Chave';
 import Faixa from '@/components/base/Faixa';
+import { JanelaNovaMensagem } from '@/components/flowAutomations/JanelaNovaMensagem';
 import ResolverPausasDialog from '@/components/flowAutomations/ResolverPausasDialog';
 import { textoDePausados } from '@/features/flowAutomations/pausas';
 import { toCondition, willConvert } from '@/features/flowAutomations/filterToCondition';
 import { flowAutomationsService } from '@/services/flowAutomations/flowAutomationsService';
-import type { FlowAutomation, FlowAutomationNode, TestRunResult } from '@/types/flowAutomations';
+import type { FlowAutomation, FlowAutomationNode, FlowNodeConfig, TestRunResult } from '@/types/flowAutomations';
 import {
   resolvedPositions, buildEdges, cutEdge, insertAt, link, removeNode, moveNode, newTempId, TRIGGER_NODE_ID,
   normalizeLoadedNodes, buildSaveFlowPayload, outputLabel, NODE_WIDTH, STEP_X, calculateLayout, outputSide, targetSide,
@@ -250,6 +251,11 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
   // religa as pontas e a etiqueta), então a lista de Blocos não oferece as que mandam ao lead.
   const travada = sequenciaTravada(automation);
   const lockedIds = useMemo(() => new Set(automation?.followup_messages?.locked_ids ?? []), [automation]);
+  // "+ Adicionar mensagem": no cartão da última espera, até o limite. Vale pro corretor (guiado) também.
+  const infoMensagens = automation?.followup_messages;
+  const podeAdicionarMensagem = travada && !readOnly && !!infoMensagens?.last_node_id && infoMensagens.count < infoMensagens.limit;
+  const [novaMensagem, setNovaMensagem] = useState(false);
+  const [salvandoMensagem, setSalvandoMensagem] = useState(false);
   const estadoDoBloco = useMemo(() => {
     const ctx = { temNumero: capacidades.temNumero, temIA: capacidades.temIA };
     const porCargo = modo === 'corretor'
@@ -431,7 +437,43 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
     }
   }, [id, automation, guided, loaded, isConversation, semGatilho, trigger, reentry, businessHoursOnly, numeroAtivo, numberSetting, nomeDaEtiquetaMudou, nomeDaEtiqueta, applyFlow, load]);
 
+  // Organizar (29/10/2026): redesenha o fluxo inteiro (caminho reto, desvio
+  // embaixo) e grava as posições na hora, como no arraste. Desfazer devolve
+  // cada bloco pro lugar de antes, inclusive o "sem posição" (nulo).
+  const applyPositions = useCallback((next: Record<string, { x: number | null; y: number | null }>) => {
+    setNodes(prev => prev.map(n => (n.id in next ? { ...n, pos_x: next[n.id].x, pos_y: next[n.id].y } : n)));
+    // Bloco novo (id temporário) ainda não existe no servidor: vai no próximo Salvar.
+    const payload = Object.entries(next)
+      .filter(([nid]) => !nid.startsWith('tmp_'))
+      .map(([nid, p]) => ({ id: nid, pos_x: p.x, pos_y: p.y }));
+    if (!id || payload.length === 0) return;
+    flowAutomationsService.movePositions(id, payload).catch(() => {
+      // silencioso, como no arraste: o próximo Salvar completo grava as posições
+    });
+    requestAnimationFrame(() => flowInstance.current?.fitView({ duration: 300 }));
+  }, [id]);
+
+  // A resposta do servidor (mensagem entrou ou saiu) vira o desenho, já reorganizado.
+  const aplicarRespostaDaMensagem = useCallback((resposta: FlowAutomation) => {
+    applyFlow(resposta);
+    applyPositions(calculateLayout(resposta.nodes, resposta.initial_node_id));
+  }, [applyFlow, applyPositions]);
+
   const handleRemove = useCallback(async (nodeId: string) => {
+    const alvo = nodes.find(n => n.id === nodeId);
+    if (travada && alvo && isMessageNode(alvo)) {
+      // Sequência travada: o servidor tira a mensagem, religa as pontas e acerta a etiqueta (gestor e corretor).
+      if (!id || !(await confirmar(PEDIDO_TIRAR_MENSAGEM))) return;
+      if (openPanel?.type === 'node' && openPanel.id === nodeId) replacePanel(null);
+      // Edição pendente vai primeiro: a resposta do servidor substitui o desenho inteiro.
+      if (hasChanges && !(await persist(nodes, initialNodeId))) return;
+      try {
+        aplicarRespostaDaMensagem(await flowAutomationsService.removeMessage(id, nodeId));
+      } catch (e) {
+        toast.error(serverMessage(e, 'Não deu pra tirar a mensagem. Tente de novo.'));
+      }
+      return;
+    }
     if (guided) {
       // Modo guiado: só mensagem sai, religando as pontas, e já grava.
       const target = nodes.find(n => n.id === nodeId);
@@ -449,7 +491,29 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
     setNodes(prev => removeNode(prev, nodeId));
     if (initialNodeId === nodeId) setInitialNodeId(null);
     if (openPanel?.type === 'node' && openPanel.id === nodeId) replacePanel(null);
-  }, [guided, nodes, initialNodeId, openPanel, replacePanel, confirmar, persist]);
+  }, [id, travada, hasChanges, aplicarRespostaDaMensagem, guided, nodes, initialNodeId, openPanel, replacePanel, confirmar, persist]);
+
+  const salvarNovaMensagem = useCallback(async (config: FlowNodeConfig) => {
+    if (!id) return;
+    setSalvandoMensagem(true);
+    try {
+      // Edição pendente primeiro; se não gravar, a janela fica aberta com o texto.
+      if (hasChanges && !(await persist(nodes, initialNodeId))) return;
+      aplicarRespostaDaMensagem(await flowAutomationsService.addMessage(id, config));
+      toast.success('Mensagem adicionada');
+      setNovaMensagem(false);
+    } catch (e) {
+      toast.error(serverMessage(e, 'Não deu pra adicionar a mensagem. Tente de novo.'));
+    } finally {
+      setSalvandoMensagem(false);
+    }
+  }, [id, hasChanges, persist, nodes, initialNodeId, aplicarRespostaDaMensagem]);
+
+  const abrirNovaMensagem = useCallback(() => {
+    setBlocksOpen(false);
+    setPendingSource(null);
+    setNovaMensagem(true);
+  }, []);
 
   const handleDuplicate = useCallback((nodeId: string) => {
     const original = nodes.find(n => n.id === nodeId);
@@ -628,7 +692,8 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
           : undefined;
       if (travada && !readOnly && !condicaoAutomatica && (mensagemTravada || naSequencia)) {
         const cur = allow ?? { edit: true, duplicate: true, remove: true, add: true, rename: true };
-        allow = { ...cur, duplicate: mensagemTravada ? false : cur.duplicate, remove: naSequencia ? false : cur.remove };
+        // Mensagem sempre pode Excluir (o servidor tira e religa); espera e condição travadas, não.
+        allow = { ...cur, duplicate: mensagemTravada ? false : cur.duplicate, remove: naSequencia && !mensagemTravada ? false : cur.remove };
       }
       return {
         id: n.id,
@@ -647,12 +712,13 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
           allow,
           condicaoAutomatica,
           ocultarProgresso: kind === 'followup',
+          onAdicionarMensagem: podeAdicionarMensagem && n.id === infoMensagens?.last_node_id ? abrirNovaMensagem : undefined,
           onEdit: openNode, onDuplicate: handleDuplicate, onRemove: handleRemove, onAddFrom: addFrom, onRename: handleRename,
         },
       };
     });
     return [startNode, ...rest];
-  }, [nodes, positions, startPosition, startData, lookups, problems, openPanel, highlighted, steps, step, readOnly, guided, builderTools, openNode, handleDuplicate, handleRemove, handleRename, addFrom, peloMeuNumero, donoDoEnvio, kind, travada, lockedIds]);
+  }, [nodes, positions, startPosition, startData, lookups, problems, openPanel, highlighted, steps, step, readOnly, guided, builderTools, openNode, handleDuplicate, handleRemove, handleRename, addFrom, peloMeuNumero, donoDoEnvio, kind, travada, lockedIds, podeAdicionarMensagem, infoMensagens?.last_node_id, abrirNovaMensagem]);
 
   // As linhas são derivadas de `nodes`: selecionar e cortar passam por aqui, senão
   // o React Flow descarta o clique e o Delete (era só apagando o bloco).
@@ -698,22 +764,6 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
       };
     });
   }, [graphEdges, nodes, positions, startPosition, builderTools, selectedEdgeId, handleCutEdge, arestaTravada]);
-
-  // Organizar (29/10/2026): redesenha o fluxo inteiro (caminho reto, desvio
-  // embaixo) e grava as posições na hora, como no arraste. Desfazer devolve
-  // cada bloco pro lugar de antes, inclusive o "sem posição" (nulo).
-  const applyPositions = useCallback((next: Record<string, { x: number | null; y: number | null }>) => {
-    setNodes(prev => prev.map(n => (n.id in next ? { ...n, pos_x: next[n.id].x, pos_y: next[n.id].y } : n)));
-    // Bloco novo (id temporário) ainda não existe no servidor: vai no próximo Salvar.
-    const payload = Object.entries(next)
-      .filter(([nid]) => !nid.startsWith('tmp_'))
-      .map(([nid, p]) => ({ id: nid, pos_x: p.x, pos_y: p.y }));
-    if (!id || payload.length === 0) return;
-    flowAutomationsService.movePositions(id, payload).catch(() => {
-      // silencioso, como no arraste: o próximo Salvar completo grava as posições
-    });
-    requestAnimationFrame(() => flowInstance.current?.fitView({ duration: 300 }));
-  }, [id]);
 
   const organize = useCallback(() => {
     const before = Object.fromEntries(nodes.map(n => [n.id, { x: n.pos_x, y: n.pos_y }]));
@@ -1008,6 +1058,7 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
                 pendingLabel={pendingSource ? pendingLabel : null}
                 onCancelPending={() => setPendingSource(null)}
                 estadoDoBloco={estadoDoBloco}
+                onAdicionarMensagem={podeAdicionarMensagem ? abrirNovaMensagem : undefined}
                 trigger={
                   <Button
                     size="sm"
@@ -1152,6 +1203,14 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
                 .then(f => setAutomation(a => (a ? { ...a, paused_other_number_count: f.paused_other_number_count ?? 0 } : a)))
                 .catch(() => undefined);
             }}
+          />
+        )}
+        {novaMensagem && (
+          <JanelaNovaMensagem
+            guided={guided}
+            salvando={salvandoMensagem || saving}
+            aoSalvar={config => void salvarNovaMensagem(config)}
+            aoFechar={() => setNovaMensagem(false)}
           />
         )}
         {dialogoDeConfirmacao}

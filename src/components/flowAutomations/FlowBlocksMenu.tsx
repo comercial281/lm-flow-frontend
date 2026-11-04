@@ -1,5 +1,5 @@
 import { useMemo, useState, type ReactNode } from 'react';
-import { Search } from 'lucide-react';
+import { MessageSquarePlus, Search } from 'lucide-react';
 import { Input, Popover, PopoverContent, PopoverTrigger } from '@/components/ui/ds';
 import EmptyState from '@/components/base/EmptyState';
 import { nodeColor } from '@/lib/flowAutomationGraph';
@@ -31,17 +31,30 @@ interface Props {
   pendingLabel?: string | null;
   /** O "cancelar" da linha da saída: volta a ligar no fim do caminho. */
   onCancelPending?: () => void;
+  /**
+   * Follow-up com condições de retomada: o item "Adicionar mensagem" no grupo Mensagem. Não arrasta
+   * e não passa pelo `onPick` (a mensagem entra pelo servidor). Ausente = o item não aparece.
+   */
+  onAdicionarMensagem?: () => void;
 }
 
-export function FlowBlocksMenu({ open, onOpenChange, onPick, estadoDoBloco, trigger, pendingLabel = null, onCancelPending }: Props) {
+const ITEM_ADICIONAR = 'Adicionar mensagem';
+
+export function FlowBlocksMenu({ open, onOpenChange, onPick, estadoDoBloco, trigger, pendingLabel = null, onCancelPending, onAdicionarMensagem }: Props) {
   const [query, setQuery] = useState('');
   const groups = useMemo(() => {
     const all = paletteGroups(query);
-    if (!estadoDoBloco) return all;
-    return all
-      .map(g => ({ ...g, items: g.items.filter(i => estadoDoBloco(i) !== 'fora') }))
-      .filter(g => g.items.length > 0);
-  }, [query, estadoDoBloco]);
+    const visiveis = !estadoDoBloco
+      ? all
+      : all
+        .map(g => ({ ...g, items: g.items.filter(i => estadoDoBloco(i) !== 'fora') }))
+        .filter(g => g.items.length > 0);
+    // O grupo Mensagem pode ter sumido (o follow-up trava as que mandam ao lead): volta, só com o item.
+    if (!onAdicionarMensagem || !ITEM_ADICIONAR.toLowerCase().includes(query.trim().toLowerCase())) return visiveis;
+    if (visiveis.some(g => g.group === 'message')) return visiveis;
+    const rotulo = paletteGroups().find(g => g.group === 'message')?.label ?? 'Mensagem';
+    return [{ group: 'message' as const, label: rotulo, items: [] }, ...visiveis];
+  }, [query, estadoDoBloco, onAdicionarMensagem]);
 
   return (
     <Popover
@@ -90,6 +103,24 @@ export function FlowBlocksMenu({ open, onOpenChange, onPick, estadoDoBloco, trig
               {label}
             </h3>
             <div className="space-y-1">
+              {group === 'message' && onAdicionarMensagem && ITEM_ADICIONAR.toLowerCase().includes(query.trim().toLowerCase()) && (
+                <button
+                  type="button"
+                  draggable={false}
+                  onClick={onAdicionarMensagem}
+                  title="Põe uma mensagem nova no fim do follow-up. O servidor religa o fluxo e a etiqueta."
+                  className="flex w-full items-center gap-2 text-left text-xs rounded-md border border-border px-2 py-1.5 hover:border-primary hover:bg-accent transition-colors"
+                >
+                  <span
+                    className="flex h-6 w-6 shrink-0 items-center justify-center rounded text-white"
+                    style={{ backgroundColor: nodeColor('send_whatsapp', 'message') }}
+                    aria-hidden="true"
+                  >
+                    <MessageSquarePlus className="h-3.5 w-3.5" />
+                  </span>
+                  <span className="truncate">{ITEM_ADICIONAR}</span>
+                </button>
+              )}
               {items.map(item => {
                 const Icon = blockIcon(item);
                 const color = nodeColor(item.kind, item.group);

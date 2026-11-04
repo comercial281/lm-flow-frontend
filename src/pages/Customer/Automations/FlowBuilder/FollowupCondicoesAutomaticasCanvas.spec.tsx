@@ -197,12 +197,12 @@ describe('travas da sequência (follow-up com condições de retomada)', () => {
     expect(screen.getByText('Disparar funil de mensagens')).toBeTruthy();
   });
 
-  it('mensagem sem Duplicar e sem Excluir (locked); espera fora de locked_ids pode Excluir', async () => {
+  it('mensagem sem Duplicar mas com Excluir (o servidor tira); espera fora de locked_ids pode Excluir', async () => {
     get.mockResolvedValue(travado());
     renderCanvas();
     await screen.findByText('Primeira mensagem');
     expect(screen.queryByLabelText('Duplicar Primeira mensagem')).toBeNull();
-    expect(screen.queryByLabelText('Excluir Primeira mensagem')).toBeNull();
+    expect(screen.queryByLabelText('Excluir Primeira mensagem')).toBeTruthy();
     expect(screen.queryByLabelText('Excluir Esperar 1 dia')).toBeTruthy();
   });
 
