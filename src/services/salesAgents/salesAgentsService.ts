@@ -248,7 +248,7 @@ export interface SalesAgent {
   followup_drip_min_minutes: number;
   followup_drip_max_minutes: number;
   /** Recorte por funil do follow-up, por cima do público fixo do servidor (só
-   *  lead que ela atendeu e que não foi para a roleta). Lista VAZIA = todos os
+   *  lead que ela atendeu e ainda não passou pra um corretor). Lista VAZIA = todos os
    *  leads desse público — não é "nenhum funil, não sai nada". */
   followup_pipeline_ids: string[];
   /** Reengajamento: antes do follow-up, a IA retoma a pergunta que ficou no ar
