@@ -143,6 +143,8 @@ export interface Contrato {
   dia_vencimento: number;
   aluguel_inicial: number;
   historico_aluguel: ItemDoAluguel[];
+  /** O servidor manda pronto (na lista, no lugar do histórico). */
+  aluguel_atual?: number;
   indice: IndiceDeReajuste;
   politica_negativo: PoliticaNegativo;
   cobranca: ModoDeCobranca;

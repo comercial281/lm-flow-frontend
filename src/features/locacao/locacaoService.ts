@@ -117,7 +117,9 @@ export function diasAte(iso: string, hoje = new Date()): number {
   return Math.round((Date.UTC(a, m - 1, d) - h) / 86_400_000);
 }
 
-const aluguelHoje = (c: Contrato) => {
+/** Aluguel em vigor. A lista de contratos do servidor é um resumo: traz `aluguel_atual` pronto e não traz o histórico. */
+export const aluguelHoje = (c: Contrato) => {
+  if (typeof c.aluguel_atual === 'number') return c.aluguel_atual;
   const h = c.historico_aluguel ?? [];
   return h.length ? h[h.length - 1].valor : c.aluguel_inicial;
 };

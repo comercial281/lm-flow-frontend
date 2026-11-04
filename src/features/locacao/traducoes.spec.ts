@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('@/services/core/api', () => ({ default: {} }));
 
-import { dePainel, deReajuste, deRepasses, deSegundaVia, diasAte, reajusteSemIndice } from './locacaoService';
+import { aluguelHoje, dePainel, deReajuste, deRepasses, deSegundaVia, diasAte, reajusteSemIndice } from './locacaoService';
 import type { Contrato, Repasse } from './tipos';
 
 const contrato = (over: Partial<Contrato> = {}) =>
@@ -90,5 +90,14 @@ describe('deSegundaVia', () => {
     expect(deSegundaVia(b)).toMatchObject({ total_hoje: 2421.89, dias_atraso: 0, endereco: 'Apto 12' });
     expect(deSegundaVia({ ...(b as object), imovel_endereco: 'Rua A, 10', encargos: { dias: 4, multa: 48.44, juros: 3.23, total: 2473.56 } } as never))
       .toMatchObject({ total_hoje: 2473.56, multa_hoje: 48.44, dias_atraso: 4, endereco: 'Rua A, 10' });
+  });
+});
+
+describe('aluguelHoje', () => {
+  it('a lista do servidor não traz histórico: usa o aluguel_atual que vem pronto', () => {
+    const resumo = { aluguel_inicial: 3100, aluguel_atual: 3162 } as unknown as Contrato; // sem historico_aluguel
+    expect(aluguelHoje(resumo)).toBe(3162);
+    expect(aluguelHoje(contrato({ historico_aluguel: [{ desde: '2026-12-10', valor: 2040 }] } as Partial<Contrato>))).toBe(2040);
+    expect(aluguelHoje({ aluguel_inicial: 2000 } as unknown as Contrato)).toBe(2000);
   });
 });
