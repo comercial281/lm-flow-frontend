@@ -168,6 +168,8 @@ export interface FlowAutomation {
   followup_padrao?: boolean;
   /** Fase 2 (follow-up): leads dentro agora, pausados incluídos. Só follow-up traz. */
   live_count?: number;
+  /** Follow-up aberto: o nome da etiqueta de progresso (Configurações). */
+  progress_tag_name?: string | null;
   /** Fase 3 (follow-up): é o "Meu padrão" de quem pediu (já checado: ligado e dele ou da equipe). */
   my_default?: boolean;
   /** Fase 3 (follow-up): é o padrão EFETIVO da conta (o que a coluna usa sem escolha). */
@@ -204,6 +206,8 @@ export interface FlowAutomationFolder {
 }
 
 export interface SaveFlowPayload {
+  /** Follow-up: nome novo da etiqueta, replicado pelo servidor nas mensagens e condições. */
+  progress_tag_name?: string;
   nodes: Array<Omit<FlowAutomationNode, 'id'> & { id?: string }>;
   initial_node_id: string | null;
 }

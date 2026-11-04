@@ -9,7 +9,24 @@
 // Config: `progress_tag_prefix` (texto) + `progress_step` (número N). Sem
 // `progress_tag_prefix` = não marca.
 
-import type { FlowNodeConfig } from '@/types/flowAutomations';
+import type { FlowAutomationKind, FlowAutomationNode, FlowNodeConfig } from '@/types/flowAutomations';
+
+/**
+ * As condições de retomada do follow-up ("Já recebeu todas", "Continuar da mensagem
+ * N") leem a etiqueta de progresso. Trocar por outra faz o lead com ela encerrar sem
+ * receber nada (Maradona, 04/11/2026), então elas não abrem pra edição. Condição com
+ * outra etiqueta segue editável, inclusive a que precisa voltar pra certa.
+ */
+export const CONDICAO_AUTOMATICA_AVISO = 'Automática: faz o lead que volta pro follow-up continuar de onde parou. Não precisa mexer.';
+
+export function ehCondicaoAutomatica(
+  node: Pick<FlowAutomationNode, 'kind' | 'config'>,
+  flowKind: FlowAutomationKind | undefined,
+): boolean {
+  if (flowKind !== 'followup' || node.kind !== 'condition') return false;
+  const config = node.config ?? {};
+  return config.criterion === 'has_label' && /-msg-\d+$/.test(String(config.label ?? ''));
+}
 
 export interface ProgressMark {
   on: boolean;

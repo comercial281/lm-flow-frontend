@@ -128,12 +128,14 @@ interface Props extends EnvioPessoal {
   numeroDoFluxo?: string | null;
   /** Fluxo antigo cujas Mensagens saem por números diferentes: aponta pras Configurações. */
   numerosDiferentes?: boolean;
+  /** Follow-up: o nome da etiqueta de progresso é do sistema, sem "Marcar progresso". */
+  semMarcarProgresso?: boolean;
 }
 
 export function MessageBlockFields({
   config, onChange, conversation = false, guided = false, pessoal = false, numeroPessoal = null,
   numeroPessoalCarregando = false, donoDoEnvio = null, numeroDoFluxo = null,
-  numerosDiferentes = false,
+  numerosDiferentes = false, semMarcarProgresso = false,
 }: Props) {
   const peloDono = pessoal || donoDoEnvio != null;
   // Follow-up guiado (Fase 3; automação nunca vem guiada e o funil é o ramo de
@@ -181,7 +183,7 @@ export function MessageBlockFields({
               />
             </>
           )}
-          {!doResponsavel && <ProgressFields config={config} onChange={onChange} />}
+          {!doResponsavel && !semMarcarProgresso && <ProgressFields config={config} onChange={onChange} />}
           {!guided && (
             <PularSeIaConversandoField config={config} onChange={next => onChange(c => ({ ...c, skip_if_ai_talking: next.skip_if_ai_talking }))} />
           )}

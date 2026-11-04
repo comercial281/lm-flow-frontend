@@ -13,7 +13,7 @@ import type { LeadAutomationAction } from '@/services/leadAutomation/leadAutomat
 import { conditionSentence, type ConditionLookups } from '@/features/flowAutomations/conditions';
 import { WAIT_FOR_REPLY_HELP, describeWait, describeWaitForReply } from '@/features/flowAutomations/waitTime';
 import { sendFromOf } from '@/features/numbers/sendFrom';
-import { progressLine } from '@/features/flowAutomations/progress';
+import { CONDICAO_AUTOMATICA_AVISO, progressLine } from '@/features/flowAutomations/progress';
 import { blockDescription } from '@/features/flowAutomations/blockInfo';
 import { RECOVERED_SUMMARY } from '@/features/flowAutomations/recovered';
 import { BOOK_SOURCE, BOOK_SUMMARY } from '@/features/flowAutomations/book';
@@ -54,6 +54,10 @@ export interface FlowNodeCardData {
    * Ausente = tudo.
    */
   allow?: { edit: boolean; duplicate: boolean; remove: boolean; add: boolean; rename: boolean };
+  /** Condição de retomada do follow-up: o cartão explica o que ela faz, sem a etiqueta. */
+  condicaoAutomatica?: boolean;
+  /** Mensagem do follow-up: o nome da etiqueta de progresso é do sistema, não aparece. */
+  ocultarProgresso?: boolean;
   onEdit: (id: string) => void;
   onDuplicate: (id: string) => void;
   onRemove: (id: string) => void;
@@ -242,7 +246,7 @@ export function FlowStartNode({ data }: NodeProps) {
 }
 
 export function FlowNodeCard({ id, data, selected }: NodeProps) {
-  const { node, lookups, pessoal, donoDoEnvio, problem, editing, highlighted, guideMark, allow, onEdit, onDuplicate, onRemove, onAddFrom, onRename } = data as unknown as FlowNodeCardData;
+  const { node, lookups, pessoal, donoDoEnvio, problem, editing, highlighted, guideMark, allow, condicaoAutomatica, ocultarProgresso, onEdit, onDuplicate, onRemove, onAddFrom, onRename } = data as unknown as FlowNodeCardData;
   const can = allow ?? { edit: true, duplicate: true, remove: true, add: true, rename: true };
   const hidden = !isVisibleNode(node);
   const color = hidden ? '#94a3b8' : nodeColor(node.kind, blockGroup(node));
@@ -260,7 +264,7 @@ export function FlowNodeCard({ id, data, selected }: NodeProps) {
     if (next !== (node.label ?? '')) onRename(id, next || null);
   };
   const envio = node.kind === 'send_whatsapp' ? sendFromLine(node.config || {}, !!pessoal, donoDoEnvio ?? null) : null;
-  const progresso = node.kind === 'send_whatsapp' ? progressLine(node.config) : null;
+  const progresso = node.kind === 'send_whatsapp' && !ocultarProgresso ? progressLine(node.config) : null;
 
   return (
     <div
@@ -349,7 +353,7 @@ export function FlowNodeCard({ id, data, selected }: NodeProps) {
           linha seguinte aparecer cortada por cima de "Pelo número…". */}
       <div className="px-3 py-2 text-xs text-muted-foreground min-h-[2.5rem]">
         <p className={node.kind === 'condition' || node.kind === 'filter_label' ? 'line-clamp-4' : 'line-clamp-2'}>
-          {summaryLine(node, lookups)}
+          {condicaoAutomatica ? CONDICAO_AUTOMATICA_AVISO : summaryLine(node, lookups)}
         </p>
       </div>
       {envio && <div className="px-3 pb-2 text-[11px] text-muted-foreground/80">{envio}</div>}

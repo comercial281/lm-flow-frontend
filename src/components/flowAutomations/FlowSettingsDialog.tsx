@@ -20,6 +20,8 @@ import {
 import {
   SEND_FROM_LOAD_FAILED, missingSelection, missingSelectionLabel, numberOptionLabel, type SendFromMode, type SendNumberOption, type SendNumbersState,
 } from '@/features/numbers/sendFrom';
+import { cleanProgressPrefix } from '@/features/flowAutomations/progress';
+import { plural } from '@/lib/formato';
 import type { NumberConflictMode } from '@/types/flowAutomations';
 
 // Configurações do fluxo: "Pode rodar de novo pro mesmo lead" (sprint 2,
@@ -41,6 +43,10 @@ export interface FlowSettings {
    * mexeu continua salvando igual a hoje.
    */
   number?: FlowNumberSetting;
+  /** Só no follow-up: o nome da etiqueta de progresso e quantos leads estão dentro. */
+  progressTag?: { name: string; leadsInside: number };
+  /** No `onSave`: só vem quando a pessoa mudou o nome. */
+  progressTagName?: string;
 }
 
 interface Props {
@@ -68,6 +74,7 @@ export function FlowSettingsDialog({
   const [number, setNumber] = useState<FlowNumberSetting | undefined>(settings.number);
   // Mexeu no grupo do número nesta abertura (escolher o mesmo do divergente conta).
   const [numberTouched, setNumberTouched] = useState(false);
+  const [tagName, setTagName] = useState(settings.progressTag?.name ?? '');
 
   React.useEffect(() => {
     if (open) {
@@ -75,6 +82,7 @@ export function FlowSettingsDialog({
       setBusinessHoursOnly(settings.businessHoursOnly);
       setNumber(settings.number);
       setNumberTouched(false);
+      setTagName(settings.progressTag?.name ?? '');
     }
   }, [open]); // eslint-disable-line react-hooks/exhaustive-deps -- reabre a partir do que está no canvas
 
@@ -90,10 +98,14 @@ export function FlowSettingsDialog({
   const lostNumber = !!number && missingSelection(
     { send_from: number.mode, send_from_inbox_id: number.inboxId }, numbers,
   );
+  const progressTag = settings.progressTag;
+  const cleanTag = cleanProgressPrefix(tagName.trim());
+  const tagMissing = !!progressTag && !cleanTag;
   const save = () => onSave({
     reentry: draft,
     businessHoursOnly,
     ...(number && numberTouched ? { number } : {}),
+    ...(progressTag && cleanTag !== progressTag.name ? { progressTagName: cleanTag } : {}),
   });
 
   return (
@@ -109,6 +121,30 @@ export function FlowSettingsDialog({
         </DialogHeader>
 
         <div className="grid gap-5 py-2">
+          {progressTag && (
+            <GrupoDaJanela titulo="Etiqueta do follow-up">
+              <CampoDaJanela rotulo="Nome da etiqueta" htmlFor="flow-etiqueta">
+                <Input
+                  id="flow-etiqueta"
+                  className="w-full"
+                  value={tagName}
+                  disabled={progressTag.leadsInside > 0}
+                  onChange={e => setTagName(e.target.value)}
+                />
+              </CampoDaJanela>
+              {progressTag.leadsInside > 0 ? (
+                <Aviso tom="atencao" compacto>
+                  {`Com ${plural(progressTag.leadsInside, 'lead', 'leads')} dentro, o nome não muda: eles perderiam o ponto de onde continuar.`}
+                </Aviso>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  {cleanTag
+                    ? `Vale pra todas as mensagens e condições deste follow-up. Cada mensagem marca o lead com ${cleanTag}-msg-1, ${cleanTag}-msg-2 e assim por diante.`
+                    : 'Escreva um nome com letras ou números.'}
+                </p>
+              )}
+            </GrupoDaJanela>
+          )}
           {number && (
             <>
             <GrupoDaJanela titulo={FLOW_NUMBER_GROUP}>
@@ -194,7 +230,7 @@ export function FlowSettingsDialog({
 
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancelar</Button>
-          <Button onClick={save} disabled={missingNumber}>Salvar</Button>
+          <Button onClick={save} disabled={missingNumber || tagMissing}>Salvar</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
