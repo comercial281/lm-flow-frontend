@@ -3,23 +3,21 @@
 // WhatsApp (as linhas `campaign_links`). A lista vem do servidor (`GET /campaigns`); campanha nova aparece sozinha.
 // Quem vê: a chave da lista (`campaign_links.read` ou a antiga `lead_ads_form_configs.read`). Quem edita cada parte
 // é a chave da própria linha. Corretor não tem o item no menu e, se chegar pelo endereço, cai no NoAccessState.
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/ds';
 import { Pagina, BaseHeader } from '@/components/base';
 import EmptyState from '@/components/base/EmptyState';
 import Carregando from '@/components/base/Carregando';
-import Aviso from '@/components/base/Aviso';
 import NoAccessState from '@/components/permissions/NoAccessState';
 import LeadAdsForms from '../LeadAdsForms';
-import LinhaDaCampanha from './LinhaDaCampanha';
+import TabelaDeAnuncios from './TabelaDeAnuncios';
 import JanelaDaCampanha from './JanelaDaCampanha';
 import { useCan } from '@/hooks/useCan';
 import { propertiesService } from '@/services/properties/propertiesService';
 import { campanhasService, type ItemDeCampanha, type OpcaoDeIa } from '@/services/campanhas/campanhasService';
-import { semOfertaComLeadRecente } from '@/features/campanhas/itensDeCampanha';
 
-const SUBTITULO = 'Tudo o que trouxe lead pro LM Flow nos últimos 90 dias. Diga o que cada uma vende: a IA usa isso na conversa. Campanha nova aparece aqui sozinha.';
+const SUBTITULO = 'Tudo o que trouxe lead pro LM Flow nos últimos 90 dias.';
 
 export default function Campanhas() {
   const can = useCan();
@@ -33,11 +31,17 @@ export default function Campanhas() {
   const [nomes, setNomes] = useState<Record<string, string>>({});
   const [aberto, setAberto] = useState<ItemDeCampanha | null>(null);
 
+  // Só a leitura mais nova vale: uma resposta lenta de antes (ex.: a da abertura) não sobrescreve a de depois de um Criar ou Salvar.
+  const leitura = useRef(0);
   const carregar = useCallback(async () => {
+    const minha = ++leitura.current;
     try {
-      setItens(await campanhasService.lista());
+      const lista = await campanhasService.lista();
+      if (minha !== leitura.current) return;
+      setItens(lista);
       setErro(false);
     } catch {
+      if (minha !== leitura.current) return;
       setErro(true);
       setItens((atual) => atual ?? []);
     }
@@ -75,11 +79,6 @@ export default function Campanhas() {
   }, [temImoveis]);
 
   const anuncios = useMemo(() => (itens ?? []).filter((i) => i.kind !== 'form'), [itens]);
-  // Formulário só sem ficha (descoberto pelos leads) não entra na conta: ele aparece em "Disponíveis no Facebook".
-  const semOfertaRecente = useMemo(
-    () => semOfertaComLeadRecente((itens ?? []).filter((i) => i.kind !== 'form' || i.form_config_id)),
-    [itens],
-  );
 
   if (!podeVer) {
     return (
@@ -89,31 +88,18 @@ export default function Campanhas() {
     );
   }
 
-  const aviso = semOfertaRecente.length > 0 && (
-    <Aviso tom="atencao" className="mb-6">
-      <p>
-        <b>{semOfertaRecente.length === 1 ? '1 campanha trouxe lead esta semana e não diz o que vende.' : `${semOfertaRecente.length} campanhas trouxeram lead esta semana e não dizem o que vendem.`}</b>{' '}
-        Enquanto isso, a IA segue pelo imóvel principal dela e pergunta o que a pessoa procura.
-      </p>
-    </Aviso>
-  );
-
   const parteDosAnuncios = (
-    <div className="mt-8" data-testid="anuncios-de-whatsapp">
-      <h2 className="mb-1 text-sm font-medium uppercase tracking-wide text-muted-foreground">Anúncios de WhatsApp</h2>
-      <p className="mb-3 text-xs text-muted-foreground">Quem clicou no anúncio e caiu direto no WhatsApp. Diga o que cada um vende.</p>
+    <section className="mt-8" data-testid="anuncios-de-whatsapp" aria-labelledby="anuncios-de-whatsapp-titulo">
+      <h2 id="anuncios-de-whatsapp-titulo" className="mb-1 text-sm font-medium uppercase tracking-wide text-muted-foreground">Anúncios de WhatsApp</h2>
+      <p className="mb-3 text-xs text-muted-foreground">Quem clicou no anúncio e caiu direto no WhatsApp. Dizer o que cada um oferece é opcional: a IA usa isso na conversa.</p>
       {itens === null ? (
         <Carregando linhas={2} rotulo="Carregando os anúncios…" />
       ) : erro && anuncios.length === 0 ? (
         <EmptyState tipo="erro" aoTentarDeNovo={() => void carregar()} />
       ) : anuncios.length === 0 ? (
-        <EmptyState title="Nenhum anúncio de WhatsApp ainda" description="Quando alguém clicar num anúncio e chamar no WhatsApp, ele aparece aqui sozinho." />
+        <EmptyState tamanho="compacto" title="Nenhum anúncio de WhatsApp ainda" description="Quando alguém clicar num anúncio e chamar no WhatsApp, ele aparece aqui sozinho." />
       ) : (
-        <div className="space-y-3">
-          {anuncios.map((it) => (
-            <LinhaDaCampanha key={it.key} item={it} nomes={nomes} podeEditar={podeEditarAnuncio} aoEditar={setAberto} />
-          ))}
-        </div>
+        <TabelaDeAnuncios itens={anuncios} nomes={nomes} podeEditar={podeEditarAnuncio} aoAbrir={setAberto} />
       )}
       {aberto && (
         <JanelaDaCampanha
@@ -127,14 +113,13 @@ export default function Campanhas() {
           aoMudarIa={(it, donos) => setItens((l) => (l ?? []).map((x) => (x.key === it.key ? { ...x, agents: donos } : x)))}
         />
       )}
-    </div>
+    </section>
   );
 
   return (
     <LeadAdsForms
       titulo="Campanhas"
       subtitulo={SUBTITULO}
-      topo={aviso}
       depois={parteDosAnuncios}
       cabecalhoExtra={podeConectar ? (
         <Button asChild variant="outline" size="sm"><Link to="/settings/facebook">Conectar o Meta</Link></Button>

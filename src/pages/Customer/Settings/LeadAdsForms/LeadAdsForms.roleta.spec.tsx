@@ -143,6 +143,7 @@ describe('Formulários do Meta · formulário pego por regra "nome contém"', ()
   it('mostra em qual roleta cai e por qual regra', async () => {
     comFormularioNovo();
     render(<MemoryRouter><LeadAdsForms /></MemoryRouter>);
+    fireEvent.click(await screen.findByRole('button', { name: /formulário.* no Facebook, ainda sem ficha/ }));
     expect(await screen.findByText('Cai na Roleta Zona Sul pela regra "alma"')).toBeInTheDocument();
   });
 
@@ -150,13 +151,14 @@ describe('Formulários do Meta · formulário pego por regra "nome contém"', ()
     comFormularioNovo();
     svc.getAll.mockResolvedValue([cadastro({ roleta_config_id: 'r1', default_assignee_id: 'u1' })]);
     render(<MemoryRouter><LeadAdsForms /></MemoryRouter>);
+    fireEvent.click(await screen.findByRole('button', { name: /formulário.* no Facebook, ainda sem ficha/ }));
     expect(await screen.findByText('Vai pra Ana Corretora pela regra "alma"')).toBeInTheDocument();
     expect(screen.queryByText(/Cai na Roleta/)).toBeNull();
   });
   it('a janela do destino tem os grupos do miolo', async () => {
     svc.getAll.mockResolvedValue([cadastro()]);
     const dialogo = await abrirEdicao();
-    for (const nome of ['Para onde vai', 'Como identificar', 'Quem assume', 'Complemento', 'Estado']) {
+    for (const nome of ['Para onde vai', 'Quem assume', 'Complemento', 'Estado']) {
       expect(within(dialogo).getByRole('group', { name: nome })).toBeInTheDocument();
     }
   });

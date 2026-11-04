@@ -19,7 +19,8 @@ export interface OpcaoNaTela {
 }
 
 export function opcoesDaTela(opcoes: readonly OpcaoDeIa[], donos: readonly IaDaCampanha[]): OpcaoNaTela[] {
-  const jaTem = new Set(donos.map((d) => chaveDaIa(d.sales_agent_id, d.sales_agent_number_id)));
+  // "Depende" não atende de fato: a IA segue na lista pra quem quiser escolhê-la ali.
+  const jaTem = new Set(donos.filter((d) => d.kind !== 'depends').map((d) => chaveDaIa(d.sales_agent_id, d.sales_agent_number_id)));
   return opcoes.map((opcao) => {
     const chave = chaveDaIa(opcao.sales_agent_id, opcao.number_id);
     let rotulo = opcao.label;
@@ -43,9 +44,18 @@ export function fraseDeMover(conflitos: readonly QuemSai[], opcoes: readonly Opc
   return `Esta campanha sai ${conhecidos.map((n) => `da IA ${n}`).join(' e ')}.`;
 }
 
+export const maiuscula = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
+
 /** Quem atende, como a coluna mostra. */
 export function donoEmTexto(d: IaDaCampanha): string {
+  if (d.reason) return `${d.name} · ${maiuscula(d.reason)}`;
   if (d.whole_number) return `${d.name} · atende todo lead do número`;
   if (d.note) return `${d.name} · ${d.note}`;
   return d.number_label ? `${d.name} · ${d.number_label}` : d.name;
+}
+
+/** O botão Tirar só existe quando tirar da lista de fato tira a IA. Servidor antigo (sem `kind`): a regra de antes. */
+export function podeTirar(d: IaDaCampanha): boolean {
+  if (d.kind === undefined) return !d.whole_number && !d.note;
+  return d.kind === 'campaign' && d.removable !== false;
 }

@@ -3,7 +3,6 @@ import { apiErrorMessage } from '@/utils/apiHelpers';
 import { toast } from 'sonner';
 import { plural } from '@/lib/formato';
 import {
-  Card,
   Button,
   Dialog,
   DialogContent,
@@ -12,20 +11,15 @@ import {
   DialogHeader,
   DialogTitle,
   Label as UILabel,
-  Badge,
-  Input,
-  Checkbox,
 } from '@/components/ui/ds';
 import {
-  RefreshCw, Edit, ToggleLeft, ToggleRight, ArrowRight, Download,
-  Stethoscope, Check, X, Copy, Eye, EyeOff, Trash2, Loader2, Ban,
+  RefreshCw, Download, Stethoscope, Check, X, Copy, Eye, EyeOff, Trash2, Loader2,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Pagina, BaseHeader } from '@/components/base';
 import EmptyState from '@/components/base/EmptyState';
 import Carregando from '@/components/base/Carregando';
 import Aviso from '@/components/base/Aviso';
-import { CampoDaJanela, GradeDaJanela, GrupoDaJanela } from '@/components/base/janela';
 import IconActionButton from '@/components/base/IconActionButton';
 import {
   leadAdsFormsService,
@@ -34,30 +28,27 @@ import {
   MetaForm,
   MetaFormsPageError,
   IgnoredLeadForm,
-  BackfillResult,
   MetaTokenDebug,
 } from '@/services/leadAds/leadAdsFormsService';
 import { metaPagesService, type MetaPage } from '@/services/integrations/metaPagesService';
 import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
 import { useAutomationResources } from '@/features/flowAutomations/editores/LeadAutomationsEditors';
 import { roletaConfigService, roletaLabel, type RoletaConfig } from '@/services/roletaConfig/roletaConfigService';
-import CampoQuemAssume, { type QuemAssume } from '@/components/roleta/CampoQuemAssume';
+import { type QuemAssume } from '@/components/roleta/CampoQuemAssume';
 import { regraQuePega } from './regraPorPalavra';
 import JanelaDaCampanha from '../Campanhas/JanelaDaCampanha';
-import { ResumoDaCampanha, contagemDeLeads } from '../Campanhas/LinhaDaCampanha';
+import EntradaDoLead, { ComplementoDaEntrada } from '../Campanhas/EntradaDoLead';
+import PraResolver from '../Campanhas/PraResolver';
+import TabelaDeFormularios, { OutrosFormularios } from '../Campanhas/TabelaDeFormularios';
+import ImportarLeadsRecentes from '../Campanhas/ImportarLeadsRecentes';
 import { itemDaFicha, itemEmBranco } from '@/features/campanhas/itensDeCampanha';
 import type { ItemDeCampanha, OpcaoDeIa } from '@/services/campanhas/campanhasService';
 import { useCan } from '@/hooks/useCan';
-import LabelMultiSelect from '@/components/labels/LabelMultiSelect';
 
 import { useConfirmacao } from '@/hooks/useConfirmacao';
 import { connectedPagesFrom } from './connectedPages';
-import { Seletor } from '@/components/base/Seletor';
 // Etiqueta de marketing padrão de todo lead de formulário (igual ao backend).
 const PAID_TAG = 'tráfego pago';
-
-// Campo dentro da janela: o espaço entre rótulo e campo é do CampoDaJanela.
-const campoDaJanelaClass = 'w-full rounded-md border border-input bg-background px-3 py-2 text-sm';
 
 interface FormState {
   form_id: string;
@@ -70,21 +61,8 @@ interface FormState {
   label_ids: string[];
   // Quem assume: corretor fixo OU roleta (no máximo um dos dois).
   quem: QuemAssume;
-  match_keyword: string;
   is_active: boolean;
 }
-
-// Palavra-chave padrão pro casamento: o nome do formulário sem a data (começo/fim).
-// O usuário pode encurtar pro nome do imóvel (ex.: "capri") pra pegar todas as
-// variações de campanha ("CAPRI 2.0 INT COND", "CAPRI INT COND"...).
-const defaultKeyword = (formName = ''): string =>
-  formName
-    .replace(/[[(][^\])]*\d[^\])]*[)\]]/g, ' ')          // [08/07], (jun/25)
-    .replace(/^\s*\d{1,4}([/.-]\d{1,4}){1,2}\b\s*/, ' ') // data no começo
-    .replace(/[\s–—/.-]+\d{1,4}([\s–—/.-]+\d{1,4})+\s*$/, ' ') // data no fim
-    .replace(/[[\]()]/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
 
 const emptyFormState = (form_id = '', form_name = '', meta_page_id = ''): FormState => ({
   form_id,
@@ -94,7 +72,6 @@ const emptyFormState = (form_id = '', form_name = '', meta_page_id = ''): FormSt
   pipeline_stage_id: '',
   label_ids: [],
   quem: { default_assignee_id: null, roleta_config_id: null },
-  match_keyword: defaultKeyword(form_name),
   is_active: true,
 });
 
@@ -113,8 +90,6 @@ const quemDe = (cfg: { default_assignee_id?: string | null; roleta_config_id?: s
 export interface LeadAdsFormsProps {
   titulo?: string;
   subtitulo?: string;
-  /** Acima da lista (o aviso de "campanha que não diz o que vende"). */
-  topo?: ReactNode;
   /** Depois dos formulários (os anúncios de WhatsApp). */
   depois?: ReactNode;
   /** Botões a mais no cabeçalho. */
@@ -131,7 +106,7 @@ export interface LeadAdsFormsProps {
   };
 }
 
-export default function LeadAdsForms({ titulo = 'Formulários', subtitulo = 'Pra onde cada formulário dos anúncios do Facebook manda os leads.', topo, depois, cabecalhoExtra, campanhas }: LeadAdsFormsProps = {}) {
+export default function LeadAdsForms({ titulo = 'Formulários', subtitulo = 'Pra onde cada formulário dos anúncios do Facebook manda os leads.', depois, cabecalhoExtra, campanhas }: LeadAdsFormsProps = {}) {
   const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
   const can = useCan();
   const resources = useAutomationResources(true);
@@ -159,6 +134,7 @@ export default function LeadAdsForms({ titulo = 'Formulários', subtitulo = 'Pra
   const [metaPages, setMetaPages] = useState<MetaPage[]>([]);
   const [pageBusy, setPageBusy] = useState<string | null>(null);
   const isSuperAdmin = useIsSuperAdmin();
+  const podeCriarFicha = can('lead_ads_form_configs', 'create');
   const [cleanupBusy, setCleanupBusy] = useState(false);
 
   // Diagnóstico do token da Meta (super-admin): app, permissões, página e o token salvo.
@@ -233,29 +209,12 @@ export default function LeadAdsForms({ titulo = 'Formulários', subtitulo = 'Pra
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<LeadAdsFormConfig | null>(null);
+  // Abriu pelo Plugar de uma ficha que estava desligada: a janela já vem com Ativo marcado e avisa que Salvar liga.
+  const [plugandoDesligada, setPlugandoDesligada] = useState(false);
   const [form, setForm] = useState<FormState>(emptyFormState());
 
-  // Importar leads recentes que não entraram (backfill)
+  // Importar leads recentes que não entraram (backfill): a janela mora em ImportarLeadsRecentes.
   const [backfillOpen, setBackfillOpen] = useState(false);
-  const [backfillDays, setBackfillDays] = useState(3);
-  const [backfillBusy, setBackfillBusy] = useState(false);
-  const [backfillPreview, setBackfillPreview] = useState<BackfillResult | null>(null);
-
-  const runBackfill = async (dryRun: boolean) => {
-    setBackfillBusy(true);
-    try {
-      const r = await leadAdsFormsService.backfill(backfillDays, dryRun);
-      setBackfillPreview(r);
-      if (!dryRun) {
-        toast.success(plural(r.importados, 'lead importado', 'leads importados'));
-        load();
-      }
-    } catch {
-      toast.error('Erro ao importar leads');
-    } finally {
-      setBackfillBusy(false);
-    }
-  };
 
   // Roletas pra escolher no roteamento de entrada. TODAS as roletas
   // (não só as ligadas): a escolhida que foi desligada continua na lista, com
@@ -408,6 +367,7 @@ export default function LeadAdsForms({ titulo = 'Formulários', subtitulo = 'Pra
 
   const openCreate = (mf: MetaForm) => {
     setEditing(null);
+    setPlugandoDesligada(false);
     // Todo form já entra com "tráfego pago" por padrão (o backend garante isso na
     // entrada do lead de qualquer forma); a etiqueta do imóvel é adicionada à mão.
     const paid = resources.labels.find(l => l.title?.toLowerCase() === PAID_TAG);
@@ -420,6 +380,7 @@ export default function LeadAdsForms({ titulo = 'Formulários', subtitulo = 'Pra
 
   const openEdit = (cfg: LeadAdsFormConfig) => {
     setEditing(cfg);
+    setPlugandoDesligada(false);
     setForm({
       form_id:           cfg.form_id,
       form_name:         cfg.form_name,
@@ -428,7 +389,6 @@ export default function LeadAdsForms({ titulo = 'Formulários', subtitulo = 'Pra
       pipeline_stage_id: cfg.pipeline_stage_id ?? '',
       label_ids:         cfg.label_ids ?? [],
       quem:              quemDe(cfg),
-      match_keyword:     cfg.match_keyword ?? defaultKeyword(cfg.form_name),
       is_active:         cfg.is_active,
     });
     setModalOpen(true);
@@ -437,8 +397,9 @@ export default function LeadAdsForms({ titulo = 'Formulários', subtitulo = 'Pra
   // A entrada do lead (funil, etapa, quem assume, etiquetas): confere e devolve o que a ficha grava.
   // Quem grava é a janela da campanha, junto com o que a campanha vende (Tarefa 77).
   const montarEntrada = (): LeadAdsFormConfigFormData | null => {
-    if (!form.pipeline_id) { toast.error('Selecione um funil'); return null; }
-    if (!form.pipeline_stage_id) { toast.error('Selecione uma etapa'); return null; }
+    // Falta algo: avisa e leva o foco ao campo (a janela rola até ele, sem a pessoa caçar o que faltou).
+    if (!form.pipeline_id) { toast.error('Selecione um funil'); document.getElementById('destino_funil')?.focus(); return null; }
+    if (!form.pipeline_stage_id) { toast.error('Selecione uma etapa'); document.getElementById('destino_etapa')?.focus(); return null; }
 
     const assign = form.quem;
     // Roleta nova (06/10/2026, D8): o horário e a mensagem de fora do horário
@@ -455,8 +416,20 @@ export default function LeadAdsForms({ titulo = 'Formulários', subtitulo = 'Pra
       default_assignee_id: assign.default_assignee_id,
       roleta_config_id:    assign.roleta_config_id,
       property_id:         editing?.property_id ?? null,
-      match_keyword:       form.match_keyword.trim() || null,
     };
+  };
+
+  // Copiar de outra ficha: só a entrada do lead. A identidade do formulário novo (id, nome, página) fica como está.
+  const copiarEntrada = (o: LeadAdsFormConfig) => setForm(f => ({
+    ...f, pipeline_id: o.pipeline_id ?? '', pipeline_stage_id: o.pipeline_stage_id ?? '', label_ids: o.label_ids ?? [], quem: quemDe(o),
+  }));
+
+  // O rodapé da janela resume pra onde o lead vai (nomes, não ids).
+  const resumoDaEntrada = (): string => {
+    const funil = resources.pipelines.find(p => p.id === form.pipeline_id)?.name;
+    if (!funil) return 'Funil ainda não escolhido';
+    const etapa = (resources.stagesByPipeline[form.pipeline_id] ?? []).find(e => e.id === form.pipeline_stage_id)?.name;
+    return etapa ? `${funil} > ${etapa}` : `${funil} (falta a etapa)`;
   };
 
   const aposSalvarJanela = ({ config }: { config?: LeadAdsFormConfig }) => {
@@ -485,24 +458,34 @@ export default function LeadAdsForms({ titulo = 'Formulários', subtitulo = 'Pra
     }
   };
 
-  const handleToggle = async (cfg: LeadAdsFormConfig) => {
-    try {
-      const updated = await leadAdsFormsService.update(cfg.id, {
-        form_id:             cfg.form_id,
-        form_name:           cfg.form_name,
-        pipeline_id:         cfg.pipeline_id,
-        pipeline_stage_id:   cfg.pipeline_stage_id,
-        is_active:           !cfg.is_active,
-        label_ids:           cfg.label_ids ?? [],
-        default_assignee_id: cfg.default_assignee_id ?? null,
-        roleta_config_id:    cfg.roleta_config_id ?? null,
-        property_id:         cfg.property_id ?? null,
-      });
-      setConfigs(prev => prev.map(c => c.id === updated.id ? updated : c));
-      toast.success(updated.is_active ? 'Ativado' : 'Desativado');
-    } catch {
-      toast.error('Erro ao alterar status');
+  // A chave "Ativo" da tabela (`Chave` da casa): vale na hora; se o servidor recusar, a chave volta e avisa sozinha.
+  const alternarAtivo = async (cfg: LeadAdsFormConfig, ligada: boolean) => {
+    const updated = await leadAdsFormsService.update(cfg.id, {
+      form_id:             cfg.form_id,
+      form_name:           cfg.form_name,
+      pipeline_id:         cfg.pipeline_id,
+      pipeline_stage_id:   cfg.pipeline_stage_id,
+      is_active:           ligada,
+      label_ids:           cfg.label_ids ?? [],
+      default_assignee_id: cfg.default_assignee_id ?? null,
+      roleta_config_id:    cfg.roleta_config_id ?? null,
+      property_id:         cfg.property_id ?? null,
+    });
+    setConfigs(prev => prev.map(c => c.id === updated.id ? updated : c));
+    campanhas?.aoMudar();
+  };
+
+  // Quem assume, em palavras (a tabela mostra o nome, não o id).
+  const quemAssumeEmTexto = (cfg: LeadAdsFormConfig): string => {
+    if (cfg.default_assignee_id) {
+      const corretor = resources.users.find(u => String(u.id) === cfg.default_assignee_id);
+      return `Assume: ${corretor?.name ?? 'o corretor escolhido'}`;
     }
+    if (cfg.roleta_config_id) {
+      const roleta = roletas?.find(r => r.id === cfg.roleta_config_id);
+      return `Assume: ${roleta ? `Roleta ${roletaLabel(roleta)}` : 'uma roleta'}`;
+    }
+    return 'Ninguém assume';
   };
 
   // Resumo do destino (pipeline -> etapa) de uma config salva.
@@ -553,11 +536,18 @@ export default function LeadAdsForms({ titulo = 'Formulários', subtitulo = 'Pra
   // --- Leads ignorados (formulário não cadastrado) ---
 
   // O quadro segue o filtro de página, como o resto da tela.
+  // Formulário que acabou de ganhar ficha ATIVA sai daqui na hora, sem esperar outra sincronização. Espelha o LeadRouter
+  // (`candidate_configs`): só vale a ficha ativa da página do lead ou sem página. Ficha de outra página não destrava o lead,
+  // e ficha desligada também não.
+  const fichaDestrava = (f: IgnoredLeadForm) => configs.some((c) => {
+    if (c.form_id !== f.form_id || !c.is_active) return false;
+    if (!c.meta_page_id || !f.page_id) return true;
+    const paginaDaFicha = metaPages.find(p => p.id === c.meta_page_id);
+    return !paginaDaFicha || paginaDaFicha.page_id === f.page_id;
+  });
   const visibleIgnored = ignoredLeads.filter(
-    f => !pageFilter || metaPages.find(p => p.id === pageFilter)?.page_id === f.page_id,
+    f => !fichaDestrava(f) && (!pageFilter || metaPages.find(p => p.id === pageFilter)?.page_id === f.page_id),
   );
-
-  const totalIgnoredLeads = visibleIgnored.reduce((sum, f) => sum + f.lead_count, 0);
 
   // O nome da página vem do page_id do Facebook (é o que o relatório devolve),
   // e só aparece quando há mais de uma conectada.
@@ -587,10 +577,40 @@ export default function LeadAdsForms({ titulo = 'Formulários', subtitulo = 'Pra
     );
   };
 
+  // Plugar um formulário que barrou lead. Se ele já tem ficha (desligada), abre ESSA ficha: criar outra duplicaria.
+  const plugarBarrado = (f: IgnoredLeadForm) => {
+    const existente = configs.find(c => c.form_id === f.form_id);
+    if (!existente) { openCreateFromIgnored(f); return; }
+    openEdit(existente);
+    // Quem clica em Plugar quer o lead entrando: a ficha desligada já abre ligada, e a janela avisa. Editar pela linha não faz isso.
+    if (!existente.is_active) {
+      setForm(fs => ({ ...fs, is_active: true }));
+      setPlugandoDesligada(true);
+    }
+  };
+
+  // Os que barraram lead estão em Pra resolver; aqui ficam só os sem ficha e sem lead.
+  const idsBarrados = new Set(ignoredLeads.map(f => f.form_id));
+  const outrosFormularios = unconfiguredForms.filter(mf => !idsBarrados.has(mf.id));
+
+  // Formulário sem ficha própria que uma regra "nome contém" com roleta já pega: o lead dele NÃO fica parado, cai na roleta.
+  const notaDaRegra = (mf: MetaForm): ReactNode => {
+    const regra = regraQuePega(mf.name ?? '', mf.meta_page_id, configs);
+    if (!regra) return null;
+    const palavra = regra.match_keyword?.trim() || regra.form_name;
+    // Corretor fixo vence a roleta no servidor (LeadRouter): a frase diz pra quem o lead vai de verdade.
+    if (regra.default_assignee_id) {
+      const corretor = resources.users.find(u => String(u.id) === regra.default_assignee_id);
+      return <p className="mt-1 text-xs text-muted-foreground">Vai pra {corretor?.name ?? 'o corretor escolhido'} pela regra "{palavra}"</p>;
+    }
+    if (!regra.roleta_config_id) return null;
+    const roleta = roletas?.find(r => r.id === regra.roleta_config_id);
+    return <p className="mt-1 text-xs text-muted-foreground">Cai na {roleta ? `Roleta ${roletaLabel(roleta)}` : 'roleta'} pela regra "{palavra}"</p>;
+  };
+
   return (
     <>
     <Pagina
-      estreita
       cabecalho={
         <BaseHeader
           title={titulo}
@@ -598,6 +618,9 @@ export default function LeadAdsForms({ titulo = 'Formulários', subtitulo = 'Pra
           aDireita={
             <>
           {cabecalhoExtra}
+          {/* Os três só funcionam pro super-admin (o servidor responde 403 pro resto): botão que só dá erro é pior que botão nenhum. */}
+          {isSuperAdmin && (
+            <>
           <IconActionButton
             label="Diagnosticar conexão"
             icon={<Stethoscope className="h-4 w-4" />}
@@ -606,7 +629,7 @@ export default function LeadAdsForms({ titulo = 'Formulários', subtitulo = 'Pra
           <IconActionButton
             label="Importar leads recentes"
             icon={<Download className="h-4 w-4" />}
-            onClick={() => { setBackfillPreview(null); setBackfillOpen(true); }}
+            onClick={() => setBackfillOpen(true)}
           />
           <IconActionButton
             label="Limpar etiquetas antigas — remove as etiquetas criadas automaticamente pelo nome do formulário"
@@ -614,6 +637,8 @@ export default function LeadAdsForms({ titulo = 'Formulários', subtitulo = 'Pra
             onClick={handleCleanupLabels}
             disabled={cleanupBusy}
           />
+            </>
+          )}
             </>
           }
           primaryAction={{
@@ -625,77 +650,7 @@ export default function LeadAdsForms({ titulo = 'Formulários', subtitulo = 'Pra
         />
       }
     >
-      {/* Modal: importar leads recentes (backfill) */}
-      <Dialog open={backfillOpen} onOpenChange={setBackfillOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Importar leads recentes</DialogTitle>
-            <DialogDescription>
-              Busca no Facebook os leads dos formulários e traz pro CRM os que ainda não entraram.
-              Não duplica os que já existem.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="grid gap-4 py-2">
-            <CampoDaJanela rotulo="Período" htmlFor="bf_days" obrigatorio>
-              <Seletor id="bf_days" value={backfillDays}
-                onChange={e => { setBackfillDays(Number(e.target.value)); setBackfillPreview(null); }}
-                className={campoDaJanelaClass}>
-                <option value={1}>Último 1 dia</option>
-                <option value={3}>Últimos 3 dias</option>
-                <option value={7}>Últimos 7 dias</option>
-                <option value={15}>Últimos 15 dias</option>
-                <option value={30}>Últimos 30 dias</option>
-              </Seletor>
-            </CampoDaJanela>
-
-            {backfillPreview && (
-              <Aviso tom="info" compacto>
-                <p>Encontrados: <strong>{backfillPreview.total_leads}</strong></p>
-                <p>Já no CRM: <strong>{backfillPreview.ja_no_crm}</strong></p>
-                <p>Faltam entrar: <strong>{backfillPreview.faltavam}</strong></p>
-              </Aviso>
-            )}
-            {backfillPreview && backfillPreview.dry_run === false && (
-              <Aviso tom="sucesso" compacto>
-                Importados agora: <strong>{backfillPreview.importados}</strong>
-              </Aviso>
-            )}
-
-            {/* Passo 1 (Conferir) libera o passo 2 (Importar). Sem esse aviso o botão
-                roxo "Importar" nasce desabilitado e parece quebrado — o cliente não
-                descobre que precisa conferir antes. */}
-            {!backfillPreview && !backfillBusy && (
-              <Aviso tom="info" compacto>
-                Passo 1: clique em <strong>Conferir</strong> para ver quantos leads faltam.
-                Isso libera o botão <strong>Importar</strong>.
-              </Aviso>
-            )}
-
-            <Aviso tom="neutro" compacto>
-              Dica: confira primeiro. Ao importar, os leads entram no funil e podem disparar as
-              automações de entrada. Desative o primeiro contato antes se não quiser avisar leads antigos.
-            </Aviso>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => runBackfill(true)} disabled={backfillBusy}>
-              {backfillBusy ? 'Conferindo...' : backfillPreview ? 'Conferir de novo' : 'Conferir'}
-            </Button>
-            <Button onClick={() => runBackfill(false)}
-              disabled={backfillBusy || !backfillPreview || backfillPreview.faltavam === 0}
-              title={
-                !backfillPreview
-                  ? 'Clique em "Conferir" primeiro para ver quantos leads faltam entrar'
-                  : backfillPreview.faltavam === 0
-                    ? 'Nenhum lead novo para importar — está tudo no CRM'
-                    : undefined
-              }>
-              {backfillBusy ? 'Importando...' : `Importar${backfillPreview ? ` ${backfillPreview.faltavam}` : ''}`}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ImportarLeadsRecentes aberto={backfillOpen} aoMudarAberto={setBackfillOpen} aoImportou={load} />
 
       {/* Modal: diagnóstico do token da Meta (app, permissões, página e o token salvo) */}
       <Dialog open={debugOpen} onOpenChange={setDebugOpen}>
@@ -870,7 +825,7 @@ export default function LeadAdsForms({ titulo = 'Formulários', subtitulo = 'Pra
                     </ul>
                     <p className="text-xs mt-2">
                       👉 {debug.unmatched_blocked
-                        ? <>Se {(debug.unmatched_forms?.length ?? 0) > 1 ? 'esses formulários são seus' : 'esse formulário é seu'}, cadastre {(debug.unmatched_forms?.length ?? 0) > 1 ? 'eles' : 'ele'} no quadro <strong>Leads ignorados</strong> desta tela. A partir daí os leads entram.</>
+                        ? <>Se {(debug.unmatched_forms?.length ?? 0) > 1 ? 'esses formulários são seus' : 'esse formulário é seu'}, cadastre {(debug.unmatched_forms?.length ?? 0) > 1 ? 'eles' : 'ele'} no quadro <strong>Pra resolver</strong> desta tela. A partir daí os leads entram.</>
                         : <>Ache {(debug.unmatched_forms?.length ?? 0) > 1 ? 'esses formulários' : 'esse formulário'} na lista e configure a etiqueta do imóvel. A partir daí os leads dele entram certos.</>}
                     </p>
                   </Aviso>
@@ -974,8 +929,6 @@ export default function LeadAdsForms({ titulo = 'Formulários', subtitulo = 'Pra
         </DialogContent>
       </Dialog>
 
-      {topo}
-
       {/* Uma linha por PÁGINA com problema. Antes vinha um erro único: com duas
           páginas conectadas, a que estava boa ficava sem aparecer. */}
       {metaPageErrors.length > 0 && metaForms.length > 0 && (
@@ -1040,90 +993,21 @@ export default function LeadAdsForms({ titulo = 'Formulários', subtitulo = 'Pra
         </div>
       )}
 
-      {/* Leads ignorados — o rastro da trava.
-          A conexão com a Meta é da PÁGINA inteira, então o Facebook entrega o lead
-          de qualquer formulário dela. Desde 24/08/2026 só entra lead de formulário
-          cadastrado aqui; este quadro é onde o que ficou de fora aparece, para o
-          caso de um formulário certo ter sido esquecido. Fica ANTES da lista de
-          cadastrados de propósito: é a única coisa nesta tela que representa lead
-          que não chegou. */}
-      {visibleIgnored.length > 0 && (
-        <div className="mb-8 rounded-xl border border-amber-500/40 bg-amber-500/5 overflow-hidden">
-          <div className="px-5 py-4 border-b border-amber-500/20">
-            <div className="flex items-start gap-2">
-              <Ban className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />
-              <div>
-                <p className="text-sm font-medium">
-                  {totalIgnoredLeads} lead{totalIgnoredLeads > 1 ? 's' : ''} não {totalIgnoredLeads > 1 ? 'entraram' : 'entrou'}
-                </p>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  {visibleIgnored.length > 1 ? 'Vieram destes formulários, que não estão' : 'Veio deste formulário, que não está'}{' '}
-                  cadastrado{visibleIgnored.length > 1 ? 's' : ''} aqui. Se algum deles é seu, cadastre — os próximos leads entram.
-                </p>
-              </div>
-            </div>
-          </div>
+      <PraResolver
+        formularios={visibleIgnored}
+        fichaDesligada={(formId) => configs.some(c => c.form_id === formId && !c.is_active)}
+        nomeDaPagina={pageNameOfIgnored}
+        aoPlugar={plugarBarrado}
+        podePlugar={podeCriarFicha}
+        pedeSuporte={!isSuperAdmin}
+        paginasDaChave={isSuperAdmin ? ignoredPages : []}
+        paginaOcupada={pageBusy}
+        aoAlternarPagina={toggleAcceptUnconfigured}
+      />
 
-          <div className="divide-y divide-amber-500/15">
-            {visibleIgnored.map(f => (
-              <div key={f.form_id} className="flex items-center gap-4 px-5 py-3">
-                <div className="flex-1 min-w-0">
-                  <span className="text-sm font-medium truncate block">{f.form_name}</span>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    {f.lead_count} lead{f.lead_count > 1 ? 's' : ''} ignorado{f.lead_count > 1 ? 's' : ''}
-                    {pageNameOfIgnored(f) ? ` • 📘 ${pageNameOfIgnored(f)}` : ''}
-                  </p>
-                </div>
-                <Button variant="outline" size="sm" onClick={() => openCreateFromIgnored(f)}>
-                  Cadastrar
-                </Button>
-              </div>
-            ))}
-          </div>
-
-          {/* Válvula de escape, por página. Só o super-admin edita página, então
-              para o resto a chave nem aparece — botão que só dá 403 é pior que
-              botão nenhum. */}
-          {isSuperAdmin && ignoredPages.length > 0 && (
-            <div className="px-5 py-3 border-t border-amber-500/20 bg-background/40 space-y-2">
-              {ignoredPages.map(page => (
-                <div key={page.id} className="flex items-start gap-3">
-                  <button
-                    type="button"
-                    onClick={() => toggleAcceptUnconfigured(page)}
-                    disabled={pageBusy === page.id}
-                    className="flex-shrink-0 mt-0.5 disabled:opacity-50"
-                    title={
-                      page.accept_unconfigured_forms
-                        ? 'Ligado — clique para só aceitar os formulários cadastrados'
-                        : 'Desligado — clique para aceitar qualquer formulário desta página'
-                    }
-                  >
-                    {pageBusy === page.id
-                      ? <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-                      : page.accept_unconfigured_forms
-                        ? <ToggleRight className="h-5 w-5 text-green-500" />
-                        : <ToggleLeft className="h-5 w-5 text-muted-foreground" />}
-                  </button>
-                  <div className="min-w-0">
-                    <p className="text-xs font-medium">
-                      Receber leads de qualquer formulário desta página
-                      {ignoredPages.length > 1 && <> — 📘 {page.page_name}</>}
-                    </p>
-                    <p className="text-[11px] text-muted-foreground mt-0.5">
-                      Ligado, tudo o que a página produzir entra no CRM, cadastrado ou não.
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Configurações salvas */}
-      <div className="mb-8">
-        <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide mb-3">
+      {/* Formulários do Meta, em tabela. A tabela não espera o Facebook: Pra resolver e os outros formulários chegam depois. */}
+      <section className="mb-2" aria-labelledby="formularios-do-meta">
+        <h2 id="formularios-do-meta" className="mb-3 text-sm font-medium uppercase tracking-wide text-muted-foreground">
           {campanhas ? 'Formulários do Meta' : 'Formulários configurados'}
         </h2>
         {loading ? (
@@ -1132,156 +1016,43 @@ export default function LeadAdsForms({ titulo = 'Formulários', subtitulo = 'Pra
           <EmptyState tipo="erro" aoTentarDeNovo={() => void load()} />
         ) : visibleConfigs.length === 0 ? (
           <EmptyState
-            title={configs.length === 0 ? 'Nenhum formulário configurado' : 'Nenhum formulário desta página'}
+            tamanho="compacto"
+            title={configs.length === 0 ? 'Nenhum formulário plugado' : 'Nenhum formulário desta página'}
             description={
               configs.length === 0
-                ? 'Sincronize os formulários da Meta e defina pra onde cada lead vai'
-                : 'Nenhuma configuração salva para a página selecionada'
+                ? 'Quando um formulário do Facebook trouxer lead, ele aparece em Pra resolver com o botão Plugar.'
+                : 'Nenhuma ficha salva para a página selecionada.'
             }
           />
         ) : (
-          <div className="space-y-3">
-            {visibleConfigs.map(cfg => (
-              <Card key={cfg.id} className="gap-0 overflow-hidden py-0">
-                <div className="flex items-center gap-4 px-5 py-4">
-                  <button
-                    onClick={() => handleToggle(cfg)}
-                    className="flex-shrink-0"
-                    title={cfg.is_active ? 'Desativar' : 'Ativar'}
-                  >
-                    {cfg.is_active
-                      ? <ToggleRight className="h-6 w-6 text-green-500" />
-                      : <ToggleLeft className="h-6 w-6 text-red-500" />}
-                  </button>
-
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-medium truncate">{configDisplayName(cfg)}</span>
-                      {syncedPages.length > 1 && pageNameOf(cfg.meta_page_id, cfg.page_name) && (
-                        <Badge variant="secondary" className="text-xs">
-                          📘 {pageNameOf(cfg.meta_page_id, cfg.page_name)}
-                        </Badge>
-                      )}
-                      {!cfg.form_name?.trim() && (
-                        <Badge variant="outline" className="text-xs text-amber-600 border-amber-500/40">
-                          Sem nome no Facebook
-                        </Badge>
-                      )}
-                      {!cfg.is_active && (
-                        <Badge variant="outline" className="text-xs text-muted-foreground">
-                          Inativo
-                        </Badge>
-                      )}
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
-                      <ArrowRight className="h-3 w-3 flex-shrink-0" />
-                      {destinationSummary(cfg)}
-                    </p>
-                    {cfg.label_ids?.length > 0 && (
-                      <div className="flex items-center gap-1 flex-wrap mt-1.5">
-                        {cfg.label_ids.map(id => {
-                          const label = resources.labels.find(l => l.id === id);
-                          return (
-                            <Badge key={id} variant="secondary" className="text-xs">
-                              {label?.title ?? id}
-                            </Badge>
-                          );
-                        })}
-                      </div>
-                    )}
-                    {campanhas && (() => {
-                      const item = itemDaFicha(cfg, configDisplayName(cfg), campanhas.itens.find(i => i.form_config_id === cfg.id));
-                      if (campanhas.listaPronta === false) {
-                        return campanhas.listaFalhou
-                          ? <p className="mt-3 text-xs text-muted-foreground">Não deu pra carregar o resumo das campanhas. Recarregue a página.</p>
-                          : null;
-                      }
-                      return (
-                        <div className="mt-3">
-                          <p className="mb-2 text-xs text-muted-foreground">{contagemDeLeads(item.leads_count)}</p>
-                          <ResumoDaCampanha item={item} nomes={campanhas.nomes} />
-                        </div>
-                      );
-                    })()}
-                  </div>
-
-                  <Button variant="ghost" size="icon" onClick={() => openEdit(cfg)} title={can('lead_ads_form_configs', 'update') ? 'Editar' : 'Ver'}>
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                </div>
-              </Card>
-            ))}
-          </div>
+          <TabelaDeFormularios
+            fichas={visibleConfigs}
+            itens={campanhas?.itens}
+            listaPronta={campanhas?.listaPronta === true}
+            nomes={campanhas?.nomes}
+            nomeDaFicha={configDisplayName}
+            destino={destinationSummary}
+            quemAssume={quemAssumeEmTexto}
+            nomeDaPagina={(cfg) => (syncedPages.length > 1 ? pageNameOf(cfg.meta_page_id, cfg.page_name) : null)}
+            podeEditar={can('lead_ads_form_configs', 'update')}
+            podeLigar={can('lead_ads_form_configs', 'update')}
+            aoAbrir={openEdit}
+            aoLigar={alternarAtivo}
+          />
         )}
-      </div>
-
-      {/* Forms do Meta ainda sem config */}
-      {syncedOnce && !metaError && (
-        <div>
-          <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide mb-3">
-            Disponíveis no Facebook
-          </h2>
-          {unconfiguredForms.length === 0 ? (
-            <div className="text-center py-8 text-sm text-muted-foreground">
-              Todos os formulários encontrados já estão configurados.
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {unconfiguredForms.map(mf => (
-                <div
-                  key={mf.id}
-                  className="border border-dashed border-border rounded-xl bg-muted/20 flex items-center gap-4 px-5 py-4"
-                >
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-medium truncate">{mf.name?.trim() || `Formulário ${mf.id}`}</span>
-                      <Badge variant="outline" className="text-xs">{mf.status}</Badge>
-                      {syncedPages.length > 1 && mf.page_name && (
-                        <Badge variant="secondary" className="text-xs">📘 {mf.page_name}</Badge>
-                      )}
-                      {!mf.name?.trim() && (
-                        <Badge variant="outline" className="text-xs text-amber-600 border-amber-500/40">
-                          Sem nome no Facebook
-                        </Badge>
-                      )}
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {mf.leads_count} {mf.leads_count === 1 ? 'lead' : 'leads'}
-                    </p>
-                    {(() => {
-                      // Formulário sem cadastro próprio que uma regra "nome contém"
-                      // com roleta já pega: o lead dele NÃO fica parado, cai na roleta.
-                      const regra = regraQuePega(mf.name ?? '', mf.meta_page_id, configs);
-                      if (!regra) return null;
-                      const palavra = regra.match_keyword?.trim() || regra.form_name;
-                      // Corretor fixo vence a roleta no servidor (LeadRouter): a
-                      // frase diz pra quem o lead vai de verdade.
-                      if (regra.default_assignee_id) {
-                        const corretor = resources.users.find(u => String(u.id) === regra.default_assignee_id);
-                        return (
-                          <p className="text-xs text-muted-foreground mt-1">
-                            Vai pra {corretor?.name ?? 'o corretor escolhido'} pela regra "{palavra}"
-                          </p>
-                        );
-                      }
-                      if (!regra.roleta_config_id) return null;
-                      const roleta = roletas?.find(r => r.id === regra.roleta_config_id);
-                      return (
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Cai na {roleta ? `Roleta ${roletaLabel(roleta)}` : 'roleta'} pela regra "{palavra}"
-                        </p>
-                      );
-                    })()}
-                  </div>
-                  <Button variant="outline" size="sm" onClick={() => openCreate(mf)}>
-                    Configurar destino
-                  </Button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
+        {campanhas?.listaFalhou && visibleConfigs.length > 0 && (
+          <p className="mt-3 text-xs text-muted-foreground">Não deu pra carregar o resumo das campanhas. Recarregue a página.</p>
+        )}
+        {syncedOnce && !metaError && (
+          <OutrosFormularios
+            formularios={outrosFormularios}
+            mostrarPagina={syncedPages.length > 1}
+            aoPlugar={openCreate}
+            podePlugar={podeCriarFicha}
+            nota={notaDaRegra}
+          />
+        )}
+      </section>
 
       {depois}
 
@@ -1296,111 +1067,31 @@ export default function LeadAdsForms({ titulo = 'Formulários', subtitulo = 'Pra
             : itemEmBranco({ key: `form:${form.form_id}`, kind: 'form', label: form.form_name })}
           opcoesDeIa={campanhas?.listaPronta === false ? undefined : campanhas?.opcoesDeIa}
           montarEntrada={montarEntrada}
+          fichas={configs}
+          itensDaLista={campanhas?.itens}
+          listaCarregando={campanhas?.listaPronta === false}
+          listaFalhou={!!campanhas?.listaFalhou}
+          aoCopiarEntrada={copiarEntrada}
           aoFechar={() => setModalOpen(false)}
           aoSalvar={aposSalvarJanela}
           aoMudarIa={() => campanhas?.aoMudar()}
           aoApagar={excluirFicha}
+          resumoDaEntrada={resumoDaEntrada()}
+          avisoDoTopo={plugandoDesligada && form.is_active ? 'Esta ficha estava desligada. Ao salvar, ela liga de novo.' : null}
+          complemento={(
+            <ComplementoDaEntrada
+              valor={form}
+              aoMudar={parcial => setForm(f => ({ ...f, ...parcial }))}
+              recursos={resources}
+            />
+          )}
           entrada={(
-            <>
-            <GrupoDaJanela titulo="Para onde vai">
-              <GradeDaJanela>
-                <CampoDaJanela rotulo="Funil" htmlFor="destino_funil" obrigatorio colunas={form.pipeline_id ? 2 : 4}>
-                  <Seletor
-                    id="destino_funil"
-                    value={form.pipeline_id}
-                    onChange={e =>
-                      setForm(f => ({ ...f, pipeline_id: e.target.value, pipeline_stage_id: '' }))
-                    }
-                    className={campoDaJanelaClass}
-                  >
-                    <option value="">Escolha um funil</option>
-                    {resources.pipelines.map(p => (
-                      <option key={p.id} value={p.id}>{p.name}</option>
-                    ))}
-                  </Seletor>
-                </CampoDaJanela>
-
-                {form.pipeline_id && (
-                  <CampoDaJanela rotulo="Etapa" htmlFor="destino_etapa" obrigatorio colunas={2}>
-                    <Seletor
-                      id="destino_etapa"
-                      value={form.pipeline_stage_id}
-                      onChange={e => setForm(f => ({ ...f, pipeline_stage_id: e.target.value }))}
-                      className={campoDaJanelaClass}
-                    >
-                      <option value="">Escolha uma etapa</option>
-                      {(resources.stagesByPipeline[form.pipeline_id] ?? []).map(s => (
-                        <option key={s.id} value={s.id}>{s.name}</option>
-                      ))}
-                    </Seletor>
-                  </CampoDaJanela>
-                )}
-              </GradeDaJanela>
-            </GrupoDaJanela>
-
-            {/* Palavra-chave do imóvel: casa TODAS as campanhas desse imóvel. O Meta
-                cria um formulário novo por campanha (nome com data/versão diferente),
-                então casar pelo nome do imóvel evita reconfigurar toda campanha. */}
-            <GrupoDaJanela titulo="Como identificar">
-              <CampoDaJanela
-                rotulo="Nome do imóvel para reconhecer os formulários"
-                htmlFor="match_keyword"
-                ajuda={<>Todo formulário cujo nome <strong>contiver</strong> isto entra com esta configuração. Cobre <strong>todas as campanhas</strong> do imóvel (datas e versões diferentes), sem configurar de novo. Deixe curto, só o nome do imóvel.</>}
-              >
-                <Input
-                  id="match_keyword"
-                  type="text"
-                  placeholder="Ex.: capri, torres dos topázios"
-                  value={form.match_keyword}
-                  onChange={e => setForm(f => ({ ...f, match_keyword: e.target.value }))}
-                />
-              </CampoDaJanela>
-            </GrupoDaJanela>
-
-            {/* Quem assume o lead na entrada: corretor fixo OU roleta, numa lista
-                só com as abas Corretores | Roleta. A tela só ESCOLHE a roleta. */}
-            <GrupoDaJanela titulo="Quem assume">
-              <CampoDaJanela
-                rotulo="Quem assume o lead"
-                htmlFor="quem_assume"
-                ajuda="O corretor recebe todo lead deste formulário. A roleta oferece cada lead ao próximo da fila."
-              >
-                <CampoQuemAssume
-                  id="quem_assume"
-                  aria-label="Quem assume o lead"
-                  value={form.quem}
-                  onChange={quem => setForm(f => ({ ...f, quem }))}
-                  pessoas={resources.users.filter(u => !u.deactivated).map(u => ({ id: String(u.id), nome: u.name }))}
-                  roletas={roletas}
-                />
-              </CampoDaJanela>
-            </GrupoDaJanela>
-
-            <GrupoDaJanela titulo="Complemento">
-              <CampoDaJanela
-                rotulo="Etiquetas"
-                ajuda={<>Já vem com <strong>tráfego pago</strong> por padrão. Busque ou crie a etiqueta do imóvel deste formulário.</>}
-              >
-                <LabelMultiSelect
-                  labels={resources.labels}
-                  selectedIds={form.label_ids}
-                  onChange={ids => setForm(f => ({ ...f, label_ids: ids }))}
-                  onLabelCreated={() => resources.reloadLabels()}
-                />
-              </CampoDaJanela>
-            </GrupoDaJanela>
-
-            <GrupoDaJanela titulo="Estado">
-              <div className="flex items-center gap-2">
-                <Checkbox
-                  id="is_active"
-                  checked={form.is_active}
-                  onCheckedChange={v => setForm(f => ({ ...f, is_active: v === true }))}
-                />
-                <UILabel htmlFor="is_active" className="cursor-pointer">Ativo</UILabel>
-              </div>
-            </GrupoDaJanela>
-            </>
+            <EntradaDoLead
+              valor={form}
+              aoMudar={parcial => setForm(f => ({ ...f, ...parcial }))}
+              recursos={resources}
+              roletas={roletas}
+            />
           )}
         />
       )}

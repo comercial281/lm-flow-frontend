@@ -10055,6 +10055,8 @@ Código: `features/flowAutomations/readiness.ts` (`hasOwnTrigger`, `nodeProblem(
 
 ## Formulários do Meta: imóvel vinculado por busca (desde 2026-10-28)
 
+⚠️ Revista em 04/11/2026: a janela do formulário ficou larga e a lista de imóveis abre aberta (seção *Campanhas: tela por tipo e plugar formulário*).
+
 ⚠️ Revista em 01/11/2026 (Tarefa 79): a tela virou *Configurações > Campanhas* (Formulários do Meta e Anúncios de WhatsApp), no mesmo endereço; o imóvel vinculado é *O que esta campanha vende* na janela da campanha. Ver *Campanhas (era Formulários do Meta)*.
 
 **O que aparece na tela:** em Configurações > Formulários do Meta, o campo "Imóvel vinculado" deixou de ser uma caixa de escolha e virou a busca por título ou código (a mesma de Tarefas). Escolhido, vira o cartão do imóvel com a lixeira pra tirar.
@@ -10513,6 +10515,8 @@ Código: `features/properties/cadastro/finalidade.ts`, `pages/Customer/Propertie
 
 ## Campanhas (era Formulários do Meta) (Tarefa 77, 01/11/2026)
 
+⚠️ Revista em 04/11/2026: a lista virou duas tabelas com Pra resolver no topo (seção *Campanhas: tela por tipo e plugar formulário*, abaixo). O aviso "N campanhas não dizem o que vendem" e a coluna de cartões de hoje saíram.
+
 Configurações > Campanhas, no mesmo endereço de antes (`/automations/origem`, o que o "editar em Campanhas" da IA usa). O item do menu "Formulários" virou "Campanhas".
 
 **O que aparece na tela**
@@ -10666,3 +10670,37 @@ Pedido do dono com o print de um aviso que chegou como `Fulano: escreveu: "Vou c
 - **No admin (04/11/2026):** a aba *Avisos na tela* de Comunicação passou a se chamar **Notificações**, porque a lista controla também push, e-mail e WhatsApp e o nome antigo escondia isso. O endereço não mudou. O botão fica em linha própria: inline, ele colava na frase de baixo.
 
 Testes: `src/components/notifications/VerTextoDoAviso.spec.tsx`.
+
+## Campanhas: tela por tipo e plugar formulário (04/11/2026)
+
+Spec: `LM FLOW/specs/2026-11-04-campanhas-tela-e-plugar-design.md`. Esta seção é a parte da tela (PR 2). O servidor (Quem atende de verdade, contagem de lead barrado) é o PR 1, e a regra do nome desligada é o PR 3.
+
+**O que aparece na tela**
+- A página usa a largura toda da moldura (`Pagina` sem `estreita`). Antes ficava em `max-w-4xl`, encostada na esquerda.
+- **Pra resolver** no topo, só com item: formulário do Facebook que trouxe lead barrado, com quantos estão esperando e o botão **Plugar**. "Plugar" é a palavra do Tony. Texto: plugou em até 2 dias, os leads entram sozinhos (o `ReconcileLeadsJob` roda a cada 10 min); os mais antigos só entram por importação manual. O quadro "N leads não entraram" e a chave de super-admin "Receber leads de qualquer formulário desta página" ficam dentro dele.
+- **Formulários do Meta** em tabela: formulário e último lead, imóvel, funil e quem assume, quem atende, leads em 90 dias, ativo (a `Chave` da casa, vale na hora), Editar/Ver. A linha inteira abre a janela. Os formulários do Facebook sem ficha e sem lead ficam recolhidos ao fim, com Plugar.
+- **Anúncios de WhatsApp** em tabela: anúncio, o que oferece, quem atende, leads, último lead. Sem oferta: selo "Não diz o que oferece" e "Parece: <imóvel>" pela busca do nome da campanha (até 12 buscas). Anúncio sem nome de campanha fica recolhido ao fim.
+- Celular: de 1280 px pra baixo cada linha vira cartão (duas colunas no tablet, uma no celular), com o nome de cada campo em cima. A tabela só existe de 1280 px pra cima.
+
+**Decisões**
+- `meta_forms` chama o Facebook e passa de 2,4 s. As tabelas não esperam: Pra resolver chega depois ou não chega, sem erro no meio da tela. A mensagem de erro de hoje (`errors`/`error`) continua.
+- Plugar num formulário que já tem ficha desligada abre ESSA ficha (selo "Ficha desligada"), nunca cria outra. A 016 tem fichas inativas.
+- `recent_count`/`last_lead_at` ausentes (servidor antigo): só a contagem ("N leads esperando"), sem separar e sem erro.
+- Lista do servidor que não chegou: a linha não afirma "0 leads" nem "Sem IA" (traço). Regra de antes, mantida.
+- O aviso do topo sobre campanha sem oferta saiu; virou o selo na linha do anúncio.
+
+**Armadilhas**
+- `Pra resolver` e `OutrosFormularios` mostram só o que o servidor devolve; o formulário barrado não se repete nos recolhidos.
+- A linha da tabela é clicável, então botão, link e chave dentro dela não podem abrir a janela (`data-nao-abre` e checagem do alvo em `TabelaDaTela.tsx`).
+- As exceções do `conferir-padrao` apontam pro arquivo: a janela de diagnóstico do Meta ficou em `LeadAdsForms.tsx` por isso. Mover pede mover as exceções junto.
+- `LeadAdsForms.tsx` continua sendo o dono do estado (fichas, sincronização, janela). Só a lista, Pra resolver e a janela de importar saíram: `PraResolver.tsx`, `TabelaDeFormularios.tsx` (com `OutrosFormularios`), `TabelaDeAnuncios.tsx`, `TabelaDaTela.tsx`, `ImportarLeadsRecentes.tsx`. `LinhaDaCampanha.tsx` foi apagado.
+
+**Revisão do PR 2 (04/11/2026, decidido pelo dono)**
+- **A janela abre pela entrada do lead.** Coluna da esquerda: Copiar, Para onde vai (Funil e Etapa), Quem assume, O que esta campanha vende (com a lista), Complemento e Estado. Antes o Funil ficava abaixo da lista de imóveis, fora da primeira tela. `EntradaDoLead` tem duas partes (`EntradaDoLead` e `ComplementoDaEntrada`). Criar sem funil ou sem etapa leva o foco ao campo.
+- **Plugar numa ficha desligada abre já ligada**, com o aviso "Esta ficha estava desligada. Ao salvar, ela liga de novo." no topo (some se a pessoa desmarcar Ativo). Editar pela linha da tabela não muda nada.
+- **Formulário plugado sai de Pra resolver na hora**, sem nova sincronização: sai quem tem ficha ATIVA da página do lead (ou sem página), igual ao `LeadRouter#candidate_configs`. Ficha de outra página ou desligada não tira.
+- **Formulário novo:** escolher a IA no seletor já vale (sem botão Pôr; entra no Criar). Sem escolha, a tela não diz "Sem IA" (diz que IA por funil ou por anúncio continua atendendo). IA de regra ampla (`broad`): sem seletor e sem a frase "vale na hora".
+- **Botões de super-admin:** Diagnosticar, Importar e Limpar etiquetas só aparecem pra ele (o servidor dá 403 pro resto). Pra quem não é, a frase da importação manual termina em "peça pro suporte da LM". Plugar só aparece com `lead_ads_form_configs.create`.
+- O filtro de tipo de imóvel é uma lista na mesma linha da busca. O subtítulo da página é uma linha só. A lista de Campanhas só aceita a resposta da leitura mais nova. "Parece com a ficha" ignora palavra de 1-2 letras, preposição e "vila". Copiar de origem com 2 IAs da campanha leva a primeira e avisa que a outra não veio.
+
+Testes: `Campanhas.spec.tsx`, `PraResolver.spec.tsx`, `TabelaDeFormularios.spec.tsx`, `TabelaDeAnuncios.spec.tsx`, `src/features/campanhas/telaDeCampanhas.spec.ts`.
