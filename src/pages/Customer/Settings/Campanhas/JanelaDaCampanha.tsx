@@ -136,7 +136,7 @@ export default function JanelaDaCampanha({
   const [preenchendo, setPreenchendo] = useState(false);
   const [trazidoDoTexto, setTrazidoDoTexto] = useState(false);
 
-  // "Quem atende"
+  // "IA que atende"
   const [donos, setDonos] = useState<IaDaCampanha[]>(item.agents);
   const [linkId, setLinkId] = useState<string | null>(item.link_id);
   const [movendo, setMovendo] = useState<{ chave: string; frase: string } | null>(null);
@@ -486,9 +486,9 @@ export default function JanelaDaCampanha({
             </fieldset>
           </section>
 
-          <section aria-label="Quem atende e oferta" data-testid="coluna-direita" className="grid min-w-0 content-start gap-5">
+          <section aria-label="IA que atende e oferta" data-testid="coluna-direita" className="grid min-w-0 content-start gap-5">
             {opcoesDeIa && (
-              <GrupoDaJanela titulo="Quem atende">
+              <GrupoDaJanela titulo="IA que atende">
                 <QuemAtende donos={donosNaTela} opcoes={opcoesNaTela} podeMexer={podeEditar} novo={novo} aoEscolher={escolher} aoTirar={tirar}
                   ocupado={iaOcupada || salvando} movendo={movendo} aoMover={() => movendo && pedir(movendo.chave, true)}
                   aoDeixar={() => { setMovendo(null); fechaAoGravar.current = false; }} aviso={avisoDaIa} ficouSemIa={ficouSemIa} />

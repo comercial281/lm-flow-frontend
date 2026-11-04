@@ -23,7 +23,7 @@ const base = {
 describe('TabelaDeFormularios', () => {
   it('colunas do spec e a linha completa', () => {
     render(<TabelaDeFormularios {...base} itens={[item({ agents: [{ sales_agent_id: 'a', name: 'IA Um', sales_agent_number_id: null, number_label: null, whole_number: false, note: null, reason: 'atende todo lead do funil' }] })]} />);
-    for (const c of ['Formulário', 'Imóvel', 'Funil e quem assume', 'Quem atende', 'Leads em 90 dias', 'Ativo']) expect(screen.getAllByText(c).length).toBeGreaterThan(0);
+    for (const c of ['Formulário', 'Imóvel', 'Funil e quem assume', 'IA que atende', 'Leads em 90 dias', 'Ativo']) expect(screen.getAllByText(c).length).toBeGreaterThan(0);
     const linha = screen.getByTestId('linha-do-formulario');
     expect(within(linha).getByText('81 leads')).toBeInTheDocument();
     expect(within(linha).getByText('Todo o catálogo')).toBeInTheDocument();

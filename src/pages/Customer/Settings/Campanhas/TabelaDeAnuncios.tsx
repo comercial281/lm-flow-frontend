@@ -69,7 +69,7 @@ function Linhas({ itens, nomes, podeEditar, aoAbrir, parecidos }: TabelaDeAnunci
                 </div>
               )}
             </Celula>
-            <Celula rotulo="Quem atende">
+            <Celula rotulo="IA que atende">
               {donos.length === 0 ? <span className="text-muted-foreground">Sem IA</span> : donos.map((d) => (
                 <Badge key={`${d.sales_agent_id}|${d.sales_agent_number_id ?? ''}`} variant="secondary" className="h-auto max-w-full whitespace-normal break-words text-left text-xs">{donoEmTexto(d)}</Badge>
               ))}
@@ -97,7 +97,7 @@ export default function TabelaDeAnuncios(props: TabelaDeAnunciosProps) {
     <Tabela rotulo="Anúncios de WhatsApp">
       {comNome.length > 0 && (
         <>
-          <CabecalhoDaTabela grade={GRADE_DOS_ANUNCIOS} colunas={['Anúncio', 'O que oferece', 'Quem atende', 'Leads em 90 dias', 'Último lead', '']} />
+          <CabecalhoDaTabela grade={GRADE_DOS_ANUNCIOS} colunas={['Anúncio', 'O que oferece', 'IA que atende', 'Leads em 90 dias', 'Último lead', '']} />
           <Linhas {...props} itens={comNome} parecidos={parecidos} />
         </>
       )}
