@@ -261,11 +261,11 @@ export default function AssistenteNovoContrato({ aberto, aoFechar, aoCriar }: Pr
                   <Dado rotulo="Total do boleto">{dinheiro(previa.total)}</Dado>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Fica com a imobiliária: {previa.taxaRotulo} {dinheiro(previa.taxa)}. O proprietário recebe {dinheiro(previa.recebeProprietario)}.
+                  Fica com a imobiliária: {previa.taxaRotulo} {dinheiro(previa.taxa)}. O proprietário recebe {dinheiro(Math.max(0, previa.recebeProprietario))}.
                   {previa.comissaoLocacao + previa.comissaoCaptacao > 0 && ` Comissões: locação ${dinheiro(previa.comissaoLocacao)} e captação ${dinheiro(previa.comissaoCaptacao)}.`}
                 </p>
                 {previa.taxaMaiorQueAluguel && (
-                  <Aviso tom="atencao" compacto>A taxa de intermediação é maior que o aluguel deste primeiro boleto: o proprietário não recebe nada nele.</Aviso>
+                  <Aviso tom="atencao" compacto>A taxa de intermediação é maior que o aluguel deste primeiro boleto: o proprietário não recebe nada nele, e os {dinheiro(-previa.recebeProprietario)} que faltam da taxa são descontados do próximo repasse dele.</Aviso>
                 )}
               </div>
             ) : (

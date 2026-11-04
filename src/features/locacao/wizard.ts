@@ -188,12 +188,15 @@ export function previaPrimeiroBoleto(e: EstadoDoAssistente, cfg: Pick<ConfigDaLo
   const extras: LinhaDaPrevia[] = [];
   const cond = lerValor(e.condominio);
   if (cond > 0) extras.push({ desc: parcial ? 'Condomínio (estimado, proporcional)' : 'Condomínio (estimado)', valor: R(cond * fr) });
+  // Igual ao motor do servidor: IPTU pelo mês da COMPETÊNCIA (o do período), não do vencimento,
+  // e IPTU e seguros proporcionais aos dias do período.
+  const mesComp = Number(periodo.ini.slice(5, 7));
   const iptu = lerValor(e.iptuParcela);
-  if (e.iptuResp === 'inq' && iptu > 0 && mes >= 2 && mes <= 11) extras.push({ desc: `IPTU parcela ${mes - 1}/10`, valor: iptu });
+  if (e.iptuResp === 'inq' && iptu > 0 && mesComp >= 2 && mesComp <= 11) extras.push({ desc: `IPTU parcela ${mesComp - 1}/10`, valor: R(iptu * fr) });
   const inc = lerValor(e.seguro);
-  if (inc > 0) extras.push({ desc: 'Seguro incêndio (mensal)', valor: inc });
+  if (inc > 0) extras.push({ desc: 'Seguro incêndio (mensal)', valor: R(inc * fr) });
   const fianca = e.garantia === 'seguro' ? lerValor(e.mensal) : 0;
-  if (fianca > 0) extras.push({ desc: 'Seguro-fiança (mensal)', valor: fianca });
+  if (fianca > 0) extras.push({ desc: 'Seguro-fiança (mensal)', valor: R(fianca * fr) });
   if (cfg.taxa_boleto > 0) extras.push({ desc: 'Taxa de boleto', valor: cfg.taxa_boleto });
 
   const taxaAdm = Number(e.taxaAdm.replace(',', '.')) || 0;

@@ -104,7 +104,7 @@ export default function JanelaDoBoleto({ cobranca, aoFechar }: { cobranca: Cobra
                       <span className="font-normal">· {DESTINO[d].ajuda}</span>
                     </p>
                     {itens.map(i => (
-                      <Dado key={`${i.desc}-${i.valor}`} rotulo={i.estimado ? `${i.desc} (estimado)` : i.desc}>{dinheiro(i.valor)}</Dado>
+                      <Dado key={`${i.desc}-${i.valor}`} rotulo={i.estimado && !/estimado/i.test(i.desc) ? `${i.desc} (estimado)` : i.desc}>{dinheiro(i.valor)}</Dado>
                     ))}
                   </div>
                 );
