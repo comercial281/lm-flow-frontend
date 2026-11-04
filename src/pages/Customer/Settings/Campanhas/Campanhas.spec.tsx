@@ -1,6 +1,6 @@
 // Configurações > Campanhas (Tarefa 77): as duas partes, a linha, o aviso do topo e o "Ver como" por cargo.
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { ItemDeCampanha } from '@/services/campanhas/campanhasService';
 import type { IgnoredLeadForm, LeadAdsFormConfig } from '@/services/leadAds/leadAdsFormsService';
@@ -66,6 +66,7 @@ beforeEach(() => {
   svc.getAll.mockReset().mockResolvedValue([ficha()]);
   svc.syncMetaForms.mockReset().mockResolvedValue({ data: [], errors: [], ignored_leads: [] });
   svc.delete.mockReset();
+  svc.create.mockReset();
   svc.update.mockReset();
 });
 
@@ -246,7 +247,7 @@ describe('Campanhas · Pra resolver', () => {
     expect(within(bloco).getByText(/6 leads esperando · Só entram por importação manual/)).toBeInTheDocument();
   });
 
-  it('Plugar abre a janela de formulário novo e o Criar grava uma ficha', async () => {
+  it('Plugar abre a janela de formulário novo; o Criar grava a ficha de verdade', async () => {
     comBarrados([barrado()]);
     svc.getAll.mockResolvedValue([]);
     camp.lista.mockResolvedValue([]);
@@ -254,7 +255,129 @@ describe('Campanhas · Pra resolver', () => {
     tela();
     fireEvent.click(await screen.findByRole('button', { name: 'Plugar [03/11] [CASTELO 2.0]' }));
     const dialogo = await screen.findByRole('dialog');
-    expect(within(dialogo).getByRole('button', { name: 'Criar' })).toBeInTheDocument();
+    fireEvent.change(within(dialogo).getByLabelText(/Funil/), { target: { value: 'p1' } });
+    fireEvent.change(await within(dialogo).findByLabelText(/Etapa/), { target: { value: 's1' } });
+    fireEvent.click(within(dialogo).getByRole('button', { name: 'Criar' }));
+    await waitFor(() => expect(svc.create).toHaveBeenCalled());
+    expect(svc.create.mock.calls[0][0]).toMatchObject({ form_id: 'f-9', form_name: '[03/11] [CASTELO 2.0]', pipeline_id: 'p1', pipeline_stage_id: 's1', is_active: true });
+  });
+
+  it('o caminho inteiro: Plugar, Copiar, Criar, IA gravada, e o formulário sai de Pra resolver (o total acompanha)', async () => {
+    const origem = ficha({ id: 'cfg-o', form_id: 'f-o', form_name: '[06/10] [CASTELO]' });
+    svc.getAll.mockResolvedValue([origem]);
+    camp.lista.mockResolvedValue([item({
+      key: 'form:f-o', label: '[06/10] [CASTELO]', form_config_id: 'cfg-o',
+      agents: [{ sales_agent_id: 'a1', name: 'Agente A', sales_agent_number_id: null, number_label: null, whole_number: false, note: null, kind: 'campaign', reason: 'na lista', removable: true }],
+    })]);
+    comBarrados([barrado(), barrado({ form_id: 'f-8', form_name: 'Outro barrado', lead_count: 2, recent_count: 1 })]);
+    svc.create.mockResolvedValue(ficha({ id: 'novo', form_id: 'f-9', form_name: '[03/11] [CASTELO 2.0]' }));
+    camp.escolherIa.mockReset().mockResolvedValue({ ok: true, holders: [], left_empty: [], warning: null });
+    tela();
+    const bloco = await screen.findByTestId('pra-resolver');
+    expect(within(bloco).getByText('7 leads não entraram')).toBeInTheDocument();
+    fireEvent.click(within(bloco).getByRole('button', { name: 'Plugar [03/11] [CASTELO 2.0]' }));
+    const dialogo = await screen.findByRole('dialog');
+    fireEvent.click(await within(dialogo).findByRole('button', { name: 'Copiar a configuração' }));
+    await waitFor(() => expect(within(dialogo).getByLabelText(/Funil/)).toHaveValue('p1'));
+    fireEvent.click(within(dialogo).getByRole('button', { name: 'Criar' }));
+    await waitFor(() => expect(svc.create).toHaveBeenCalled());
+    expect(svc.create.mock.calls[0][0]).toMatchObject({ form_id: 'f-9', pipeline_id: 'p1', pipeline_stage_id: 's1' });
+    await waitFor(() => expect(camp.escolherIa).toHaveBeenCalledWith({ ref: { kind: 'form', id: 'f-9' }, sales_agent_id: 'a1', number_id: null }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    const depois = screen.getByTestId('pra-resolver');
+    expect(within(depois).queryByText('[03/11] [CASTELO 2.0]')).toBeNull();
+    expect(within(depois).getByText('Outro barrado')).toBeInTheDocument();
+    expect(within(depois).getByText('2 leads não entraram')).toBeInTheDocument();
+  });
+
+  it('plugado o único barrado, o quadro inteiro some (sem recarregar)', async () => {
+    comBarrados([barrado()]);
+    svc.getAll.mockResolvedValue([]);
+    camp.lista.mockResolvedValue([]);
+    svc.create.mockResolvedValue(ficha({ id: 'novo', form_id: 'f-9' }));
+    tela();
+    fireEvent.click(await screen.findByRole('button', { name: 'Plugar [03/11] [CASTELO 2.0]' }));
+    const dialogo = await screen.findByRole('dialog');
+    fireEvent.change(within(dialogo).getByLabelText(/Funil/), { target: { value: 'p1' } });
+    fireEvent.change(await within(dialogo).findByLabelText(/Etapa/), { target: { value: 's1' } });
+    fireEvent.click(within(dialogo).getByRole('button', { name: 'Criar' }));
+    await waitFor(() => expect(screen.queryByTestId('pra-resolver')).toBeNull());
+  });
+
+  it('ficha de OUTRA página não destrava o lead: o formulário segue em Pra resolver', async () => {
+    paginas.getAll.mockResolvedValue([
+      { id: 'mp1', page_id: 'pg-1', page_name: 'Página Um', is_active: true, accept_unconfigured_forms: false },
+      { id: 'mp2', page_id: 'pg-2', page_name: 'Página Dois', is_active: true, accept_unconfigured_forms: false },
+    ]);
+    svc.getAll.mockResolvedValue([ficha({ id: 'cfg-x', form_id: 'f-9', form_name: 'Mesmo id, outra página', meta_page_id: 'mp2', is_active: true })]);
+    camp.lista.mockResolvedValue([]);
+    comBarrados([barrado()]);
+    tela();
+    const bloco = await screen.findByTestId('pra-resolver');
+    await waitFor(() => expect(paginas.getAll).toHaveBeenCalled());
+    expect(within(bloco).getByText('[03/11] [CASTELO 2.0]')).toBeInTheDocument();
+  });
+
+  it('ficha ativa da MESMA página (ou sem página) tira o formulário de Pra resolver', async () => {
+    paginas.getAll.mockResolvedValue([{ id: 'mp1', page_id: 'pg-1', page_name: 'Página Um', is_active: true, accept_unconfigured_forms: false }]);
+    svc.getAll.mockResolvedValue([ficha({ id: 'cfg-x', form_id: 'f-9', meta_page_id: 'mp1', is_active: true })]);
+    camp.lista.mockResolvedValue([]);
+    comBarrados([barrado()]);
+    tela();
+    await screen.findByTestId('linha-do-formulario');
+    await waitFor(() => expect(svc.syncMetaForms).toHaveBeenCalled());
+    await waitFor(() => expect(paginas.getAll).toHaveBeenCalled());
+    expect(screen.queryByTestId('pra-resolver')).toBeNull();
+  });
+
+  it('ligar a ficha desligada pela chave da tabela tira o formulário de Pra resolver', async () => {
+    svc.getAll.mockResolvedValue([ficha({ id: 'cfg-off', form_id: 'f-off', form_name: 'Inativo antigo', is_active: false })]);
+    camp.lista.mockResolvedValue([]);
+    comBarrados([barrado({ form_id: 'f-off', form_name: 'Inativo antigo' })]);
+    svc.update.mockResolvedValue(ficha({ id: 'cfg-off', form_id: 'f-off', form_name: 'Inativo antigo', is_active: true }));
+    tela();
+    const bloco = await screen.findByTestId('pra-resolver');
+    expect(within(bloco).getByText('Ficha desligada')).toBeInTheDocument();
+    fireEvent.click(await screen.findByRole('switch', { name: 'Ficha ativa de Inativo antigo' }));
+    await waitFor(() => expect(svc.update).toHaveBeenCalled());
+    await waitFor(() => expect(screen.queryByTestId('pra-resolver')).toBeNull());
+  });
+
+  it('Plugar numa ficha desligada abre já com Ativo marcado e o aviso de que ela liga ao salvar; Salvar manda is_active true', async () => {
+    svc.getAll.mockResolvedValue([ficha({ id: 'cfg-off', form_id: 'f-off', form_name: 'Inativo antigo', is_active: false })]);
+    camp.lista.mockResolvedValue([]);
+    comBarrados([barrado({ form_id: 'f-off', form_name: 'Inativo antigo' })]);
+    svc.update.mockResolvedValue(ficha({ id: 'cfg-off', form_id: 'f-off', form_name: 'Inativo antigo', is_active: true }));
+    tela();
+    const bloco = await screen.findByTestId('pra-resolver');
+    fireEvent.click(within(bloco).getByRole('button', { name: 'Plugar Inativo antigo' }));
+    const dialogo = await screen.findByRole('dialog');
+    expect(within(dialogo).getByText('Esta ficha estava desligada. Ao salvar, ela liga de novo.')).toBeInTheDocument();
+    expect(within(dialogo).getByRole('checkbox', { name: 'Ativo' })).toBeChecked();
+    fireEvent.click(within(dialogo).getByRole('button', { name: 'Salvar' }));
+    await waitFor(() => expect(svc.update).toHaveBeenCalled());
+    expect(svc.update.mock.calls[0][1]).toMatchObject({ is_active: true });
+  });
+
+  it('se a pessoa desmarca Ativo depois de Plugar, o aviso some (não promete ligar)', async () => {
+    svc.getAll.mockResolvedValue([ficha({ id: 'cfg-off', form_id: 'f-off', form_name: 'Inativo antigo', is_active: false })]);
+    camp.lista.mockResolvedValue([]);
+    comBarrados([barrado({ form_id: 'f-off', form_name: 'Inativo antigo' })]);
+    tela();
+    fireEvent.click(await screen.findByRole('button', { name: 'Plugar Inativo antigo' }));
+    const dialogo = await screen.findByRole('dialog');
+    fireEvent.click(within(dialogo).getByRole('checkbox', { name: 'Ativo' }));
+    expect(within(dialogo).queryByText(/Esta ficha estava desligada/)).toBeNull();
+  });
+
+  it('Editar pela linha da tabela não muda nada: a ficha desligada abre desligada, sem aviso', async () => {
+    svc.getAll.mockResolvedValue([ficha({ id: 'cfg-off', form_id: 'f-off', form_name: 'Inativo antigo', is_active: false })]);
+    camp.lista.mockResolvedValue([]);
+    tela();
+    fireEvent.click(await screen.findByTitle('Editar'));
+    const dialogo = await screen.findByRole('dialog');
+    expect(within(dialogo).getByRole('checkbox', { name: 'Ativo' })).not.toBeChecked();
+    expect(within(dialogo).queryByText(/Esta ficha estava desligada/)).toBeNull();
   });
 
   it('formulário que já tem ficha desligada: mostra "Ficha desligada" e Plugar abre ESSA ficha, sem criar outra', async () => {
@@ -361,5 +484,71 @@ describe('Menu e endereço', () => {
     const { default: Origem } = await import('@/pages/Customer/Automations/Origem/Origem');
     render(<MemoryRouter><Origem /></MemoryRouter>);
     expect(await screen.findByRole('heading', { level: 1, name: 'Campanhas' })).toBeInTheDocument();
+  });
+});
+
+describe('Campanhas · botões que dependem de ser super-admin e de permissão', () => {
+  it('quem não é super-admin não vê Diagnosticar, Importar nem Limpar etiquetas', async () => {
+    tela();
+    await screen.findByRole('heading', { name: 'Formulários do Meta' });
+    expect(screen.queryByRole('button', { name: /Diagnosticar conexão/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Importar leads recentes/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Limpar etiquetas antigas/ })).toBeNull();
+  });
+
+  it('super-admin vê os três', async () => {
+    sup.valor = true;
+    tela();
+    expect(await screen.findByRole('button', { name: /Diagnosticar conexão/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Importar leads recentes/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Limpar etiquetas antigas/ })).toBeInTheDocument();
+  });
+
+  it('em Pra resolver, quem não é super-admin lê "peça pro suporte da LM"; super-admin não', async () => {
+    comBarrados([barrado()]);
+    const { unmount } = tela();
+    const bloco = await screen.findByTestId('pra-resolver');
+    expect(within(bloco).getByText(/Os mais antigos só entram por importação manual: peça pro suporte da LM\./)).toBeInTheDocument();
+    unmount();
+    sup.valor = true;
+    tela();
+    const bloco2 = await screen.findByTestId('pra-resolver');
+    expect(within(bloco2).queryByText(/suporte da LM/)).toBeNull();
+  });
+
+  it('sem lead_ads_form_configs.create, Plugar não aparece em Pra resolver nem nos outros formulários', async () => {
+    cargo.chaves = new Set(ADMIN.filter((k) => k !== 'lead_ads_form_configs.create'));
+    svc.syncMetaForms.mockResolvedValue({ data: [{ id: 'f-77', name: 'Sem lead ainda', status: 'ACTIVE', leads_count: 0 }], errors: [], ignored_leads: [barrado()] });
+    tela();
+    const bloco = await screen.findByTestId('pra-resolver');
+    expect(within(bloco).queryByRole('button', { name: /^Plugar/ })).toBeNull();
+    fireEvent.click(await screen.findByRole('button', { name: /ainda sem ficha/ }));
+    expect(await screen.findByText('Sem lead ainda')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Plugar Sem lead ainda' })).toBeNull();
+  });
+});
+
+describe('Campanhas · lista e subtítulo', () => {
+  it('leitura antiga da lista não sobrescreve a nova', async () => {
+    let soltaVelha: (v: unknown) => void = () => undefined;
+    camp.lista.mockReset();
+    camp.lista.mockImplementationOnce(() => new Promise((r) => { soltaVelha = r; }));
+    camp.lista.mockResolvedValueOnce([item({ leads_count: 99 }), anuncio()]);
+    svc.update.mockResolvedValue(ficha({ is_active: false }));
+    tela();
+    const chave = await screen.findByRole('switch', { name: 'Ficha ativa de Formulário Teste' });
+    fireEvent.click(chave); // muda algo: pede a lista de novo (a 2ª, rápida)
+    await waitFor(() => expect(camp.lista).toHaveBeenCalledTimes(2));
+    expect(await screen.findByText('99 leads')).toBeInTheDocument();
+    await act(async () => { soltaVelha([item({ leads_count: 1 }), anuncio()]); });
+    expect(screen.getByText('99 leads')).toBeInTheDocument();
+    expect(screen.queryByText('1 lead')).toBeNull();
+  });
+
+  it('o subtítulo é uma linha só, sem a explicação de Pra resolver', async () => {
+    tela();
+    await screen.findByRole('heading', { level: 1, name: 'Campanhas' });
+    expect(screen.getByText('Tudo o que trouxe lead pro LM Flow nos últimos 90 dias.')).toBeInTheDocument();
+    expect(screen.queryByText(/aparece em Pra resolver/)).toBeNull();
   });
 });

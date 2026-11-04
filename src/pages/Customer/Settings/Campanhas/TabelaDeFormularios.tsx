@@ -116,10 +116,12 @@ export interface OutrosFormulariosProps {
   /** Uma frase por formulário (ex.: "Cai na Roleta X pela regra..."). */
   nota?: (mf: MetaForm) => ReactNode;
   aoPlugar: (mf: MetaForm) => void;
+  /** Sem `lead_ads_form_configs.create` o servidor recusa a ficha nova: Plugar nem aparece. */
+  podePlugar?: boolean;
 }
 
 /** Formulários do Facebook sem ficha e sem lead barrado: recolhidos, pra não competir com o que precisa de ação. */
-export function OutrosFormularios({ formularios, mostrarPagina, nota, aoPlugar }: OutrosFormulariosProps) {
+export function OutrosFormularios({ formularios, mostrarPagina, nota, aoPlugar, podePlugar = true }: OutrosFormulariosProps) {
   const [aberto, setAberto] = useState(false);
   if (formularios.length === 0) return null;
   const Seta = aberto ? ChevronDown : ChevronRight;
@@ -143,7 +145,7 @@ export function OutrosFormularios({ formularios, mostrarPagina, nota, aoPlugar }
                 <p className="mt-1 text-xs text-muted-foreground">{plural(mf.leads_count, 'lead', 'leads')}</p>
                 {nota?.(mf)}
               </div>
-              <Button variant="outline" size="sm" onClick={() => aoPlugar(mf)} aria-label={`Plugar ${mf.name?.trim() || mf.id}`}>Plugar</Button>
+              {podePlugar && <Button variant="outline" size="sm" onClick={() => aoPlugar(mf)} aria-label={`Plugar ${mf.name?.trim() || mf.id}`}>Plugar</Button>}
             </div>
           ))}
         </div>

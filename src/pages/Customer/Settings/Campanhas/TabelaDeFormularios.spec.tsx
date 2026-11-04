@@ -80,4 +80,11 @@ describe('OutrosFormularios', () => {
     const { container } = render(<OutrosFormularios mostrarPagina={false} aoPlugar={vi.fn()} formularios={[]} />);
     expect(container).toBeEmptyDOMElement();
   });
+
+  it('sem permissão de criar ficha, o Plugar dos outros formulários não aparece', () => {
+    render(<OutrosFormularios mostrarPagina={false} aoPlugar={vi.fn()} podePlugar={false} formularios={[{ id: 'x', name: 'Novo', status: 'ACTIVE', leads_count: 0 }]} />);
+    fireEvent.click(screen.getByRole('button', { name: /ainda sem ficha/ }));
+    expect(screen.getByText('Novo')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Plugar Novo' })).toBeNull();
+  });
 });

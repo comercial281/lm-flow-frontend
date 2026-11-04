@@ -367,6 +367,14 @@ const formNovo = (extra: Partial<React.ComponentProps<typeof JanelaDaCampanha>> 
     ...extra,
   });
 
+describe('JanelaDaCampanha · aviso no topo e foco', () => {
+  it('avisoDoTopo aparece no começo do miolo', () => {
+    formNovo({ avisoDoTopo: 'Esta ficha estava desligada. Ao salvar, ela liga de novo.' });
+    const miolo = screen.getByTestId('miolo-da-janela');
+    expect(miolo.firstElementChild).toHaveTextContent('Esta ficha estava desligada. Ao salvar, ela liga de novo.');
+  });
+});
+
 describe('JanelaDaCampanha · janela nova (Tarefa 6)', () => {
   it('é a janela larga da casa, com o miolo em duas colunas que podem encolher', () => {
     const { dialogo } = formNovo();
@@ -438,19 +446,28 @@ describe('JanelaDaCampanha · janela nova (Tarefa 6)', () => {
     formNovo({ resumoDaEntrada: 'Leads > Novo', item: item({ kind: 'form', sells_scope: 'catalog' }) });
     expect(screen.getByTestId('resumo-do-rodape')).toHaveTextContent('Todo o catálogo');
     expect(screen.getByTestId('resumo-do-rodape')).toHaveTextContent('Leads > Novo');
+    // Formulário novo sem escolha: o rodapé não afirma "Sem IA" (uma IA por funil ou por anúncio ainda pode atender)
+    expect(screen.getByTestId('resumo-do-rodape')).not.toHaveTextContent('Sem IA');
+  });
+
+  it('formulário que já existe, sem nenhuma IA: o rodapé diz "Sem IA"', () => {
+    abrir({ tipo: 'form', config: ficha(), entrada: entradaFalsa, opcoesDeIa: opcoes, item: item({ kind: 'form', form_config_id: 'cfg-1', agents: [] }) });
     expect(screen.getByTestId('resumo-do-rodape')).toHaveTextContent('Sem IA');
   });
 });
 
 describe('JanelaDaCampanha · criar com IA escolhida', () => {
   const criada = () => ({ ...ficha(), id: 'cfg-9', form_id: 'f-9', form_name: 'Novo' });
+  // Formulário novo: escolher no seletor já vale (sem Pôr). Já criado, em edição: precisa do Pôr.
   const escolhaDaIa = (valor: string) => {
     fireEvent.change(screen.getByLabelText('Pôr numa IA'), { target: { value: valor } });
-    fireEvent.click(screen.getByRole('button', { name: 'Pôr' }));
+    const por = screen.queryByRole('button', { name: 'Pôr' });
+    if (por) fireEvent.click(por);
   };
 
-  it('formulário novo: escolher a IA não grava nada ainda e avisa que grava no Criar', () => {
+  it('formulário novo: escolher a IA (sem clicar em Pôr) não grava nada ainda e avisa que grava no Criar', () => {
     formNovo();
+    expect(screen.queryByRole('button', { name: 'Pôr' })).toBeNull();
     escolhaDaIa('a1|');
     expect(camp.escolherIa).not.toHaveBeenCalled();
     expect(screen.getByText('A escolha grava junto quando você clicar em Criar.')).toBeInTheDocument();
@@ -469,6 +486,15 @@ describe('JanelaDaCampanha · criar com IA escolhida', () => {
     expect(forms.create.mock.invocationCallOrder[0]).toBeLessThan(camp.escolherIa.mock.invocationCallOrder[0]);
     await waitFor(() => expect(aoFechar).toHaveBeenCalled());
     expect(aoSalvar).toHaveBeenCalledWith({ config: expect.objectContaining({ id: 'cfg-9' }) });
+  });
+
+  it('escolher a IA no seletor e clicar direto em Criar grava a IA (não se perde sem o Pôr)', async () => {
+    forms.create.mockResolvedValue(criada());
+    camp.escolherIa.mockResolvedValue({ ok: true, holders: [], left_empty: [], warning: null });
+    formNovo();
+    fireEvent.change(screen.getByLabelText('Pôr numa IA'), { target: { value: 'a1|' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Criar' }));
+    await waitFor(() => expect(camp.escolherIa).toHaveBeenCalledWith({ ref: { kind: 'form', id: 'f-9' }, sales_agent_id: 'a1', number_id: null }));
   });
 
   it('sem IA escolhida, Criar não chama o endereço da IA', async () => {
@@ -548,7 +574,8 @@ describe('JanelaDaCampanha · criar com IA escolhida', () => {
     escolhaDaIa('a1|');
     fireEvent.click(screen.getByRole('button', { name: /^Tirar a IA/ }));
     expect(camp.tirarIa).not.toHaveBeenCalled();
-    expect(screen.getByText('Sem IA')).toBeInTheDocument();
+    expect(screen.queryByText('Sem IA')).toBeNull();
+    expect(screen.getByText(/Nenhuma IA escolhida aqui/)).toBeInTheDocument();
   });
 });
 
@@ -615,6 +642,13 @@ describe('JanelaDaCampanha · lista de imóveis aberta e só o miolo rola (fix 1
   });
 });
 
+
+describe('JanelaDaCampanha · sugestão de imóvel pelo nome', () => {
+  it('"[03/11] [CASTELO 2.0]" sugere pela palavra CASTELO (sugestaoPeloNome, não normalizarNome)', async () => {
+    formNovo({ item: item({ kind: 'form', key: 'form:f-9', label: '[03/11] [CASTELO 2.0]' }) });
+    await waitFor(() => expect(props.list).toHaveBeenCalledWith({ q: 'CASTELO', per_page: 1 }));
+  });
+});
 
 describe('JanelaDaCampanha · copiar de outra ficha (Tarefa 7)', () => {
   const origem = (): LeadAdsFormConfig => ({ ...ficha(), id: 'cfg-o', form_id: 'f-o', form_name: '[06/10] [CASTELO]' });
@@ -685,7 +719,7 @@ describe('JanelaDaCampanha · copiar de outra ficha (Tarefa 7)', () => {
   it('IA por regra mais ampla na origem: nada a escolher, nenhum aviso', () => {
     novoParecido({ itensDaLista: [itemOrigem({ agents: [{ sales_agent_id: 'a1', name: 'Agente A', sales_agent_number_id: null, number_label: null, whole_number: false, note: null, kind: 'broad', reason: 'atende todo lead do funil', removable: false }] })] });
     copiar();
-    expect(screen.getByText('Sem IA')).toBeInTheDocument();
+    expect(screen.queryByText(/Agente A/, { selector: 'span' })).toBeNull();
     expect(screen.queryByText(/IA não foi copiada/)).toBeNull();
   });
 
@@ -693,7 +727,7 @@ describe('JanelaDaCampanha · copiar de outra ficha (Tarefa 7)', () => {
     novoParecido({ opcoesDeIa: opcoes.filter((o) => o.sales_agent_id !== 'b1') });
     copiar();
     expect(screen.getByText(/A IA não foi copiada/)).toBeInTheDocument();
-    expect(screen.getByText('Sem IA')).toBeInTheDocument();
+    expect(screen.queryByText('Sem IA')).toBeNull();
     expect(screen.getByLabelText('Investimento')).toBeChecked();
   });
 
@@ -702,6 +736,14 @@ describe('JanelaDaCampanha · copiar de outra ficha (Tarefa 7)', () => {
     novoParecido({ itensDaLista: [itemOrigem({ agents: [ag('b1', 'n1'), ag('a1', null)] })] });
     copiar();
     expect(within(screen.getByTestId('coluna-direita')).getByText('Agente B · Ana', { selector: 'span' })).toBeInTheDocument();
+    // e diz, em uma linha, que a outra não veio
+    expect(screen.getByText(/A outra IA desta campanha \(Agente A\) não veio/)).toBeInTheDocument();
+  });
+
+  it('origem com uma IA só da campanha: nenhum aviso de "outra IA"', () => {
+    novoParecido();
+    copiar();
+    expect(screen.queryByText(/A outra IA desta campanha/)).toBeNull();
   });
 
   it('lista de campanhas chegando: Copiar espera, não copia nada; quando chega, habilita e copia a IA', async () => {

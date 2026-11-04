@@ -1,6 +1,6 @@
 /**
  * Os campos da "Entrada do lead" de um formulário do Meta (coluna esquerda da janela da campanha, 04/11/2026):
- * funil e etapa, quem assume, etiquetas e ativo. O "Nome do imóvel para reconhecer os formulários" saiu: quem
+ * funil e etapa, quem assume (no topo), etiquetas e ativo (no fim, depois do que a campanha vende). O "Nome do imóvel para reconhecer os formulários" saiu: quem
  * liga lead a ficha é o `form_id`, não uma palavra no nome.
  */
 import type { ComponentProps } from 'react';
@@ -23,6 +23,7 @@ type Recursos = Pick<ReturnType<typeof useAutomationResources>, 'pipelines' | 's
 
 const campo = 'w-full min-w-0 rounded-md border border-input bg-background px-3 py-2 text-sm';
 
+/** A primeira metade, no topo da janela: pra onde o lead vai e quem assume. O resto (etiquetas, estado) é `ComplementoDaEntrada`. */
 export default function EntradaDoLead({ valor, aoMudar, recursos, roletas }: {
   valor: EntradaEmEdicao;
   aoMudar: (parcial: Partial<EntradaEmEdicao>) => void;
@@ -70,7 +71,18 @@ export default function EntradaDoLead({ valor, aoMudar, recursos, roletas }: {
           />
         </CampoDaJanela>
       </GrupoDaJanela>
+    </>
+  );
+}
 
+/** A segunda metade, depois do que a campanha vende: etiquetas e se a ficha está ativa. */
+export function ComplementoDaEntrada({ valor, aoMudar, recursos }: {
+  valor: EntradaEmEdicao;
+  aoMudar: (parcial: Partial<EntradaEmEdicao>) => void;
+  recursos: Recursos;
+}) {
+  return (
+    <>
       <GrupoDaJanela titulo="Complemento">
         <CampoDaJanela
           rotulo="Etiquetas"

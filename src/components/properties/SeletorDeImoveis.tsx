@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Check, Search, X } from 'lucide-react';
 import { Button, Input } from '@/components/ui/ds';
-import BotoesDeEscolha from '@/components/base/BotoesDeEscolha';
+import { Seletor } from '@/components/base/Seletor';
 import Carregando from '@/components/base/Carregando';
 import EmptyState from '@/components/base/EmptyState';
 import { cn } from '@/lib/utils';
@@ -145,14 +145,18 @@ export function SeletorDeImoveis({ id, selecionados, max = 10, sugestaoQ, disabl
         </div>
       )}
 
-      <div className="relative">
-        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <Input id={id} value={texto} onChange={e => setTexto(e.target.value)} placeholder={TEXTOS.buscar} className="pl-9" disabled={disabled} />
+      {/* Busca e tipo na mesma linha: o tipo é uma lista (3 opções + Todos), não uma segunda fileira de botões. */}
+      <div data-testid="busca-e-tipo" className="flex min-w-0 items-center gap-2">
+        <div className="relative min-w-0 flex-1">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input id={id} value={texto} onChange={e => setTexto(e.target.value)} placeholder={TEXTOS.buscar} className="pl-9" disabled={disabled} />
+        </div>
+        <Seletor aria-label="Tipo de imóvel" value={tipo} disabled={disabled}
+          onChange={e => setTipo(e.target.value as '' | ListingKind)}
+          className="w-44 shrink-0 rounded-md border border-input bg-background px-3 py-2 text-sm">
+          {TIPOS.map(t => <option key={t.valor} value={t.valor}>{t.valor === '' ? 'Todos os tipos' : t.rotulo}</option>)}
+        </Seletor>
       </div>
-
-      <BotoesDeEscolha<'' | ListingKind>
-        rotulo="Tipo de imóvel" valor={tipo} opcoes={TIPOS} aoEscolher={setTipo} desabilitado={disabled}
-      />
 
       {!pronto ? (
         <Carregando variante="lista" linhas={3} rotulo="Carregando imóveis…" />

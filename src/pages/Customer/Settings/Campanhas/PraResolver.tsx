@@ -16,6 +16,10 @@ export interface PraResolverProps {
   /** Só com mais de uma página conectada. */
   nomeDaPagina: (f: IgnoredLeadForm) => string | null;
   aoPlugar: (f: IgnoredLeadForm) => void;
+  /** Sem `lead_ads_form_configs.create` o servidor recusa a ficha nova: Plugar nem aparece (a lista só informa). */
+  podePlugar?: boolean;
+  /** Quem não é super-admin não importa lead (o botão dá 403): a frase da importação manda pro suporte da LM. */
+  pedeSuporte?: boolean;
   /** Super-admin: as páginas que barram lead e a chave "Receber leads de qualquer formulário desta página". */
   paginasDaChave?: MetaPage[];
   paginaOcupada?: string | null;
@@ -23,7 +27,7 @@ export interface PraResolverProps {
 }
 
 export default function PraResolver({
-  formularios, fichaDesligada, nomeDaPagina, aoPlugar, paginasDaChave = [], paginaOcupada = null, aoAlternarPagina,
+  formularios, fichaDesligada, nomeDaPagina, aoPlugar, podePlugar = true, pedeSuporte = false, paginasDaChave = [], paginaOcupada = null, aoAlternarPagina,
 }: PraResolverProps) {
   if (formularios.length === 0) return null;
   const total = formularios.reduce((soma, f) => soma + f.lead_count, 0);
@@ -39,7 +43,7 @@ export default function PraResolver({
             <p className="text-sm font-medium">{plural(total, 'lead não entrou', 'leads não entraram')}</p>
             <p className="mt-0.5 text-xs text-muted-foreground">
               {haEntradaSozinha
-                ? 'Plugue em até 2 dias e os leads que estão esperando entram sozinhos. Os mais antigos só entram por importação manual.'
+                ? `Plugue em até 2 dias e os leads que estão esperando entram sozinhos. Os mais antigos só entram por importação manual${pedeSuporte ? ': peça pro suporte da LM' : ''}.`
                 : `${formularios.length > 1 ? 'Vieram destes formulários, que não estão plugados' : 'Veio deste formulário, que não está plugado'}. Se for seu, plugue: os próximos leads entram.`}
             </p>
           </div>
@@ -47,7 +51,7 @@ export default function PraResolver({
 
         <ul className="divide-y divide-border">
           {formularios.map((f) => {
-            const frases = frasesDoLeadBarrado(f);
+            const frases = frasesDoLeadBarrado(f, pedeSuporte);
             const ultimo = ultimoLeadEmTexto(f.last_lead_at);
             const pagina = nomeDaPagina(f);
             return (
@@ -62,7 +66,7 @@ export default function PraResolver({
                     {[frases.principal, frases.porImportacao, ultimo].filter(Boolean).join(' · ')}
                   </p>
                 </div>
-                <Button variant="outline" size="sm" onClick={() => aoPlugar(f)} aria-label={`Plugar ${f.form_name || f.form_id}`}>Plugar</Button>
+                {podePlugar && <Button variant="outline" size="sm" onClick={() => aoPlugar(f)} aria-label={`Plugar ${f.form_name || f.form_id}`}>Plugar</Button>}
               </li>
             );
           })}

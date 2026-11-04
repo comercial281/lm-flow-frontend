@@ -30,13 +30,17 @@ export default function QuemAtende({
   donos, opcoes, podeMexer, novo = false, aoEscolher, aoTirar, ocupado = false, movendo = null, aoMover, aoDeixar, aviso, ficouSemIa = [],
 }: QuemAtendeProps) {
   const [escolhida, setEscolhida] = useState('');
+  // IA de regra mais ampla já atende: não há o que escolher aqui (Ação: Nenhuma).
+  const temAmpla = donos.some((d) => d.kind === 'broad');
   // Depois de gravar, os donos mudam: a escolha feita já foi usada.
   useEffect(() => { setEscolhida(''); }, [donos]);
 
   return (
     <div className="grid gap-3">
       {donos.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Sem IA</p>
+        novo
+          ? <p className="text-sm text-muted-foreground">Nenhuma IA escolhida aqui. IA que atende por funil ou por todo anúncio continua atendendo; depois de criar, a linha mostra quem atende.</p>
+          : <p className="text-sm text-muted-foreground">Sem IA</p>
       ) : (
         <ul className="grid gap-2">
           {donos.map((d) => (
@@ -56,11 +60,16 @@ export default function QuemAtende({
           ))}
         </ul>
       )}
-      {podeMexer && (
+      {podeMexer && !temAmpla && (
         <div className="flex flex-wrap items-end gap-2">
           <div className="min-w-0 flex-1">
             <Seletor aria-label="Pôr numa IA" value={escolhida} disabled={ocupado}
-              onChange={(e) => { setEscolhida(e.target.value); aoDeixar?.(); }}
+              onChange={(e) => {
+                setEscolhida(e.target.value);
+                aoDeixar?.();
+                // Formulário novo: não há o que gravar agora, então escolher já vale (entra no Criar). Sem botão Pôr.
+                if (novo && e.target.value) aoEscolher(e.target.value);
+              }}
               className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
               <option value="">Pôr numa IA...</option>
               {opcoes.filter((o) => !o.jaAtende).map((o) => (
@@ -68,7 +77,7 @@ export default function QuemAtende({
               ))}
             </Seletor>
           </div>
-          <Button type="button" variant="outline" disabled={!escolhida || ocupado} onClick={() => aoEscolher(escolhida)}>Pôr</Button>
+          {!novo && <Button type="button" variant="outline" disabled={!escolhida || ocupado} onClick={() => aoEscolher(escolhida)}>Pôr</Button>}
         </div>
       )}
       {movendo && (
@@ -82,7 +91,7 @@ export default function QuemAtende({
       )}
       {aviso && <Aviso tom="atencao" compacto>{aviso}</Aviso>}
       {ficouSemIa.length > 0 && <Aviso tom="atencao" compacto>Ficou sem IA: {ficouSemIa.join(', ')}.</Aviso>}
-      {podeMexer && (
+      {podeMexer && !temAmpla && (
         <p className="text-xs text-muted-foreground">
           {novo ? 'A escolha grava junto quando você clicar em Criar.' : 'Esta escolha vale na hora, sem esperar o Salvar.'}
         </p>

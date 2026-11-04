@@ -10,6 +10,10 @@ describe('frasesDoLeadBarrado', () => {
     expect(frasesDoLeadBarrado({ lead_count: 5, recent_count: 3 })).toEqual({ principal: '3 leads entram sozinhos ao plugar', porImportacao: '2 leads só entram por importação manual' });
     expect(frasesDoLeadBarrado({ lead_count: 1, recent_count: 1 })).toEqual({ principal: '1 lead entra sozinho ao plugar', porImportacao: null });
   });
+  it('quem não importa: a frase da importação termina mandando pro suporte da LM', () => {
+    expect(frasesDoLeadBarrado({ lead_count: 5, recent_count: 3 }, true).porImportacao).toBe('2 leads só entram por importação manual: peça pro suporte da LM');
+    expect(frasesDoLeadBarrado({ lead_count: 6, recent_count: 0 }, true).porImportacao).toBe('Só entram por importação manual: peça pro suporte da LM');
+  });
   it('tudo velho: só importação', () => {
     expect(frasesDoLeadBarrado({ lead_count: 6, recent_count: 0 })).toEqual({ principal: '6 leads esperando', porImportacao: 'Só entram por importação manual' });
   });

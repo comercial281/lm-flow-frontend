@@ -10695,4 +10695,12 @@ Spec: `LM FLOW/specs/2026-11-04-campanhas-tela-e-plugar-design.md`. Esta seção
 - As exceções do `conferir-padrao` apontam pro arquivo: a janela de diagnóstico do Meta ficou em `LeadAdsForms.tsx` por isso. Mover pede mover as exceções junto.
 - `LeadAdsForms.tsx` continua sendo o dono do estado (fichas, sincronização, janela). Só a lista, Pra resolver e a janela de importar saíram: `PraResolver.tsx`, `TabelaDeFormularios.tsx` (com `OutrosFormularios`), `TabelaDeAnuncios.tsx`, `TabelaDaTela.tsx`, `ImportarLeadsRecentes.tsx`. `LinhaDaCampanha.tsx` foi apagado.
 
+**Revisão do PR 2 (04/11/2026, decidido pelo dono)**
+- **A janela abre pela entrada do lead.** Coluna da esquerda: Copiar, Para onde vai (Funil e Etapa), Quem assume, O que esta campanha vende (com a lista), Complemento e Estado. Antes o Funil ficava abaixo da lista de imóveis, fora da primeira tela. `EntradaDoLead` tem duas partes (`EntradaDoLead` e `ComplementoDaEntrada`). Criar sem funil ou sem etapa leva o foco ao campo.
+- **Plugar numa ficha desligada abre já ligada**, com o aviso "Esta ficha estava desligada. Ao salvar, ela liga de novo." no topo (some se a pessoa desmarcar Ativo). Editar pela linha da tabela não muda nada.
+- **Formulário plugado sai de Pra resolver na hora**, sem nova sincronização: sai quem tem ficha ATIVA da página do lead (ou sem página), igual ao `LeadRouter#candidate_configs`. Ficha de outra página ou desligada não tira.
+- **Formulário novo:** escolher a IA no seletor já vale (sem botão Pôr; entra no Criar). Sem escolha, a tela não diz "Sem IA" (diz que IA por funil ou por anúncio continua atendendo). IA de regra ampla (`broad`): sem seletor e sem a frase "vale na hora".
+- **Botões de super-admin:** Diagnosticar, Importar e Limpar etiquetas só aparecem pra ele (o servidor dá 403 pro resto). Pra quem não é, a frase da importação manual termina em "peça pro suporte da LM". Plugar só aparece com `lead_ads_form_configs.create`.
+- O filtro de tipo de imóvel é uma lista na mesma linha da busca. O subtítulo da página é uma linha só. A lista de Campanhas só aceita a resposta da leitura mais nova. "Parece com a ficha" ignora palavra de 1-2 letras, preposição e "vila". Copiar de origem com 2 IAs da campanha leva a primeira e avisa que a outra não veio.
+
 Testes: `Campanhas.spec.tsx`, `PraResolver.spec.tsx`, `TabelaDeFormularios.spec.tsx`, `TabelaDeAnuncios.spec.tsx`, `src/features/campanhas/telaDeCampanhas.spec.ts`.

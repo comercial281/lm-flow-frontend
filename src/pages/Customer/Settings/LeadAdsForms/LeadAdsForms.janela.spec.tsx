@@ -162,4 +162,42 @@ describe('Formulários do Meta · janela da campanha', () => {
     });
     recursos.labels = [];
   });
+
+  it('a janela abre pela entrada do lead: Copiar, Para onde vai, Quem assume, o que vende, Complemento, Estado', async () => {
+    svc.getAll.mockResolvedValue([cadastro({ id: 'cfg-o', form_id: 'f-o', form_name: '[06/10] [CASTELO]' })]);
+    svc.syncMetaForms.mockResolvedValue({ data: [{ id: 'f-2', name: '[03/11] [CASTELO 2.0]', status: 'ACTIVE', leads_count: 3 }], errors: [], ignored_leads: [] });
+    render(<MemoryRouter><LeadAdsForms /></MemoryRouter>);
+    fireEvent.click(await plugarOutro());
+    const dialogo = await screen.findByRole('dialog');
+    const coluna = within(dialogo).getByTestId('coluna-entrada');
+    await within(dialogo).findByRole('button', { name: 'Copiar a configuração' });
+    const pos = (el: HTMLElement) => Array.from(coluna.querySelectorAll('*')).indexOf(el);
+    const copiar = within(coluna).getByRole('button', { name: 'Copiar a configuração' });
+    const ordem = [
+      copiar,
+      within(coluna).getByRole('group', { name: 'Para onde vai' }),
+      within(coluna).getByRole('group', { name: 'Quem assume' }),
+      within(coluna).getByRole('group', { name: 'O que esta campanha vende' }),
+      within(coluna).getByRole('group', { name: 'Complemento' }),
+      within(coluna).getByRole('group', { name: 'Estado' }),
+    ].map(pos);
+    expect(ordem).toEqual([...ordem].sort((a, b) => a - b));
+    expect(new Set(ordem).size).toBe(6);
+  });
+
+  it('Criar sem funil leva o foco ao campo Funil; com funil e sem etapa, ao campo Etapa', async () => {
+    svc.getAll.mockResolvedValue([]);
+    svc.syncMetaForms.mockResolvedValue({ data: [{ id: 'f-2', name: '05/10 - ALMA', status: 'ACTIVE', leads_count: 3 }], errors: [], ignored_leads: [] });
+    render(<MemoryRouter><LeadAdsForms /></MemoryRouter>);
+    fireEvent.click(await plugarOutro());
+    const dialogo = await screen.findByRole('dialog');
+    fireEvent.click(within(dialogo).getByRole('button', { name: 'Criar' }));
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith('Selecione um funil'));
+    expect(within(dialogo).getByLabelText(/Funil/)).toHaveFocus();
+    fireEvent.change(within(dialogo).getByLabelText(/Funil/), { target: { value: 'p1' } });
+    fireEvent.click(within(dialogo).getByRole('button', { name: 'Criar' }));
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith('Selecione uma etapa'));
+    expect(within(dialogo).getByLabelText(/Etapa/)).toHaveFocus();
+    expect(svc.create).not.toHaveBeenCalled();
+  });
 });

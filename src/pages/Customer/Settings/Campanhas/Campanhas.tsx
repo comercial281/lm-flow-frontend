@@ -3,7 +3,7 @@
 // WhatsApp (as linhas `campaign_links`). A lista vem do servidor (`GET /campaigns`); campanha nova aparece sozinha.
 // Quem vê: a chave da lista (`campaign_links.read` ou a antiga `lead_ads_form_configs.read`). Quem edita cada parte
 // é a chave da própria linha. Corretor não tem o item no menu e, se chegar pelo endereço, cai no NoAccessState.
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/ds';
 import { Pagina, BaseHeader } from '@/components/base';
@@ -17,7 +17,7 @@ import { useCan } from '@/hooks/useCan';
 import { propertiesService } from '@/services/properties/propertiesService';
 import { campanhasService, type ItemDeCampanha, type OpcaoDeIa } from '@/services/campanhas/campanhasService';
 
-const SUBTITULO = 'Tudo o que trouxe lead pro LM Flow nos últimos 90 dias. Formulário novo aparece em Pra resolver quando o primeiro lead for barrado. Anúncio de WhatsApp aparece aqui sozinho.';
+const SUBTITULO = 'Tudo o que trouxe lead pro LM Flow nos últimos 90 dias.';
 
 export default function Campanhas() {
   const can = useCan();
@@ -31,11 +31,17 @@ export default function Campanhas() {
   const [nomes, setNomes] = useState<Record<string, string>>({});
   const [aberto, setAberto] = useState<ItemDeCampanha | null>(null);
 
+  // Só a leitura mais nova vale: uma resposta lenta de antes (ex.: a da abertura) não sobrescreve a de depois de um Criar ou Salvar.
+  const leitura = useRef(0);
   const carregar = useCallback(async () => {
+    const minha = ++leitura.current;
     try {
-      setItens(await campanhasService.lista());
+      const lista = await campanhasService.lista();
+      if (minha !== leitura.current) return;
+      setItens(lista);
       setErro(false);
     } catch {
+      if (minha !== leitura.current) return;
       setErro(true);
       setItens((atual) => atual ?? []);
     }

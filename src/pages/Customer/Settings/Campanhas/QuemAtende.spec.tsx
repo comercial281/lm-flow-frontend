@@ -21,11 +21,19 @@ const mostrar = (donos: IaDaCampanha[], extra: Partial<QuemAtendeProps> = {}) =>
 const RODAPE = 'As regras da IA ficam em IA Vendedora > Configurar > Campanhas e gatilhos.';
 
 describe('QuemAtende', () => {
-  it('broad: nome e motivo, sem botão nenhum', () => {
+  it('broad: nome e motivo, nenhum botão e nenhum seletor (Ação: Nenhuma)', () => {
     mostrar([dono({ kind: 'broad', reason: 'atende todo lead que entra no funil Leads (Marketing)', removable: false })]);
     expect(screen.getByText('Agente A')).toBeInTheDocument();
     expect(screen.getByText('Atende todo lead que entra no funil Leads (Marketing)')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /^Tirar a IA/ })).toBeNull();
+    expect(screen.queryAllByRole('button')).toHaveLength(0);
+    expect(screen.queryByLabelText('Pôr numa IA')).toBeNull();
+    expect(screen.queryByText(/vale na hora/)).toBeNull();
+  });
+
+  it('broad num formulário novo: também sem seletor e sem a frase do Criar', () => {
+    mostrar([dono({ kind: 'broad', reason: 'atende todo lead do funil', removable: false })], { novo: true });
+    expect(screen.queryByLabelText('Pôr numa IA')).toBeNull();
+    expect(screen.queryByText(/clicar em Criar/)).toBeNull();
   });
 
   it('campaign removível mostra Tirar a IA e chama aoTirar', () => {
@@ -73,6 +81,24 @@ describe('QuemAtende', () => {
     mostrar([dono({ note: 'atende todo anúncio' })]);
     expect(screen.getByText('Agente A · atende todo anúncio')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /^Tirar a IA/ })).toBeNull();
+  });
+
+  it('formulário novo: escolher no seletor já vale, sem botão Pôr', () => {
+    const p = mostrar([], { novo: true });
+    expect(screen.queryByRole('button', { name: 'Pôr' })).toBeNull();
+    fireEvent.change(screen.getByLabelText('Pôr numa IA'), { target: { value: 'b1|' } });
+    expect(p.aoEscolher).toHaveBeenCalledWith('b1|');
+  });
+
+  it('formulário novo sem IA escolhida não afirma "Sem IA": diz que outra IA pode atender', () => {
+    mostrar([], { novo: true });
+    expect(screen.queryByText('Sem IA')).toBeNull();
+    expect(screen.getByText(/Nenhuma IA escolhida aqui\. IA que atende por funil ou por todo anúncio continua atendendo; depois de criar, a linha mostra quem atende\./)).toBeInTheDocument();
+  });
+
+  it('formulário existente mantém o Pôr', () => {
+    mostrar([]);
+    expect(screen.getByRole('button', { name: 'Pôr' })).toBeInTheDocument();
   });
 
   it('formulário novo: diz que a escolha grava no Criar; existente diz que vale na hora', () => {

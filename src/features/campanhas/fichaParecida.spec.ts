@@ -50,4 +50,17 @@ describe('fichaParecida', () => {
   it('sem nenhuma palavra em comum devolve null', () => {
     expect(fichaParecida('[03/11] [VIVANT]', [f('[06/10] [CASTELO]')])).toBeNull();
   });
+
+  it('palavra de 1-2 letras, preposição e "vila" em comum não sugerem nada', () => {
+    expect(fichaParecida('[03/11] [Residencial da Praça]', [f('[06/10] [Edifício da Serra]')])).toBeNull();
+    expect(fichaParecida('[03/11] [Parque do Sol]', [f('[06/10] [Jardim do Mar]')])).toBeNull();
+    expect(fichaParecida('[03/11] [Vila Verde]', [f('[06/10] [Vila Madalena]')])).toBeNull();
+    expect(fichaParecida('[03/11] [AB Castelo]', [f('[06/10] [AB Vivant]')])).toBeNull();
+    expect(fichaParecida('[03/11] [Casa de Pedra]', [f('[06/10] [Torre de Vidro]')])).toBeNull();
+  });
+
+  it('com uma palavra útil em comum, a preposição não atrapalha', () => {
+    const c = f('[06/10] [Vila Castelo]');
+    expect(fichaParecida('[03/11] [Parque do Castelo]', [c])).toBe(c);
+  });
 });

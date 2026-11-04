@@ -38,4 +38,21 @@ describe('PraResolver', () => {
     render(<PraResolver {...props} formularios={[f({ form_name: nome })]} />);
     expect(screen.getByText(nome)).toHaveClass('break-words');
   });
+
+  it('sem permissão de criar ficha, Plugar não aparece (a lista fica só informando)', () => {
+    render(<PraResolver {...props} podePlugar={false} formularios={[f()]} />);
+    expect(screen.getByText('Castelo')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Plugar/ })).toBeNull();
+  });
+
+  it('quem não importa leads (não é super-admin) lê que os antigos pedem o suporte da LM', () => {
+    render(<PraResolver {...props} pedeSuporte formularios={[f()]} />);
+    expect(screen.getByText(/Os mais antigos só entram por importação manual: peça pro suporte da LM\./)).toBeInTheDocument();
+    expect(screen.getByText(/2 leads só entram por importação manual: peça pro suporte da LM/)).toBeInTheDocument();
+  });
+
+  it('super-admin não é mandado ao suporte', () => {
+    render(<PraResolver {...props} formularios={[f()]} />);
+    expect(screen.queryByText(/suporte da LM/)).toBeNull();
+  });
 });

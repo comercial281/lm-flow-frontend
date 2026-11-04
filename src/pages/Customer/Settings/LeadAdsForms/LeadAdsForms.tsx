@@ -37,7 +37,7 @@ import { roletaConfigService, roletaLabel, type RoletaConfig } from '@/services/
 import { type QuemAssume } from '@/components/roleta/CampoQuemAssume';
 import { regraQuePega } from './regraPorPalavra';
 import JanelaDaCampanha from '../Campanhas/JanelaDaCampanha';
-import EntradaDoLead from '../Campanhas/EntradaDoLead';
+import EntradaDoLead, { ComplementoDaEntrada } from '../Campanhas/EntradaDoLead';
 import PraResolver from '../Campanhas/PraResolver';
 import TabelaDeFormularios, { OutrosFormularios } from '../Campanhas/TabelaDeFormularios';
 import ImportarLeadsRecentes from '../Campanhas/ImportarLeadsRecentes';
@@ -134,6 +134,7 @@ export default function LeadAdsForms({ titulo = 'Formulários', subtitulo = 'Pra
   const [metaPages, setMetaPages] = useState<MetaPage[]>([]);
   const [pageBusy, setPageBusy] = useState<string | null>(null);
   const isSuperAdmin = useIsSuperAdmin();
+  const podeCriarFicha = can('lead_ads_form_configs', 'create');
   const [cleanupBusy, setCleanupBusy] = useState(false);
 
   // Diagnóstico do token da Meta (super-admin): app, permissões, página e o token salvo.
@@ -208,6 +209,8 @@ export default function LeadAdsForms({ titulo = 'Formulários', subtitulo = 'Pra
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<LeadAdsFormConfig | null>(null);
+  // Abriu pelo Plugar de uma ficha que estava desligada: a janela já vem com Ativo marcado e avisa que Salvar liga.
+  const [plugandoDesligada, setPlugandoDesligada] = useState(false);
   const [form, setForm] = useState<FormState>(emptyFormState());
 
   // Importar leads recentes que não entraram (backfill): a janela mora em ImportarLeadsRecentes.
@@ -364,6 +367,7 @@ export default function LeadAdsForms({ titulo = 'Formulários', subtitulo = 'Pra
 
   const openCreate = (mf: MetaForm) => {
     setEditing(null);
+    setPlugandoDesligada(false);
     // Todo form já entra com "tráfego pago" por padrão (o backend garante isso na
     // entrada do lead de qualquer forma); a etiqueta do imóvel é adicionada à mão.
     const paid = resources.labels.find(l => l.title?.toLowerCase() === PAID_TAG);
@@ -376,6 +380,7 @@ export default function LeadAdsForms({ titulo = 'Formulários', subtitulo = 'Pra
 
   const openEdit = (cfg: LeadAdsFormConfig) => {
     setEditing(cfg);
+    setPlugandoDesligada(false);
     setForm({
       form_id:           cfg.form_id,
       form_name:         cfg.form_name,
@@ -392,8 +397,9 @@ export default function LeadAdsForms({ titulo = 'Formulários', subtitulo = 'Pra
   // A entrada do lead (funil, etapa, quem assume, etiquetas): confere e devolve o que a ficha grava.
   // Quem grava é a janela da campanha, junto com o que a campanha vende (Tarefa 77).
   const montarEntrada = (): LeadAdsFormConfigFormData | null => {
-    if (!form.pipeline_id) { toast.error('Selecione um funil'); return null; }
-    if (!form.pipeline_stage_id) { toast.error('Selecione uma etapa'); return null; }
+    // Falta algo: avisa e leva o foco ao campo (a janela rola até ele, sem a pessoa caçar o que faltou).
+    if (!form.pipeline_id) { toast.error('Selecione um funil'); document.getElementById('destino_funil')?.focus(); return null; }
+    if (!form.pipeline_stage_id) { toast.error('Selecione uma etapa'); document.getElementById('destino_etapa')?.focus(); return null; }
 
     const assign = form.quem;
     // Roleta nova (06/10/2026, D8): o horário e a mensagem de fora do horário
@@ -530,8 +536,17 @@ export default function LeadAdsForms({ titulo = 'Formulários', subtitulo = 'Pra
   // --- Leads ignorados (formulário não cadastrado) ---
 
   // O quadro segue o filtro de página, como o resto da tela.
+  // Formulário que acabou de ganhar ficha ATIVA sai daqui na hora, sem esperar outra sincronização. Espelha o LeadRouter
+  // (`candidate_configs`): só vale a ficha ativa da página do lead ou sem página. Ficha de outra página não destrava o lead,
+  // e ficha desligada também não.
+  const fichaDestrava = (f: IgnoredLeadForm) => configs.some((c) => {
+    if (c.form_id !== f.form_id || !c.is_active) return false;
+    if (!c.meta_page_id || !f.page_id) return true;
+    const paginaDaFicha = metaPages.find(p => p.id === c.meta_page_id);
+    return !paginaDaFicha || paginaDaFicha.page_id === f.page_id;
+  });
   const visibleIgnored = ignoredLeads.filter(
-    f => !pageFilter || metaPages.find(p => p.id === pageFilter)?.page_id === f.page_id,
+    f => !fichaDestrava(f) && (!pageFilter || metaPages.find(p => p.id === pageFilter)?.page_id === f.page_id),
   );
 
   // O nome da página vem do page_id do Facebook (é o que o relatório devolve),
@@ -565,8 +580,13 @@ export default function LeadAdsForms({ titulo = 'Formulários', subtitulo = 'Pra
   // Plugar um formulário que barrou lead. Se ele já tem ficha (desligada), abre ESSA ficha: criar outra duplicaria.
   const plugarBarrado = (f: IgnoredLeadForm) => {
     const existente = configs.find(c => c.form_id === f.form_id);
-    if (existente) openEdit(existente);
-    else openCreateFromIgnored(f);
+    if (!existente) { openCreateFromIgnored(f); return; }
+    openEdit(existente);
+    // Quem clica em Plugar quer o lead entrando: a ficha desligada já abre ligada, e a janela avisa. Editar pela linha não faz isso.
+    if (!existente.is_active) {
+      setForm(fs => ({ ...fs, is_active: true }));
+      setPlugandoDesligada(true);
+    }
   };
 
   // Os que barraram lead estão em Pra resolver; aqui ficam só os sem ficha e sem lead.
@@ -598,6 +618,9 @@ export default function LeadAdsForms({ titulo = 'Formulários', subtitulo = 'Pra
           aDireita={
             <>
           {cabecalhoExtra}
+          {/* Os três só funcionam pro super-admin (o servidor responde 403 pro resto): botão que só dá erro é pior que botão nenhum. */}
+          {isSuperAdmin && (
+            <>
           <IconActionButton
             label="Diagnosticar conexão"
             icon={<Stethoscope className="h-4 w-4" />}
@@ -614,6 +637,8 @@ export default function LeadAdsForms({ titulo = 'Formulários', subtitulo = 'Pra
             onClick={handleCleanupLabels}
             disabled={cleanupBusy}
           />
+            </>
+          )}
             </>
           }
           primaryAction={{
@@ -800,7 +825,7 @@ export default function LeadAdsForms({ titulo = 'Formulários', subtitulo = 'Pra
                     </ul>
                     <p className="text-xs mt-2">
                       👉 {debug.unmatched_blocked
-                        ? <>Se {(debug.unmatched_forms?.length ?? 0) > 1 ? 'esses formulários são seus' : 'esse formulário é seu'}, cadastre {(debug.unmatched_forms?.length ?? 0) > 1 ? 'eles' : 'ele'} no quadro <strong>Leads ignorados</strong> desta tela. A partir daí os leads entram.</>
+                        ? <>Se {(debug.unmatched_forms?.length ?? 0) > 1 ? 'esses formulários são seus' : 'esse formulário é seu'}, cadastre {(debug.unmatched_forms?.length ?? 0) > 1 ? 'eles' : 'ele'} no quadro <strong>Pra resolver</strong> desta tela. A partir daí os leads entram.</>
                         : <>Ache {(debug.unmatched_forms?.length ?? 0) > 1 ? 'esses formulários' : 'esse formulário'} na lista e configure a etiqueta do imóvel. A partir daí os leads dele entram certos.</>}
                     </p>
                   </Aviso>
@@ -973,6 +998,8 @@ export default function LeadAdsForms({ titulo = 'Formulários', subtitulo = 'Pra
         fichaDesligada={(formId) => configs.some(c => c.form_id === formId && !c.is_active)}
         nomeDaPagina={pageNameOfIgnored}
         aoPlugar={plugarBarrado}
+        podePlugar={podeCriarFicha}
+        pedeSuporte={!isSuperAdmin}
         paginasDaChave={isSuperAdmin ? ignoredPages : []}
         paginaOcupada={pageBusy}
         aoAlternarPagina={toggleAcceptUnconfigured}
@@ -1021,6 +1048,7 @@ export default function LeadAdsForms({ titulo = 'Formulários', subtitulo = 'Pra
             formularios={outrosFormularios}
             mostrarPagina={syncedPages.length > 1}
             aoPlugar={openCreate}
+            podePlugar={podeCriarFicha}
             nota={notaDaRegra}
           />
         )}
@@ -1049,6 +1077,14 @@ export default function LeadAdsForms({ titulo = 'Formulários', subtitulo = 'Pra
           aoMudarIa={() => campanhas?.aoMudar()}
           aoApagar={excluirFicha}
           resumoDaEntrada={resumoDaEntrada()}
+          avisoDoTopo={plugandoDesligada && form.is_active ? 'Esta ficha estava desligada. Ao salvar, ela liga de novo.' : null}
+          complemento={(
+            <ComplementoDaEntrada
+              valor={form}
+              aoMudar={parcial => setForm(f => ({ ...f, ...parcial }))}
+              recursos={resources}
+            />
+          )}
           entrada={(
             <EntradaDoLead
               valor={form}

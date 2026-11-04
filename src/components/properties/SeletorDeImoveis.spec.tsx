@@ -48,7 +48,7 @@ describe('SeletorDeImoveis', () => {
     list.mockResolvedValue(pagina([item(1)]));
     render(<Host />);
     await screen.findByRole('button', { name: /^Imóvel 1/ });
-    fireEvent.click(screen.getByRole('radio', { name: 'Empreendimentos' }));
+    fireEvent.change(screen.getByLabelText('Tipo de imóvel'), { target: { value: 'development' } });
     await waitFor(() => expect(list).toHaveBeenLastCalledWith(expect.objectContaining({ listing_kind: 'development' })));
   });
 
@@ -106,8 +106,8 @@ describe('SeletorDeImoveis', () => {
     await screen.findByRole('button', { name: /^Imóvel 1/ });
     list.mockImplementationOnce(() => new Promise(r => { soltaVelha = r; }));
     list.mockResolvedValueOnce(pagina([item(3, { title: 'Nova' })]));
-    fireEvent.click(screen.getByRole('radio', { name: 'Empreendimentos' })); // pedido lento
-    fireEvent.click(screen.getByRole('radio', { name: 'Revenda' })); // pedido rápido
+    fireEvent.change(screen.getByLabelText('Tipo de imóvel'), { target: { value: 'development' } }); // pedido lento
+    fireEvent.change(screen.getByLabelText('Tipo de imóvel'), { target: { value: 'resale' } }); // pedido rápido
     expect(await screen.findByRole('button', { name: /Nova/ })).toBeInTheDocument();
     await act(async () => { soltaVelha(pagina([item(2, { title: 'Velha' })])); });
     expect(screen.queryByRole('button', { name: /Velha/ })).not.toBeInTheDocument();
@@ -176,12 +176,17 @@ describe('SeletorDeImoveis', () => {
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
   });
 
-  it('o tipo marcado usa a escolha da casa (rádio), não o botão roxo cheio', async () => {
+  it('o tipo é uma lista na mesma linha da busca, não uma segunda fileira de botões', async () => {
     list.mockResolvedValue(pagina([item(1)]));
     render(<Host />);
     await screen.findByRole('button', { name: /^Imóvel 1/ });
-    expect(screen.getByRole('radio', { name: 'Todos' })).toHaveAttribute('aria-checked', 'true');
-    fireEvent.click(screen.getByRole('radio', { name: 'Leilão' }));
-    expect(screen.getByRole('radio', { name: 'Leilão' })).toHaveAttribute('aria-checked', 'true');
+    expect(screen.queryByRole('radio')).toBeNull();
+    const tipo = screen.getByLabelText('Tipo de imóvel');
+    expect(tipo).toHaveValue('');
+    const busca = screen.getByPlaceholderText('Buscar por título ou código');
+    expect(tipo.closest('[data-testid="busca-e-tipo"]')).toBe(busca.closest('[data-testid="busca-e-tipo"]'));
+    expect(tipo.closest('[data-testid="busca-e-tipo"]')).not.toBeNull();
+    fireEvent.change(tipo, { target: { value: 'auction' } });
+    expect(screen.getByLabelText('Tipo de imóvel')).toHaveValue('auction');
   });
 });

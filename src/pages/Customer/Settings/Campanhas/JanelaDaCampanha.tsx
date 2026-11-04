@@ -35,7 +35,7 @@ import {
 import { MAX_DE_IMOVEIS, TIPOS_DE_IMOVEL, itemDaFicha, nomeDoItem } from '@/features/campanhas/itensDeCampanha';
 import { fichaParecida } from '@/features/campanhas/fichaParecida';
 import { chaveDaIa, fraseDeMover, maiuscula, opcoesDaTela } from '@/features/campanhas/qualIaAtende';
-import { normalizarNome } from '../LeadAdsForms/regraPorPalavra';
+import { sugestaoPeloNome } from '@/features/campanhas/telaDeCampanhas';
 import QuemAtende from './QuemAtende';
 
 /** O que o servidor escreveu no 409 ("esta campanha sai da IA X"), com maiúscula e ponto. Vazio = monta pelo rótulo. */
@@ -51,8 +51,12 @@ export interface JanelaDaCampanhaProps {
   item: ItemDeCampanha;
   /** Formulário: a ficha que se edita. Sem ela, é um formulário novo (cria). */
   config?: LeadAdsFormConfig | null;
-  /** Formulário: os campos de "Entrada do lead" (funil, quem assume, etiquetas...), na coluna da esquerda. */
+  /** Formulário: "Para onde vai" e "Quem assume", no topo da coluna da esquerda (o funil é o que falta com mais frequência). */
   entrada?: ReactNode;
+  /** Formulário: etiquetas e estado, no fim da coluna da esquerda, depois do que a campanha vende. */
+  complemento?: ReactNode;
+  /** Uma frase no topo do miolo (ex.: ficha desligada que vai ligar ao salvar). */
+  avisoDoTopo?: string | null;
   /** Formulário: pra onde o lead vai, em palavras ("Funil > Etapa"), pro resumo do rodapé. */
   resumoDaEntrada?: string;
   /** Devolve o que a entrada grava, ou nulo se faltou algo (quem chama já avisou). */
@@ -93,7 +97,7 @@ function fraseDoCadastro(escopo: EscopoDaOferta | null, qtd: number, umSo: Prope
 const temCondicao = (c: CondicaoDaOferta | null) => Object.values(c ?? {}).some((v) => v != null && String(v).trim() !== '');
 
 export default function JanelaDaCampanha({
-  tipo, item, config = null, entrada, resumoDaEntrada, montarEntrada, opcoesDeIa, aoFechar, aoSalvar, aoMudarIa, aoCriarLinha, aoApagar, fichas, itensDaLista, aoCopiarEntrada, listaCarregando = false, listaFalhou = false,
+  tipo, item, config = null, entrada, complemento, avisoDoTopo, resumoDaEntrada, montarEntrada, opcoesDeIa, aoFechar, aoSalvar, aoMudarIa, aoCriarLinha, aoApagar, fichas, itensDaLista, aoCopiarEntrada, listaCarregando = false, listaFalhou = false,
 }: JanelaDaCampanhaProps) {
   const can = useCan();
   const recurso = tipo === 'form' ? 'lead_ads_form_configs' : 'campaign_links';
@@ -314,11 +318,20 @@ export default function JanelaDaCampanha({
     } else {
       if (!daLista) naoCopiou('não achei a ficha de origem na lista de campanhas');
       else {
-        const dela = ori.agents.find((a) => a.kind === 'campaign');
+        const daCampanha = ori.agents.filter((a) => a.kind === 'campaign');
+        const dela = daCampanha[0];
         if (dela) {
           const op = opcoes.find((o) => o.chave === chaveDaIa(dela.sales_agent_id, dela.sales_agent_number_id));
-          if (op && !op.fixa) { setPendente(op.chave); setAvisoDaIa(null); setAvisoDaCopia(null); }
-          else naoCopiou('a opção dela não está mais disponível');
+          if (op && !op.fixa) {
+            setPendente(op.chave); setAvisoDaIa(null); setAvisoDaCopia(null);
+            // Formulário novo leva uma IA só: a(s) outra(s) da origem fica(m) de fora, e a janela diz isso em uma linha.
+            const outras = [...new Set(daCampanha.slice(1).map((a) => a.name))];
+            if (outras.length > 0) {
+              setAvisoDaCopia(outras.length === 1
+                ? `A outra IA desta campanha (${outras[0]}) não veio: o formulário novo leva uma IA só.`
+                : `As outras IAs desta campanha (${outras.join(', ')}) não vieram: o formulário novo leva uma IA só.`);
+            }
+          } else naoCopiou('a opção dela não está mais disponível');
         }
       }
     }
@@ -369,7 +382,7 @@ export default function JanelaDaCampanha({
 
   const frase = fraseDaIntencao(intencoes, 'desta campanha');
   const linhasDeCondicao = condicaoDaLinha({ offer_condition: condicaoParaGravar(cond) }, umSo);
-  const sugestao = normalizarNome(nomeDoItem(item)).replace(/[^\p{L}\p{N}\s]/gu, ' ').replace(/\s+/g, ' ').trim() || null;
+  const sugestao = sugestaoPeloNome(nomeDoItem(item));
   const eForm = tipo === 'form';
 
   const imovelEmTexto = escopo === 'catalog' ? 'Todo o catálogo'
@@ -380,7 +393,8 @@ export default function JanelaDaCampanha({
   const resumo = [
     imovelEmTexto,
     eForm ? resumoDaEntrada : null,
-    opcoesDeIa ? (donosNaTela.length ? donosNaTela.map((d) => d.name).join(', ') : 'Sem IA') : null,
+    // Formulário novo sem escolha: não afirma "Sem IA" (uma IA por funil ou por anúncio ainda pode atender).
+    opcoesDeIa ? (donosNaTela.length ? donosNaTela.map((d) => d.name).join(', ') : novo ? null : 'Sem IA') : null,
   ].filter(Boolean).join(' · ');
 
   // Quem atende e a oferta saem em cada janela do mesmo jeito; o que muda é a esquerda.
@@ -437,6 +451,7 @@ export default function JanelaDaCampanha({
         {/* Só o miolo rola: a janela não (overflow-hidden), o topo e o rodapé ficam parados. A folga de 1 evita cortar o anel de foco.
             `relative` prende o texto sr-only ("(obrigatório)", absoluto) ao miolo: sem isso ele sai pra fora da rolagem, cai no fim da janela e a faz rolar. */}
         <div data-testid="miolo-da-janela" className="relative -mx-1 min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-1">
+        {avisoDoTopo && <Aviso tom="atencao" compacto className="mb-2">{avisoDoTopo}</Aviso>}
         {!podeEditar && (
           <Aviso tom="neutro" compacto>
             {!podeCriar
@@ -465,8 +480,9 @@ export default function JanelaDaCampanha({
                 </Aviso>
               )}
               {avisoDaCopia && <Aviso tom="atencao" compacto>{avisoDaCopia}</Aviso>}
-              {oQueVende}
               {eForm && entrada}
+              {oQueVende}
+              {eForm && complemento}
             </fieldset>
           </section>
 

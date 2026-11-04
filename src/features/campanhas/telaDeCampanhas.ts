@@ -27,17 +27,21 @@ export const sugestaoPeloNome = (nome: string | null | undefined): string | null
 
 const leads = (n: number) => `${n} ${n === 1 ? 'lead' : 'leads'}`;
 
+const PEDE_SUPORTE = ': peça pro suporte da LM';
+
 /**
  * O que está parado num formulário barrado. Servidor que ainda não manda `recent_count`: só a contagem,
  * sem separar o que entra sozinho do que só entra por importação.
+ * `pedeSuporte`: quem não é super-admin não importa lead (o botão dá 403), então a frase da importação manda pro suporte.
  */
-export function frasesDoLeadBarrado(f: Pick<IgnoredLeadForm, 'lead_count' | 'recent_count'>): { principal: string; porImportacao: string | null } {
+export function frasesDoLeadBarrado(f: Pick<IgnoredLeadForm, 'lead_count' | 'recent_count'>, pedeSuporte = false): { principal: string; porImportacao: string | null } {
   if (typeof f.recent_count !== 'number') return { principal: `${leads(f.lead_count)} esperando`, porImportacao: null };
   const velhos = Math.max(0, f.lead_count - f.recent_count);
+  const sufixo = pedeSuporte ? PEDE_SUPORTE : '';
   return {
     principal: f.recent_count > 0 ? `${leads(f.recent_count)} ${f.recent_count === 1 ? 'entra sozinho' : 'entram sozinhos'} ao plugar` : `${leads(f.lead_count)} esperando`,
     porImportacao: f.recent_count > 0 && velhos > 0
-      ? `${leads(velhos)} ${velhos === 1 ? 'só entra' : 'só entram'} por importação manual`
-      : f.recent_count === 0 ? 'Só entram por importação manual' : null,
+      ? `${leads(velhos)} ${velhos === 1 ? 'só entra' : 'só entram'} por importação manual${sufixo}`
+      : f.recent_count === 0 ? `Só entram por importação manual${sufixo}` : null,
   };
 }
