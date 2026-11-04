@@ -76,6 +76,7 @@ const THEME_BY_GROUP: Record<string, string> = {
   visits: 'funil',
   proposals: 'funil',
   contracts: 'funil',
+  locacao: 'imoveis',
   properties: 'imoveis',
   property_capture: 'imoveis',
   property_interests: 'imoveis',

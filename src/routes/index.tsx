@@ -17,6 +17,8 @@ import {
   Pipelines,
   Bolsao,
   BolsaoBatches,
+  Locacao,
+  FichaDoContrato,
   Disparos,
   DisparoDetalhe,
   WhatsappOficial,
@@ -589,6 +591,25 @@ const AppRouter = () => {
                 }
               />
             </Route>
+
+            {/* Locação — contratos de aluguel, boletos, repasses e reajustes.
+                Leitura de imóveis é a porta; o servidor barra quem não tem a Locação ligada. */}
+            <Route
+              path="/locacao/contratos/:id"
+              element={
+                <PermissionRoute resource="properties" action="read">
+                  <FichaDoContrato />
+                </PermissionRoute>
+              }
+            />
+            <Route
+              path="/locacao"
+              element={
+                <PermissionRoute resource="properties" action="read">
+                  <Locacao />
+                </PermissionRoute>
+              }
+            />
 
             <Route
               path="/equipe"

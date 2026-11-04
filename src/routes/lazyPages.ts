@@ -23,6 +23,8 @@ export const ChatPage = lazyWithRetry(() => import('@/pages/Customer/Chat/ChatPa
 export const Pipelines = lazyWithRetry(() => import('@/pages/Customer/Pipelines/Pipelines'));
 export const Bolsao = lazyWithRetry(() => import('@/pages/Customer/Bolsao/Bolsao'));
 export const BolsaoBatches = lazyWithRetry(() => import('@/pages/Customer/Bolsao/BolsaoBatches'));
+export const Locacao = lazyWithRetry(() => import('@/pages/Customer/Locacao/Locacao'));
+export const FichaDoContrato = lazyWithRetry(() => import('@/pages/Customer/Locacao/FichaDoContrato'));
 export const Disparos = lazyWithRetry(() => import('@/pages/Customer/Disparos/Disparos'));
 // Monitoria de um disparo (/disparos/:id): abre pela lista de Disparos.
 export const DisparoDetalhe = lazyWithRetry(() => import('@/pages/Customer/Disparos/DisparoDetalhe'));
@@ -67,6 +69,8 @@ export const routePrefetchMap: Record<string, () => Promise<unknown>> = {
   '/pipelines': Pipelines.__preload,
   '/bolsao': Bolsao.__preload,
   '/bolsao/listas': BolsaoBatches.__preload,
+  '/locacao': Locacao.__preload,
+  '/locacao/contratos/:id': FichaDoContrato.__preload,
   '/disparos': Disparos.__preload,
   '/ia-vendedora': SalesAgents.__preload,
   '/equipe': TeamAccess.__preload,
