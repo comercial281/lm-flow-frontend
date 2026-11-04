@@ -161,8 +161,8 @@ export const campanhasService = {
   },
 
   /**
-   * Põe a IA na campanha. Campanha que já é de outra IA no mesmo número pede
-   * `confirm_move: true`: o servidor responde 409, e aqui vira `moveNeeded` pra tela perguntar.
+   * Põe a IA na campanha (só o Criar de um formulário copiado usa; o resto da configuração mora na IA).
+   * Campanha que já é de outra IA no mesmo número pede `confirm_move: true`: o servidor responde 409, e aqui vira `moveNeeded` pra tela perguntar.
    */
   async escolherIa(pedido: PedidoDeIa): Promise<RespostaDoPedidoDeIa> {
     try {
@@ -175,10 +175,5 @@ export const campanhasService = {
       }
       throw erro;
     }
-  },
-
-  async tirarIa(pedido: Omit<PedidoDeIa, 'confirm_move'>): Promise<DonosDaCampanha> {
-    const res = await api.delete('/campaigns/agent', { data: pedido });
-    return res.data as DonosDaCampanha;
   },
 };
