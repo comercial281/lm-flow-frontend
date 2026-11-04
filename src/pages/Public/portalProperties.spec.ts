@@ -99,7 +99,7 @@ describe('fetchListaDoSite', () => {
   const resp = (body: unknown, ok = true) => ({ ok, json: async () => body }) as unknown as Response;
 
   it('manda o caminho ao servidor e devolve quem entra e o nome da lista', async () => {
-    const fetchImpl = vi.fn(async (_url: string) => resp({
+    const fetchImpl = vi.fn<(url: string, init?: RequestInit) => Promise<Response>>(async () => resp({
       data: [prop(1), prop(2)], meta: { total: 2, listing_title: 'Casas à venda em Sorocaba' },
     }));
     const lista = await fetchListaDoSite('https://api.test', 'imob', 'a-venda/casa/sorocaba', fetchImpl);
