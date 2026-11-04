@@ -12,7 +12,7 @@ vi.mock('@xyflow/react', async importOriginal => ({
   EdgeLabelRenderer: ({ children }: { children: ReactNode }) => <foreignObject>{children}</foreignObject>,
 }));
 
-import { FlowEdge } from './FlowEdge';
+import { FlowEdge, edgeLabelPoint } from './FlowEdge';
 
 const renderEdge = (patch: Partial<ComponentProps<typeof FlowEdge>> = {}) => {
   const onCut = vi.fn();
@@ -54,5 +54,17 @@ describe('Linha do construtor', () => {
     const d = document.querySelector('path.react-flow__edge-path')?.getAttribute('d') ?? '';
     expect(d).toMatch(/C/);
     expect(d).not.toMatch(/[LQ]/);
+  });
+});
+
+describe('nome da linha', () => {
+  const pontos = { midX: 500, midY: 300, targetX: 700, targetY: 600 };
+
+  it('fica no meio da curva, como sempre foi', () => {
+    expect(edgeLabelPoint(pontos, false)).toEqual({ x: 500, y: 300 });
+  });
+
+  it('nos caminhos do sorteio, encosta na entrada do bloco: as curvas se cruzam no meio', () => {
+    expect(edgeLabelPoint(pontos, true)).toEqual({ x: 670, y: 600 });
   });
 });

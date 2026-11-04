@@ -10,6 +10,7 @@ import { sendFromOf, sendFromProblem } from '@/features/numbers/sendFrom';
 import { usesBook } from './book';
 import { hasStoredItems, messageItemsOf } from './messageItems';
 import { conditionProblem } from './conditions';
+import { percentProblem } from './randomizer';
 import { leadActionProblem } from './leadAction';
 import { moveStageModeOf, moveStageProblem } from './moveStage';
 import { progressProblem } from './progress';
@@ -70,6 +71,8 @@ export function nodeProblem(node: BlockLike, kind: FlowAutomationKind = 'automat
     case 'condition':
     case 'filter_label':
       return conditionProblem(config);
+    case 'randomizer':
+      return percentProblem(config);
     case 'move_stage':
       return moveStageProblem(config);
     case 'add_label':

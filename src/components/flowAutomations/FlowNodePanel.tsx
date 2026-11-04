@@ -5,6 +5,7 @@ import EmptyState from '@/components/base/EmptyState';
 import { Seletor } from '@/components/base/Seletor';
 import BotoesDeEscolha from '@/components/base/BotoesDeEscolha';
 import { SaidasDoBloco } from './SaidasDoBloco';
+import { RandomizerFields } from './RandomizerFields';
 import { EscolhaDeEtiqueta } from './EscolhaDeEtiqueta';
 import { applySendFrom } from '@/features/numbers/sendFrom';
 import type { FlowAutomationKind, FlowAutomationNode, FlowNodeConfig } from '@/types/flowAutomations';
@@ -555,6 +556,8 @@ export function FlowNodePanel({ node, resources, onClose, onSave, onDirtyChange,
       }
       case 'condition':
         return conditionFields('condition');
+      case 'randomizer':
+        return <RandomizerFields config={config} onChange={setConfig} readOnly={guided} />;
       case 'filter_label':
         // Com critério, abre como Condição (o canvas converte ao salvar);
         // o legado, só com etiquetas, abre como sempre.
@@ -650,7 +653,8 @@ export function FlowNodePanel({ node, resources, onClose, onSave, onDirtyChange,
           </div>
         )}
         {renderFields()}
-        {problem && <p className="text-xs text-destructive" role="alert">{problem}</p>}
+        {/* No Randomizador o aviso da soma já está nos campos, ao vivo. */}
+        {problem && activeNode.kind !== 'randomizer' && <p className="text-xs text-destructive" role="alert">{problem}</p>}
       </div>
     </FlowBlockDialog>
   );

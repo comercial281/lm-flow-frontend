@@ -15,6 +15,7 @@
 
 import type { FlowAutomation, FlowAutomationKind, FlowAutomationNode, FlowNodeGuide } from '@/types/flowAutomations';
 import { hasMessageContent, hasMessageMedia, hasStoredItems } from './messageItems';
+import { mapBranchTargets } from './randomizer';
 
 export interface GuideStep {
   nodeId: string;
@@ -137,7 +138,7 @@ export function removeAndRewire(
     nodes: nodes
       .filter(n => n.id !== id)
       .map(n => ({
-        ...n,
+        ...mapBranchTargets(n, swap),
         next_node_id: swap(n.next_node_id),
         next_yes_node_id: swap(n.next_yes_node_id),
         next_no_node_id: swap(n.next_no_node_id),

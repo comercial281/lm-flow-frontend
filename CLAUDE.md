@@ -10757,6 +10757,40 @@ Armadilhas:
 
 Testes: `CondicoesAutomaticasDoFollowup.spec.tsx`, `FollowupCondicoesAutomaticasCanvas.spec.tsx`. Servidor: `spec/requests/api/v1/flow_automations_followup_progress_labels_spec.rb`.
 
+## Construtor: bloco Randomizador (desde 2026-11-04)
+
+Em 04/11/2026 o Tony pediu um bloco de sorteio genérico: "pode ser para um disparo, pode ser para ver qual responde mais, pode ser para N coisas". O bloco só sorteia o caminho; o que vem depois é de quem monta. **Não é blindagem de número nem teste A/B com resultado:** painel de resultado por caminho ficou de fora (`LM FLOW/_MELHORIAS.md`).
+
+O que aparece:
+
+- **Lista de Blocos, grupo Controle:** Esperar, Aguardar resposta, Condição, Randomizador. O corretor com Automações próprias também tem.
+- **Janela:** uma linha por caminho (letra, %, fatia, remover), *Adicionar caminho*, *Dividir igual* e a caixa do total, que acompanha a digitação.
+- **Cartão no mapa:** uma linha por caminho (letra, fatia, %, "+") com o ponto de ligar na ponta da própria linha. O nome da linha ("A · 25%") encosta na entrada do bloco de destino.
+- **"O que aconteceu" e Simular:** `sorteio: Caminho B (25%)`.
+
+Decisões (não reabrir sem o dono pedir):
+
+1. **De 2 a 10 caminhos.** Nasce com 2, 50% cada.
+2. **Só salva com 100%:** a janela, o cartão, a chave de ligar (`readiness.ts`) e o servidor seguem a mesma régua. % é inteiro de 0 a 100; 0% é aceito e nunca sai.
+3. **Adicionar ou remover caminho redivide igual**, com a sobra nos primeiros (34, 33, 33), e mantém a ligação de quem fica. Digitar a % não mexe nas outras.
+4. **Sorteio de verdade, um por lead, a cada passagem pelo bloco:** a divisão é aproximada em lista pequena. Não é rodízio.
+5. **Caminho sem nada ligado:** o fluxo para ali pra esse lead (a mesma regra do Não da Condição), e o histórico diz.
+6. **Fora do funil de mensagem:** ele roda em linha reta, sem ter como sortear caminho (`foraDoFunilDeConversa`). Em Disparos, vale pela opção Automação.
+7. **Caminho não tem nome próprio:** é a letra da posição na lista. Remover o A faz o B virar A.
+8. **Modo guiado:** o corretor vê a % sem editar. Tirar a mensagem de um caminho religa o caminho no bloco seguinte.
+
+Armadilhas:
+
+1. **A ligação de cada caminho mora em `config.branches[].next_node_id`**, sem chave estrangeira: o número de saídas varia. Quem copia ou salva fluxo no servidor traduz por `assign_random_branches`; no navegador, `link`, `removeNode` e `removeAndRewire` (via `mapBranchTargets`). Quem andar pelo grafo novo precisa olhar os caminhos também (`numberWarnings` olha).
+2. **A saída é `path:<id do caminho>`,** nunca a posição: a linha continua certa quando a letra muda.
+3. **O tipo é virtual** no servidor (grava `log_event` + `_virtual_kind`), sem migration. `where(kind: 'randomizer')` não acha o bloco.
+4. **Trocar um caminho por outro não muda a altura do cartão,** então o React Flow não percebe os pontos novos sozinho: `RandomizerPaths` chama `useUpdateNodeInternals`.
+5. **Linha de caminho entra sempre pela esquerda:** por cima, ela cruzaria o bloco do meio da pilha.
+6. **Os campos vêm antes das ações na janela de propósito:** o foco abre na primeira %, e um Enter não aciona "Dividir igual".
+7. **O total é sempre a mesma caixa, só muda cor e texto:** aparecendo só com a soma errada, a janela mudava de altura ao digitar e o clique seguinte caía no campo errado (visto na prévia, 04/11).
+
+Código: `features/flowAutomations/randomizer.ts`, `components/flowAutomations/RandomizerFields.tsx`, `components/flowAutomations/FlowNodeCard.tsx` (`RandomizerPaths`), `lib/flowAutomationGraph.ts`, `components/flowAutomations/FlowEdge.tsx` (`labelAtEnd`). Servidor: `FlowAutomations::RandomDraw`, `NodeHandlers#handle_randomizer`, `FlowAutomationNode#random_branches`. Testes: `randomizer.spec.ts`, `RandomizerFields.spec.tsx`, e no backend `randomizer_spec.rb` e `flow_automations_randomizer_spec.rb`.
+
 ## Quais leads do follow-up: a roleta antes da IA não tira mais (desde 2026-11-05)
 
 Pedido do dono do produto (04/11/2026, caso Pandora). A regra mora no servidor (ver o CLAUDE.md do `lm-flow`): o lead que passou pela roleta antes de falar com a IA pode receber follow-up e retomada; o que ela já passou pra um corretor, não. A retomada segue dependendo da chave do follow-up.

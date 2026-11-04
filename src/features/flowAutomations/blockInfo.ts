@@ -6,7 +6,7 @@
 // o que vai junto dele.
 
 import {
-  ArrowRightLeft, Bell, BellRing, CircleCheck, Clock, Eraser, FileText, Filter, GitBranch, Hourglass, Image,
+  ArrowRightLeft, Bell, BellRing, CircleCheck, Clock, Dices, Eraser, FileText, Filter, GitBranch, Hourglass, Image,
   ListOrdered, MessageSquare, Mic, Bot, BotOff, Repeat, Send, Shuffle, Sticker, Tag,
   Trophy, UserCheck, ClipboardList, Video, Zap, type LucideIcon,
 } from 'lucide-react';
@@ -26,6 +26,7 @@ const ICONS: Record<string, LucideIcon> = {
   wait: Clock,
   wait_for_reply: Hourglass,
   condition: GitBranch,
+  randomizer: Dices,
   filter_label: Filter,
   add_label: Tag,
   remove_label: Eraser,
@@ -62,6 +63,7 @@ const DESCRIPTIONS: Record<string, string> = {
   wait: 'Segura o fluxo um tempo antes de seguir pro próximo bloco.',
   wait_for_reply: 'Espera o lead responder e segue por um caminho ou pelo outro.',
   condition: 'Confere algo do lead e segue pelo Sim ou pelo Não.',
+  randomizer: 'Sorteia um caminho pra cada lead, pela % de cada um.',
   filter_label: 'Só deixa o fluxo seguir se o lead passar na regra.',
   add_label: 'Coloca etiquetas no lead.',
   remove_label: 'Tira etiquetas do lead.',

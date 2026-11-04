@@ -4,6 +4,7 @@
 import { triggerEvents, type FlowTrigger } from './trigger';
 import type { FlowNumberSetting } from './flowNumber';
 import type { FlowAutomationNode } from '@/types/flowAutomations';
+import { branchesOf } from './randomizer';
 
 // Sem lead.roleta_accepted: no aceite o lead só falou com a IA (caso Basel).
 const CONFLICT_EVENTS = ['lead.visit_completed', 'lead.stage_changed'];
@@ -26,7 +27,8 @@ function sendsMessage(n: FlowAutomationNode | undefined): boolean {
 }
 
 function nextsOf(n: FlowAutomationNode): string[] {
-  return [n.next_node_id, n.next_yes_node_id, n.next_no_node_id].filter((x): x is string => !!x);
+  const paths = n.kind === 'randomizer' ? branchesOf(n.config).map(branch => branch.next_node_id) : [];
+  return [n.next_node_id, n.next_yes_node_id, n.next_no_node_id, ...paths].filter((x): x is string => !!x);
 }
 
 export function numberWarnings(input: {

@@ -1,10 +1,10 @@
-import { Handle, Position, type NodeProps } from '@xyflow/react';
-import { Pencil, Copy, Trash2, Zap, AlertTriangle } from 'lucide-react';
-import { useRef, useState, type MouseEvent } from 'react';
+import { Handle, Position, useUpdateNodeInternals, type NodeProps } from '@xyflow/react';
+import { Pencil, Copy, Plus, Trash2, Zap, AlertTriangle } from 'lucide-react';
+import { useEffect, useRef, useState, type MouseEvent } from 'react';
 import { Input } from '@/components/ui/ds';
 import type { FlowAutomationNode } from '@/types/flowAutomations';
 import {
-  nodeColor, looseOutputs, NODE_WIDTH, TRIGGER_NODE_ID, branchHandles, handleColor, handleLabel, isBranching, outputSide,
+  nodeColor, looseOutputs, NODE_WIDTH, TRIGGER_NODE_ID, branchHandles, handleColor, handleLabel, isBranching, outputSide, pathHandle,
   type OutputHandle,
 } from '@/lib/flowAutomationGraph';
 import { HIDDEN_BLOCK_NOTICE, blockGroup, blockLabel, isVisibleNode } from '@/features/flowAutomations/palette';
@@ -19,6 +19,7 @@ import { RECOVERED_SUMMARY } from '@/features/flowAutomations/recovered';
 import { BOOK_SOURCE, BOOK_SUMMARY } from '@/features/flowAutomations/book';
 import { hasStoredItems, messageItemsOf, type StoredMessageItem } from '@/features/flowAutomations/messageItems';
 import { moveStageModeOf, stageNameOf } from '@/features/flowAutomations/moveStage';
+import { branchLetter, branchesOf, summary as randomizerSummary } from '@/features/flowAutomations/randomizer';
 import { cn } from '@/lib/utils';
 
 /** O que o cartão precisa pra montar a frase do bloco. */
@@ -161,6 +162,8 @@ export function summaryLine(node: FlowAutomationNode, lookups: FlowLookups = {})
     case 'condition':
     case 'filter_label':
       return conditionSentence(cfg, lookups);
+    case 'randomizer':
+      return randomizerSummary(cfg);
     case 'add_label':
     case 'remove_label': {
       const labels = Array.isArray(cfg.labels) ? (cfg.labels as string[]) : [];
@@ -186,6 +189,55 @@ export function summaryLine(node: FlowAutomationNode, lookups: FlowLookups = {})
     default:
       return node.label || '';
   }
+}
+
+/**
+ * As saídas do Randomizador: uma linha por caminho, com a letra, a fatia, a % e o
+ * "+"; o ponto de ligar fica na ponta direita da própria linha. Trocar um caminho
+ * por outro não muda a altura do cartão, então o mapa precisa ser avisado pra
+ * reencontrar os pontos.
+ */
+function RandomizerPaths({ node, canAdd, onAddFrom }: {
+  node: FlowAutomationNode;
+  canAdd: boolean;
+  onAddFrom: (sourceId: string, handle: OutputHandle) => void;
+}) {
+  const branches = branchesOf(node.config);
+  const updateNodeInternals = useUpdateNodeInternals();
+  const handleIds = branches.map(branch => branch.id).join();
+  useEffect(() => updateNodeInternals(node.id), [node.id, handleIds, updateNodeInternals]);
+
+  return (
+    <ul aria-label="Caminhos do sorteio" className="border-t border-border py-1">
+      {branches.map((branch, index) => {
+        const handle = pathHandle(branch.id);
+        const letter = branchLetter(index);
+        return (
+          <li key={branch.id} className="relative flex h-8 items-center gap-2 px-3">
+            <span aria-label={`Caminho ${letter}`} className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-muted text-[10px] font-semibold text-foreground/70">
+              {letter}
+            </span>
+            <span aria-hidden="true" className="h-2 min-w-0 flex-1 overflow-hidden rounded-full bg-muted">
+              <span className="block h-full rounded-full bg-primary" style={{ width: `${Math.min(branch.percent, 100)}%` }} />
+            </span>
+            <span className="w-8 shrink-0 text-right text-xs font-semibold tabular-nums text-foreground">{branch.percent}%</span>
+            {canAdd && (
+              <button
+                type="button"
+                onClick={own(() => onAddFrom(node.id, handle))}
+                aria-label={`Pôr um bloco no Caminho ${letter}`}
+                title={branch.next_node_id ? 'Põe um bloco aqui, antes do que já vem depois' : `Põe um bloco no Caminho ${letter}`}
+                className="nodrag flex h-5 w-5 shrink-0 items-center justify-center rounded border border-dashed border-border text-muted-foreground hover:border-primary hover:text-primary"
+              >
+                <Plus className="h-3 w-3" aria-hidden="true" />
+              </button>
+            )}
+            <Handle type="source" position={Position.Right} id={handle} style={{ backgroundColor: handleColor(node.kind, handle) }} className="!w-3 !h-3" />
+          </li>
+        );
+      })}
+    </ul>
+  );
 }
 
 // O primeiro bloco do fluxo. Não tem entrada (nada vem antes dele), não se
@@ -372,7 +424,8 @@ export function FlowNodeCard({ id, data, selected }: NodeProps) {
         <Handle type="source" position={Position.Right} id="out" className="!bg-slate-400 !w-3 !h-3" />
       )}
       {/* O que segue o caminho sai pela direita; o desvio ("Não", "Respondeu") desce. */}
-      {branching && branches.map(h => (
+      {node.kind === 'randomizer' && <RandomizerPaths node={node} canAdd={can.add} onAddFrom={onAddFrom} />}
+      {branching && node.kind !== 'randomizer' && branches.map(h => (
         <Handle
           key={h}
           type="source"
@@ -386,7 +439,7 @@ export function FlowNodeCard({ id, data, selected }: NodeProps) {
       {/* "+" em toda saída, livre ou ligada (20/10/2026): na ligada, o bloco novo
           entra no meio. Antes só a saída vazia tinha "+", e não dava pra pôr
           nada depois de um bloco que já seguia pra outro. */}
-      {(branching || can.add) && (
+      {node.kind !== 'randomizer' && (branching || can.add) && (
         <div className="border-t border-border px-2 py-1.5 flex flex-wrap gap-1">
           {(branching ? branches : (['out'] as OutputHandle[])).map(handle => {
             const name = handleLabel(node.kind, handle);
