@@ -53,6 +53,7 @@ import {
 } from '@/features/flowAutomations/personal';
 import { usePersonalCapabilities } from '@/features/flowAutomations/usePersonalCapabilities';
 import { enableProblem, hasOwnTrigger, nodeProblem } from '@/features/flowAutomations/readiness';
+import { ehCondicaoAutomatica } from '@/features/flowAutomations/progress';
 import {
   reentryOf, reentrySummary, reentryWarning, serializeReentry, type ReentrySetting,
 } from '@/features/flowAutomations/reentry';
@@ -164,6 +165,7 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
   // visita. Sem nenhum dos dois (fluxo antigo), o Salvar não manda número e
   // não toca as Mensagens.
   const [numberSetting, setNumberSetting] = useState<FlowNumberSetting>({ mode: '', inboxId: '', onConflict: 'follow_conversation' });
+  const [nomeDaEtiqueta, setNomeDaEtiqueta] = useState<string | null>(null);
   const [numberSaved, setNumberSaved] = useState(false);
   const [numberDivergent, setNumberDivergent] = useState(false);
   const [numberTouched, setNumberTouched] = useState(false);
@@ -194,6 +196,7 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
     setNumberSaved(nextNumber.saved);
     setNumberDivergent(nextNumber.divergent);
     setNumberTouched(false);
+    setNomeDaEtiqueta(data.progress_tag_name ?? null);
     setNodes(nextNodes);
     setInitialNodeId(data.initial_node_id);
     setLoaded(snapshot(
@@ -288,11 +291,12 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
   const guided = isGuided(automation);
   const builderTools = !readOnly && !guided;
 
+  const nomeDaEtiquetaMudou = !guided && !!nomeDaEtiqueta && nomeDaEtiqueta !== (automation?.progress_tag_name ?? null);
   const hasChanges = !readOnly && !!automation && !!loaded
-    && !mesmoConteudo(snapshot(
+    && (nomeDaEtiquetaMudou || !mesmoConteudo(snapshot(
       automation.name, trigger, reentry, businessHoursOnly, numberSaved || numberTouched ? numberSetting : null,
       nodes, initialNodeId,
-    ), loaded);
+    ), loaded));
   // O rascunho do painel lateral também é alteração não salva: sair pelo menu
   // ou fechar a aba com ele mexido pergunta antes.
   const unsaved = hasChanges || sidePanel.dirty;
@@ -402,7 +406,10 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
       // bloco novo desta sessão): o servidor decide "é novo?" batendo contra os
       // blocos que já existem no fluxo. `initial_node_id` pode ser temporário
       // também: o servidor resolve os dois pelo MESMO mapa.
-      const saved = await flowAutomationsService.saveFlow(id, buildSaveFlowPayload(nodesToSave, nextInitial));
+      const saved = await flowAutomationsService.saveFlow(id, {
+        ...buildSaveFlowPayload(nodesToSave, nextInitial),
+        ...(nomeDaEtiquetaMudou && nomeDaEtiqueta ? { progress_tag_name: nomeDaEtiqueta } : {}),
+      });
       // A resposta já é o fluxo salvo (com o guia atualizado e, no funil de
       // conversa, ligado se o último passo ficou pronto): sem recarregar a tela.
       if (saved && Array.isArray(saved.nodes)) applyFlow(saved);
@@ -415,7 +422,7 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
     } finally {
       setSaving(false);
     }
-  }, [id, automation, guided, loaded, isConversation, semGatilho, trigger, reentry, businessHoursOnly, numeroAtivo, numberSetting, applyFlow, load]);
+  }, [id, automation, guided, loaded, isConversation, semGatilho, trigger, reentry, businessHoursOnly, numeroAtivo, numberSetting, nomeDaEtiquetaMudou, nomeDaEtiqueta, applyFlow, load]);
 
   const handleRemove = useCallback(async (nodeId: string) => {
     if (guided) {
@@ -472,8 +479,10 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
 
   const openNode = useCallback((nodeId: string) => {
     if (readOnly) return;
+    const alvo = nodes.find(n => n.id === nodeId);
+    if (alvo && ehCondicaoAutomatica(alvo, kind)) return;
     requestPanel({ type: 'node', id: nodeId });
-  }, [readOnly, requestPanel]);
+  }, [readOnly, requestPanel, nodes, kind]);
 
   const addFrom = useCallback((sourceId: string, handle: OutputHandle) => {
     setPendingSource({ id: sourceId, handle });
@@ -600,7 +609,8 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
     const stepByNode = new Map(steps.map(st => [st.nodeId, st]));
     const rest: Node[] = nodes.map(n => {
       const st = stepByNode.get(n.id);
-      const allow = readOnly
+      const condicaoAutomatica = ehCondicaoAutomatica(n, kind);
+      const allow = readOnly || condicaoAutomatica
         ? { edit: false, duplicate: false, remove: false, add: false, rename: false }
         : guided
           ? { edit: true, duplicate: false, remove: isMessageNode(n), add: false, rename: false }
@@ -611,6 +621,7 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
         position: positions[n.id] || { x: 0, y: 0 },
         draggable: builderTools,
         connectable: builderTools,
+        deletable: !condicaoAutomatica,
         data: {
           node: n, lookups, pessoal: peloMeuNumero, donoDoEnvio,
           problem: problems[n.id] ?? null,
@@ -618,12 +629,14 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
           highlighted: highlighted === n.id,
           guideMark: st ? { step: st.step, state: st.done ? 'done' : step?.nodeId === n.id ? 'current' : 'pending' } : null,
           allow,
+          condicaoAutomatica,
+          ocultarProgresso: kind === 'followup',
           onEdit: openNode, onDuplicate: handleDuplicate, onRemove: handleRemove, onAddFrom: addFrom, onRename: handleRename,
         },
       };
     });
     return [startNode, ...rest];
-  }, [nodes, positions, startPosition, startData, lookups, problems, openPanel, highlighted, steps, step, readOnly, guided, builderTools, openNode, handleDuplicate, handleRemove, handleRename, addFrom, peloMeuNumero, donoDoEnvio]);
+  }, [nodes, positions, startPosition, startData, lookups, problems, openPanel, highlighted, steps, step, readOnly, guided, builderTools, openNode, handleDuplicate, handleRemove, handleRename, addFrom, peloMeuNumero, donoDoEnvio, kind]);
 
   // As linhas são derivadas de `nodes`: selecionar e cortar passam por aqui, senão
   // o React Flow descarta o clique e o Delete (era só apagando o bloco).
@@ -1078,7 +1091,11 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
 
         <FlowSettingsDialog
           open={editingSettings}
-          settings={{ reentry, businessHoursOnly, ...(numeroDoFluxoVale ? { number: numberSetting } : {}) }}
+          settings={{
+            reentry, businessHoursOnly,
+            ...(numeroDoFluxoVale ? { number: numberSetting } : {}),
+            ...(nomeDaEtiqueta && !guided ? { progressTag: { name: nomeDaEtiqueta, leadsInside: automation.live_count ?? 0 } } : {}),
+          }}
           numberDivergent={numberDivergent && !numberTouched}
           numbers={sendNumbers.numbers}
           numberOwnerRule={sendNumbers.ownerRule}
@@ -1088,6 +1105,7 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
           onSave={next => {
             setReentry(next.reentry);
             setBusinessHoursOnly(next.businessHoursOnly);
+            if (next.progressTagName) setNomeDaEtiqueta(next.progressTagName);
             // Só vem quando a pessoa mexeu no grupo do número.
             if (next.number) {
               setNumberSetting(next.number);

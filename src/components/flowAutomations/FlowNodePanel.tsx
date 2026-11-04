@@ -401,6 +401,7 @@ export function FlowNodePanel({ node, resources, onClose, onSave, onDirtyChange,
             donoDoEnvio={donoDoEnvio}
             numeroDoFluxo={numeroDoFluxo ? flowNumberMessageLine(numeroDoFluxo) : null}
             numerosDiferentes={numerosDiferentes}
+            semMarcarProgresso={flowKind === 'followup'}
           />
         );
       case 'add_label':
