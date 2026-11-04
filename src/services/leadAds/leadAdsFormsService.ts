@@ -85,7 +85,12 @@ export interface IgnoredLeadForm {
   form_id: string;
   form_name: string;
   page_id?: string;
+  /** Leads barrados em 7 dias. */
   lead_count: number;
+  /** Dos barrados, os dos últimos 2 dias: entram sozinhos assim que o formulário é plugado. Ausente = servidor antigo. */
+  recent_count?: number;
+  /** ISO8601 do lead barrado mais recente. Ausente = servidor antigo. */
+  last_lead_at?: string | null;
 }
 
 // Resposta de meta_forms — pode vir { data, errors } se alguma página falhar.

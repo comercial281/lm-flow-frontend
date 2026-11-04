@@ -143,6 +143,7 @@ describe('Formulários do Meta · formulário pego por regra "nome contém"', ()
   it('mostra em qual roleta cai e por qual regra', async () => {
     comFormularioNovo();
     render(<MemoryRouter><LeadAdsForms /></MemoryRouter>);
+    fireEvent.click(await screen.findByRole('button', { name: /formulário.* no Facebook, ainda sem ficha/ }));
     expect(await screen.findByText('Cai na Roleta Zona Sul pela regra "alma"')).toBeInTheDocument();
   });
 
@@ -150,6 +151,7 @@ describe('Formulários do Meta · formulário pego por regra "nome contém"', ()
     comFormularioNovo();
     svc.getAll.mockResolvedValue([cadastro({ roleta_config_id: 'r1', default_assignee_id: 'u1' })]);
     render(<MemoryRouter><LeadAdsForms /></MemoryRouter>);
+    fireEvent.click(await screen.findByRole('button', { name: /formulário.* no Facebook, ainda sem ficha/ }));
     expect(await screen.findByText('Vai pra Ana Corretora pela regra "alma"')).toBeInTheDocument();
     expect(screen.queryByText(/Cai na Roleta/)).toBeNull();
   });

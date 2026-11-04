@@ -1,5 +1,5 @@
 // Formulários (Automações): falha ao ler os formulários configurados não pode virar
-// "Nenhum formulário configurado" — o gestor recadastraria o que já existe.
+// "Nenhum formulário plugado" — o gestor recadastraria o que já existe.
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -36,17 +36,17 @@ beforeEach(() => {
 });
 
 describe('Formulários · erro de carga', () => {
-  it('leitura que falha mostra Tentar de novo, não "Nenhum formulário configurado"', async () => {
+  it('leitura que falha mostra Tentar de novo, não "Nenhum formulário plugado"', async () => {
     svc.getAll.mockRejectedValue(new Error('500'));
     render(<MemoryRouter><LeadAdsForms /></MemoryRouter>);
     const botao = await screen.findByRole('button', { name: 'Tentar de novo' });
-    expect(screen.queryByText('Nenhum formulário configurado')).toBeNull();
+    expect(screen.queryByText('Nenhum formulário plugado')).toBeNull();
 
     svc.getAll.mockResolvedValue([]);
     const antes = svc.getAll.mock.calls.length;
     await userEvent.click(botao);
     await waitFor(() => expect(svc.getAll.mock.calls.length).toBe(antes + 1));
-    expect(await screen.findByText('Nenhum formulário configurado')).toBeInTheDocument();
+    expect(await screen.findByText('Nenhum formulário plugado')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Tentar de novo' })).toBeNull();
   });
 });

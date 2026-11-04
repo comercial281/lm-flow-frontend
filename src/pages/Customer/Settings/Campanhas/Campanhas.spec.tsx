@@ -3,20 +3,22 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { ItemDeCampanha } from '@/services/campanhas/campanhasService';
-import type { LeadAdsFormConfig } from '@/services/leadAds/leadAdsFormsService';
+import type { IgnoredLeadForm, LeadAdsFormConfig } from '@/services/leadAds/leadAdsFormsService';
 
 const camp = vi.hoisted(() => ({ lista: vi.fn(), opcoesDeIa: vi.fn(), criarLinha: vi.fn(), atualizarLinha: vi.fn(), escolherIa: vi.fn(), tirarIa: vi.fn(), condicaoDoTexto: vi.fn() }));
 vi.mock('@/services/campanhas/campanhasService', () => ({ campanhasService: camp }));
 const svc = vi.hoisted(() => ({ getAll: vi.fn(), syncMetaForms: vi.fn(), update: vi.fn(), create: vi.fn(), delete: vi.fn() }));
 vi.mock('@/services/leadAds/leadAdsFormsService', () => ({ leadAdsFormsService: svc }));
-vi.mock('@/services/integrations/metaPagesService', () => ({ metaPagesService: { getAll: vi.fn().mockResolvedValue([]) } }));
+const paginas = vi.hoisted(() => ({ getAll: vi.fn(), update: vi.fn() }));
+vi.mock('@/services/integrations/metaPagesService', () => ({ metaPagesService: paginas }));
 vi.mock('@/services/properties/propertiesService', () => ({
   propertiesService: {
     list: vi.fn().mockResolvedValue({ data: [{ id: 'p1', title: 'Residencial Teste', code: 'AB01' }] }),
     get: vi.fn().mockResolvedValue({ id: 'p1', title: 'Residencial Teste', code: 'AB01' }),
   },
 }));
-vi.mock('@/hooks/useIsSuperAdmin', () => ({ useIsSuperAdmin: () => false }));
+const sup = vi.hoisted(() => ({ valor: false }));
+vi.mock('@/hooks/useIsSuperAdmin', () => ({ useIsSuperAdmin: () => sup.valor }));
 vi.mock('@/services/roletaConfig/roletaConfigService', async (orig) => {
   const real = await orig<typeof import('@/services/roletaConfig/roletaConfigService')>();
   return { ...real, roletaConfigService: { getAll: vi.fn().mockResolvedValue([]) } };
@@ -55,12 +57,16 @@ const anuncio = (extra: Partial<ItemDeCampanha> = {}): ItemDeCampanha => item({
 const tela = () => render(<MemoryRouter><Campanhas /></MemoryRouter>);
 
 beforeEach(() => {
+  sup.valor = false;
+  paginas.getAll.mockReset().mockResolvedValue([]);
+  paginas.update.mockReset().mockResolvedValue({});
   cargo.chaves = new Set(ADMIN);
   camp.lista.mockReset().mockResolvedValue([item(), anuncio()]);
   camp.opcoesDeIa.mockReset().mockResolvedValue([{ sales_agent_id: 'a1', number_id: null, label: 'Agente A', serves_all: false, locked: null, enabled: true }]);
   svc.getAll.mockReset().mockResolvedValue([ficha()]);
   svc.syncMetaForms.mockReset().mockResolvedValue({ data: [], errors: [], ignored_leads: [] });
   svc.delete.mockReset();
+  svc.update.mockReset();
 });
 
 describe('Campanhas', () => {
@@ -71,27 +77,46 @@ describe('Campanhas', () => {
     expect(screen.getByRole('heading', { level: 1, name: 'Campanhas' })).toBeInTheDocument();
   });
 
-  it('a linha do formulário mostra leads, o que vende, a condição ("A do imóvel" quando vazia) e qual IA atende', async () => {
+  it('a linha do formulário mostra imóvel, leads em 90 dias, quem atende e a data do último lead', async () => {
     tela();
-    expect(await screen.findByText('12 leads em 90 dias')).toBeInTheDocument();
-    await waitFor(() => expect(screen.getByText('Residencial Teste')).toBeInTheDocument());
-    expect(screen.getAllByText('A do imóvel').length).toBeGreaterThan(0);
-    expect(screen.getByText('Agente A')).toBeInTheDocument();
+    const linha = await screen.findByTestId('linha-do-formulario');
+    expect(within(linha).getByText('12 leads')).toBeInTheDocument();
+    await waitFor(() => expect(within(linha).getByText('Residencial Teste')).toBeInTheDocument());
+    expect(within(linha).getByText('Agente A')).toBeInTheDocument();
+    expect(within(linha).getByText('Vendas → Novo')).toBeInTheDocument();
+    expect(within(linha).getByText('Último lead agora')).toBeInTheDocument();
   });
 
-  it('campanha sem linha: "Não diz o que vende" e o aviso no topo', async () => {
+  it('a página usa a largura toda (sem o estreita de max-w-4xl)', async () => {
+    const { container } = tela();
+    await screen.findByRole('heading', { name: 'Formulários do Meta' });
+    expect(container.querySelector('.max-w-4xl')).toBeNull();
+  });
+
+  it('anúncio sem oferta: selo "Não diz o que oferece" e "Parece: <imóvel>" pelo nome; o aviso do topo não existe mais', async () => {
     tela();
     const bloco = await screen.findByTestId('anuncios-de-whatsapp');
     expect(within(bloco).getByText('Campanha B')).toBeInTheDocument();
-    expect(within(bloco).getByText('Não diz o que vende')).toBeInTheDocument();
-    expect(screen.getByText('1 campanha trouxe lead esta semana e não diz o que vende.')).toBeInTheDocument();
+    expect(within(bloco).getByText('Não diz o que oferece')).toBeInTheDocument();
+    expect(await within(bloco).findByText('Parece: Residencial Teste')).toBeInTheDocument();
+    expect(screen.queryByText(/não dizem o que vendem|não diz o que vende\./)).toBeNull();
   });
 
-  it('sem campanha parada, não tem aviso', async () => {
-    camp.lista.mockResolvedValue([item(), anuncio({ sells_scope: 'catalog' })]);
+  it('clicar na linha do formulário abre a janela dele', async () => {
     tela();
-    await screen.findByText('Campanha B');
-    expect(screen.queryByText(/não dizem o que vendem|não diz o que vende\./)).toBeNull();
+    fireEvent.click(await screen.findByTestId('linha-do-formulario'));
+    const dialogo = await screen.findByRole('dialog');
+    expect(within(dialogo).getByRole('button', { name: 'Salvar' })).toBeInTheDocument();
+  });
+
+  it('mexer na chave Ativo não abre a janela e grava na hora', async () => {
+    svc.update.mockResolvedValue(ficha({ is_active: false }));
+    tela();
+    const linha = await screen.findByTestId('linha-do-formulario');
+    fireEvent.click(within(linha).getByRole('switch', { name: 'Ficha ativa de Formulário Teste' }));
+    await waitFor(() => expect(svc.update).toHaveBeenCalled());
+    expect(svc.update.mock.calls[0][1]).toMatchObject({ is_active: false });
+    expect(screen.queryByRole('dialog')).toBeNull();
   });
 
   it('lista que falha mostra Tentar de novo na parte dos anúncios', async () => {
@@ -175,6 +200,159 @@ describe('Campanhas · por cargo (Ver como)', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Ver Campanha B' }));
     const dialogo = await screen.findByRole('dialog');
     expect(within(dialogo).queryByRole('button', { name: 'Salvar' })).toBeNull();
+  });
+});
+
+const barrado = (extra: Partial<IgnoredLeadForm> = {}): IgnoredLeadForm => ({
+  form_id: 'f-9', form_name: '[03/11] [CASTELO 2.0]', page_id: 'pg-1', lead_count: 5, recent_count: 3, last_lead_at: new Date().toISOString(), ...extra,
+});
+const comBarrados = (ignored_leads: IgnoredLeadForm[], extra: object = {}) =>
+  svc.syncMetaForms.mockResolvedValue({ data: [], errors: [], ignored_leads, ...extra });
+
+describe('Campanhas · Pra resolver', () => {
+  it('sem lead barrado, o bloco nem existe', async () => {
+    tela();
+    await screen.findByRole('heading', { name: 'Formulários do Meta' });
+    await waitFor(() => expect(svc.syncMetaForms).toHaveBeenCalled());
+    expect(screen.queryByText('Pra resolver')).toBeNull();
+  });
+
+  it('lista só o formulário barrado, com a contagem, o texto dos 2 dias e a separação do que só entra por importação', async () => {
+    comBarrados([barrado()]);
+    tela();
+    const bloco = await screen.findByTestId('pra-resolver');
+    expect(within(bloco).getByText('[03/11] [CASTELO 2.0]')).toBeInTheDocument();
+    expect(within(bloco).getByText(/Plugue em até 2 dias/)).toBeInTheDocument();
+    expect(within(bloco).getByText(/3 leads entram sozinhos ao plugar · 2 leads só entram por importação manual/)).toBeInTheDocument();
+    expect(within(bloco).getByText('5 leads não entraram')).toBeInTheDocument();
+    expect(within(bloco).queryByText('Formulário Teste')).toBeNull();
+  });
+
+  it('servidor antigo (sem recent_count): só a contagem, sem separar e sem erro', async () => {
+    comBarrados([{ form_id: 'f-9', form_name: 'Antigo', page_id: 'pg-1', lead_count: 4 }]);
+    tela();
+    const bloco = await screen.findByTestId('pra-resolver');
+    expect(within(bloco).getByText('4 leads esperando')).toBeInTheDocument();
+    expect(within(bloco).queryByText(/Plugue em até 2 dias/)).toBeNull();
+    expect(within(bloco).queryByText(/importação manual/)).toBeNull();
+    expect(screen.queryByText(/Não foi possível/)).toBeNull();
+  });
+
+  it('só importação: recent_count 0 não promete entrada sozinha', async () => {
+    comBarrados([barrado({ recent_count: 0, lead_count: 6 })]);
+    tela();
+    const bloco = await screen.findByTestId('pra-resolver');
+    expect(within(bloco).queryByText(/Plugue em até 2 dias/)).toBeNull();
+    expect(within(bloco).getByText(/6 leads esperando · Só entram por importação manual/)).toBeInTheDocument();
+  });
+
+  it('Plugar abre a janela de formulário novo e o Criar grava uma ficha', async () => {
+    comBarrados([barrado()]);
+    svc.getAll.mockResolvedValue([]);
+    camp.lista.mockResolvedValue([]);
+    svc.create.mockResolvedValue(ficha({ id: 'novo', form_id: 'f-9' }));
+    tela();
+    fireEvent.click(await screen.findByRole('button', { name: 'Plugar [03/11] [CASTELO 2.0]' }));
+    const dialogo = await screen.findByRole('dialog');
+    expect(within(dialogo).getByRole('button', { name: 'Criar' })).toBeInTheDocument();
+  });
+
+  it('formulário que já tem ficha desligada: mostra "Ficha desligada" e Plugar abre ESSA ficha, sem criar outra', async () => {
+    svc.getAll.mockResolvedValue([ficha({ id: 'cfg-off', form_id: 'f-off', form_name: 'Inativo antigo', is_active: false })]);
+    camp.lista.mockResolvedValue([]);
+    comBarrados([barrado({ form_id: 'f-off', form_name: 'Inativo antigo' })]);
+    tela();
+    const bloco = await screen.findByTestId('pra-resolver');
+    expect(within(bloco).getByText('Ficha desligada')).toBeInTheDocument();
+    fireEvent.click(within(bloco).getByRole('button', { name: 'Plugar Inativo antigo' }));
+    const dialogo = await screen.findByRole('dialog');
+    expect(within(dialogo).getByRole('button', { name: 'Salvar' })).toBeInTheDocument();
+    expect(within(dialogo).queryByRole('button', { name: 'Criar' })).toBeNull();
+    expect(svc.create).not.toHaveBeenCalled();
+  });
+
+  it('Facebook lento: as tabelas aparecem na hora e Pra resolver chega depois, sem erro no meio da tela', async () => {
+    let chegou: (v: unknown) => void = () => undefined;
+    svc.syncMetaForms.mockReturnValue(new Promise((r) => { chegou = r; }));
+    tela();
+    expect(await screen.findByTestId('linha-do-formulario')).toBeInTheDocument();
+    expect(await screen.findByTestId('anuncios-de-whatsapp')).toBeInTheDocument();
+    expect(screen.queryByTestId('pra-resolver')).toBeNull();
+    expect(screen.queryByText(/Não foi possível|Não deu pra/)).toBeNull();
+    chegou({ data: [], errors: [], ignored_leads: [barrado()] });
+    expect(await screen.findByTestId('pra-resolver')).toBeInTheDocument();
+  });
+
+  it('Facebook fora: as tabelas seguem, Pra resolver não aparece e a mensagem de erro de hoje continua', async () => {
+    svc.syncMetaForms.mockResolvedValue({ data: [], errors: [], error: 'Token expirado', ignored_leads: [] });
+    tela();
+    expect(await screen.findByText('Não foi possível carregar os formulários da Meta')).toBeInTheDocument();
+    expect(screen.getByText('Token expirado')).toBeInTheDocument();
+    expect(screen.getByTestId('linha-do-formulario')).toBeInTheDocument();
+    expect(screen.queryByTestId('pra-resolver')).toBeNull();
+  });
+
+  it('sync que rejeita: silêncio, a tela segue só com as tabelas', async () => {
+    svc.syncMetaForms.mockRejectedValue(new Error('timeout'));
+    tela();
+    expect(await screen.findByTestId('linha-do-formulario')).toBeInTheDocument();
+    await waitFor(() => expect(svc.syncMetaForms).toHaveBeenCalled());
+    expect(screen.queryByTestId('pra-resolver')).toBeNull();
+    expect(screen.queryByText(/Não foi possível carregar os formulários/)).toBeNull();
+  });
+
+  it('a chave de super-admin "Receber leads de qualquer formulário desta página" fica dentro de Pra resolver', async () => {
+    sup.valor = true;
+    paginas.getAll.mockResolvedValue([{ id: 'mp1', page_id: 'pg-1', page_name: 'Página Um', is_active: true, accept_unconfigured_forms: false }]);
+    comBarrados([barrado()]);
+    tela();
+    const bloco = await screen.findByTestId('pra-resolver');
+    expect(await within(bloco).findByRole('button', { name: 'Receber leads de qualquer formulário desta página' })).toBeInTheDocument();
+  });
+
+  it('quem não é super-admin não vê a chave', async () => {
+    paginas.getAll.mockResolvedValue([{ id: 'mp1', page_id: 'pg-1', page_name: 'Página Um', is_active: true, accept_unconfigured_forms: false }]);
+    comBarrados([barrado()]);
+    tela();
+    const bloco = await screen.findByTestId('pra-resolver');
+    expect(within(bloco).queryByRole('button', { name: /Receber leads de qualquer formulário/ })).toBeNull();
+  });
+});
+
+describe('Campanhas · recolhidos e lista que não chegou', () => {
+  it('formulário do Facebook sem ficha e sem lead fica recolhido, com Plugar depois de abrir', async () => {
+    svc.syncMetaForms.mockResolvedValue({ data: [{ id: 'f-77', name: 'Sem lead ainda', status: 'ACTIVE', leads_count: 0 }], errors: [], ignored_leads: [] });
+    tela();
+    const abrir = await screen.findByRole('button', { name: /1 outro formulário no Facebook, ainda sem ficha/ });
+    expect(abrir).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByText('Sem lead ainda')).toBeNull();
+    fireEvent.click(abrir);
+    expect(await screen.findByText('Sem lead ainda')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Plugar Sem lead ainda' })).toBeInTheDocument();
+  });
+
+  it('formulário barrado aparece em Pra resolver e NÃO se repete nos recolhidos', async () => {
+    svc.syncMetaForms.mockResolvedValue({ data: [{ id: 'f-9', name: '[03/11] [CASTELO 2.0]', status: 'ACTIVE', leads_count: 5 }], errors: [], ignored_leads: [barrado()] });
+    tela();
+    await screen.findByTestId('pra-resolver');
+    expect(screen.queryByRole('button', { name: /ainda sem ficha/ })).toBeNull();
+  });
+
+  it('anúncio sem nome de campanha fica recolhido ao fim', async () => {
+    camp.lista.mockResolvedValue([item(), anuncio(), anuncio({ key: 'ad:99', kind: 'ad', label: 'Anúncio 99', campaign_name: null, ad_title: null, match_kind: 'ad', match_value: '99' })]);
+    tela();
+    await screen.findByText('Campanha B');
+    expect(screen.queryByText('Anúncio 99')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /1 anúncio sem nome de campanha/ }));
+    expect(await screen.findByText('Anúncio 99')).toBeInTheDocument();
+  });
+
+  it('lista do servidor demorando: nem "0 leads" nem "Sem IA" na linha do formulário', async () => {
+    camp.lista.mockReturnValue(new Promise(() => undefined));
+    tela();
+    const linha = await screen.findByTestId('linha-do-formulario');
+    expect(within(linha).queryByText(/0 leads/)).toBeNull();
+    expect(within(linha).queryByText('Sem IA')).toBeNull();
   });
 });
 

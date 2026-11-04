@@ -56,6 +56,12 @@ beforeEach(() => {
   toast.success.mockReset(); toast.error.mockReset();
 });
 
+// Formulário do Facebook sem ficha e sem lead fica recolhido: abre a lista e devolve o Plugar dele.
+const plugarOutro = async () => {
+  fireEvent.click(await screen.findByRole('button', { name: /formulário.* no Facebook, ainda sem ficha/ }));
+  return screen.findByRole('button', { name: /^Plugar/ });
+};
+
 const abrir = async (itens: ItemDeCampanha[] = [itemDaLista()]) => {
   render(<MemoryRouter><LeadAdsForms campanhas={{ itens, listaPronta: true, opcoesDeIa: opcoes, aoMudar: vi.fn() }} /></MemoryRouter>);
   fireEvent.click(await screen.findByTitle('Editar'));
@@ -103,7 +109,7 @@ describe('Formulários do Meta · janela da campanha', () => {
     svc.getAll.mockResolvedValue([]);
     svc.syncMetaForms.mockResolvedValue({ data: [{ id: 'f-2', name: '05/10 - ALMA', status: 'ACTIVE', leads_count: 3 }], errors: [], ignored_leads: [] });
     render(<MemoryRouter><LeadAdsForms /></MemoryRouter>);
-    fireEvent.click(await screen.findByRole('button', { name: 'Configurar destino' }));
+    fireEvent.click(await plugarOutro());
     const dialogo = await screen.findByRole('dialog');
     fireEvent.change(within(dialogo).getByLabelText(/Funil/), { target: { value: 'p1' } });
     fireEvent.change(await within(dialogo).findByLabelText(/Etapa/), { target: { value: 's1' } });
@@ -117,7 +123,7 @@ describe('Formulários do Meta · janela da campanha', () => {
     svc.getAll.mockResolvedValue([]);
     svc.syncMetaForms.mockResolvedValue({ data: [{ id: 'f-2', name: '05/10 - ALMA', status: 'ACTIVE', leads_count: 3 }], errors: [], ignored_leads: [] });
     render(<MemoryRouter><LeadAdsForms /></MemoryRouter>);
-    fireEvent.click(await screen.findByRole('button', { name: 'Configurar destino' }));
+    fireEvent.click(await plugarOutro());
     const dialogo = await screen.findByRole('dialog');
     const rodape = () => within(dialogo).getByTestId('resumo-do-rodape');
     // sem funil: o campo mostra o convite e o rodapé não afirma funil nenhum
@@ -144,7 +150,7 @@ describe('Formulários do Meta · janela da campanha', () => {
     })]);
     svc.syncMetaForms.mockResolvedValue({ data: [{ id: 'f-2', name: '[03/11] [CASTELO 2.0]', status: 'ACTIVE', leads_count: 3, meta_page_id: 'pg-2' }], errors: [], ignored_leads: [] });
     render(<MemoryRouter><LeadAdsForms /></MemoryRouter>);
-    fireEvent.click(await screen.findByRole('button', { name: 'Configurar destino' }));
+    fireEvent.click(await plugarOutro());
     const dialogo = await screen.findByRole('dialog');
     fireEvent.click(await within(dialogo).findByRole('button', { name: 'Copiar a configuração' }));
     await waitFor(() => expect(within(dialogo).getByLabelText(/Funil/)).toHaveValue('p1'));
