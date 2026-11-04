@@ -68,7 +68,7 @@ describe('Follow-up (linha do tempo)', () => {
 
   it('Quais leads: frase fixa da regra + Todos esses / Só os destes funis', async () => {
     const gravar = abrir();
-    expect(screen.getByText(/Só quem ela atendeu e que ainda não foi pra um corretor/)).toBeInTheDocument();
+    expect(screen.getByText(/Só quem ela atendeu e ainda não passou pra um corretor/)).toBeInTheDocument();
     await userEvent.click(screen.getByRole('radio', { name: 'Só os destes funis' }));
     await userEvent.click(await screen.findByRole('button', { name: 'Vendas' }));
     expect(gravar).toHaveBeenCalledWith({ followup_pipeline_ids: ['f1'] });

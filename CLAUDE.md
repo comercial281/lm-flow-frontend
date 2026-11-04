@@ -10790,3 +10790,11 @@ Armadilhas:
 7. **O total é sempre a mesma caixa, só muda cor e texto:** aparecendo só com a soma errada, a janela mudava de altura ao digitar e o clique seguinte caía no campo errado (visto na prévia, 04/11).
 
 Código: `features/flowAutomations/randomizer.ts`, `components/flowAutomations/RandomizerFields.tsx`, `components/flowAutomations/FlowNodeCard.tsx` (`RandomizerPaths`), `lib/flowAutomationGraph.ts`, `components/flowAutomations/FlowEdge.tsx` (`labelAtEnd`). Servidor: `FlowAutomations::RandomDraw`, `NodeHandlers#handle_randomizer`, `FlowAutomationNode#random_branches`. Testes: `randomizer.spec.ts`, `RandomizerFields.spec.tsx`, e no backend `randomizer_spec.rb` e `flow_automations_randomizer_spec.rb`.
+
+## Quais leads do follow-up: a roleta antes da IA não tira mais (desde 2026-11-05)
+
+Pedido do dono do produto (04/11/2026, caso Pandora). A regra mora no servidor (ver o CLAUDE.md do `lm-flow`): o lead que passou pela roleta antes de falar com a IA pode receber follow-up e retomada; o que ela já passou pra um corretor, não. A retomada segue dependendo da chave do follow-up.
+
+Na tela só muda a frase de *IA Vendedora › Follow-up › Quais leads*: *"Só quem ela atendeu e ainda não passou pra um corretor."* A antiga ("ainda não foi pra um corretor") ficaria falsa num lead que já tem corretor e segue com a IA.
+
+Voltar é seguro: a frase não chama nada no servidor.

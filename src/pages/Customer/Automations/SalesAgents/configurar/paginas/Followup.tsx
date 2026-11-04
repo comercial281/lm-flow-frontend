@@ -6,8 +6,8 @@
 // ⚠️ Ligar o follow-up sem uma saída válida (IA antiga em 'ai', ou sem valor) é
 // RECUSADO aqui (o servidor também recusa): a chave volta e o "Depois dela"
 // aparece com o motivo, mesmo desligado — senão ninguém conseguiria escolher.
-// ⚠️ Público (decisão de 29/09 + onda 1): só quem ela atendeu e que ainda não foi
-// pra um corretor. A frase é fixa; o recorte por funil é por cima disso.
+// ⚠️ Público (decisão de 29/09 + onda 1): só quem ela atendeu e ainda não passou
+// pra um corretor (desde 04/11, roleta antes da IA não conta). A frase é fixa; o recorte por funil é por cima disso.
 import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/ds';
 import { Secao, Secoes } from '@/components/base/Secao';
@@ -113,7 +113,7 @@ export default function Followup({ agent, gravar, irPara }: PropsDaPagina) {
 
       {mostrarResto && (
         <>
-          <Secao titulo="Quais leads" descricao="Só quem ela atendeu e que ainda não foi pra um corretor.">
+          <Secao titulo="Quais leads" descricao="Só quem ela atendeu e ainda não passou pra um corretor.">
             <BotoesDeEscolha rotulo="Quais leads" valor={recortado ? 'funis' : 'todos'}
               opcoes={[{ valor: 'todos', rotulo: 'Todos esses' }, { valor: 'funis', rotulo: 'Só os destes funis' }]}
               aoEscolher={(v) => {
