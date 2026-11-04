@@ -43,6 +43,8 @@ export interface CatalogEvent {
    * defeito, quando é a barreira de origem do cliente fazendo o que deve.
    */
   requires_pipeline?: boolean;
+  /** A mensagem de exemplo do "Ver texto", no mesmo modelo do envio. Sem modelo: nulo. */
+  whatsapp_preview?: string | null;
   params: CatalogParam[];
 }
 

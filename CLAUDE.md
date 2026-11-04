@@ -10653,3 +10653,15 @@ Pedido do dono depois da reestruturação ir ao ar: o Configurar ficava espremid
 6. As listas das condições têm largura que não depende do rótulo escolhido (`flex-1` no tipo, `w-full` até um teto nas outras): a lista do produto mede o rótulo (`w-fit`) e a linha pularia ao trocar a escolha (spec `triggersForm`).
 
 Código: `moldura/PaginasComTrilho.tsx`, `IaBarra.tsx`, `configurar/blocos/TriggersSection.tsx`, `configurar/paginas/GatilhosDoNumero.tsx`, `agentes/{PaginaDeAgentes,QuadroDoAgente}.tsx`, `configurar/paginas/NumerosEUsuarios.tsx`, `components/base/Secao.tsx`, `features/salesAgents/quadroDoAgente.ts` (`trintaDias` no lugar do `rodape`), `styles/globals.css` (`.capa-do-agente`).
+
+## Notificações: "Ver texto" do aviso no WhatsApp (03/11/2026)
+
+Pedido do dono com o print de um aviso que chegou como `Fulano: escreveu: "Vou confirmar"`, sem dizer o que era. Cada aviso da lista de Notificações (Área do Admin e Configurações → Conta, mesmo componente) ganha o botão **Ver texto**, com a mensagem como chega no WhatsApp.
+
+- **O texto vem do servidor** (`whatsapp_preview` do catálogo), montado com o mesmo modelo do envio (`Notifications::WhatsappText`, backend). A tela não tem texto próprio, então não tem como ficar diferente do que sai.
+- **Só leitura.** O dono já pediu o editor na tela e ele vem depois; é o modelo do servidor que ele vai trocar. Antes disso, nenhum campo de edição aqui.
+- **Sem botão** nos avisos sem modelo: o da automação é o texto escrito no bloco, e os da roleta ficam na aba Avisos dela.
+- O `*negrito*` do WhatsApp vira `<strong>`, como elemento, nunca como HTML.
+- Servidor antigo sem o campo: o botão não aparece. Voltar a tela é seguro.
+
+Testes: `src/components/notifications/VerTextoDoAviso.spec.tsx`.

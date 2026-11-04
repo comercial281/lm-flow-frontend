@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { Bell, Filter, Mail, MessageCircle, RotateCcw, Smartphone } from 'lucide-react';
 import { Badge, Checkbox, Input, Switch } from '@/components/ui/ds';
+import VerTextoDoAviso from './VerTextoDoAviso';
 import type {
   CatalogEvent,
   LabelledKey,
@@ -129,6 +130,7 @@ export default function NotificationMatrix({
                       )}
                     </div>
                     <p className="text-xs text-muted-foreground mt-0.5">{event.description}</p>
+                    <VerTextoDoAviso titulo={event.label} texto={event.whatsapp_preview} />
                     {/*
                       A regra fica À VISTA. Um gestor que liga o aviso, manda uma
                       mensagem de teste de um número qualquer e não recebe nada
