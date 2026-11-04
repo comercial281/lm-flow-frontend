@@ -93,6 +93,26 @@ describe('installSiteTracking', () => {
     expect(document.querySelectorAll('script[src*="gtag/js"]').length).toBe(1);
   });
 
+  it('Clarity do cliente: entra no domínio próprio, nunca no endereço lmflow', async () => {
+    installSiteTracking({ tracking: { clarity: 'abcd1234ef' } }, { host: 'imob.lmflow.com.br' });
+    expect(document.querySelectorAll('script[src*="clarity.ms"]').length).toBe(0);
+    expect((window as unknown as { clarity?: unknown }).clarity).toBeUndefined();
+
+    fakeWin();
+    delete (window as unknown as { clarity?: unknown }).clarity;
+    await confirmar('www.imob.com.br');
+    installSiteTracking({ tracking: { clarity: 'abcd1234ef' } }, { host: 'www.imob.com.br' });
+    expect(document.querySelectorAll('script[src="https://www.clarity.ms/tag/abcd1234ef"]').length).toBe(1);
+    expect(typeof (window as unknown as { clarity?: unknown }).clarity).toBe('function');
+    delete (window as unknown as { clarity?: unknown }).clarity;
+  });
+
+  it('Clarity fora do formato não carrega', async () => {
+    await confirmar('www.imob.com.br');
+    installSiteTracking({ tracking: { clarity: 'x"><script>' } }, { host: 'www.imob.com.br' });
+    expect(document.querySelectorAll('script[src*="clarity.ms"]').length).toBe(0);
+  });
+
   it('GTM fora do formato não carrega nem em domínio próprio', async () => {
     await confirmar('www.imob.com.br');
     installSiteTracking({ tracking: { gtm_id: 'G-AB12' } }, { host: 'www.imob.com.br' });

@@ -1,5 +1,6 @@
 import { Badge } from '@/components/ui/ds';
 import { erroGa4, erroGtm, erroPixel } from '@/features/siteBuilder/trackingIds';
+import { lerContas, naoReconhecido, resolverGoogle } from '@/features/siteBuilder/contasDoGoogle';
 import type { TelaId } from '@/features/siteBuilder/meuSiteMenu';
 import { Secao, Secoes } from '@/components/base/Secao';
 import { CampoTexto, CampoTextoLongo } from '@/components/base/Campo';
@@ -32,6 +33,11 @@ export default function TelaRastreamento({ site, siteForm, setF, irPara }: Props
   const eGa4 = erroGa4(siteForm.ga4_measurement_id ?? '');
   const ePixel = erroPixel(siteForm.facebook_pixel_id ?? '');
   const eGtm = erroGtm(siteForm.gtm_id ?? '');
+  // O Clarity mora no bloco "google" (conta do cliente); o bloco viaja inteiro.
+  const google = resolverGoogle(siteForm.google);
+  const eClarity = naoReconhecido(google.clarity, lerContas.clarity)
+    ? 'Não reconheci esse código. Cole o ID do projeto (só letras e números) ou o script inteiro do Clarity.'
+    : undefined;
 
   return (
     <Secoes>
@@ -65,6 +71,18 @@ export default function TelaRastreamento({ site, siteForm, setF, irPara }: Props
         <CampoTexto id="rastreio-gtm" rotulo="Código do contêiner" placeholder="GTM-AB12CD" classeDoControle="font-mono"
           ajuda="Começa com GTM-." erro={eGtm ?? undefined} valor={siteForm.gtm_id ?? ''}
           aoMudar={v => setF({ gtm_id: v })} />
+        <LinhaEnderecoProprio irPara={irPara} />
+      </Secao>
+
+      <Secao
+        titulo="Microsoft Clarity"
+        descricao="Grava como as pessoas usam o site (onde clicam, até onde rolam) e mostra o mapa de calor. Use o Clarity da imobiliária, não o da agência."
+        acao={<Selo ligado={!!lerContas.clarity(site?.google?.clarity ?? '')} />}
+      >
+        <CampoTexto id="rastreio-clarity" rotulo="ID do projeto" placeholder="abcd1234ef" classeDoControle="font-mono"
+          ajuda="Onde achar: clarity.microsoft.com › seu projeto › Configurações › Visão geral › ID do projeto. Pode colar o script inteiro, o site tira o ID sozinho."
+          erro={eClarity} valor={google.clarity ?? ''}
+          aoMudar={v => setF({ google: { ...google, clarity: v } })} />
         <LinhaEnderecoProprio irPara={irPara} />
       </Secao>
 

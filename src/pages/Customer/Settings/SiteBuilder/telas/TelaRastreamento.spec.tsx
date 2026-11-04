@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import TelaRastreamento from './TelaRastreamento';
 
 const SRC = join(process.cwd(), 'src');
@@ -32,5 +32,13 @@ describe('TelaRastreamento', () => {
     expect(ga4.getAttribute('aria-invalid')).toBe('true');
     expect(screen.getByLabelText('Número do pixel')).toBeTruthy();
     expect(screen.getByLabelText('Código do contêiner')).toBeTruthy();
+  });
+
+  it('Clarity do cliente: colar o script grava sem apagar as contas do Google', () => {
+    const setF = vi.fn();
+    render(<TelaRastreamento site={null} siteForm={{ name: 'Imob', google: { indexable: true, creci: 'J-12345' } }} setF={setF} irPara={vi.fn()} />);
+    const campo = document.getElementById('rastreio-clarity')!;
+    fireEvent.change(campo, { target: { value: 'abcd1234ef' } });
+    expect(setF).toHaveBeenCalledWith({ google: expect.objectContaining({ indexable: true, creci: 'J-12345', clarity: 'abcd1234ef' }) });
   });
 });

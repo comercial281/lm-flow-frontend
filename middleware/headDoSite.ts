@@ -44,6 +44,8 @@ export interface DadosDoHead {
   content?: ConteudoDaPagina | null;
   /** Dados estruturados (schema.org), um `<script type="application/ld+json">` cada. */
   jsonld?: unknown[] | null;
+  /** Códigos de verificação do Search Console e do Bing — da conta do CLIENTE. */
+  verification?: { google?: string | null; bing?: string | null } | null;
 }
 
 export interface LinkDaPagina {
@@ -291,6 +293,12 @@ function scriptsDeDados(jsonld: unknown): string[] {
 
 const RAIZ = /<div id="root"><\/div>/;
 
+/** Código de verificação (Search Console / Bing): só letra, número, `_` e `-`. */
+function codigoDeVerificacao(v: unknown): string | null {
+  const c = texto(v);
+  return c && /^[A-Za-z0-9_-]{10,100}$/.test(c) ? c : null;
+}
+
 /**
  * Costura no `index.html` o título, a descrição, as tags de prévia do link
  * (`og:*`, `twitter:card`), o `canonical`, o `robots` e, no domínio ativo, o
@@ -338,6 +346,11 @@ export function montarHead(html: string, dados: DadosDoHead, host: string): stri
   if (url) tags.push(`<meta property="og:url" content="${escapeHtml(url)}" />`);
   tags.push(`<meta name="twitter:card" content="${imagem ? 'summary_large_image' : 'summary'}" />`);
   if (canonical) tags.push(`<link rel="canonical" href="${escapeHtml(canonical)}" />`);
+  const verificacao = dados.verification;
+  const codigoGoogle = codigoDeVerificacao(verificacao?.google);
+  const codigoBing = codigoDeVerificacao(verificacao?.bing);
+  if (codigoGoogle) tags.push(`<meta name="google-site-verification" content="${escapeHtml(codigoGoogle)}" />`);
+  if (codigoBing) tags.push(`<meta name="msvalidate.01" content="${escapeHtml(codigoBing)}" />`);
   if (dominio) tags.push(scriptDoSite(texto(dados.tenant)!, texto(dados.site_slug)));
   tags.push(...scriptsDeDados(dados.jsonld));
 

@@ -44,7 +44,7 @@ function BankBadge({ bank }: { bank: PortalBank }) {
         style={{ background: bank.color }}
       >
         {bank.logo_url ? (
-          <img src={bank.logo_url} alt={bank.name} className="h-full w-full object-contain p-4" />
+          <img src={bank.logo_url} alt={bank.name} loading="lazy" decoding="async" className="h-full w-full object-contain p-4" />
         ) : (
           <span
             className="px-3 text-center text-[15px] font-bold leading-tight"
