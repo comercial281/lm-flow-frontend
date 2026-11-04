@@ -1577,6 +1577,7 @@ const AppRouter = () => {
 
           {/* Público — página dedicada de busca/filtros de imóveis do portal. */}
           <Route path="/portal/:tenant/imoveis" element={<PortalSearch />} />
+          <Route path="/portal/:tenant/imoveis/*" element={<PortalSearch />} />
 
           {/* Público INDEXÁVEL — as duas páginas extras do portal. Elas existem
               sempre; quem decide se aparecem no menu (e se respondem de verdade)

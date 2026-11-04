@@ -26,7 +26,8 @@ export function finalidadeInicial(valor?: string | null): Finalidade {
 }
 
 /** Link da página do imóvel, levando a aba Alugar quando a busca estava nela. */
-export function imovelHref(ctx: CtxDoSite, code: string, tab?: PortalTab): string {
-  const base = caminhoDoSite(ctx, `/imovel/${code}`);
+export function imovelHref(ctx: CtxDoSite, code: string, tab?: PortalTab, sitePath?: string): string {
+  // No domínio o link vai direto pro endereço legível (o canonical), sem passar por 301.
+  const base = ctx.dominio && sitePath?.startsWith('/imovel/') ? sitePath : caminhoDoSite(ctx, `/imovel/${code}`);
   return tab === 'rent' ? `${base}?${FINALIDADE_PARAM}=locacao` : base;
 }

@@ -358,7 +358,7 @@ function dadosDoCartao({ p, wa, tab }: PropsDoCartao, ctx: CtxDoSite) {
     typeLabel: rotuloTipo(p.property_type),
     local: [p.address?.neighborhood, p.address?.city].filter(Boolean).join(', '),
     waLink: wa ? `https://wa.me/${onlyDigits(wa)}?text=${encodeURIComponent(`Olá! Tenho interesse no imóvel ${p.code} (${p.title}).`)}` : null,
-    href: imovelHref(ctx, p.code, tab),
+    href: imovelHref(ctx, p.code, tab, p.site_path),
   };
 }
 

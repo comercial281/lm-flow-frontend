@@ -1,11 +1,14 @@
 import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { useSearchParams, useLocation } from 'react-router-dom';
-import { useTenantDoSite } from '@/features/siteBuilder/public/useTenantDoSite';
+import { useCtxDoSite, useTenantDoSite } from '@/features/siteBuilder/public/useTenantDoSite';
 import {
-  I, Ic, OrdenarPor, PortalFooter, PortalHeader, PropertyCard, PropertyRow, Select,
+  API, I, Ic, OrdenarPor, PortalFooter, PortalHeader, PropertyCard, PropertyRow, Select,
   filterProperties, usePortalData, type PortalFilters, type PortalTab,
 } from './portalShared';
 import PaginaManutencao from './PaginaManutencao';
+import PaginaNaoEncontrada from './PaginaNaoEncontrada';
+import { chaveDaLista, fetchListaDoSite, type ListaDoSite } from './portalProperties';
+import { caminhoDoSite } from '@/features/siteBuilder/public/dominioDoSite';
 import { opcaoDoTipo, opcoesDeTipo } from '@/features/siteBuilder/public/tiposDeImovel';
 import { opcoesDePreco, precoDaFaixa } from '@/features/siteBuilder/public/faixasDePreco';
 import { opcaoDoTexto } from '@/features/siteBuilder/public/filtros';
@@ -51,6 +54,27 @@ export default function PortalSearchPage() {
   const [params, setParams] = useSearchParams();
   const { state, site, items, fontHrefs, wa, cities, hoods, types, abas, cssVars, fundo, manutencao } = usePortalData(tenant);
   const { pathname, search } = useLocation();
+  const ctx = useCtxDoSite(tenant ?? '');
+
+  // Página de lista (/imoveis/a-venda/casa/sorocaba): o servidor diz quem entra
+  // e o nome dela, com a mesma regra do <head> que o Google leu. undefined =
+  // ainda perguntando; null = a lista não existe (404 no servidor).
+  const chave = chaveDaLista(pathname);
+  const [respostaDaLista, setRespostaDaLista] = useState<{ chave: string; valor: ListaDoSite | null | 'erro' } | null>(null);
+  useEffect(() => {
+    if (!tenant || !chave) return;
+    let vivo = true;
+    fetchListaDoSite(API, tenant, chave).then(
+      valor => { if (vivo) setRespostaDaLista({ chave, valor }); },
+      () => { if (vivo) setRespostaDaLista({ chave, valor: 'erro' }); },
+    );
+    return () => { vivo = false; };
+  }, [tenant, chave]);
+  const listaDoServidor = chave ? (respostaDaLista?.chave === chave ? respostaDaLista.valor : undefined) : null;
+  const listaOk = listaDoServidor && listaDoServidor !== 'erro' ? listaDoServidor : null;
+  useEffect(() => {
+    if (state === 'ok' && listaOk) document.title = `${listaOk.titulo} | ${site.name || 'Imóveis'}`;
+  }, [state, listaOk, site.name]);
 
   // Uma visita por carga da página, levando os filtros (pathname + query) de quando a URL
   // assentou pela 1ª vez. Mexer nos filtros depois não conta visita nova.
@@ -66,8 +90,11 @@ export default function PortalSearchPage() {
   useIconeDaAba(site.branding?.favicon_url);
 
   // Só vale aba visível; a da URL que não é (desligada ou sem imóvel) cai na primeira visível.
+  // Na lista, a aba vem do negócio do caminho (para-alugar e temporada = Alugar).
   const tabDaUrl = params.get('tab') as PortalTab | null;
-  const tab: PortalTab = tabDaUrl && abas.includes(tabDaUrl) ? tabDaUrl : (abas[0] ?? 'sale');
+  const tabDaLista: PortalTab | null = chave ? (/^(para-alugar|temporada)(\/|$)/.test(chave) ? 'rent' : 'sale') : null;
+  const tab: PortalTab = tabDaUrl && abas.includes(tabDaUrl) ? tabDaUrl
+    : tabDaLista && abas.includes(tabDaLista) ? tabDaLista : (abas[0] ?? 'sale');
 
   const filters: PortalFilters = useMemo(() => ({
     tab,
@@ -112,7 +139,8 @@ export default function PortalSearchPage() {
   const trocarOrdem = (o: Ordem) => update({ sort: o === lista.default_sort ? '' : o });
 
   // Filtra, ordena e só então pagina ("Mostrar mais").
-  const filtered = useMemo(() => filterProperties(items, filters), [items, filters]);
+  const daLista = useMemo(() => (listaOk ? items.filter(i => listaOk.ids.has(i.id)) : items), [items, listaOk]);
+  const filtered = useMemo(() => filterProperties(daLista, filters), [daLista, filters]);
   const ordenados = useMemo(() => ordenarImoveis(filtered, ordem, filters.tab), [filtered, ordem, filters.tab]);
   const hasActiveFilters = !!(filters.type || filters.city || filters.neighborhood || filters.bedrooms || filters.code
     || filters.price_min || filters.price_max || filters.suites || filters.parking || filters.stage);
@@ -133,14 +161,15 @@ export default function PortalSearchPage() {
   const shown = ordenados.slice(0, visible);
   const remaining = ordenados.length - shown.length;
 
-  if (state === 'loading') {
-    return <div className="flex min-h-screen items-center justify-center text-neutral-400" style={{ fontFamily: 'system-ui' }}>Carregando…</div>;
+  if (state === 'loading' || listaDoServidor === undefined) {
+    return <div data-carregando className="flex min-h-screen items-center justify-center text-neutral-400" style={{ fontFamily: 'system-ui' }}>Carregando…</div>;
   }
   // Em manutenção a página de manutenção vem antes do erro e das listas (que dão 404).
   if (manutencao) return <PaginaManutencao site={site} />;
-  if (state === 'error') {
+  if (state === 'error' || listaDoServidor === 'erro') {
     return <div className="flex min-h-screen items-center justify-center px-6 text-center text-neutral-500" style={{ fontFamily: 'system-ui' }}>Portal indisponível.</div>;
   }
+  if (listaDoServidor === null && chave) return <PaginaNaoEncontrada inicio={caminhoDoSite(ctx, '/')} imoveis={caminhoDoSite(ctx, '/imoveis')} />;
 
   return (
     <div style={cssVars as CSSProperties} data-fundo={fundo} className="min-h-screen bg-[var(--paper)] text-[var(--ink)] antialiased">
@@ -152,10 +181,11 @@ export default function PortalSearchPage() {
       {/* ── Barra de busca / filtros ──────────────────────────────────────── */}
       <section className="border-b border-black/[0.06] bg-white">
         <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
-          <h1 className="font-[var(--display)] text-2xl font-semibold sm:text-3xl">Encontre seu imóvel</h1>
+          <h1 className="font-[var(--display)] text-2xl font-semibold sm:text-3xl">{listaOk ? listaOk.titulo : 'Encontre seu imóvel'}</h1>
           <div className="mt-4 rounded-[24px] bg-[var(--paper)] p-3 ring-1 ring-black/[0.05] sm:p-4">
             {/* Uma aba só não é escolha: a fileira some. */}
-            {abas.length > 1 && <div className="mb-3 flex flex-wrap gap-1.5">
+            {/* Na lista o negócio já é o do caminho: trocar de aba esvaziaria a lista. */}
+            {abas.length > 1 && !listaOk && <div className="mb-3 flex flex-wrap gap-1.5">
               {abas.map(k => (
                 <button key={k} type="button" onClick={() => trocarAba(k)}
                   className={`rounded-full px-4 py-1.5 text-[13px] font-semibold transition-colors ${filters.tab === k ? 'text-white' : 'text-neutral-600 hover:bg-black/[0.04]'}`}

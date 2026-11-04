@@ -118,10 +118,12 @@ function semNadaDoCrm() {
 
 describe('roteador do domínio do cliente', () => {
   it.each(['/login', '/conversas', '/settings/x', '/dashboard', '/admin/clientes'])(
-    'tela do CRM (%s) cai no início do site, sem tocar na sessão', async caminho => {
+    'tela do CRM (%s) mostra "Página não encontrada" (noindex), sem tocar na sessão', async caminho => {
       abrir(caminho);
-      await screen.findByRole('heading', { level: 1 });
-      expect(onde()).toBe('/');
+      expect(await screen.findByRole('heading', { name: 'Página não encontrada' })).toBeInTheDocument();
+      expect(onde()).toBe(caminho);
+      expect(document.head.querySelector('meta[name="robots"]')?.getAttribute('content')).toBe('noindex');
+      expect(screen.getByRole('link', { name: 'Ver imóveis' }).getAttribute('href')).toBe('/imoveis');
       semNadaDoCrm();
     },
   );
@@ -139,9 +141,26 @@ describe('roteador do domínio do cliente', () => {
     await waitFor(() => expect(onde()).toBe('/blog'));
   });
 
-  it('/imovel/<cliente>/<código> vai para /imovel/<código>', async () => {
-    abrir('/imovel/imob/AP0042?finalidade=locacao');
-    await waitFor(() => expect(onde()).toBe('/imovel/AP0042?finalidade=locacao'));
+  it('/imovel/<endereço-legível>/<código> abre a ficha pelo código, sem trocar o endereço', async () => {
+    vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+      chamadas.push({ url });
+      if (url.includes('/site/properties/AP0042')) return resposta({ data: { code: 'AP0042', title: 'Casa AP0042', photos: [] } });
+      if (url.includes('/site/properties')) return resposta({ data: [], meta: { total: 0 } });
+      if (/\/site(\?|$)/.test(url)) return resposta({ data: { name: 'Imob Teste' } });
+      return resposta({});
+    }));
+    abrir('/imovel/casa-campinas/AP0042?finalidade=locacao');
+    await screen.findByRole('link', { name: /Voltar aos imóveis/ });
+    expect(chamadas.some(c => c.url.includes('/site/properties/AP0042'))).toBe(true);
+    expect(onde()).toBe('/imovel/casa-campinas/AP0042?finalidade=locacao');
+  });
+
+  it('o cartão do imóvel aponta direto pro endereço legível quando o servidor manda', async () => {
+    servidor({}, [imovel('R1', { featured: true, site_path: '/imovel/apartamento-campinas/R1' })]);
+    abrir('/');
+    await screen.findByRole('heading', { level: 1 });
+    await waitFor(() => expect(document.querySelector('a[href="/imovel/apartamento-campinas/R1"]')).not.toBeNull());
+    expect(document.querySelector('a[href="/imovel/R1"]')).toBeNull();
   });
 
   it('/lp/<cliente>/<slug> vai para /lp/<slug>', async () => {
@@ -200,6 +219,8 @@ describe('código da página adiantado', () => {
     ['/', 'PortalHome'],
     ['/login', 'PortalHome'],
     ['/imoveis', 'PortalSearch'],
+    ['/imoveis/a-venda/casa/campinas', 'PortalSearch'],
+    ['/imovel/casa-campinas/AP1', 'ImovelPublic'],
     ['/imovel/AP1', 'ImovelPublic'],
     ['/imovel/imob/AP1', 'ImovelPublic'],
     ['/blog', 'PortalBlog'],

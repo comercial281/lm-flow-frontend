@@ -36,6 +36,47 @@ export interface DadosDoHead {
   /** Nome do site (vira o `og:site_name` e o título de reserva). */
   site_name?: string | null;
   name?: string | null;
+  /** Código de resposta da página: 200, 404 (não existe), 410 (imóvel vendido), 503 (falha no servidor). */
+  status?: number | null;
+  /** Endereço oficial quando o pedido veio num endereço antigo ou torto: vira 301. */
+  redirect?: string | null;
+  /** O texto da página, para o HTML que o robô lê antes do código rodar. */
+  content?: ConteudoDaPagina | null;
+  /** Dados estruturados (schema.org), um `<script type="application/ld+json">` cada. */
+  jsonld?: unknown[] | null;
+}
+
+export interface LinkDaPagina {
+  name?: string | null;
+  url?: string | null;
+}
+
+export interface ItemDaPagina {
+  title?: string | null;
+  url?: string | null;
+  price?: string | null;
+  summary?: string | null;
+  date?: string | null;
+  image?: { url?: string | null; alt?: string | null } | null;
+}
+
+/** `content` do `head`: cada página manda só o que tem. */
+export interface ConteudoDaPagina {
+  h1?: string | null;
+  intro?: string | null;
+  price?: string | null;
+  facts?: string[] | null;
+  image?: { url?: string | null; alt?: string | null } | null;
+  paragraphs?: string[] | null;
+  /** HTML do artigo, já limpo no servidor (sanitize do Rails). */
+  body_html?: string | null;
+  author?: string | null;
+  date?: string | null;
+  breadcrumbs?: LinkDaPagina[] | null;
+  items?: ItemDaPagina[] | null;
+  articles?: ItemDaPagina[] | null;
+  faq?: { q?: string | null; a?: string | null }[] | null;
+  links?: LinkDaPagina[] | null;
 }
 
 /** Título que vai no `<title>` quando o servidor não manda `title`. */
@@ -59,18 +100,6 @@ export interface PaginaDoSite {
   path: string;
 }
 
-/** Caminhos limpos do site (sem `/lp`, que tem tratamento próprio). */
-const LIMPOS = [
-  /^\/$/,
-  /^\/imoveis$/,
-  /^\/imovel\/[^/]+$/,
-  /^\/blog$/,
-  /^\/blog\/[^/]+$/,
-  /^\/p\/[^/]+$/,
-  /^\/financiamento$/,
-  /^\/anuncie$/,
-];
-
 function decodificar(s: string): string {
   try {
     return decodeURIComponent(s);
@@ -79,30 +108,39 @@ function decodificar(s: string): string {
   }
 }
 
-function ehLimpo(path: string): boolean {
-  return LIMPOS.some(r => r.test(path));
-}
-
 /**
  * Lê o caminho e diz se é página do site:
- * - endereço do sistema: `/portal/<cliente>/<resto>` e `/imovel/<cliente>/<código>`
- *   (o resto do CRM, null: nada a fazer);
- * - domínio do cliente: os caminhos limpos (o resto o front manda para o início).
+ * - endereço do sistema: `/portal/<cliente>(/<resto>)` e `/imovel/<cliente>/<código>`
+ *   (o resto é o CRM, null: nada a fazer);
+ * - domínio do cliente: QUALQUER caminho. Quem diz se a página existe é o
+ *   servidor (404 de verdade, nunca o início com código 200). `/lp` tem
+ *   tratamento próprio e não chega aqui.
  */
 export function paginaDoSite(host: string, pathname: string): PaginaDoSite | null {
   const partes = pathname.split('/').filter(Boolean).map(decodificar);
   if (ehEnderecoDoSistema(host)) {
     if (partes[0] === 'portal' && partes[1]) {
-      const path = `/${partes.slice(2).join('/')}`;
-      return ehLimpo(path) ? { tenant: partes[1], path } : null;
+      return { tenant: partes[1], path: `/${partes.slice(2).join('/')}` };
     }
     if (partes[0] === 'imovel' && partes.length === 3) {
       return { tenant: partes[1], path: `/imovel/${partes[2]}` };
     }
     return null;
   }
-  const path = `/${partes.join('/')}`;
-  return ehLimpo(path) ? { tenant: null, path } : null;
+  if (partes[0] === 'lp') return null;
+  // Barra no fim e maiúscula vão como vieram (o servidor decide o 301); só o acento é decodificado.
+  return { tenant: null, path: decodificar(pathname) || '/' };
+}
+
+/**
+ * Endereço antigo colado no domínio (/portal/<cliente>/<resto>) → o caminho
+ * limpo, para o 301. Null quando não é. O /imovel/<cliente>/<código> antigo não
+ * precisa: o servidor lê o 1º pedaço como texto errado e já manda o 301.
+ */
+export function caminhoLimpo(pathname: string): string | null {
+  const portal = /^\/portal\/[^/]+(\/.*)?$/.exec(pathname);
+  if (!portal) return null;
+  return portal[1] && portal[1] !== '/' ? portal[1] : '/';
 }
 
 /* ── <head> ───────────────────────────────────────────────────────────────── */
@@ -143,6 +181,115 @@ const TAGS_DO_APP = [
 const META_ROBOTS = /<meta\b[^>]*\bname=["']robots["'][^>]*>/i;
 const META_DESCRIPTION = /<meta\b[^>]*\bname=["']description["'][^>]*>/i;
 const TITULO = /<title>[\s\S]*?<\/title>/i;
+
+/* ── O texto da página no HTML ──────────────────────────────────────────── */
+
+/** Só endereço http(s) ou caminho do próprio site. `javascript:` e afins viram null. */
+function urlSegura(v: unknown): string | null {
+  const u = texto(v);
+  if (!u) return null;
+  return /^https?:\/\//i.test(u) || (u.startsWith('/') && !u.startsWith('//')) ? u : null;
+}
+
+function lista<T>(v: T[] | null | undefined): T[] {
+  return Array.isArray(v) ? v.filter(x => x != null) : [];
+}
+
+function link(nome: unknown, url: unknown): string {
+  const n = texto(nome);
+  if (!n) return '';
+  const u = urlSegura(url);
+  return u ? `<a href="${escapeHtml(u)}">${escapeHtml(n)}</a>` : escapeHtml(n);
+}
+
+function imagem(img: { url?: string | null; alt?: string | null } | null | undefined, lazy: boolean): string {
+  const src = urlSegura(img?.url);
+  if (!src) return '';
+  return `<img src="${escapeHtml(src)}" alt="${escapeHtml(texto(img?.alt) ?? '')}"${lazy ? ' loading="lazy"' : ''} decoding="async" />`;
+}
+
+function cartao(it: ItemDaPagina, nivel: 'h2' | 'h3'): string {
+  const titulo = link(it.title, it.url);
+  if (!titulo) return '';
+  const partes = [
+    imagem(it.image, true),
+    `<${nivel}>${titulo}</${nivel}>`,
+    texto(it.price) ? `<p><strong>${escapeHtml(texto(it.price)!)}</strong></p>` : '',
+    texto(it.date) ? `<p><time datetime="${escapeHtml(texto(it.date)!)}">${escapeHtml(texto(it.date)!.slice(0, 10))}</time></p>` : '',
+    texto(it.summary) ? `<p>${escapeHtml(texto(it.summary)!)}</p>` : '',
+  ];
+  return `<article>${partes.filter(Boolean).join('')}</article>`;
+}
+
+/**
+ * O conteúdo da página em HTML puro: migalhas, UM `<h1>`, preço, características,
+ * foto com `alt`, texto, imóveis, perguntas frequentes e links internos. É o que
+ * o robô (Google, ChatGPT, Perplexity…) lê sem rodar o código do site; o
+ * visitante vê isto só até o site de verdade desenhar a página por cima.
+ *
+ * Todo texto passa por escape. A exceção é o `body_html` do artigo, que o
+ * servidor já limpou (sanitize do Rails) e chega como HTML de propósito.
+ */
+export function htmlDoConteudo(c: ConteudoDaPagina | null | undefined): string {
+  if (!c || typeof c !== 'object') return '';
+  const h1 = texto(c.h1);
+  if (!h1) return '';
+  const out: string[] = [];
+
+  const migalhas = lista(c.breadcrumbs).map(b => link(b.name, b.url)).filter(Boolean);
+  if (migalhas.length > 1) out.push(`<nav aria-label="Você está em"><ol>${migalhas.map(m => `<li>${m}</li>`).join('')}</ol></nav>`);
+
+  out.push(`<h1>${escapeHtml(h1)}</h1>`);
+  if (texto(c.intro)) out.push(`<p>${escapeHtml(texto(c.intro)!)}</p>`);
+  if (texto(c.price)) out.push(`<p><strong>${escapeHtml(texto(c.price)!)}</strong></p>`);
+  const fatos = lista(c.facts).map(texto).filter((f): f is string => !!f);
+  if (fatos.length) out.push(`<ul>${fatos.map(f => `<li>${escapeHtml(f)}</li>`).join('')}</ul>`);
+  // Foto principal da página: sem lazy (é a primeira coisa que aparece).
+  out.push(imagem(c.image, false));
+  if (texto(c.author) || texto(c.date)) {
+    const quem = texto(c.author) ? `Por ${escapeHtml(texto(c.author)!)}` : '';
+    const quando = texto(c.date) ? `<time datetime="${escapeHtml(texto(c.date)!)}">${escapeHtml(texto(c.date)!.slice(0, 10))}</time>` : '';
+    out.push(`<p>${[quem, quando].filter(Boolean).join(' · ')}</p>`);
+  }
+  for (const par of lista(c.paragraphs)) if (texto(par)) out.push(`<p>${escapeHtml(texto(par)!)}</p>`);
+  const corpo = texto(c.body_html);
+  if (corpo) out.push(`<div>${corpo}</div>`);
+
+  const itens = lista(c.items).map(it => cartao(it, 'h3')).filter(Boolean);
+  if (itens.length) out.push(`<section><h2>Imóveis</h2>${itens.join('')}</section>`);
+  const artigos = lista(c.articles).map(it => cartao(it, 'h3')).filter(Boolean);
+  if (artigos.length) out.push(`<section><h2>Artigos</h2>${artigos.join('')}</section>`);
+
+  const faq = lista(c.faq).filter(f => texto(f.q) && texto(f.a));
+  if (faq.length) {
+    out.push(`<section><h2>Perguntas frequentes</h2>${faq.map(f => `<h3>${escapeHtml(texto(f.q)!)}</h3><p>${escapeHtml(texto(f.a)!)}</p>`).join('')}</section>`);
+  }
+  const links = lista(c.links).map(l => link(l.name, l.url)).filter(Boolean);
+  if (links.length) out.push(`<nav aria-label="Veja também"><h2>Veja também</h2><ul>${links.map(l => `<li>${l}</li>`).join('')}</ul></nav>`);
+
+  return out.filter(Boolean).join('');
+}
+
+/**
+ * Estilo mínimo do texto do servidor (fonte do sistema, largura de leitura). O
+ * `[data-carregando]` é o "Carregando…" das páginas do site: some enquanto o
+ * texto do servidor está na tela, para o visitante não ver as duas coisas.
+ */
+const ESTILO_DO_TEXTO =
+  '<style>#lmf-ssr{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;max-width:960px;margin:0 auto;padding:24px 16px;color:#1f2937;line-height:1.55}' +
+  '#lmf-ssr img{max-width:100%;height:auto;border-radius:8px}#lmf-ssr a{color:inherit}#lmf-ssr ol,#lmf-ssr nav ul{padding-left:18px}' +
+  '#lmf-ssr nav[aria-label="Você está em"] ol{display:flex;flex-wrap:wrap;gap:6px;list-style:none;padding:0;font-size:14px}' +
+  '#lmf-ssr article{margin:16px 0}body:has(#lmf-ssr) [data-carregando]{display:none!important}</style>';
+
+/** `<script type="application/ld+json">` de cada item (só objeto). `jsonForScript` escapa `<`, `>` e `&`. */
+function scriptsDeDados(jsonld: unknown): string[] {
+  if (!Array.isArray(jsonld)) return [];
+  return jsonld
+    .filter(j => j && typeof j === 'object' && !Array.isArray(j))
+    .map(j => `<script type="application/ld+json">${jsonForScript(j)}</script>`);
+}
+
+const RAIZ = /<div id="root"><\/div>/;
 
 /**
  * Costura no `index.html` o título, a descrição, as tags de prévia do link
@@ -192,6 +339,13 @@ export function montarHead(html: string, dados: DadosDoHead, host: string): stri
   tags.push(`<meta name="twitter:card" content="${imagem ? 'summary_large_image' : 'summary'}" />`);
   if (canonical) tags.push(`<link rel="canonical" href="${escapeHtml(canonical)}" />`);
   if (dominio) tags.push(scriptDoSite(texto(dados.tenant)!, texto(dados.site_slug)));
+  tags.push(...scriptsDeDados(dados.jsonld));
+
+  const conteudo = htmlDoConteudo(dados.content);
+  if (conteudo && RAIZ.test(out)) {
+    tags.push(ESTILO_DO_TEXTO);
+    out = out.replace(RAIZ, () => `<div id="lmf-ssr">${conteudo}</div>\n    <div id="root"></div>`);
+  }
 
   return out.replace('</head>', () => `    ${tags.join('\n    ')}\n  </head>`);
 }
@@ -199,6 +353,25 @@ export function montarHead(html: string, dados: DadosDoHead, host: string): stri
 /* ── robots.txt ───────────────────────────────────────────────────────────── */
 
 const ROBOTS_FECHADO = 'User-agent: *\nDisallow: /\n';
+
+/**
+ * Quem lê o site: o `*` (Google, Bing…) e, pelo nome, os robôs das IAs que
+ * respondem perguntas (ChatGPT, Claude, Perplexity, Gemini, Apple). Alguns só
+ * seguem regra que cita o nome deles.
+ */
+export const ROBOS = [
+  '*',
+  'GPTBot',
+  'OAI-SearchBot',
+  'ChatGPT-User',
+  'ClaudeBot',
+  'Claude-SearchBot',
+  'Claude-User',
+  'PerplexityBot',
+  'Google-Extended',
+  'Applebot-Extended',
+  'CCBot',
+];
 
 /** Subdomínios lmflow que são do sistema, nunca de um cliente. */
 const SUBDOMINIOS_DO_SISTEMA = new Set(['app', 'www', 'api', 'admin']);
@@ -234,7 +407,7 @@ function robotsDoSubdominio(slug: string, dados: DadosDoHead | null): string {
   const tenant = texto(dados.tenant)?.toLowerCase();
   if (tenant && tenant !== slug) return ROBOTS_FECHADO;
   return [
-    'User-agent: *',
+    ...ROBOS.map(r => `User-agent: ${r}`),
     `Allow: /portal/${slug}$`,
     `Allow: /portal/${slug}/`,
     `Allow: /imovel/${slug}/`,
@@ -263,22 +436,150 @@ export function robotsTxt(host: string, dados: DadosDoHead | null): string {
   if (slug) return robotsDoSubdominio(slug, dados);
   if (ehEnderecoDoSistema(h) || !dados || !noDominioAtivo(h, dados)) return ROBOTS_FECHADO;
   if (!liberaGoogle(dados)) return ROBOTS_FECHADO;
+  // Domínio próprio é o site inteiro: tudo liberado, menos as landing pages de
+  // anúncio (/lp), que não são para busca.
   return [
-    'User-agent: *',
-    'Allow: /$',
-    'Allow: /imoveis',
-    'Allow: /imovel/',
-    'Allow: /blog',
-    'Allow: /p/',
-    'Allow: /financiamento',
-    'Allow: /anuncie',
-    'Allow: /assets/',
-    'Allow: /favicon',
-    'Disallow: /',
+    ...ROBOS.map(r => `User-agent: ${r}`),
+    'Allow: /',
+    'Disallow: /lp/',
     '',
     `Sitemap: https://${h}/sitemap.xml`,
     '',
   ].join('\n');
+}
+
+/* ── llms.txt ─────────────────────────────────────────────────────────────── */
+
+/**
+ * `llms.txt` do domínio (padrão llmstxt.org): um resumo em texto do site para
+ * as IAs (ChatGPT, Claude, Perplexity) acharem o que importa sem ler tudo.
+ * Montado do `head` da página inicial: nome, descrição, links, imóveis em
+ * destaque e artigos. Google desligado ou sem dado = null (o middleware
+ * responde 404).
+ */
+export function llmsTxt(host: string, dados: DadosDoHead | null): string | null {
+  const h = limparHost(host);
+  if (!dados || !noDominioAtivo(h, dados) || !liberaGoogle(dados)) return null;
+  const nome = texto(dados.site_name) ?? texto(dados.title) ?? h;
+  const c = dados.content ?? {};
+  const linha = (it: { name?: string | null; title?: string | null; url?: string | null; summary?: string | null; price?: string | null }) => {
+    const n = texto(it.name) ?? texto(it.title);
+    const u = urlSegura(it.url);
+    if (!n || !u) return null;
+    const abs = u.startsWith('/') ? `https://${h}${u}` : u;
+    const extra = [texto(it.price), texto(it.summary)].filter(Boolean).join(' — ');
+    return `- [${n}](${abs})${extra ? `: ${extra}` : ''}`;
+  };
+  const secao = (titulo: string, itens: (string | null)[]) => {
+    const l = itens.filter((x): x is string => !!x);
+    return l.length ? ['', `## ${titulo}`, '', ...l] : [];
+  };
+  return [
+    `# ${nome}`,
+    '',
+    ...(texto(dados.description) ? [`> ${texto(dados.description)}`] : []),
+    ...secao('Páginas', [
+      linha({ name: 'Início', url: `https://${h}/` }),
+      linha({ name: 'Todos os imóveis', url: `https://${h}/imoveis` }),
+      ...lista(c.links).map(linha),
+    ]),
+    ...secao('Imóveis em destaque', lista(c.items).map(linha)),
+    ...secao('Artigos', lista(c.articles).map(linha)),
+    ...secao('Mapa do site', [`- [sitemap.xml](https://${h}/sitemap.xml)`]),
+    '',
+  ].join('\n');
+}
+
+/* ── A resposta da página ─────────────────────────────────────────────────── */
+
+/** O que o middleware conseguiu do `/head`. */
+export type ResultadoDoHead = { tipo: 'ok'; dados: DadosDoHead } | { tipo: 'sem-site' } | { tipo: 'falhou' };
+
+export interface RespostaDaPagina {
+  status: number;
+  /** Endereço do 301. */
+  location?: string;
+  body?: string;
+  cache: string;
+  retryAfter?: string;
+}
+
+/** Cache da borda: o Google e a 2ª visita leem da Vercel, sem esperar o servidor. */
+export const CACHE_DA_BORDA = 'public, max-age=0, s-maxage=60, stale-while-revalidate=300';
+const SEM_CACHE = 'no-store';
+const CODIGOS = new Set([200, 404, 410, 503]);
+
+/** `https://` no mesmo domínio: o único 301 que a borda aceita do servidor. */
+function noMesmoDominio(url: string | null, dominio: string): url is string {
+  if (!url) return false;
+  try {
+    const u = new URL(url);
+    return u.protocol === 'https:' && limparHost(u.host) === limparHost(dominio);
+  } catch {
+    return false;
+  }
+}
+
+/** Troca a query do endereço pela do pedido (UTM, gclid e fbclid sobrevivem ao 301). */
+function comQuery(destino: string, search: string): string {
+  const u = new URL(destino);
+  u.search = search;
+  return u.toString();
+}
+
+/**
+ * Decide a resposta de uma página do site. Função pura (o middleware só busca).
+ * Nesta ordem:
+ * 1. o servidor falhou → 503 com `Retry-After` (o Google volta depois e não
+ *    tira a página do índice), com o HTML cru para o visitante;
+ * 2. não há site neste endereço → 404 `noindex`;
+ * 3. endereço errado do site → 301 para o domínio oficial:
+ *    - `exemplo.com.br` quando o oficial é `www.exemplo.com.br` (ou o contrário);
+ *    - endereço antigo ou torto que o servidor corrigiu (`redirect`);
+ *    - o mesmo site aberto pelo endereço lmflow (fora da prévia do editor);
+ * 4. senão, o HTML com o `<head>`, o texto e o código que o servidor mandou
+ *    (404 de verdade, 410 do vendido, 200).
+ *
+ * null = não mexe (o middleware deixa passar).
+ */
+export function respostaDaPagina(
+  html: string | null,
+  host: string,
+  url: URL,
+  resultado: ResultadoDoHead,
+): RespostaDaPagina | null {
+  const h = limparHost(host);
+  if (resultado.tipo === 'falhou') {
+    return html ? { status: 503, body: html, cache: SEM_CACHE, retryAfter: '120' } : null;
+  }
+  if (resultado.tipo === 'sem-site') {
+    return html ? { status: 404, body: montarHead(html, { robots: 'noindex' }, h), cache: CACHE_DA_BORDA } : null;
+  }
+
+  const dados = resultado.dados;
+  const dominio = texto(dados.domain);
+  const status = typeof dados.status === 'number' && CODIGOS.has(dados.status) ? dados.status : 200;
+  const sistema = ehEnderecoDoSistema(h);
+  const previa = url.searchParams.has('previa') || url.searchParams.has('modelo');
+
+  if (dominio && !sistema && limparHost(dominio) !== h) {
+    return { status: 301, location: `https://${limparHost(dominio)}${url.pathname}${url.search}`, cache: CACHE_DA_BORDA };
+  }
+  const redirect = texto(dados.redirect);
+  if (dominio && !sistema && noMesmoDominio(redirect, dominio)) {
+    return { status: 301, location: comQuery(redirect, url.search), cache: CACHE_DA_BORDA };
+  }
+  const canonical = texto(dados.canonical);
+  if (dominio && sistema && status === 200 && !previa && noMesmoDominio(canonical, dominio)) {
+    return { status: 301, location: comQuery(canonical, url.search), cache: CACHE_DA_BORDA };
+  }
+  if (!html) return null;
+  return {
+    status,
+    body: montarHead(html, dados, h),
+    cache: status === 503 ? SEM_CACHE : CACHE_DA_BORDA,
+    ...(status === 503 ? { retryAfter: '120' } : {}),
+  };
 }
 
 /* ── sitemap.xml ──────────────────────────────────────────────────────────── */

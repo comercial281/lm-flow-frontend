@@ -11,6 +11,10 @@
 // dois lados.
 import { ehEnderecoDoSistema } from './features/siteBuilder/public/dominioDoSite';
 import { isChunkError, reloadForNewVersion } from './utils/chunkReload';
+import { tirarTextoDoServidorQuandoPronto } from './features/siteBuilder/public/textoDoServidor';
+
+// O texto da página que o middleware pôs pro Google sai quando o app desenha.
+tirarTextoDoServidorQuandoPronto();
 
 // ⚠️ A trava de build só segue o import estático da entrada. Um novo `import()`
 // aqui não é conferido pela `conferir-dominio-limpo` (scripts/conferir-dominio-limpo.mjs).
