@@ -10720,11 +10720,18 @@ Spec: `LM FLOW/specs/2026-11-04-campanhas-tela-e-plugar-design.md`. Esta seção
 - **A janela abre pela entrada do lead.** Coluna da esquerda: Copiar, Para onde vai (Funil e Etapa), Quem assume, O que esta campanha vende (com a lista), Complemento e Estado. Antes o Funil ficava abaixo da lista de imóveis, fora da primeira tela. `EntradaDoLead` tem duas partes (`EntradaDoLead` e `ComplementoDaEntrada`). Criar sem funil ou sem etapa leva o foco ao campo.
 - **Plugar numa ficha desligada abre já ligada**, com o aviso "Esta ficha estava desligada. Ao salvar, ela liga de novo." no topo (some se a pessoa desmarcar Ativo). Editar pela linha da tabela não muda nada.
 - **Formulário plugado sai de Pra resolver na hora**, sem nova sincronização: sai quem tem ficha ATIVA da página do lead (ou sem página), igual ao `LeadRouter#candidate_configs`. Ficha de outra página ou desligada não tira.
-- **Formulário novo:** escolher a IA no seletor já vale (sem botão Pôr; entra no Criar). Sem escolha, a tela não diz "Sem IA" (diz que IA por funil ou por anúncio continua atendendo). IA de regra ampla (`broad`): sem seletor e sem a frase "vale na hora".
+- ~~**Formulário novo:** escolher a IA no seletor já vale~~ **Revertido pelo dono em 04/11/2026** (ver "IA só leitura" abaixo).
 - **Botões de super-admin:** Diagnosticar, Importar e Limpar etiquetas só aparecem pra ele (o servidor dá 403 pro resto). Pra quem não é, a frase da importação manual termina em "peça pro suporte da LM". Plugar só aparece com `lead_ads_form_configs.create`.
 - O filtro de tipo de imóvel é uma lista na mesma linha da busca. O subtítulo da página é uma linha só. A lista de Campanhas só aceita a resposta da leitura mais nova. "Parece com a ficha" ignora palavra de 1-2 letras, preposição e "vila". Copiar de origem com 2 IAs da campanha leva a primeira e avisa que a outra não veio.
 
 Testes: `Campanhas.spec.tsx`, `PraResolver.spec.tsx`, `TabelaDeFormularios.spec.tsx`, `TabelaDeAnuncios.spec.tsx`, `src/features/campanhas/telaDeCampanhas.spec.ts`.
+
+**IA só leitura na janela (04/11/2026, decidido pelo dono): a decisão 4 do spec ("dois caminhos", escolher a IA na janela e na IA) foi REVERTIDA.** A configuração da IA mora na IA, não na campanha.
+- O bloco **IA que atende** só mostra quem atende, com o motivo que o servidor escreveu. Sumiram o seletor "Pôr numa IA", o Pôr e o Tirar a IA, em ficha existente e em anúncio (o anúncio sem linha não cria mais a linha ao abrir; o Salvar cria). Não reabrir sem o dono pedir.
+- **Configurar na IA** é um link normal para `/ia-vendedora?ia=<id>&tela=configurar&pagina=campanhas` (a página "Campanhas e gatilhos"; montado com `paramsDaIa`) quando uma IA só atende (a mesma IA em dois números conta como uma), e para `/ia-vendedora` nos outros casos. Só aparece com `sales_agents.read`, a permissão da rota. Cargo que só lê ou corretor vê o mesmo bloco.
+- **Copiar de uma ficha parecida continua trazendo a IA**, e agora ela aparece antes do Criar ("Vem da ficha copiada: <IA>"). O Criar grava a ficha e depois a IA pelo mesmo caminho de antes, com a pergunta "Esta campanha sai da IA X" (Mover / Deixar como está) e o aviso "a ficha foi criada, mas a IA não foi gravada". Se a gravação falhar a janela fica em edição e manda marcar o formulário na IA (não há mais seletor pra tentar de novo).
+- **Formulário novo sem cópia** não escolhe IA: o bloco avisa "IA que usa lista de formulários só atende depois de marcar este formulário nela" (a regra do nome está desligada, então a IA de lista ficaria muda sem aviso) e repete que IA por funil ou por todo anúncio continua atendendo.
+- Saiu o código morto: `opcoesDaTela`, `podeTirar`, `campanhasService.tirarIa`, `aoCriarLinha`. Ficou `campanhasService.escolherIa`, que só o Criar usa.
 
 ## Follow-up: etiqueta nasce pronta, nome em um lugar só e condições travadas (04/11/2026)
 

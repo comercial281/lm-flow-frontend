@@ -66,12 +66,6 @@ describe('campanhasService', () => {
     await expect(campanhasService.escolherIa({ ref: { kind: 'form', id: 'f1' }, sales_agent_id: 'a1' })).rejects.toBeTruthy();
   });
 
-  it('tirarIa faz DELETE com o corpo em data', async () => {
-    del.mockResolvedValue({ data: { holders: [], left_empty: ['Campanha A'], warning: 'Ficou sem IA' } });
-    const r = await campanhasService.tirarIa({ ref: { kind: 'form', id: 'f1' }, sales_agent_id: 'a1', number_id: 'n1' });
-    expect(del).toHaveBeenCalledWith('/campaigns/agent', { data: { ref: { kind: 'form', id: 'f1' }, sales_agent_id: 'a1', number_id: 'n1' } });
-    expect(r.left_empty).toEqual(['Campanha A']);
-  });
 
   it('condicaoDoTexto posta o texto do anúncio', async () => {
     post.mockResolvedValue({ data: { data: { down_payment_from: 5000, installment_from: 900, min_income: 3000, payment_terms: null, note: null } } });

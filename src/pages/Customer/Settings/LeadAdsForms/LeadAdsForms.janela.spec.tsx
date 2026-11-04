@@ -12,7 +12,7 @@ vi.mock('@/services/integrations/metaPagesService', () => ({ metaPagesService: {
 vi.mock('@/services/properties/propertiesService', () => ({
   propertiesService: { list: vi.fn().mockResolvedValue({ data: [], meta: { total: 0 } }), get: vi.fn() },
 }));
-vi.mock('@/services/campanhas/campanhasService', () => ({ campanhasService: { escolherIa: vi.fn(), tirarIa: vi.fn() } }));
+vi.mock('@/services/campanhas/campanhasService', () => ({ campanhasService: { escolherIa: vi.fn() } }));
 vi.mock('@/hooks/useIsSuperAdmin', () => ({ useIsSuperAdmin: () => false }));
 vi.mock('@/hooks/useCan', () => ({ useCan: () => () => true }));
 vi.mock('@/services/roletaConfig/roletaConfigService', async (orig) => {

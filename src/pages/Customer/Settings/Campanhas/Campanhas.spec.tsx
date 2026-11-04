@@ -5,7 +5,7 @@ import { MemoryRouter } from 'react-router-dom';
 import type { ItemDeCampanha } from '@/services/campanhas/campanhasService';
 import type { IgnoredLeadForm, LeadAdsFormConfig } from '@/services/leadAds/leadAdsFormsService';
 
-const camp = vi.hoisted(() => ({ lista: vi.fn(), opcoesDeIa: vi.fn(), criarLinha: vi.fn(), atualizarLinha: vi.fn(), escolherIa: vi.fn(), tirarIa: vi.fn(), condicaoDoTexto: vi.fn() }));
+const camp = vi.hoisted(() => ({ lista: vi.fn(), opcoesDeIa: vi.fn(), criarLinha: vi.fn(), atualizarLinha: vi.fn(), escolherIa: vi.fn(), condicaoDoTexto: vi.fn() }));
 vi.mock('@/services/campanhas/campanhasService', () => ({ campanhasService: camp }));
 const svc = vi.hoisted(() => ({ getAll: vi.fn(), syncMetaForms: vi.fn(), update: vi.fn(), create: vi.fn(), delete: vi.fn() }));
 vi.mock('@/services/leadAds/leadAdsFormsService', () => ({ leadAdsFormsService: svc }));
@@ -136,26 +136,15 @@ describe('Campanhas', () => {
 });
 
 describe('Campanhas · rodada 1', () => {
-  it('escolhe a IA num anúncio sem linha, fecha, reabre e salva: a linha é criada uma vez só', async () => {
-    camp.criarLinha.mockReset().mockResolvedValue({ id: 'l9' });
-    camp.atualizarLinha.mockReset().mockResolvedValue({ id: 'l9' });
-    camp.escolherIa.mockReset().mockResolvedValue({ ok: true, holders: [], left_empty: [], warning: null });
+  it('a janela do anúncio só mostra quem atende: sem seletor, sem Pôr, e a linha não é criada ao abrir', async () => {
+    camp.criarLinha.mockReset();
     tela();
     fireEvent.click(await screen.findByRole('button', { name: 'Editar Campanha B' }));
-    let dialogo = await screen.findByRole('dialog');
-    await waitFor(() => expect(within(dialogo).getByLabelText('Pôr numa IA')).toBeInTheDocument());
-    fireEvent.change(within(dialogo).getByLabelText('Pôr numa IA'), { target: { value: 'a1|' } });
-    fireEvent.click(within(dialogo).getByRole('button', { name: 'Pôr' }));
-    await waitFor(() => expect(camp.escolherIa).toHaveBeenCalled());
-    fireEvent.click(within(dialogo).getByRole('button', { name: 'Cancelar' }));
-    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
-    fireEvent.click(screen.getByRole('button', { name: 'Editar Campanha B' }));
-    dialogo = await screen.findByRole('dialog');
-    fireEvent.click(within(dialogo).getByRole('radio', { name: 'Todo o catálogo' }));
-    fireEvent.click(within(dialogo).getByRole('button', { name: 'Salvar' }));
-    await waitFor(() => expect(camp.atualizarLinha).toHaveBeenCalled());
-    expect(camp.criarLinha).toHaveBeenCalledTimes(1);
-    expect(camp.atualizarLinha.mock.calls[0][0]).toBe('l9');
+    const dialogo = await screen.findByRole('dialog');
+    await waitFor(() => expect(within(dialogo).getByRole('group', { name: 'IA que atende' })).toBeInTheDocument());
+    expect(within(dialogo).queryByLabelText('Pôr numa IA')).toBeNull();
+    expect(within(dialogo).queryByRole('button', { name: 'Pôr' })).toBeNull();
+    expect(camp.criarLinha).not.toHaveBeenCalled();
   });
 
   it('lista que falha: o cartão do formulário não afirma "0 leads" nem "Nenhuma" IA', async () => {

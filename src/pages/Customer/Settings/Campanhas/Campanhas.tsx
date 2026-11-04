@@ -109,8 +109,6 @@ export default function Campanhas() {
           opcoesDeIa={opcoesDeIa}
           aoFechar={() => setAberto(null)}
           aoSalvar={() => void carregar()}
-          aoCriarLinha={(it, id) => setItens((l) => (l ?? []).map((x) => (x.key === it.key ? { ...x, link_id: id } : x)))}
-          aoMudarIa={(it, donos) => setItens((l) => (l ?? []).map((x) => (x.key === it.key ? { ...x, agents: donos } : x)))}
         />
       )}
     </section>
