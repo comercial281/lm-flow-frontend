@@ -551,3 +551,67 @@ describe('JanelaDaCampanha · criar com IA escolhida', () => {
     expect(screen.getByText('Sem IA')).toBeInTheDocument();
   });
 });
+
+describe('JanelaDaCampanha · lista de imóveis aberta e só o miolo rola (fix 1)', () => {
+  const entradaOk = () => ({ form_id: 'f-9', form_name: 'Novo', pipeline_id: 'p', pipeline_stage_id: 's', is_active: true, label_ids: [] });
+
+  it('formulário novo abre em "Imóveis escolhidos" com a lista de imóveis à mostra, sem digitar', async () => {
+    formNovo();
+    expect(screen.getByRole('radio', { name: 'Imóveis escolhidos' })).toHaveAttribute('aria-checked', 'true');
+    expect(screen.getByPlaceholderText('Buscar por título ou código')).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /^Residencial Teste/ })).toBeInTheDocument();
+    expect(props.list).toHaveBeenCalledWith(expect.objectContaining({ per_page: 20, sort: 'recent' }));
+  });
+
+  it('ficha existente sem tipo e sem imóvel também abre com a lista à mostra', async () => {
+    abrir({ tipo: 'form', config: ficha(), entrada: entradaFalsa, item: item({ kind: 'form', form_config_id: 'cfg-1' }) });
+    expect(await screen.findByRole('button', { name: /^Residencial Teste/ })).toBeInTheDocument();
+  });
+
+  it('Criar sem escolher nada manda o mesmo de antes: sem tipo e sem imóvel', async () => {
+    forms.create.mockResolvedValue(ficha());
+    formNovo({ montarEntrada: entradaOk });
+    await screen.findByRole('button', { name: /^Residencial Teste/ });
+    fireEvent.click(screen.getByRole('button', { name: 'Criar' }));
+    await waitFor(() => expect(forms.create).toHaveBeenCalled());
+    expect(forms.create.mock.calls[0][0]).toMatchObject({
+      sells_scope: null, sells_listing_kind: null, property_ids: [], property_id: null,
+    });
+  });
+
+  it('marcar um imóvel vira "imóveis escolhidos"; desmarcar o último volta a não dizer nada (e Criar não reclama)', async () => {
+    forms.create.mockResolvedValue(ficha());
+    formNovo({ montarEntrada: entradaOk });
+    const b = await screen.findByRole('button', { name: /^Residencial Teste/ });
+    fireEvent.click(b);
+    expect(screen.getByRole('button', { name: /^Residencial Teste/ })).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.click(screen.getByRole('button', { name: /^Residencial Teste/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Criar' }));
+    await waitFor(() => expect(forms.create).toHaveBeenCalled());
+    expect(forms.create.mock.calls[0][0]).toMatchObject({ sells_scope: null, property_ids: [], property_id: null });
+    expect(screen.queryByText('Escolha pelo menos um imóvel.')).toBeNull();
+  });
+
+  it('com um imóvel marcado, Criar grava imóveis escolhidos com ele', async () => {
+    forms.create.mockResolvedValue(ficha());
+    formNovo({ montarEntrada: entradaOk });
+    fireEvent.click(await screen.findByRole('button', { name: /^Residencial Teste/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Criar' }));
+    await waitFor(() => expect(forms.create).toHaveBeenCalled());
+    expect(forms.create.mock.calls[0][0]).toMatchObject({ sells_scope: 'properties', property_ids: ['p1'], property_id: 'p1' });
+  });
+
+  it('a janela não rola: o miolo rola e o topo e o rodapé ficam parados', () => {
+    const { dialogo } = formNovo();
+    expect(dialogo.className).toContain('overflow-hidden');
+    expect(dialogo.className).toContain('flex-col');
+    const miolo = screen.getByTestId('miolo-da-janela');
+    expect(miolo.className).toContain('overflow-y-auto');
+    expect(miolo.className).toContain('overflow-x-hidden');
+    expect(miolo.className).toContain('relative'); // prende o sr-only absoluto dentro da rolagem
+    expect(miolo.contains(screen.getByTestId('coluna-direita'))).toBe(true);
+    expect(miolo.contains(screen.getByRole('button', { name: 'Criar' }))).toBe(false);
+    expect(miolo.contains(screen.getByRole('heading', { name: /Configurar formulário/ }))).toBe(false);
+  });
+});
+

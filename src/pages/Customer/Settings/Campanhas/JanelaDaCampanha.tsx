@@ -100,6 +100,17 @@ export default function JanelaDaCampanha({
   const [ids, setIds] = useState<string[]>(item.property_ids.map(String));
   // Sem tipo gravado mas com imóvel: é "imóveis escolhidos" (o mesmo que o servidor entende).
   const [escopo, setEscopo] = useState<EscopoDaOferta | null>(item.sells_scope ?? (item.property_ids.length ? 'properties' : null));
+  // Sem nada gravado a janela abre em "Imóveis escolhidos", com a lista à mostra, mas continua sem escopo: "o que vende" é
+  // opcional, e criar sem escolher nada grava o mesmo de sempre (sem tipo, sem imóvel). Marcar um imóvel vira escolha de verdade;
+  // desmarcar o último de uma escolha que não foi pedida volta a "sem escopo".
+  const escopoImplicito = useRef(false);
+  const escopoNaTela: EscopoDaOferta = escopo ?? 'properties';
+  const escolheEscopo = (e: EscopoDaOferta) => { escopoImplicito.current = false; setEscopo(e); };
+  const mudaImoveis = (novos: string[]) => {
+    setIds(novos);
+    if (escopo === null && novos.length > 0) { escopoImplicito.current = true; setEscopo('properties'); }
+    else if (escopo === 'properties' && novos.length === 0 && escopoImplicito.current) { escopoImplicito.current = false; setEscopo(null); }
+  };
   const [tipoDeImovel, setTipoDeImovel] = useState<TipoDoImovel>(item.sells_listing_kind ?? 'development');
   const [cond, setCond] = useState<CondicaoEmEdicao>(condicaoEmEdicao(item.offer_condition));
   const [intencoes, setIntencoes] = useState<Intencao[]>(item.audience_intents ?? []);
@@ -324,18 +335,18 @@ export default function JanelaDaCampanha({
   const oQueVende = (
     <GrupoDaJanela titulo={eForm ? 'O que esta campanha vende' : 'O que este anúncio oferece'}>
       <BotoesDeEscolha<EscopoDaOferta>
-        rotulo="O que vende" semNome valor={escopo} desabilitado={!podeEditar}
+        rotulo="O que vende" semNome valor={escopoNaTela} desabilitado={!podeEditar}
         opcoes={[
           { valor: 'properties', rotulo: 'Imóveis escolhidos' },
           { valor: 'listing_kind', rotulo: 'Um tipo inteiro' },
           { valor: 'catalog', rotulo: 'Todo o catálogo' },
         ]}
-        aoEscolher={setEscopo}
+        aoEscolher={escolheEscopo}
       />
-      {escopo === 'properties' && (
+      {escopoNaTela === 'properties' && (
         <CampoDaJanela rotulo="Imóveis" htmlFor="oferta_busca" ajuda={`De 1 a ${MAX_DE_IMOVEIS}. Marque na lista ou busque por título ou código.`}>
           <SeletorDeImoveis id="oferta_busca" selecionados={ids} max={MAX_DE_IMOVEIS} sugestaoQ={ids.length ? null : sugestao}
-            disabled={!podeEditar} aoMudar={setIds} />
+            disabled={!podeEditar} aoMudar={mudaImoveis} />
           {ids.length >= MAX_DE_IMOVEIS && <p className="text-sm text-muted-foreground">Chegou em {MAX_DE_IMOVEIS} imóveis, o máximo de uma campanha.</p>}
           {ids.length > 1 && (
             <p className="rounded-md bg-accent px-3 py-2 text-xs text-accent-foreground">
@@ -355,13 +366,13 @@ export default function JanelaDaCampanha({
         </CampoDaJanela>
       )}
       {escopo === 'catalog' && <p className="text-sm text-muted-foreground">A IA não fixa imóvel: descobre o que a pessoa procura e busca no catálogo.</p>}
-      {!escopo && <p className="text-sm text-muted-foreground">Ainda não diz. A IA segue pelo imóvel principal dela, e a Saúde da IA avisa.</p>}
+      {!escopo && ids.length === 0 && <p className="text-sm text-muted-foreground">Ainda não diz. A IA segue pelo imóvel principal dela, e a Saúde da IA avisa.</p>}
     </GrupoDaJanela>
   );
 
   return (
     <Dialog open onOpenChange={(o) => { if (!o) aoFechar(); }}>
-      <DialogContent size="wide" className="max-sm:h-dvh max-sm:max-h-none max-sm:rounded-none max-sm:content-start">
+      <DialogContent size="wide" className="flex flex-col overflow-hidden max-sm:h-dvh max-sm:max-h-none max-sm:rounded-none">
         <DialogHeader>
           <DialogTitle>{tipo === 'form' ? (configAtual ? 'Editar formulário do Meta' : 'Configurar formulário do Meta') : 'Editar anúncio de WhatsApp'}</DialogTitle>
           <DialogDescription>
@@ -371,6 +382,9 @@ export default function JanelaDaCampanha({
           </DialogDescription>
         </DialogHeader>
 
+        {/* Só o miolo rola: a janela não (overflow-hidden), o topo e o rodapé ficam parados. A folga de 1 evita cortar o anel de foco.
+            `relative` prende o texto sr-only ("(obrigatório)", absoluto) ao miolo: sem isso ele sai pra fora da rolagem, cai no fim da janela e a faz rolar. */}
+        <div data-testid="miolo-da-janela" className="relative -mx-1 min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-1">
         {!podeEditar && (
           <Aviso tom="neutro" compacto>
             {!podeCriar
@@ -472,6 +486,7 @@ export default function JanelaDaCampanha({
               </GrupoDaJanela>
             </fieldset>
           </section>
+        </div>
         </div>
 
         <DialogFooter>

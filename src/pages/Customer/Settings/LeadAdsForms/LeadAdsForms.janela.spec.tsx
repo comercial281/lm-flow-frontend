@@ -112,4 +112,28 @@ describe('Formulários do Meta · janela da campanha', () => {
     expect(svc.create.mock.calls[0][0]).toMatchObject({ form_id: 'f-2', form_name: '05/10 - ALMA', pipeline_id: 'p1', pipeline_stage_id: 's1' });
     expect(svc.create.mock.calls[0][0]).not.toHaveProperty('match_keyword');
   });
+
+  it('o resumo do rodapé sempre diz o mesmo que os campos de funil e etapa', async () => {
+    svc.getAll.mockResolvedValue([]);
+    svc.syncMetaForms.mockResolvedValue({ data: [{ id: 'f-2', name: '05/10 - ALMA', status: 'ACTIVE', leads_count: 3 }], errors: [], ignored_leads: [] });
+    render(<MemoryRouter><LeadAdsForms /></MemoryRouter>);
+    fireEvent.click(await screen.findByRole('button', { name: 'Configurar destino' }));
+    const dialogo = await screen.findByRole('dialog');
+    const rodape = () => within(dialogo).getByTestId('resumo-do-rodape');
+    // sem funil: o campo mostra o convite e o rodapé não afirma funil nenhum
+    expect(within(dialogo).getByLabelText(/Funil/)).toHaveValue('');
+    expect(within(dialogo).queryByLabelText(/Etapa/)).toBeNull();
+    expect(rodape()).toHaveTextContent('Funil ainda não escolhido');
+    expect(rodape()).not.toHaveTextContent('Vendas');
+    // funil sem etapa
+    fireEvent.change(within(dialogo).getByLabelText(/Funil/), { target: { value: 'p1' } });
+    expect(rodape()).toHaveTextContent('Vendas (falta a etapa)');
+    // funil e etapa
+    fireEvent.change(await within(dialogo).findByLabelText(/Etapa/), { target: { value: 's1' } });
+    expect(rodape()).toHaveTextContent('Vendas > Novo');
+    // volta o funil pra nada: some a etapa e o rodapé acompanha
+    fireEvent.change(within(dialogo).getByLabelText(/Funil/), { target: { value: '' } });
+    expect(within(dialogo).queryByLabelText(/Etapa/)).toBeNull();
+    expect(rodape()).toHaveTextContent('Funil ainda não escolhido');
+  });
 });
