@@ -98,9 +98,9 @@ export const ADMIN_MENU_ITEMS: AdminMenuItem[] = [
     name: 'Comunicação',
     href: '/admin/comunicacao',
     icon: Megaphone,
-    description: 'Falar com os clientes: avisos na tela, push, WhatsApp e banner',
+    description: 'Falar com os clientes: notificações, push, WhatsApp e banner',
     abas: [
-      { name: 'Avisos na tela', href: '/admin/comunicacao', icon: Bell, exata: true },
+      { name: 'Notificações', href: '/admin/comunicacao', icon: Bell, exata: true },
       { name: 'Push', href: '/admin/push', icon: BellRing },
       { name: 'WhatsApp', href: '/admin/comunicacao/whatsapp', icon: MessageCircle },
       { name: 'Banner', href: '/admin/comunicacao/banner', icon: GalleryHorizontal },

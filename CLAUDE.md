@@ -4796,7 +4796,7 @@ O que aparece na tela, no menu da Área do Admin:
 | Suporte | — |
 | Clientes | Clientes · Números conectados · Custos |
 | Usuários | Usuários (lista de todos os clientes + ficha) · Logs · Mensagem de acesso |
-| Comunicação | Avisos na tela · Push · WhatsApp |
+| Comunicação | Notificações · Push · WhatsApp |
 | Plataforma | Academia · Menus arquivados · Site |
 | IA Vendedora | Agentes · Dashboard · Conhecimento · Aviso de visita |
 | Equipe | — |
@@ -6944,7 +6944,7 @@ Entrega 4 da Área do Admin (spec `LM FLOW/specs/2026-10-06-admin-final-design.m
 Entrega 8 da Área do Admin, onda 2 da spec `LM FLOW/specs/2026-10-06-admin-final-design.md`.
 
 - **Estilo do admin**: o padrão de quadro e respiro mora em `src/pages/Admin/Area/estilo.ts` (saiu de `PooledClients/estilo.ts`). Tela nova ou mexida do admin importa de lá.
-- **Avisos na tela** (`/admin/comunicacao`): a matriz é a mesma do cliente (decisão de 25/08). Erro de carga é `EmptyState` com "Tentar de novo", nunca tela em branco. "Aplicar a todos os clientes" confirma dizendo quantos ("Aplicar este padrão aos 31 clientes?"): N = clientes ativos menos o de origem, a mesma lista em que o servidor aplica.
+- **Notificações** (`/admin/comunicacao`, até 04/11/2026 se chamava Avisos na tela): a matriz é a mesma do cliente (decisão de 25/08). Erro de carga é `EmptyState` com "Tentar de novo", nunca tela em branco. "Aplicar a todos os clientes" confirma dizendo quantos ("Aplicar este padrão aos 31 clientes?"): N = clientes ativos menos o de origem, a mesma lista em que o servidor aplica.
 - **Push** (`/admin/push`): Regras, Disparo manual e Histórico são três seções na mesma página. O liga/desliga da regra é `Chave`; as listas do formulário usam `Checkbox`, e "Regra ligada" é caixinha porque espera o Salvar. **O disparo manual confirma com o público e a quantidade** ("Enviar para 12 pessoas (17 aparelhos) de Moeda Forte?"), contados pelo servidor (`GET /super/push_rules/audience_count`, a mesma conta que o envio grava no histórico) e recontados no clique. Zero aparelhos trava o Enviar com o motivo. "Para mim" com mais de uma pessoa diz "N pessoas da Leal Mídia", não "você".
 - **Comunicado** (`/admin/comunicacao/whatsapp`): tela própria, sem janela.
   - Abas Donos | Grupos. Os clientes com destino vêm marcados; quem não tem telefone ou grupo aparece com o motivo, com a caixa travada, e fica de fora. O grupo segue a mesma regra do Kit de boas-vindas.
@@ -10663,5 +10663,6 @@ Pedido do dono com o print de um aviso que chegou como `Fulano: escreveu: "Vou c
 - **Sem botão** nos avisos sem modelo: o da automação é o texto escrito no bloco, e os da roleta ficam na aba Avisos dela.
 - O `*negrito*` do WhatsApp vira `<strong>`, como elemento, nunca como HTML.
 - Servidor antigo sem o campo: o botão não aparece. Voltar a tela é seguro.
+- **No admin (04/11/2026):** a aba *Avisos na tela* de Comunicação passou a se chamar **Notificações**, porque a lista controla também push, e-mail e WhatsApp e o nome antigo escondia isso. O endereço não mudou. O botão fica em linha própria: inline, ele colava na frase de baixo.
 
 Testes: `src/components/notifications/VerTextoDoAviso.spec.tsx`.

@@ -46,7 +46,7 @@ import { STATUS_CLASS, pedidoDeDisparo, textoDoPublico } from './pushRegras';
  *                     com zero aparelhos o Enviar fica travado.
  *   Histórico      -> o que saiu, pra quem, e o que FALHOU
  *
- * O que a equipe do CLIENTE recebe dentro do CRM mora em Avisos na tela.
+ * O que a equipe do CLIENTE recebe dentro do CRM mora em Notificações.
  */
 
 const EMPTY_FORM: PushRulePayload = {
@@ -349,7 +349,7 @@ export default function PushCentral() {
                       */}
                       {rule.superseded && (
                         <p className="mt-2 text-xs text-muted-foreground">
-                          Push para a equipe do cliente agora vive em <strong>Avisos na tela</strong>: esta
+                          Push para a equipe do cliente agora vive em <strong>Notificações</strong>: esta
                           regra está guardada, mas não envia mais nada. O que ela avisava está em:{' '}
                           {rule.superseded_by.join(', ')}.
                         </p>
@@ -648,7 +648,7 @@ export default function PushCentral() {
               {form.audience === 'client' && (
                 <Aviso tom="atencao">
                   Regra automática para a equipe do cliente não dispara mais: esses avisos vivem em{' '}
-                  <strong>Avisos na tela</strong>. Aqui só continua valendo o aviso para a Leal Mídia — e o
+                  <strong>Notificações</strong>. Aqui só continua valendo o aviso para a Leal Mídia — e o
                   disparo manual, logo abaixo das regras.
                 </Aviso>
               )}

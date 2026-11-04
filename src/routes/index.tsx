@@ -160,7 +160,7 @@ const AdminFichaDoUsuario = lazyWithRetry(() => import('@/pages/SuperAdmin/Usuar
 const AdminChavesMcp = lazyWithRetry(() => import('@/pages/SuperAdmin/ChavesMcp'));
 const AdminLogs = lazyWithRetry(() => import('@/pages/SuperAdmin/Logs'));
 const AdminMensagemDeAcesso = lazyWithRetry(() => import('@/pages/SuperAdmin/MensagemDeAcesso'));
-const AdminAvisosNaTela = lazyWithRetry(() => import('@/pages/SuperAdmin/PushCentral/NotificationsTab'));
+const AdminNotificacoes = lazyWithRetry(() => import('@/pages/SuperAdmin/PushCentral/NotificationsTab'));
 const AdminComunicadoWhatsapp = lazyWithRetry(() => import('@/pages/SuperAdmin/ComunicadoWhatsapp'));
 const AdminBanners = lazyWithRetry(() => import('@/pages/SuperAdmin/Banners'));
 const AdminMenusArquivados = lazyWithRetry(() => import('@/pages/SuperAdmin/PooledClients/ArchivedFeaturesView'));
@@ -1398,7 +1398,7 @@ const AppRouter = () => {
               <Route path="/admin/usuarios/logs" element={<AdminConteudo><AdminLogs /></AdminConteudo>} />
               <Route path="/admin/usuarios/mensagem-de-acesso" element={<AdminMensagemDeAcesso />} />
               {/* Comunicação */}
-              <Route path="/admin/comunicacao" element={<AdminConteudo><AdminAvisosNaTela /></AdminConteudo>} />
+              <Route path="/admin/comunicacao" element={<AdminConteudo><AdminNotificacoes /></AdminConteudo>} />
               <Route path="/admin/push" element={<PushCentral />} />
               <Route path="/admin/comunicacao/whatsapp" element={<AdminComunicadoWhatsapp />} />
               <Route path="/admin/comunicacao/banner" element={<AdminConteudo><AdminBanners /></AdminConteudo>} />

@@ -35,7 +35,7 @@ describe('menu da Área do Admin', () => {
     ['/admin/usuarios/tenant_x/8f1c-uuid', 'Usuários', 'Usuários'],
     ['/admin/usuarios/logs', 'Usuários', 'Logs'],
     ['/admin/usuarios/mensagem-de-acesso', 'Usuários', 'Mensagem de acesso'],
-    ['/admin/comunicacao', 'Comunicação', 'Avisos na tela'],
+    ['/admin/comunicacao', 'Comunicação', 'Notificações'],
     ['/admin/push', 'Comunicação', 'Push'],
     ['/admin/comunicacao/whatsapp', 'Comunicação', 'WhatsApp'],
     ['/admin/academia', 'Plataforma', 'Academia'],

@@ -23,7 +23,7 @@ export default function VerTextoDoAviso({ titulo, texto }: { titulo: string; tex
       <button
         type="button"
         onClick={() => setAberto(true)}
-        className="mt-1 text-[11px] text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
+        className="mt-1 w-fit text-[11px] text-muted-foreground hover:text-foreground flex items-center gap-1"
       >
         <MessageCircle className="w-3 h-3" />
         Ver texto

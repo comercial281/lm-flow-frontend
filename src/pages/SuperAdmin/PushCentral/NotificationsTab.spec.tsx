@@ -27,7 +27,7 @@ const tenants = [
   { id: 'c', slug: 'domus', name: 'Domus', schema: 'tenant_domus' },
 ];
 
-describe('Comunicação → Avisos na tela', () => {
+describe('Comunicação → Notificações', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     svc.catalog.mockResolvedValue({ tenants });
