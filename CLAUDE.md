@@ -10725,3 +10725,26 @@ Spec: `LM FLOW/specs/2026-11-04-campanhas-tela-e-plugar-design.md`. Esta seção
 - O filtro de tipo de imóvel é uma lista na mesma linha da busca. O subtítulo da página é uma linha só. A lista de Campanhas só aceita a resposta da leitura mais nova. "Parece com a ficha" ignora palavra de 1-2 letras, preposição e "vila". Copiar de origem com 2 IAs da campanha leva a primeira e avisa que a outra não veio.
 
 Testes: `Campanhas.spec.tsx`, `PraResolver.spec.tsx`, `TabelaDeFormularios.spec.tsx`, `TabelaDeAnuncios.spec.tsx`, `src/features/campanhas/telaDeCampanhas.spec.ts`.
+
+## Follow-up: etiqueta nasce pronta, nome em um lugar só e condições travadas (04/11/2026)
+
+**O caso.** Maradona Broker, "Follow-up Polo Paulista". A etiqueta `<nome>-msg-N` só nascia quando a mensagem N saía. Em follow-up novo ou duplicado, a condição aparecia com "não existe mais" em vermelho e a busca não achava. As 6 condições foram trocadas pela etiqueta da campanha: o lead com ela iria direto pra "Marcar follow-up encerrado", sem mensagem, e o Simular não mostrava porque o Lead de teste não tem etiqueta. Nas mensagens, cada uma aceitava um nome digitado: saíram 3 nomes diferentes.
+
+**Como ficou:**
+
+- **Etiquetas nascem com o follow-up.** Criar, duplicar ou salvar cria as `<nome>-msg-N` que faltam (`ProgressTag.ensure_labels!`).
+- **Nome da etiqueta em Configurações**, só no follow-up e só pro gestor. Vai no Salvar do topo (`progress_tag_name` no `save_flow`), e o servidor replica nas mensagens e nas condições na mesma gravação. Follow-up misturado volta pra um nome só. Com lead dentro o campo trava: a etiqueta é o ponto de onde o lead continua. Nome de outro follow-up é recusado. A condição é reconhecida pelo formato `-msg-N`: o Follow-up Tikoa do Maradona tinha mensagens com um nome e condições com o da cópia, e mandar o nome conserta as duas.
+- **Condições de retomada travadas.** Condição por etiqueta `...-msg-N` num follow-up (`ehCondicaoAutomatica`) mostra o aviso "Automática: faz o lead que volta pro follow-up continuar de onde parou. Não precisa mexer.", sem editar, duplicar, renomear, "+ saída" nem excluir, e o clique não abre o painel. Condição com outra etiqueta continua normal, inclusive a que precisa de conserto.
+- **"Marcar progresso" saiu da mensagem do follow-up**, e o cartão não mostra o nome da etiqueta. Na automação continua igual.
+- **Duplicar** sai com um nome só, mesmo com original misturado. O nome nasce de "(cópia)": quem quiser outro define em Configurações.
+- **O servidor recusa** (`ProgressTag.locked_change_error`) trocar a etiqueta da condição ou o nome numa mensagem pelo `save_flow`, venha de aba antiga ou do MCP, com a frase que aponta pra automação.
+
+**O filtro de campanha mora na automação que inicia o follow-up, nunca dentro dele.**
+
+Armadilhas:
+
+1. **O nome só vai no Salvar do topo, junto dos blocos.** Trocar por outro caminho e depois salvar os blocos velhos daria 422 na trava do servidor.
+2. **Etiquetas do nome antigo ficam na conta**, sem lead novo. Não apagar junto: lead antigo pode ter a etiqueta.
+3. **Ainda dá pra cortar a linha de uma condição travada.** E mensagem nova adicionada no follow-up não marca progresso, então a retomada não a reconhece. Próxima conversa: 7ª mensagem e prazos. Ver `LM FLOW/_MELHORIAS.md`.
+
+Testes: `CondicoesAutomaticasDoFollowup.spec.tsx`, `FollowupCondicoesAutomaticasCanvas.spec.tsx`. Servidor: `spec/requests/api/v1/flow_automations_followup_progress_labels_spec.rb`.

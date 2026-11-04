@@ -14,15 +14,17 @@
  *
  * PÁGINAS DO SITE
  * O site é um app de navegador, e o HTML cru é o do CRM ("LM Flow", noindex).
- * Aqui o `<head>` sai com o título, a descrição, a prévia do link (WhatsApp,
- * Google), o canonical e o robots do site — ver `middleware/headDoSite.ts`.
+ * Aqui sai a página que o Google lê como site normal — ver `middleware/headDoSite.ts`:
+ * o `<head>` (título, descrição, prévia do link, canonical, robots, JSON-LD), o
+ * TEXTO da página dentro do HTML (`#lmf-ssr`, que o app troca quando monta) e o
+ * código certo: 200, 301 (www ↔ sem www, endereço lmflow → domínio, endereço
+ * legível do imóvel), 404 de verdade, 410 do imóvel vendido, 503 se o servidor cair.
  * - endereço lmflow: `/portal/<cliente>/...` e `/imovel/<cliente>/<código>`;
- * - domínio do cliente: os caminhos limpos (`/`, `/imoveis`, `/imovel/<código>`,
- *   `/blog`, `/p/<slug>`…).
+ * - domínio do cliente: qualquer caminho, menos `/lp` (o servidor diz se existe).
  * O resto (telas do CRM no endereço lmflow, arquivos, `/assets`) passa direto.
  *
- * ROBOTS.TXT E SITEMAP.XML
- * - domínio do cliente: abre as páginas do site com o Google ligado;
+ * ROBOTS.TXT, SITEMAP.XML E LLMS.TXT
+ * - domínio do cliente: abre o site com o Google ligado (e os robôs de IA);
  * - subdomínio do cliente (`imob.lmflow.com.br`), sem domínio próprio ativo:
  *   abre só `/portal/imob` e `/imovel/imob/` com o Google ligado;
  * - `app`, `www`, `api`, `admin` e o resto do sistema: `Disallow: /`.
@@ -30,13 +32,12 @@
  * A resposta é cacheada na borda por um minuto (`s-maxage`), então a página
  * vira, na prática, estática e se atualiza sozinha um minuto depois de publicada.
  *
- * QUANDO NÃO FAZ NADA
- * Qualquer tropeço (API fora, 404, sem variável de ambiente, HTML
- * inalcançável, tempo esgotado) deixa a requisição seguir para o rewrite de
- * sempre (`vercel.json`), e a página se vira sozinha como antes. O middleware
- * só ACELERA e arruma o `<head>`; nunca é o único caminho. O `index.html` cru é
- * `noindex`, então para robô a falha cai no fechado. No `robots.txt` a falha é
- * `Disallow: /`.
+ * QUANDO O SERVIDOR FALHA
+ * - endereço lmflow: segue para o rewrite de sempre (`vercel.json`), como antes;
+ * - domínio do cliente: 503 com `Retry-After` e o HTML do app (o visitante vê o
+ *   site normal; o Google volta depois e NÃO tira a página do índice — 200 com
+ *   noindex tiraria). Sem variável de ambiente ou sem o `index.html`: segue direto.
+ * - `robots.txt`: `Disallow: /` sem guardar na borda.
  *
  * ARMADILHAS
  * - O `matcher` NÃO cobre `/lp.html` nem `/index.html`: é este arquivo que busca
@@ -52,16 +53,21 @@ import { injectLandingIntoHtml, LANDING_DATA_MARKER } from './src/features/landi
 import { landingEndpoint, parseLandingPath, type PublicLandingDTO } from './src/features/landing/public/landingLoader';
 import { ehEnderecoDoSistema, limparHost, rotaDaLandingNoDominio } from './src/features/siteBuilder/public/dominioDoSite';
 import {
+  CACHE_DA_BORDA,
+  caminhoLimpo,
   dadosDaResposta,
   dominioDaResposta,
-  montarHead,
+  llmsTxt,
   paginaDoSite,
+  respostaDaPagina,
   robotsTxt,
   scriptDoSite,
   sitemapXml,
   subdominioDoCliente,
   urlsDaResposta,
   type DadosDoHead,
+  type PaginaDoSite,
+  type ResultadoDoHead,
 } from './middleware/headDoSite';
 
 export const config = {
@@ -69,17 +75,18 @@ export const config = {
     '/lp/:path*',
     '/robots.txt',
     '/sitemap.xml',
-    // Páginas do site no domínio do cliente…
-    '/',
-    '/imoveis',
+    '/llms.txt',
+    // Endereço lmflow, como era: código de imóvel ou post com ponto no nome
+    // escaparia da regra de baixo (ela pula "arquivo com extensão").
     '/imovel/:path*',
-    '/blog',
     '/blog/:path*',
     '/p/:path*',
-    '/financiamento',
-    '/anuncie',
-    // …e no endereço lmflow.
     '/portal/:path*',
+    // Toda página (no domínio do cliente, qualquer endereço é do site; quem diz
+    // se ela existe é o servidor). Fora: arquivos com extensão (inclui o
+    // `/index.html` e o `/lp.html` que este arquivo busca — laço), `/assets`,
+    // `/api` e o `_vercel`.
+    '/((?!assets/|api/|_vercel|.*\\.[a-zA-Z0-9]+$).*)',
   ],
 };
 
@@ -87,14 +94,16 @@ export const config = {
 const API_TIMEOUT_MS = 2500;
 
 /**
- * Teto do `head` (páginas do site e `robots.txt`): mais curto, porque ele fica
- * na frente de TODA página do site. Sem o cache da borda provado, cada visita
- * pode pagar essa espera; acima dela, o HTML de hoje sai na hora.
+ * Teto do `head` (páginas do site e `robots.txt`). A borda guarda a resposta
+ * pronta por um minuto, então só a 1ª visita de cada página paga a espera;
+ * acima dela, no domínio, sai 503 (o Google volta depois) com a página de hoje.
  */
-const HEAD_TIMEOUT_MS = 1200;
+const HEAD_TIMEOUT_MS = 3000;
 
-/** Navegador: sempre confere. Borda: um minuto, servindo o velho enquanto renova. */
-const CACHE_DA_BORDA = 'public, max-age=0, s-maxage=60, stale-while-revalidate=300';
+/** No endereço lmflow fica o prazo de antes: lá a página é do CRM também e não pode esperar 3 s. */
+const HEAD_TIMEOUT_SISTEMA_MS = 1200;
+
+const prazoDoHead = (host: string) => (ehEnderecoDoSistema(host) ? HEAD_TIMEOUT_SISTEMA_MS : HEAD_TIMEOUT_MS);
 
 const JSON_HEADERS = { Accept: 'application/json' };
 
@@ -122,6 +131,7 @@ export default async function middleware(request: Request): Promise<Response> {
   const host = limparHost(url.hostname);
   if (url.pathname === '/robots.txt') return robots(host);
   if (url.pathname === '/sitemap.xml') return sitemap(host);
+  if (url.pathname === '/llms.txt') return llms(host);
   if (url.pathname.startsWith('/lp/')) {
     return ehEnderecoDoSistema(host) ? landingNoLmflow(url) : landingNoDominio(url, host);
   }
@@ -216,33 +226,73 @@ function headEndpoint(base: string, host: string, path: string, tenant: string |
   return `${base}/api/public/v1/head?${q}${tenant ? `&tenant=${encodeURIComponent(tenant)}` : ''}`;
 }
 
-/** O `index.html` com o `<head>` do site. Em qualquer falha, o HTML de hoje. */
+/** O `index.html` da própria implantação (sem cache próprio: a borda já guarda a resposta pronta). */
+async function htmlDoApp(url: URL, ms: number): Promise<string | null> {
+  try {
+    return await comPrazo(async signal => {
+      const res = await fetch(new URL('/index.html', url.origin).toString(), { signal });
+      return res.ok ? await res.text() : null;
+    }, ms);
+  } catch {
+    return null;
+  }
+}
+
+/** Pergunta o `/head`: 404 = não há site neste endereço; erro, tempo ou resposta torta = falhou. */
+async function headDaPagina(base: string, host: string, pg: PaginaDoSite): Promise<ResultadoDoHead> {
+  const ms = prazoDoHead(host);
+  try {
+    return await comPrazo(async signal => {
+      const res = await fetch(headEndpoint(base, host, pg.path, pg.tenant), { headers: JSON_HEADERS, signal });
+      if (res.status === 404) return { tipo: 'sem-site' } as const;
+      if (!res.ok) return { tipo: 'falhou' } as const;
+      const dados = dadosDaResposta(await res.json());
+      return dados ? ({ tipo: 'ok', dados } as const) : ({ tipo: 'falhou' } as const);
+    }, ms);
+  } catch {
+    return { tipo: 'falhou' };
+  }
+}
+
+/**
+ * Página do site: o `index.html` com o `<head>`, o texto da página e o código
+ * de resposta certo (200, 301, 404, 410, 503) — a regra mora em
+ * `respostaDaPagina`. Endereço do sistema fora do site (telas do CRM) passa
+ * direto, sem perguntar nada.
+ */
 async function pagina(url: URL, host: string): Promise<Response> {
   const pg = paginaDoSite(host, url.pathname);
   const base = apiBase();
   if (!pg || !base) return passThrough();
-  try {
-    return await comPrazo(async signal => {
-      const [htmlRes, apiRes] = await Promise.all([
-        fetch(new URL('/index.html', url.origin).toString(), { signal }),
-        fetch(headEndpoint(base, host, pg.path, pg.tenant), { headers: JSON_HEADERS, signal }),
-      ]);
-      if (!htmlRes.ok || !apiRes.ok) return passThrough();
-      const [html, json] = await Promise.all([htmlRes.text(), apiRes.json()]);
-      const dados = dadosDaResposta(json);
-      if (!dados || !html) return passThrough();
-      return new Response(montarHead(html, dados, host), {
-        status: 200,
-        headers: {
-          'content-type': 'text/html; charset=utf-8',
-          'cache-control': CACHE_DA_BORDA,
-          'x-lm-site': 'head',
-        },
-      });
-    }, HEAD_TIMEOUT_MS);
-  } catch {
-    return passThrough();
+  const limpo = ehEnderecoDoSistema(host) ? null : caminhoLimpo(url.pathname);
+  if (limpo) {
+    return new Response(null, {
+      status: 301,
+      headers: { location: `${limpo}${url.search}`, 'cache-control': CACHE_DA_BORDA, 'x-lm-site': 'head' },
+    });
   }
+  const [html, resultado] = await Promise.all([htmlDoApp(url, prazoDoHead(host)), headDaPagina(base, host, pg)]);
+  // No endereço lmflow, servidor fora não vira 503: `respostaDaPagina` devolve null e a página segue.
+  const r = respostaDaPagina(html, host, url, resultado);
+  if (!r) return passThrough();
+  const headers: Record<string, string> = { 'cache-control': r.cache, 'x-lm-site': 'head' };
+  if (r.location) headers.location = r.location;
+  if (r.retryAfter) headers['retry-after'] = r.retryAfter;
+  if (r.body != null) headers['content-type'] = 'text/html; charset=utf-8';
+  return new Response(r.body ?? null, { status: r.status, headers });
+}
+
+/** `llms.txt` do domínio do cliente (resumo do site para as IAs). Sem site ou Google desligado: 404. */
+async function llms(host: string): Promise<Response> {
+  const base = apiBase();
+  const naoTem = () => resposta('Not found\n', 404, 'text/plain; charset=utf-8', CACHE_DA_BORDA);
+  // Endereço lmflow: segue como antes (o arquivo não existia lá).
+  if (ehEnderecoDoSistema(host)) return passThrough();
+  if (!base) return naoTem();
+  const r = await headDaPagina(base, host, { tenant: null, path: '/' });
+  if (r.tipo === 'falhou') return resposta('Service unavailable\n', 503, 'text/plain; charset=utf-8', 'no-store');
+  const corpo = r.tipo === 'ok' ? llmsTxt(host, r.dados) : null;
+  return corpo ? resposta(corpo, 200, 'text/plain; charset=utf-8', CACHE_DA_BORDA) : naoTem();
 }
 
 /* ── robots.txt e sitemap.xml ─────────────────────────────────────────────── */
@@ -269,7 +319,7 @@ async function robots(host: string): Promise<Response> {
         if (res.status === 404) return null;
         if (!res.ok) throw new Error(`head ${res.status}`);
         return dadosDaResposta(await res.json());
-      }, HEAD_TIMEOUT_MS);
+      }, prazoDoHead(host));
     } catch {
       falhou = true;
     }

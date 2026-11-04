@@ -73,7 +73,7 @@ describe('Formulários do Meta · janela da campanha', () => {
     const dialogo = await abrir();
     expect(within(dialogo).queryByLabelText(/Nome do imóvel para reconhecer os formulários/)).toBeNull();
     expect(within(dialogo).queryByRole('group', { name: 'Como identificar' })).toBeNull();
-    for (const nome of ['Para onde vai', 'Quem assume', 'Complemento', 'Estado', 'Quem atende']) {
+    for (const nome of ['Para onde vai', 'Quem assume', 'Complemento', 'Estado', 'IA que atende']) {
       expect(within(dialogo).getByRole('group', { name: nome })).toBeInTheDocument();
     }
   });
@@ -88,7 +88,7 @@ describe('Formulários do Meta · janela da campanha', () => {
   it('ficha sem etapa: a janela abre, Quem atende aparece e Salvar pede a etapa sem gravar', async () => {
     svc.getAll.mockResolvedValue([cadastro({ pipeline_stage_id: null })]);
     const dialogo = await abrir();
-    expect(within(dialogo).getByRole('group', { name: 'Quem atende' })).toBeInTheDocument();
+    expect(within(dialogo).getByRole('group', { name: 'IA que atende' })).toBeInTheDocument();
     expect(within(dialogo).getByText('Atende todo lead do funil')).toBeInTheDocument();
     expect(within(dialogo).getByLabelText(/Etapa/)).toHaveValue('');
     fireEvent.click(within(dialogo).getByRole('button', { name: 'Salvar' }));

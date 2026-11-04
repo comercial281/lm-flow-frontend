@@ -392,7 +392,7 @@ describe('JanelaDaCampanha · janela nova (Tarefa 6)', () => {
     const dir = screen.getByTestId('coluna-direita');
     expect(within(esq).getByText('Campos da entrada')).toBeInTheDocument();
     expect(within(esq).getByRole('radio', { name: 'Imóveis escolhidos' })).toBeInTheDocument();
-    expect(within(dir).getByRole('group', { name: 'Quem atende' })).toBeInTheDocument();
+    expect(within(dir).getByRole('group', { name: 'IA que atende' })).toBeInTheDocument();
     expect(within(dir).getByRole('group', { name: /Oferta do anúncio/ })).toBeInTheDocument();
     expect(within(dir).queryByText('Campos da entrada')).toBeNull();
     expect(screen.queryByLabelText(/Nome do imóvel para reconhecer os formulários/)).toBeNull();

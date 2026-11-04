@@ -3,10 +3,17 @@ import { getTenantSlug } from '@/services/core/tenant';
 import { enderecoNoGoogle } from '@/features/siteBuilder/enderecoDoSite';
 import { Secao, Secoes } from '@/components/base/Secao';
 import { CampoTexto, CampoTextoLongo } from '@/components/base/Campo';
+import { lerContas, naoReconhecido, resolverGoogle } from '@/features/siteBuilder/contasDoGoogle';
+import type { SiteGoogle } from '@/services/siteBuilder/siteBuilderService';
 import type { FormProps } from './tipos';
 
 export default function TelaGoogle({ site, siteForm, setF }: FormProps) {
-  const ligado = siteForm.google?.indexable === true;
+  const google = resolverGoogle(siteForm.google);
+  const ligado = google.indexable;
+  // O bloco viaja inteiro: mudar um campo nunca apaga os outros.
+  const mudar = (parcial: Partial<SiteGoogle>) => setF({ google: { ...google, ...parcial } });
+  const erro = (valor: string | null | undefined, ler: (v: string) => string | null, msg: string) =>
+    naoReconhecido(valor, ler) ? msg : undefined;
   // A frase diz onde o Google lê o site de verdade: o domínio próprio ativo ou,
   // sem ele, o endereço <cliente>.lmflow.com.br (nunca o app.lmflow.com.br).
   const endereco = site ? enderecoNoGoogle(site, getTenantSlug()) : null;
@@ -24,7 +31,7 @@ export default function TelaGoogle({ site, siteForm, setF }: FormProps) {
       >
         <div className="flex items-center gap-3">
           <Checkbox id="google-aparecer" checked={ligado} aria-describedby={descricoes}
-            onCheckedChange={v => setF({ google: { indexable: v === true } })} />
+            onCheckedChange={v => mudar({ indexable: v === true })} />
           <UILabel htmlFor="google-aparecer" className="cursor-pointer text-base font-normal">Aparecer no Google</UILabel>
         </div>
         {endereco && (
@@ -52,6 +59,34 @@ export default function TelaGoogle({ site, siteForm, setF }: FormProps) {
           placeholder="Encontre o imóvel ideal..." rows={2} classeDoControle="resize-none"
           ajuda="A frase embaixo do título nos resultados. Use até uns 160 caracteres. Também vira o subtítulo da capa, se você não escrever outro em Busca rápida."
           aoMudar={seo_description => setF({ seo_description })} />
+      </Secao>
+      <Secao
+        titulo="Contas da imobiliária no Google"
+        descricao="Tudo aqui é da conta da imobiliária, não da agência. Cada campo é opcional: preencha o que já tiver."
+      >
+        <CampoTexto id="google-search-console" rotulo="Search Console (verificação do site)" classeDoControle="font-mono"
+          placeholder='<meta name="google-site-verification" content="..." />'
+          valor={google.search_console ?? ''}
+          ajuda={<>Prova pro Google que o site é seu e libera os relatórios de busca. Onde achar: search.google.com/search-console › Adicionar propriedade › <strong>Prefixo do URL</strong> (o endereço do site) › Outros métodos de verificação › <strong>Tag HTML</strong> › Copiar. Cole aqui o código inteiro, salve o site e só depois clique em Verificar no Search Console.</>}
+          erro={erro(google.search_console, lerContas.searchConsole, 'Não reconheci esse código. Cole a tag que começa com <meta name="google-site-verification" ou só o código dentro de content.')}
+          aoMudar={search_console => mudar({ search_console })} />
+        <CampoTexto id="google-bing" rotulo="Bing (verificação do site)" classeDoControle="font-mono"
+          placeholder='<meta name="msvalidate.01" content="..." />'
+          valor={google.bing ?? ''}
+          ajuda="O Bing também alimenta o ChatGPT e o Copilot. Onde achar: bing.com/webmasters › Adicionar site › Meta tag HTML. Se o site já está no Search Console, dá pra importar de lá e deixar este campo em branco."
+          erro={erro(google.bing, lerContas.bing, 'Não reconheci esse código. Cole a tag que começa com <meta name="msvalidate.01" ou só o código dentro de content.')}
+          aoMudar={bing => mudar({ bing })} />
+        <CampoTexto id="google-perfil" rotulo="Perfil da Empresa no Google" placeholder="https://g.page/sua-imobiliaria"
+          valor={google.business_profile_url ?? ''}
+          ajuda="Liga o site à ficha da imobiliária no Google Maps. Onde achar: pesquise a imobiliária no Google › no seu perfil, Compartilhar › Copiar link."
+          erro={erro(google.business_profile_url, lerContas.perfil, 'Cole o link inteiro, começando com https://.')}
+          aoMudar={business_profile_url => mudar({ business_profile_url })} />
+        <CampoTexto id="google-creci" rotulo="CRECI da imobiliária" placeholder="J-12345"
+          valor={google.creci ?? ''}
+          ajuda="Vai junto com o nome da imobiliária nos dados que o Google lê. Pode escrever com ou sem a palavra CRECI."
+          erro={erro(google.creci, lerContas.creci, 'Use só letras, números, ponto, barra e hífen. Ex.: J-12345.')}
+          aoMudar={creci => mudar({ creci })} />
+        <p className="text-sm text-muted-foreground">Google Analytics, Pixel do Meta, Tag Manager e Clarity ficam em Rastreamento.</p>
       </Secao>
     </Secoes>
   );

@@ -136,5 +136,7 @@
   { "arquivo": "src/pages/Customer/PropertyOwners/FichaDoProprietario.tsx", "categoria": "rodapeAMao", "trecho": "<DialogContent", "motivo": "dados internos só de leitura; o botão da página está fora da janela" },
   { "arquivo": "src/pages/Customer/Settings/SiteBuilder/telas/TelaPaginas.tsx", "categoria": "rodapeAMao", "trecho": "<DialogContent", "motivo": "janela 'Nova página' é uma escolha de modelo (cada opção age); a outra janela do arquivo já usa o DialogFooter" },
   { "arquivo": "src/pages/Customer/Visits/Visits.tsx", "categoria": "rodapeAMao", "trecho": "<DialogContent", "motivo": "resumo da visita: o VisitCard traz as próprias ações; a outra janela do arquivo já usa o DialogFooter" },
-  { "arquivo": "src/components/contacts/CardDoContato.tsx", "categoria": "rodapeAMao", "trecho": "<DialogContent", "motivo": "as duas janelas são carregando e escolha do funil (cada linha age); sem botão final" }
+  { "arquivo": "src/components/contacts/CardDoContato.tsx", "categoria": "rodapeAMao", "trecho": "<DialogContent", "motivo": "as duas janelas são carregando e escolha do funil (cada linha age); sem botão final" },
+  {"arquivo": "src/pages/Customer/Settings/SiteBuilder/telas/TelaGoogle.tsx", "categoria": "glossario", "trecho": "Tag HTML", "motivo": "nome literal da opção na tela do Google Search Console (Outros métodos de verificação › Tag HTML); trocar por \"etiqueta\" faria o cliente não achar a opção"},
+  {"arquivo": "src/pages/Customer/Settings/SiteBuilder/telas/TelaGoogle.tsx", "categoria": "glossario", "trecho": "Tag Manager", "motivo": "nome próprio do produto Google Tag Manager, igual à exceção da TelaRastreamento"}
 ]

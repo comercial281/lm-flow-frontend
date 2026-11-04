@@ -40,7 +40,7 @@ export default function TabelaDeFormularios({
   const grade = GRADE_DOS_FORMULARIOS;
   return (
     <Tabela rotulo="Formulários do Meta">
-      <CabecalhoDaTabela grade={grade} colunas={['Formulário', 'Imóvel', 'Funil e quem assume', 'Quem atende', 'Leads em 90 dias', 'Ativo', '']} />
+      <CabecalhoDaTabela grade={grade} colunas={['Formulário', 'Imóvel', 'Funil e quem assume', 'IA que atende', 'Leads em 90 dias', 'Ativo', '']} />
       <div className="space-y-3">
         {fichas.map((cfg) => {
           const nome = nomeDaFicha(cfg);
@@ -73,7 +73,7 @@ export default function TabelaDeFormularios({
                   <p className="break-words text-xs text-muted-foreground">{quemAssume(cfg)}</p>
                 </div>
               </Celula>
-              <Celula rotulo="Quem atende">
+              <Celula rotulo="IA que atende">
                 {!listaPronta ? <span className="text-muted-foreground">—</span>
                   : donos.length === 0 ? <span className="text-muted-foreground">Sem IA</span>
                     : donos.map((d) => (

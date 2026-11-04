@@ -7,7 +7,7 @@ import {
 import {
   Archive, Edit, Image as ImageIcon, Lightbulb, Loader2, Newspaper, Plus, Send, Trash2, X,
 } from 'lucide-react';
-import { formatDateBR } from '@/utils/dateUtils';
+import { formatDateBR, formatDateTimeBR } from '@/utils/dateUtils';
 import { apiErrorMessage } from '@/utils/apiHelpers';
 import { RichTextEditor, type RichTextEditorRef } from '@/components/chat/rich-text-editor';
 import {
@@ -15,6 +15,7 @@ import {
   type ArticleFormData, type Site, type SiteArticle,
 } from '@/services/siteBuilder/siteBuilderService';
 import { CampoTexto, CampoTextoLongo } from '@/components/base/Campo';
+import { camposDePublicacao, estaAgendado, paraCampo } from './agendaDoPost';
 import { CaixaDaJanela, GrupoDaJanela } from '@/components/base/janela';
 import Carregando from '@/components/base/Carregando';
 import EmptyState from '@/components/base/EmptyState';
@@ -56,6 +57,7 @@ export default function TelaBlog({ site }: { site: Site }) {
   // Semente do editor: (re)carrega o HTML no editor a cada abertura do modal.
   const [editorSeed, setEditorSeed] = useState({ html: '', nonce: 0 });
   const [saving, setSaving] = useState(false);
+  const [publicarEm, setPublicarEm] = useState('');
 
   const loadArticles = useCallback(async () => {
     if (!site) return;
@@ -84,6 +86,7 @@ export default function TelaBlog({ site }: { site: Site }) {
   const openCreateArticle = () => {
     setEditingArticle(null);
     setArticleForm(EMPTY_ARTICLE_FORM);
+    setPublicarEm('');
     setEditorSeed(s => ({ html: '', nonce: s.nonce + 1 }));
     setArticleModal(true);
   };
@@ -96,6 +99,7 @@ export default function TelaBlog({ site }: { site: Site }) {
       excerpt: article.excerpt ?? '',
       cover_image_url: article.cover_image_url ?? '',
     });
+    setPublicarEm(article.status === 'published' ? paraCampo(article.published_at) : '');
     setEditorSeed(s => ({ html: article.body_html ?? '', nonce: s.nonce + 1 }));
     setArticleModal(true);
     // A listagem não traz o corpo; busca o artigo completo e recarrega o editor.
@@ -136,6 +140,7 @@ export default function TelaBlog({ site }: { site: Site }) {
     const payload: ArticleFormData = {
       ...articleForm,
       body_html: articleEditorRef.current?.getContent() ?? articleForm.body_html ?? '',
+      ...camposDePublicacao(publicarEm, editingArticle?.status === 'published' ? editingArticle.published_at : null),
     };
     setSaving(true);
     try {
@@ -222,15 +227,23 @@ export default function TelaBlog({ site }: { site: Site }) {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-medium text-sm truncate">{article.title}</span>
-                    <span className={`text-xs px-2 py-0.5 rounded font-medium ${ARTICLE_STATUS_COLORS[article.status] ?? ''}`}>
-                      {ARTICLE_STATUS_LABELS[article.status] ?? article.status}
-                    </span>
+                    {estaAgendado(article) ? (
+                      <span className={`text-xs px-2 py-0.5 rounded font-medium ${ARTICLE_STATUS_COLORS.agendado}`}>
+                        {ARTICLE_STATUS_LABELS.agendado}
+                      </span>
+                    ) : (
+                      <span className={`text-xs px-2 py-0.5 rounded font-medium ${ARTICLE_STATUS_COLORS[article.status] ?? ''}`}>
+                        {ARTICLE_STATUS_LABELS[article.status] ?? article.status}
+                      </span>
+                    )}
                   </div>
                   {article.excerpt && (
                     <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{article.excerpt}</p>
                   )}
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    {article.published_at ? `Publicado ${formatDateBR(article.published_at)}` : `Criado ${formatDateBR(article.created_at)}`}
+                    {estaAgendado(article)
+                      ? `Vai ao ar em ${formatDateTimeBR(article.published_at)}`
+                      : article.published_at ? `Publicado ${formatDateBR(article.published_at)}` : `Criado ${formatDateBR(article.created_at)}`}
                   </p>
                 </div>
                 <div className="flex items-center gap-1 flex-shrink-0">
@@ -284,6 +297,10 @@ export default function TelaBlog({ site }: { site: Site }) {
                 rows={2} placeholder="Breve descrição exibida na listagem..." classeDoControle="resize-none"
                 ajuda="Duas linhas que aparecem embaixo do título, na lista de artigos do blog."
                 aoMudar={excerpt => setArticleForm(f => ({ ...f, excerpt }))} />
+
+              <CampoTexto id="artigo-publicar-em" type="datetime-local" rotulo="Data de publicação" valor={publicarEm}
+                ajuda="Em branco: fica como está (rascunho até clicar em Publicar). Com data no futuro, o post fica agendado: escondido do site e do Google até esse dia e hora."
+                aoMudar={setPublicarEm} />
               </GrupoDaJanela>
 
               <GrupoDaJanela titulo="Capa">

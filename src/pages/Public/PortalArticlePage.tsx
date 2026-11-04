@@ -69,7 +69,7 @@ export default function PortalArticlePage() {
   const waHref = wa ? `https://wa.me/${onlyDigits(wa)}` : null;
 
   if (state === 'loading') {
-    return <div className="flex min-h-screen items-center justify-center text-neutral-400" style={{ fontFamily: 'system-ui' }}>Carregando…</div>;
+    return <div data-carregando className="flex min-h-screen items-center justify-center text-neutral-400" style={{ fontFamily: 'system-ui' }}>Carregando…</div>;
   }
   // Em manutenção a página de manutenção vem antes do erro e das listas (que dão 404).
   if (manutencao) return <PaginaManutencao site={site} />;
@@ -90,7 +90,7 @@ export default function PortalArticlePage() {
         </Link>
 
         {loading ? (
-          <div className="flex items-center justify-center py-24 text-neutral-400">Carregando artigo…</div>
+          <div data-carregando className="flex items-center justify-center py-24 text-neutral-400">Carregando artigo…</div>
         ) : !article ? (
           <div className="flex flex-col items-center justify-center py-24 text-center text-neutral-500">
             <p className="text-[15px]">Artigo não encontrado.</p>

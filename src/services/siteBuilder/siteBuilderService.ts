@@ -215,9 +215,22 @@ export interface Site {
   updated_at: string;
 }
 
-/** Caixinha "Aparecer no Google". Viaja sempre o bloco inteiro. */
+/**
+ * "Aparecer no Google". Viaja sempre o bloco inteiro. As contas são do CLIENTE
+ * (Search Console, Bing, Clarity e Perfil da Empresa dele), nunca da Leal Mídia.
+ */
 export interface SiteGoogle {
   indexable: boolean;
+  /** Código (ou a tag inteira) de verificação do Search Console. */
+  search_console?: string | null;
+  /** Código (ou a tag `msvalidate.01`) do Bing Webmaster Tools. */
+  bing?: string | null;
+  /** ID do projeto do Microsoft Clarity (ou o script inteiro). */
+  clarity?: string | null;
+  /** Link do Perfil da Empresa no Google. */
+  business_profile_url?: string | null;
+  /** CRECI da imobiliária (vai nos dados estruturados). */
+  creci?: string | null;
 }
 
 /** Link da prévia antes de publicar (`POST /sites/:id/preview_link`), vale 24 h. */
@@ -431,6 +444,9 @@ export interface ArticleFormData {
   cover_image_url?: string;
   meta_title?: string;
   meta_description?: string;
+  /** Só vai quando a tela marca data de publicação (agendar). */
+  status?: 'draft' | 'published';
+  published_at?: string | null;
 }
 
 export type DashboardScope = 'site' | 'landing';
@@ -702,10 +718,12 @@ export const ARTICLE_STATUS_LABELS: Record<string, string> = {
   draft:     'Rascunho',
   published: 'Publicado',
   archived:  'Arquivado',
+  agendado:  'Agendado',
 };
 
 export const ARTICLE_STATUS_COLORS: Record<string, string> = {
   draft:     'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
   published: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
   archived:  'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
+  agendado:  'bg-primary/10 text-primary',
 };
