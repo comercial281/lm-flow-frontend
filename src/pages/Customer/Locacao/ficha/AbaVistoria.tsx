@@ -140,7 +140,7 @@ export default function AbaVistoria({ contrato: c, aoMudar }: { contrato: Contra
           acao={(
             <div className="flex items-center gap-2">
               {entrada.concluida && <Selo sev="ok">Concluída{entrada.data ? ` em ${data(entrada.data)}` : ''}</Selo>}
-              <Button size="sm" variant="outline" onClick={() => setVistoria(v => ({ ...v, entrada: { ...v.entrada, comodos: [...v.entrada.comodos, { nome: '', novo: true, itens: [{ nome: '', novo: true }] }] } }))}>
+              <Button size="sm" variant="outline" onClick={() => setVistoria(v => ({ ...v, entrada: { ...v.entrada, comodos: [...v.entrada.comodos, { nome: '', itens: [{ nome: '' }] }] } }))}>
                 <Plus className="mr-1 h-4 w-4" />Adicionar cômodo
               </Button>
             </div>
@@ -187,7 +187,7 @@ export default function AbaVistoria({ contrato: c, aoMudar }: { contrato: Contra
               </div>
             ))}
             <div>
-              <Button variant="outline" size="sm" onClick={() => mudarComodo(ci, { itens: [...cm.itens, { nome: '', novo: true }] })}><Plus className="mr-1 h-4 w-4" />Adicionar item</Button>
+              <Button variant="outline" size="sm" onClick={() => mudarComodo(ci, { itens: [...cm.itens, { nome: '' }] })}><Plus className="mr-1 h-4 w-4" />Adicionar item</Button>
             </div>
           </Card>
         ))}

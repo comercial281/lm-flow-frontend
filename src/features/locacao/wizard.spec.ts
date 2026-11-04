@@ -134,4 +134,23 @@ describe('prévia do primeiro boleto', () => {
     expect(p.extras.map((x) => x.valor)).toEqual([500, 40, 3.5]);
     expect(p.total).toBe(3543.5);
   });
+  it('bate com o boleto que o servidor gerou no lealmidia (LOC-0001): IPTU pela competência e seguro proporcional', () => {
+    const p = previaPrimeiroBoleto(
+      { ...base(), inicio: '2026-11-04', aluguel: '2.000,00', condominio: '450,00', iptuResp: 'inq', iptuParcela: '120,00', seguro: '30,00' },
+      cfg,
+    )!;
+    expect(p.vencimento).toBe('2026-12-10');
+    expect(p.aluguel).toBe(1800);
+    expect(p.extras).toEqual([
+      { desc: 'Condomínio (estimado, proporcional)', valor: 405 },
+      { desc: 'IPTU parcela 10/10', valor: 108 },
+      { desc: 'Seguro incêndio (mensal)', valor: 27 },
+      { desc: 'Taxa de boleto', valor: 3.5 },
+    ]);
+    expect(p.total).toBe(2343.5);
+  });
+  it('competência de dezembro não cobra IPTU (só fevereiro a novembro)', () => {
+    const p = previaPrimeiroBoleto({ ...base(), inicio: '2026-12-01', iptuResp: 'inq', iptuParcela: '120,00' }, cfg)!;
+    expect(p.extras.some((x) => x.desc.startsWith('IPTU'))).toBe(false);
+  });
 });

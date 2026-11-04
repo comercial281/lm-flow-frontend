@@ -83,12 +83,10 @@ export interface ItemDeVistoria {
   estado?: string | null;
   obs?: string | null;
   fotos?: string[];
-  novo?: boolean;
 }
 
 export interface ComodoDeVistoria {
   nome: string;
-  novo?: boolean;
   itens: ItemDeVistoria[];
 }
 

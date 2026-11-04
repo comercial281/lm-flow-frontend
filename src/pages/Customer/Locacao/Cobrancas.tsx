@@ -23,8 +23,9 @@ export default function Cobrancas() {
   const gerar = async () => {
     setGerando(true);
     try {
-      await locacaoService.gerarCobrancas(ref);
-      toast.success('Boletos gerados.');
+      const { geradas } = await locacaoService.gerarCobrancas(ref);
+      if (geradas > 0) toast.success(geradas === 1 ? '1 boleto gerado.' : `${geradas} boletos gerados.`);
+      else toast.info('Nenhum boleto novo para gerar neste mês.');
       recarregar();
     } catch (e) {
       toast.error(apiErrorMessage(e, 'Não deu pra gerar os boletos.'));
