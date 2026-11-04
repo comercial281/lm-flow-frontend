@@ -12,7 +12,7 @@ import { Dado, Falha, Numero, Titulo } from '../comum';
 import { rotuloDoMes, useCarga } from '../usoComum';
 
 export default function AbaReajuste({ contrato: c, aoMudar }: { contrato: Contrato; aoMudar: (c: Contrato) => void }) {
-  const { dados: r, erro, recarregar } = useCarga(() => locacaoService.reajuste(c.id), `reajuste-${c.id}-${c.ultimo_reajuste ?? ''}`);
+  const { dados: r, erro, recarregar } = useCarga(() => locacaoService.reajuste(c), `reajuste-${c.id}-${c.ultimo_reajuste ?? ''}`);
   const [aplicando, setAplicando] = useState(false);
   const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
 
@@ -28,7 +28,7 @@ export default function AbaReajuste({ contrato: c, aoMudar }: { contrato: Contra
     if (!ok) return;
     setAplicando(true);
     try {
-      aoMudar(await locacaoService.aplicarReajuste(c.id));
+      aoMudar(await locacaoService.aplicarReajuste(c.id, r.aniversario));
       toast.success('Reajuste aplicado.');
       recarregar();
     } catch (e) {
@@ -58,8 +58,8 @@ export default function AbaReajuste({ contrato: c, aoMudar }: { contrato: Contra
             <Numero rotulo="Aluguel hoje" valor={dinheiro(r.aluguel_atual)} />
             <Numero rotulo="Aluguel novo" valor={dinheiro(r.aluguel_novo)} ajuda={`reajuste de ${porcentagem(r.pct)}`} />
           </div>
-          {!r.pode_aplicar && !r.erro && faltam > 0 && (
-            <Aviso tom="neutro" compacto>O reajuste só pode ser aplicado a partir do aniversário do contrato.</Aviso>
+          {!r.pode_aplicar && !r.erro && c.status === 'ativo' && (
+            <Aviso tom="neutro" compacto>O reajuste libera 45 dias antes do aniversário do contrato.</Aviso>
           )}
         </Card>
       </section>

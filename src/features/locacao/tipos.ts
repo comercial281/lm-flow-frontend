@@ -238,7 +238,7 @@ export interface Painel {
     contratos_ativos: number;
     aluguel_mensal_total: number;
     a_repassar_total: number;
-    no_lote_total: number;
+    proprietarios_a_repassar: number;
     receita_30_dias: number;
   };
   avisos: AvisoDoPainel[];

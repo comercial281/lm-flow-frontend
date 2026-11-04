@@ -36,7 +36,7 @@ export default function Painel({ aoIrParaAba, aoAbrirContrato }: Props) {
           tom={kpis.em_atraso_qtd > 0 ? 'bad' : undefined}
         />
         <Numero rotulo="Contratos ativos" valor={kpis.contratos_ativos} ajuda={`${dinheiro(kpis.aluguel_mensal_total)} de aluguel por mês`} />
-        <Numero rotulo="A repassar" valor={dinheiro(kpis.a_repassar_total)} ajuda={`${dinheiro(kpis.no_lote_total)} já no lote`} />
+        <Numero rotulo="A repassar" valor={dinheiro(kpis.a_repassar_total)} ajuda={kpis.proprietarios_a_repassar === 1 ? "para 1 proprietário" : `para ${kpis.proprietarios_a_repassar} proprietários`} />
         <Numero rotulo="Receita dos próximos 30 dias" valor={dinheiro(kpis.receita_30_dias)} ajuda="taxas que ficam com a imobiliária" />
       </Card>
 
