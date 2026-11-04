@@ -171,6 +171,69 @@ describe('Tela de Imóveis', () => {
     expect(svc.contarPorTipo).toHaveBeenCalledWith({ status: 'active', without_photos: '1' });
   });
 
+  describe('Só os meus', () => {
+    const botao = () => screen.findByRole('button', { name: 'Só os meus' });
+    beforeEach(() => {
+      localStorage.clear();
+      svc.contarPorTipo.mockResolvedValue({ development: 0, resale: 38, auction: 0 });
+    });
+
+    it('nasce desligado: a lista e as abas mostram a imobiliária inteira', async () => {
+      abrir();
+      expect(await botao()).toHaveAttribute('aria-pressed', 'false');
+      await waitFor(() => expect(svc.list).toHaveBeenCalled());
+      expect(svc.list.mock.calls.at(-1)![0].mine).toBeUndefined();
+      expect(svc.contarPorTipo).toHaveBeenLastCalledWith({});
+    });
+
+    it('ligar recorta a lista, as abas e os filtros, e lembra da escolha', async () => {
+      const { unmount } = abrir();
+      fireEvent.click(await botao());
+      await waitFor(() => expect(svc.list.mock.calls.at(-1)![0].mine).toBe('1'));
+      expect(svc.contarPorTipo).toHaveBeenLastCalledWith({ mine: '1' });
+      expect(svc.facets).toHaveBeenLastCalledWith('resale', { mine: true });
+      unmount();
+      svc.list.mockClear();
+      abrir();
+      expect(await botao()).toHaveAttribute('aria-pressed', 'true');
+      await waitFor(() => expect(svc.list.mock.calls.at(-1)![0].mine).toBe('1'));
+    });
+
+    it('sem nenhum imóvel no nome, diz isso e oferece ver todos', async () => {
+      localStorage.setItem('imoveis:so-os-meus', '1');
+      svc.contarPorTipo.mockResolvedValue({ development: 0, resale: 0, auction: 0 });
+      svc.list.mockResolvedValue(resposta([], 0));
+      abrir();
+      expect(await screen.findByText('Nenhum imóvel no seu nome')).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Ver todos os imóveis' }));
+      await waitFor(() => expect(svc.list.mock.calls.at(-1)![0].mine).toBeUndefined());
+      expect(localStorage.getItem('imoveis:so-os-meus')).toBeNull();
+    });
+
+    it('link da Dashboard manda: a escolha lembrada não muda o número do link', async () => {
+      localStorage.setItem('imoveis:so-os-meus', '1');
+      abrir('/properties?recorte=sem_fotos');
+      expect(await botao()).toHaveAttribute('aria-pressed', 'false');
+      await waitFor(() => expect(svc.list).toHaveBeenCalled());
+      expect(svc.list.mock.calls.at(-1)![0].mine).toBeUndefined();
+    });
+
+    it('link "seus" da Dashboard acende o botão; desligar tira o link e mostra todos', async () => {
+      abrir('/properties?recorte=ativos&meus=1');
+      fireEvent.click(await botao().then(b => { expect(b).toHaveAttribute('aria-pressed', 'true'); return b; }));
+      await waitFor(() => expect(svc.list.mock.calls.at(-1)![0].mine).toBeUndefined());
+      expect(screen.getByTestId('onde').textContent).not.toContain('recorte');
+    });
+
+    it('no Mapa o botão some e as abas contam a imobiliária inteira, como o mapa mostra', async () => {
+      localStorage.setItem('imoveis:so-os-meus', '1');
+      abrir('/properties?visao=mapa&aba=revenda');
+      await screen.findByTestId('mapa');
+      expect(screen.queryByRole('button', { name: 'Só os meus' })).toBeNull();
+      await waitFor(() => expect(svc.contarPorTipo).toHaveBeenLastCalledWith({}));
+    });
+  });
+
   it('Cadastrar à mão na aba Empreendimentos abre o cadastro de empreendimento', async () => {
     svc.contarPorTipo.mockResolvedValue({ development: 12, resale: 3 });
     abrir('/properties?aba=empreendimentos');

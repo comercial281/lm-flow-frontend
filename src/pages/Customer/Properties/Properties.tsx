@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, Suspense, lazy } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef, Suspense, lazy } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { numero, plural } from '@/lib/formato';
@@ -22,6 +22,7 @@ import {
   Grid3X3,
   Map as MapIcon,
   SlidersHorizontal,
+  UserRound,
 } from 'lucide-react';
 import {
   propertiesService,
@@ -70,7 +71,7 @@ import CartaoGrade from './lista/CartaoGrade';
 import JanelaSituacao from './lista/JanelaSituacao';
 import type { AcoesDoImovel, Permissoes } from './lista/MenuDoImovel';
 import { paginaNoSite } from './lista/pinoDoMapa';
-import { lerVisao, paramsDaLista, type Ordem, type Visao } from './lista/estadoDaLista';
+import { gravarSoOsMeus, lerSoOsMeus, lerVisao, paramsDaLista, recorteDaLista, type Ordem, type Visao } from './lista/estadoDaLista';
 
 // O mapa (Leaflet) só baixa quando a pessoa abre a visão Mapa.
 const VisaoMapa = lazy(() => import('./lista/VisaoMapa'));
@@ -110,6 +111,10 @@ export default function Properties() {
   const [search, setSearch]                   = useState(searchParams.get('q') ?? '');
   // A busca que a lista usa: anda 400 ms atrás do que a pessoa digita.
   const [buscaAtiva, setBuscaAtiva]           = useState(search);
+  // Botão "Só os meus" (captador ou responsável). Com link aberto, quem manda é o link.
+  const [soOsMeusEscolhido, setSoOsMeusEscolhido] = useState(lerSoOsMeus);
+  const recorteAtivo = useMemo(() => recorteDaLista(recorte?.params ?? null, soOsMeusEscolhido), [recorte, soOsMeusEscolhido]);
+  const soOsMeus = recorteAtivo?.mine === '1';
 
   // ── Lista nova: abas Empreendimentos/Revenda, filtro retrátil, linhas ──────
   // `kind` nulo = ainda não sabemos a aba (a padrão é a com mais cadastros).
@@ -160,7 +165,7 @@ export default function Properties() {
     setErroDeCarga(false);
     try {
       const res = await propertiesService.list(paramsDaLista({
-        kind, filtros: filtrosDaAba, busca: buscaAtiva, ordem, recorte: recorte?.params ?? null, pagina: pag,
+        kind, filtros: filtrosDaAba, busca: buscaAtiva, ordem, recorte: recorteAtivo, pagina: pag,
       }));
       if (pedido !== ultimoPedido.current) return;
       const novos = res.data ?? [];
@@ -176,17 +181,22 @@ export default function Properties() {
     } finally {
       if (pedido === ultimoPedido.current) { setLoading(false); setCarregandoMais(false); }
     }
-  }, [kind, filtrosDaAba, buscaAtiva, ordem, recorte, visao]);
+  }, [kind, filtrosDaAba, buscaAtiva, ordem, recorteAtivo, visao]);
 
   // Recarrega da página 1 sempre que muda a aba, os filtros dela, a ordem, o
   // recorte da Dashboard, a busca (já com o atraso de 400 ms) ou quando volta do mapa.
   useEffect(() => { load(1); }, [load]);
 
   // Quantos há em cada aba, com o mesmo recorte da lista (link da Dashboard e
-  // "só os meus"), mas sem os filtros do painel: é o total da aba.
+  // "só os meus"), mas sem os filtros do painel: é o total da aba. O Mapa mostra a
+  // aba inteira e não tem o botão: lá ele não entra na conta.
+  const paramsDaContagem = useMemo(
+    () => (visao === 'mapa' ? recorte?.params : recorteAtivo) ?? {},
+    [visao, recorte, recorteAtivo],
+  );
   const contar = useCallback(
-    () => propertiesService.contarPorTipo(recorte?.params ?? {}),
-    [recorte],
+    () => propertiesService.contarPorTipo(paramsDaContagem),
+    [paramsDaContagem],
   );
   // Só a última contagem pedida vale: uma recontagem começada com o recorte
   // antigo não pode sobrescrever a do recorte novo.
@@ -209,7 +219,6 @@ export default function Properties() {
 
   // Bairros, tipos e captadores da aba, para os seletores do painel. Leitura de
   // fundo: falha deixa os seletores só com "Todos", sem aviso.
-  const soOsMeus = recorte?.params.mine === '1';
   useEffect(() => {
     if (!kind) return;
     let vivo = true;
@@ -296,6 +305,17 @@ export default function Properties() {
     }, { replace: true });
   };
 
+  const escolherSoOsMeus = (ligado: boolean) => {
+    setSoOsMeusEscolhido(ligado);
+    gravarSoOsMeus(ligado);
+  };
+
+  // Mexer no botão com um link aberto troca o link pela escolha da pessoa.
+  const alternarSoOsMeus = () => {
+    if (recorte) tirarRecorte();
+    escolherSoOsMeus(!soOsMeus);
+  };
+
   const mudarFiltros = (f: Filtros) => {
     if (!kind) return;
     // O link manda a própria situação (ex.: "Sem fotos" é Disponível). Quem
@@ -319,6 +339,7 @@ export default function Properties() {
     setSearch('');
     setBuscaAtiva('');
     if (recorte) tirarRecorte();
+    escolherSoOsMeus(false);
   };
 
   // O cadastro é uma página: /properties/new?tipo=… e /properties/:id/editar.
@@ -455,7 +476,8 @@ export default function Properties() {
     : kind === 'auction'
       ? plural(n, 'imóvel de leilão', 'imóveis de leilão')
       : plural(n, 'imóvel de revenda', 'imóveis de revenda'));
-  const abaVazia = totalDaAba === 0 && !temFiltro && !recorte && properties.length === 0;
+  const abaVazia = totalDaAba === 0 && !temFiltro && !recorteAtivo && properties.length === 0;
+  const semNadaNoNome = totalDaAba === 0 && !temFiltro && !recorte && soOsMeus && properties.length === 0;
 
   const esqueleto = (
     <div role="status" className="mt-4 flex flex-col gap-2.5">
@@ -470,7 +492,14 @@ export default function Properties() {
     ) : erroDeCarga ? (
       <EmptyState tipo="erro" aoTentarDeNovo={() => load(1)} />
     ) : loading && properties.length === 0 ? esqueleto
-    : abaVazia ? (
+    : semNadaNoNome ? (
+      <EmptyState
+        icon={Building2}
+        title="Nenhum imóvel no seu nome"
+        description="Aparecem aqui os imóveis em que você é Captador ou Corretor responsável."
+        action={{ label: 'Ver todos os imóveis', onClick: () => escolherSoOsMeus(false) }}
+      />
+    ) : abaVazia ? (
       kind === 'development' ? (
         <EmptyState
           icon={Building2}
@@ -582,6 +611,10 @@ export default function Properties() {
                         {filtrosDaTela.length}
                       </span>
                     )}
+                  </Button>
+                  <Button variant={soOsMeus ? 'default' : 'outline'} aria-pressed={soOsMeus} onClick={alternarSoOsMeus}>
+                    <UserRound className="h-4 w-4 mr-2" />
+                    Só os meus
                   </Button>
                   <Seletor aria-label="Ordenar" value={ordem} onChange={e => setOrdem(e.target.value as Ordem)} className="w-52">
                     <option value="recent">Mais recentes</option>
