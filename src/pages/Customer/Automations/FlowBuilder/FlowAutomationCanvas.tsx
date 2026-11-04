@@ -17,7 +17,7 @@ import { flowAutomationsService } from '@/services/flowAutomations/flowAutomatio
 import type { FlowAutomation, FlowAutomationNode, TestRunResult } from '@/types/flowAutomations';
 import {
   resolvedPositions, buildEdges, cutEdge, insertAt, link, removeNode, moveNode, newTempId, TRIGGER_NODE_ID,
-  normalizeLoadedNodes, buildSaveFlowPayload, handleLabel, NODE_WIDTH, STEP_X, calculateLayout, outputSide, targetSide,
+  normalizeLoadedNodes, buildSaveFlowPayload, outputLabel, NODE_WIDTH, STEP_X, calculateLayout, outputSide, targetSide,
   type OutputHandle,
 } from '@/lib/flowAutomationGraph';
 import { flowNodeTypes, type FlowLookups, type FlowStartNodeData } from '@/components/flowAutomations/FlowNodeCard';
@@ -46,7 +46,7 @@ import {
 import { businessHoursOnlyOf } from '@/features/flowAutomations/businessHours';
 import { FLOW_KIND_COPY, kindOf } from '@/features/flowAutomations/kind';
 import { avisoLeadsSaindo, leadsDentro, pedidoDesligarFollowup } from '@/features/flowAutomations/desligarFollowup';
-import { configDoBlocoNovo, freshBlockConfig, paletteItems, podeSoltarBloco, type PaletteItem } from '@/features/flowAutomations/palette';
+import { configDoBlocoNovo, foraDoFunilDeConversa, freshBlockConfig, paletteItems, podeSoltarBloco, type PaletteItem } from '@/features/flowAutomations/palette';
 import {
   modoPessoal, numeroFixoNaEquipe, personalAvailabilityState, personalBlockState, personalTriggerGroups,
   presaNaEquipe, tirarDaEquipe, useEhCorretorDeAutomacao,
@@ -248,10 +248,11 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
   const capacidades = usePersonalCapabilities(peloMeuNumero);
   const estadoDoBloco = useMemo(() => {
     const ctx = { temNumero: capacidades.temNumero, temIA: capacidades.temIA };
-    if (modo === 'corretor') return (item: PaletteItem) => personalBlockState(item, ctx);
-    if (modo === 'dono') return (item: PaletteItem) => personalAvailabilityState(item, ctx);
-    return undefined;
-  }, [modo, capacidades.temNumero, capacidades.temIA]);
+    const porCargo = modo === 'corretor'
+      ? (item: PaletteItem) => personalBlockState(item, ctx)
+      : modo === 'dono' ? (item: PaletteItem) => personalAvailabilityState(item, ctx) : undefined;
+    return kind === 'conversation' ? foraDoFunilDeConversa(porCargo) : porCargo;
+  }, [kind, modo, capacidades.temNumero, capacidades.temIA]);
   // Número do fluxo (Entrega 4): só na automação da equipe. Follow-up, funil
   // de conversa e automação pessoal seguem como estão.
   const numeroDoFluxoVale = kind === 'automation' && modo === null;
@@ -663,7 +664,8 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
       const from = source ? outputSide(source, e.sourceHandle) : 'right';
       const sourcePos = e.source === TRIGGER_NODE_ID ? startPosition : positions[e.source];
       const targetPos = positions[e.target];
-      const entersTop = !!sourcePos && !!targetPos && targetSide(from, sourcePos, targetPos) === 'top';
+      // Os destinos do Randomizador ficam empilhados: por cima, a linha cruzaria o bloco do meio.
+      const entersTop = source?.kind !== 'randomizer' && !!sourcePos && !!targetPos && targetSide(from, sourcePos, targetPos) === 'top';
       return {
         id: e.id, type: 'flowEdge', source: e.source, target: e.target, sourceHandle: e.sourceHandle,
         targetHandle: entersTop ? 'in-top' : 'in',
@@ -671,7 +673,7 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
         label: e.label || undefined,
         labelStyle: { fontSize: 10, fill: e.color },
         style: { stroke: e.color },
-        data: { onCut: handleCutEdge } satisfies FlowEdgeData,
+        data: { onCut: handleCutEdge, labelAtEnd: source?.kind === 'randomizer' } satisfies FlowEdgeData,
       };
     });
   }, [graphEdges, nodes, positions, startPosition, builderTools, selectedEdgeId, handleCutEdge]);
@@ -701,7 +703,7 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
   const pendingLabel = useMemo(() => {
     if (!pendingSource) return '';
     const source = nodes.find(n => n.id === pendingSource.id);
-    return source ? handleLabel(source.kind, pendingSource.handle) : '';
+    return source ? outputLabel(source, pendingSource.handle) : '';
   }, [pendingSource, nodes]);
 
   const save = async () => {

@@ -8,7 +8,7 @@ export type FlowNodeKind =
   | 'sequence' | 'funnel' | 'call_flow'
   | 'add_label' | 'remove_label' | 'create_pipeline_item' | 'move_stage' | 'move_pipeline'
   | 'assign_owner' | 'assign_round_robin' | 'set_next_action' | 'log_event'
-  | 'wait' | 'filter_label' | 'wait_for_reply' | 'condition'
+  | 'wait' | 'filter_label' | 'wait_for_reply' | 'condition' | 'randomizer'
   | 'webhook' | 'http_call'
   // Sprint 2 (03/10/2026): uma ação das Automações como bloco. Config
   // `{ action_type, params }`, executada pelo MESMO LeadAutomation::Executor.
@@ -256,6 +256,8 @@ export const FLOW_NODE_DEFS: FlowNodeDef[] = [
   { kind: 'filter_label', label: 'Só continuar se', group: 'control', canFail: false, defaultConfig: { criterion: 'has_label', label: '', labels: [], mode: 'all' } },
   { kind: 'wait_for_reply', label: 'Aguardar resposta', group: 'control', canFail: false, defaultConfig: { minutes: 1440, indefinite: false } },
   { kind: 'condition', label: 'Condição', group: 'control', canFail: false, defaultConfig: { criterion: 'replied', window_hours: 24 } },
+  // Os ids são trocados ao criar o bloco (freshBlockConfig).
+  { kind: 'randomizer', label: 'Randomizador', group: 'control', canFail: false, defaultConfig: { branches: [{ id: 'a', percent: 50, next_node_id: null }, { id: 'b', percent: 50, next_node_id: null }] } },
   { kind: 'webhook', label: 'Avisar um sistema de fora', group: 'notify', canFail: true, defaultConfig: { event_name: '' } },
   { kind: 'http_call', label: 'Chamar uma API', group: 'notify', canFail: true, defaultConfig: { method: 'POST', url: '', headers: '', body: '' } },
   // Nome e grupo de cada ação vêm de features/flowAutomations/leadAction.ts.
@@ -276,7 +278,7 @@ export const FLOW_NODE_DEF_BY_KIND: Record<FlowNodeKind, FlowNodeDef> = FLOW_NOD
 // mora em features/flowAutomations/palette.ts.
 export const FLOW_VISIBLE_NODE_KINDS: FlowNodeKind[] = [
   'send_whatsapp',
-  'wait', 'wait_for_reply', 'condition', 'filter_label',
+  'wait', 'wait_for_reply', 'condition', 'randomizer', 'filter_label',
   'add_label', 'remove_label', 'move_stage',
   'lead_action',
   'followup_recovered',
