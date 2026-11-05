@@ -1,4 +1,5 @@
-import type { DestinoDoDinheiro, Intermediacao, TipoGarantia } from './tipos';
+import { dataHora } from '@/lib/formato';
+import type { DestinoDoDinheiro, Intermediacao, MensagemDoSistema, TipoGarantia } from './tipos';
 
 export const GARANTIA: Record<TipoGarantia, string> = {
   caucao: 'Caução',
@@ -59,3 +60,6 @@ export const LEI_MES_VENCIDO =
  *  zero ou negativo = a caução cobriu e a sobra volta para ele. */
 export const rotuloDoTotalDoAcerto = (total: number) =>
   total > 0 ? 'Total que o inquilino ainda deve' : 'Total a devolver ao inquilino';
+
+/** Quando a mensagem saiu: `created_at` tem a hora; `data` é só o dia. */
+export const quandoSaiu = (m: Pick<MensagemDoSistema, 'data' | 'created_at'>) => dataHora(m.created_at ?? m.data);
