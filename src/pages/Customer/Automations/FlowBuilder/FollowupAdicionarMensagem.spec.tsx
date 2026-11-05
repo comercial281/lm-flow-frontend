@@ -97,7 +97,7 @@ const renderCanvas = () =>
   );
 
 // Consulta por texto: `getByRole` varre o desenho inteiro do React Flow e estoura o tempo do `findBy`.
-const BOTAO = '+ Adicionar mensagem';
+const BOTAO = 'Adicionar mensagem'; // ícone "+" e rótulo
 const nova = bloco({ id: 'm2', kind: 'send_whatsapp', label: 'Segunda mensagem', config: { text: 'Voltei' }, pos_y: 450 });
 const respostaDoServidor = () => fluxo({
   nodes: [msg, espera, nova],
@@ -125,14 +125,25 @@ const abrirJanela = async () => {
 };
 
 describe('botão "+ Adicionar mensagem"', () => {
-  it('gestor: aparece só embaixo do cartão de last_node_id', async () => {
+  it('gestor: um botão só, na barra de cima, e nenhum dentro dos cartões', async () => {
     renderCanvas();
     await screen.findByText('Primeira mensagem');
     const botoes = await screen.findAllByText(BOTAO);
     expect(botoes).toHaveLength(1);
-    const cartao = botoes[0].closest('.fluxo-bloco')?.textContent ?? '';
-    expect(cartao).toContain('Primeira mensagem');
-    expect(cartao).not.toContain('Esperar 1 dia');
+    expect(botoes[0].closest('.fluxo-barra')).not.toBeNull();
+    expect(botoes[0].closest('.fluxo-bloco')).toBeNull();
+    for (const cartao of Array.from(document.querySelectorAll('.fluxo-bloco'))) {
+      expect(cartao.textContent).not.toContain(BOTAO);
+    }
+    const barra = botoes[0].closest('.fluxo-barra')!;
+    expect(within(barra as HTMLElement).getByRole('button', { name: /Blocos/ })).toBeTruthy();
+    expect(within(barra as HTMLElement).getByRole('button', { name: /Simular/ })).toBeTruthy();
+  });
+
+  it('clicar no botão da barra abre a janela da nova mensagem', async () => {
+    renderCanvas();
+    const janela = await abrirJanela();
+    expect(within(janela).getByLabelText('Mensagem')).toBeTruthy();
   });
 
   it('no limite (count 25) não aparece', async () => {
@@ -149,10 +160,14 @@ describe('botão "+ Adicionar mensagem"', () => {
     expect(screen.queryByText(BOTAO)).toBeNull();
   });
 
-  it('corretor no follow-up dele (guiado): aparece', async () => {
+  it('corretor no follow-up dele (guiado): só o botão, sem Blocos nem Organizar', async () => {
     get.mockResolvedValue(fluxo({ permissions: { ...permissoes, guided: true, can_mark_team: false } }));
     renderCanvas();
-    expect(await screen.findByText(BOTAO)).toBeTruthy();
+    const botao = await screen.findByText(BOTAO);
+    expect(botao.closest('.fluxo-barra')).not.toBeNull();
+    expect(screen.queryByRole('button', { name: /Blocos/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Organizar/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Simular/ })).toBeNull();
   });
 
   it('só ver (can_edit false): não aparece', async () => {
@@ -165,7 +180,10 @@ describe('botão "+ Adicionar mensagem"', () => {
   it('item "Adicionar mensagem" na lista de Blocos abre a janela; sem arraste', async () => {
     renderCanvas();
     fireEvent.click(await screen.findByRole('button', { name: /Blocos/ }));
-    const item = await screen.findByRole('button', { name: /^Adicionar mensagem/ });
+    // A barra também tem um botão com esse nome: o item da lista é o que não está nela.
+    await screen.findByText('Esperar');
+    const item = screen.getAllByRole('button', { name: /^Adicionar mensagem/ }).find(b => !b.closest('.fluxo-barra'))!;
+    expect(item).toBeTruthy();
     expect(item.getAttribute('draggable')).not.toBe('true');
     fireEvent.click(item);
     expect(await screen.findByRole('dialog')).toBeTruthy();
@@ -251,6 +269,26 @@ describe('tirar mensagem pelo servidor', () => {
     await waitFor(() => expect(removeMessage).toHaveBeenCalledWith('f1', 'm1'));
     expect(saveFlow).not.toHaveBeenCalled();
     await waitFor(() => expect(screen.queryByText('Primeira mensagem')).toBeNull());
+  });
+
+  it('follow-up: a confirmação fala em follow-up', async () => {
+    renderCanvas();
+    fireEvent.click(await screen.findByLabelText('Excluir Primeira mensagem'));
+    expect(await screen.findByText('Tirar esta mensagem do follow-up?')).toBeTruthy();
+    expect(screen.getByText('A mensagem sai do follow-up e a anterior passa a seguir direto pra próxima. Isso já fica salvo.')).toBeTruthy();
+    expect(screen.queryByText(/funil/)).toBeNull();
+  });
+
+  it('funil de conversa em modo guiado: a confirmação segue falando em funil', async () => {
+    const m2 = bloco({ id: 'm2', kind: 'send_whatsapp', label: 'Segunda mensagem', config: { text: 'Tchau', items: [{ id: 'i2', kind: 'text', text_content: 'Tchau' }] }, pos_y: 150 });
+    get.mockResolvedValue(fluxo({
+      kind: 'conversation', trigger: null, nodes: [{ ...msg, next_node_id: 'm2' }, m2], initial_node_id: 'm1',
+      followup_messages: undefined, permissions: { ...permissoes, guided: true, can_mark_team: false },
+    }));
+    renderCanvas();
+    fireEvent.click(await screen.findByLabelText('Excluir Primeira mensagem'));
+    expect(await screen.findByText('Tirar esta mensagem do funil?')).toBeTruthy();
+    expect(screen.getByText('A mensagem sai do funil e a anterior passa a seguir direto pra próxima. Isso já fica salvo.')).toBeTruthy();
   });
 
   it('cancelar não chama nada', async () => {

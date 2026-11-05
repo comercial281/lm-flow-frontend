@@ -10806,7 +10806,7 @@ Voltar é seguro: a frase não chama nada no servidor.
 
 **Como ficou** (a lógica mora no servidor; a tela manda o conteúdo e recebe o follow-up atualizado):
 
-- **"+ Adicionar mensagem"** fica embaixo da última mensagem, antes do "Marcar follow-up encerrado". Na lista de Blocos do follow-up os blocos de mandar mensagem saem e entra "Adicionar mensagem" no lugar. A mensagem só entra ao salvar, preenchida (`JanelaNovaMensagem`); fechar não cria nada.
+- **"+ Adicionar mensagem"** fica na barra de cima do construtor, ao lado de Blocos (ordem: Blocos, Adicionar mensagem, Simular, Organizar), pra gestor e corretor; o corretor vê só esse botão na barra. Antes ficava embaixo da última mensagem, mas o minimapa cobria o botão e ele ficava mais longe a cada mensagem que entrava. O item "Adicionar mensagem" continua na lista de Blocos. A confirmação de tirar mensagem, no follow-up, fala em follow-up (no funil de conversa segue falando em funil). Na lista de Blocos do follow-up os blocos de mandar mensagem saem e entra "Adicionar mensagem" no lugar. A mensagem só entra ao salvar, preenchida (`JanelaNovaMensagem`); fechar não cria nada.
 - **Sem mais clique:** nasce a espera "Depois da mensagem N" (copia a anterior; sem anterior, 1 dia em horário comercial), a mensagem "(última)", a condição "Continuar da mensagem N" e o fim vai pra depois dela. Tela e servidor renumeram os nomes; nome personalizado fica.
 - **Quem pode:** gestor em qualquer follow-up, corretor só no dele. No da equipe o corretor só vê.
 - **Limites:** 25 mensagens por follow-up, pra todos (o botão some e o servidor recusa). Corretor: pelo menos 1 hora entre mensagens, ao adicionar e ao editar a espera; follow-up já com menos continua valendo até mexerem naquela espera. Gestor sem mínimo.

@@ -6,7 +6,7 @@ import {
   type Node, type Edge, type EdgeChange, type NodeChange, type Connection, type ReactFlowInstance, BackgroundVariant,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { ArrowLeft, Save, Play, Loader2, Settings2, LayoutGrid, Copy, Users, Workflow } from 'lucide-react';
+import { ArrowLeft, Save, Play, Loader2, Settings2, LayoutGrid, Copy, Users, Workflow, Plus } from 'lucide-react';
 import { Badge, Button, Input } from '@/components/ui/ds';
 import Chave from '@/components/base/Chave';
 import Faixa from '@/components/base/Faixa';
@@ -108,12 +108,14 @@ const CONVERSATION_TRIGGER_LINE = 'Você dispara o funil numa conversa, pelo bot
 // Follow-up não tem gatilho (Fase 2): começa por uma das portas, nunca sozinho.
 const FOLLOWUP_TRIGGER_LINE = 'Começa quando o lead é colocado em follow-up: pela coluna Follow-up, pelo card, pela IA ou por uma automação';
 
-const PEDIDO_TIRAR_MENSAGEM = {
-  titulo: 'Tirar esta mensagem do funil?',
-  descricao: 'A mensagem sai do funil e a anterior passa a seguir direto pra próxima. Isso já fica salvo.',
+const pedidoTirarMensagem = (kind: string) => ({
+  titulo: kind === 'followup' ? 'Tirar esta mensagem do follow-up?' : 'Tirar esta mensagem do funil?',
+  descricao: kind === 'followup'
+    ? 'A mensagem sai do follow-up e a anterior passa a seguir direto pra próxima. Isso já fica salvo.'
+    : 'A mensagem sai do funil e a anterior passa a seguir direto pra próxima. Isso já fica salvo.',
   rotuloDaAcao: 'Tirar',
   destrutivo: true,
-};
+});
 
 /** Distância entre o Início e o primeiro bloco (a mesma entre colunas do layout). */
 const START_GAP_X = STEP_X;
@@ -251,7 +253,7 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
   // religa as pontas e a etiqueta), então a lista de Blocos não oferece as que mandam ao lead.
   const travada = sequenciaTravada(automation);
   const lockedIds = useMemo(() => new Set(automation?.followup_messages?.locked_ids ?? []), [automation]);
-  // "+ Adicionar mensagem": no cartão da última espera, até o limite. Vale pro corretor (guiado) também.
+  // "+ Adicionar mensagem": na barra de cima, ao lado de Blocos, até o limite. Vale pro corretor (guiado) também.
   const infoMensagens = automation?.followup_messages;
   const podeAdicionarMensagem = travada && !readOnly && !!infoMensagens?.last_node_id && infoMensagens.count < infoMensagens.limit;
   const [novaMensagem, setNovaMensagem] = useState(false);
@@ -463,7 +465,7 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
     const alvo = nodes.find(n => n.id === nodeId);
     if (travada && alvo && isMessageNode(alvo)) {
       // Sequência travada: o servidor tira a mensagem, religa as pontas e acerta a etiqueta (gestor e corretor).
-      if (!id || !(await confirmar(PEDIDO_TIRAR_MENSAGEM))) return;
+      if (!id || !(await confirmar(pedidoTirarMensagem(kind)))) return;
       if (openPanel?.type === 'node' && openPanel.id === nodeId) replacePanel(null);
       // Edição pendente vai primeiro: a resposta do servidor substitui o desenho inteiro.
       if (hasChanges && !(await persist(nodes, initialNodeId))) return;
@@ -482,7 +484,7 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
         toast.error('O funil precisa de pelo menos uma mensagem.');
         return;
       }
-      if (!(await confirmar(PEDIDO_TIRAR_MENSAGEM))) return;
+      if (!(await confirmar(pedidoTirarMensagem(kind)))) return;
       const next = removeAndRewire(nodes, initialNodeId, nodeId);
       if (openPanel?.type === 'node' && openPanel.id === nodeId) replacePanel(null);
       await persist(next.nodes, next.initialNodeId);
@@ -491,7 +493,7 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
     setNodes(prev => removeNode(prev, nodeId));
     if (initialNodeId === nodeId) setInitialNodeId(null);
     if (openPanel?.type === 'node' && openPanel.id === nodeId) replacePanel(null);
-  }, [id, travada, hasChanges, aplicarRespostaDaMensagem, guided, nodes, initialNodeId, openPanel, replacePanel, confirmar, persist]);
+  }, [id, travada, hasChanges, aplicarRespostaDaMensagem, guided, kind, nodes, initialNodeId, openPanel, replacePanel, confirmar, persist]);
 
   const salvarNovaMensagem = useCallback(async (config: FlowNodeConfig) => {
     if (!id) return;
@@ -712,13 +714,12 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
           allow,
           condicaoAutomatica,
           ocultarProgresso: kind === 'followup',
-          onAdicionarMensagem: podeAdicionarMensagem && n.id === infoMensagens?.last_node_id ? abrirNovaMensagem : undefined,
           onEdit: openNode, onDuplicate: handleDuplicate, onRemove: handleRemove, onAddFrom: addFrom, onRename: handleRename,
         },
       };
     });
     return [startNode, ...rest];
-  }, [nodes, positions, startPosition, startData, lookups, problems, openPanel, highlighted, steps, step, readOnly, guided, builderTools, openNode, handleDuplicate, handleRemove, handleRename, addFrom, peloMeuNumero, donoDoEnvio, kind, travada, lockedIds, podeAdicionarMensagem, infoMensagens?.last_node_id, abrirNovaMensagem]);
+  }, [nodes, positions, startPosition, startData, lookups, problems, openPanel, highlighted, steps, step, readOnly, guided, builderTools, openNode, handleDuplicate, handleRemove, handleRename, addFrom, peloMeuNumero, donoDoEnvio, kind, travada, lockedIds]);
 
   // As linhas são derivadas de `nodes`: selecionar e cortar passam por aqui, senão
   // o React Flow descarta o clique e o Delete (era só apagando o bloco).
@@ -1049,8 +1050,9 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
               <FlowGuideChecklist steps={steps} onOpenStep={openStep} className="absolute right-2 top-2 z-10" />
             )}
 
-            {builderTools && (
+            {(builderTools || podeAdicionarMensagem) && (
             <div className="fluxo-barra absolute left-2 top-2 z-10 flex items-center gap-2">
+              {builderTools && (
               <FlowBlocksMenu
                 open={blocksOpen}
                 onOpenChange={closeOrOpenBlocks}
@@ -1070,6 +1072,19 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
                   </Button>
                 }
               />
+              )}
+              {podeAdicionarMensagem && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-8 bg-background shadow-sm"
+                  onClick={abrirNovaMensagem}
+                  title="Acrescenta uma mensagem no fim do follow-up, com a espera antes dela"
+                >
+                  <Plus className="h-4 w-4 mr-1" aria-hidden="true" /> Adicionar mensagem
+                </Button>
+              )}
+              {builderTools && (
               <Button
                 size="sm"
                 variant="outline"
@@ -1080,7 +1095,8 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
               >
                 {testing ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Play className="h-4 w-4 mr-1" />} Simular
               </Button>
-              {nodes.length > 0 && (
+              )}
+              {builderTools && nodes.length > 0 && (
                 <Button
                   size="sm"
                   variant="outline"

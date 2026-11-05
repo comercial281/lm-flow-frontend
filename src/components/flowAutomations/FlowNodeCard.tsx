@@ -59,8 +59,6 @@ export interface FlowNodeCardData {
   condicaoAutomatica?: boolean;
   /** Mensagem do follow-up: o nome da etiqueta de progresso é do sistema, não aparece. */
   ocultarProgresso?: boolean;
-  /** Só no cartão da última MENSAGEM (`last_node_id` do servidor) do follow-up com condições de retomada, embaixo dela: abre a janela "Adicionar mensagem". */
-  onAdicionarMensagem?: () => void;
   onEdit: (id: string) => void;
   onDuplicate: (id: string) => void;
   onRemove: (id: string) => void;
@@ -300,7 +298,7 @@ export function FlowStartNode({ data }: NodeProps) {
 }
 
 export function FlowNodeCard({ id, data, selected }: NodeProps) {
-  const { node, lookups, pessoal, donoDoEnvio, problem, editing, highlighted, guideMark, allow, condicaoAutomatica, ocultarProgresso, onAdicionarMensagem, onEdit, onDuplicate, onRemove, onAddFrom, onRename } = data as unknown as FlowNodeCardData;
+  const { node, lookups, pessoal, donoDoEnvio, problem, editing, highlighted, guideMark, allow, condicaoAutomatica, ocultarProgresso, onEdit, onDuplicate, onRemove, onAddFrom, onRename } = data as unknown as FlowNodeCardData;
   const can = allow ?? { edit: true, duplicate: true, remove: true, add: true, rename: true };
   const hidden = !isVisibleNode(node);
   const color = hidden ? '#94a3b8' : nodeColor(node.kind, blockGroup(node));
@@ -459,17 +457,6 @@ export function FlowNodeCard({ id, data, selected }: NodeProps) {
               <span key={handle} className="text-[10px] px-1.5 py-0.5 text-muted-foreground">{dot}{name}</span>
             );
           })}
-        </div>
-      )}
-      {onAdicionarMensagem && (
-        <div className="border-t border-border px-2 py-1.5">
-          <button
-            type="button"
-            onClick={own(onAdicionarMensagem)}
-            className="nodrag text-[11px] font-medium rounded border border-dashed border-border px-2 py-1 text-muted-foreground hover:border-primary hover:text-primary"
-          >
-            + Adicionar mensagem
-          </button>
         </div>
       )}
     </div>
