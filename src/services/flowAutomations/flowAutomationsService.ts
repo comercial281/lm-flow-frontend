@@ -3,6 +3,7 @@ import type {
   FlowAutomation,
   FlowAutomationFolder,
   FlowAutomationKind,
+  FlowNodeConfig,
   SaveFlowPayload,
   TestRunResult,
 } from '@/types/flowAutomations';
@@ -131,6 +132,15 @@ class FlowAutomationsService {
 
   async saveFlow(id: string, payload: SaveFlowPayload): Promise<FlowAutomation> {
     return unwrap<FlowAutomation>(await api.put(`${this.baseUrl}/${id}/save_flow`, payload));
+  }
+
+  // Follow-up com condições de retomada: a mensagem entra/sai pelo servidor, que religa as pontas e a etiqueta.
+  async addMessage(id: string, config: FlowNodeConfig): Promise<FlowAutomation> {
+    return unwrap<FlowAutomation>(await api.post(`${this.baseUrl}/${id}/add_message`, { config }));
+  }
+
+  async removeMessage(id: string, nodeId: string): Promise<FlowAutomation> {
+    return unwrap<FlowAutomation>(await api.delete(`${this.baseUrl}/${id}/messages/${nodeId}`));
   }
 
   // Posição nula = sem lugar salvo (o canvas calcula). O Desfazer do Organizar devolve nulo.

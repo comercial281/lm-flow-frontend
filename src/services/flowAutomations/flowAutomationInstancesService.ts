@@ -58,10 +58,12 @@ export interface ProgressoDoFollowup {
   flow_automation_id: string;
   step: number;
   total: number;
-  /** Existe a mensagem `step + 1`: é ISTO que oferece "Continuar" (não o texto). */
+  /** Existe uma próxima mensagem, de número maior que `step` (não precisa ser `step + 1`: pode ter mensagem tirada): é ISTO que oferece "Continuar" (não o texto). */
   has_next: boolean;
   /** O texto da próxima; nulo quando ela é só mídia (ou não existe). */
   next_text: string | null;
+  /** Posição da próxima mensagem na ordem atual; null/ausente = servidor antigo (usa step + 1). */
+  next_position?: number | null;
 }
 
 /** O que a janela "Colocar em follow-up" precisa saber antes de abrir. */
@@ -114,6 +116,7 @@ const previewFrom = (body: unknown): PlacePreview => {
         total: Number(progress.total) || 0,
         has_next: progress.has_next === true,
         next_text: textoOuNulo(progress.next_text),
+        next_position: Number.isInteger(progress.next_position) && Number(progress.next_position) > 0 ? Number(progress.next_position) : null,
       }
       : null,
     has_followup_column: raw?.has_followup_column === true,

@@ -166,6 +166,11 @@ export interface FlowAutomation {
    *  servidor). ⚠️ Não usar `template_key` pra isso: todo "Novo follow-up" nasce
    *  com o modelo 'follow_up_padrao', inclusive um "Pós-visita" qualquer. */
   followup_padrao?: boolean;
+  /** Só follow-up com condições de retomada (`supported`): quantas mensagens tem, o limite, a última
+   *  espera e os blocos que não saem (mensagens e condições). Ausente = como sempre foi. */
+  followup_messages?: {
+    supported: boolean; count: number; limit: number; last_node_id: string | null; locked_ids: string[];
+  };
   /** Fase 2 (follow-up): leads dentro agora, pausados incluídos. Só follow-up traz. */
   live_count?: number;
   /** Follow-up aberto: o nome da etiqueta de progresso (Configurações). */
