@@ -342,6 +342,8 @@ export interface MensagemDoSistema {
   texto: string;
   status?: 'enviada' | 'registrada' | 'bloqueada_demo' | 'falhou';
   erro?: string | null;
+  /** Hora real do envio. `data` é só o dia (sai 00:00 se formatada como hora). */
+  created_at?: string;
 }
 
 export interface ConfigDaLocacao {

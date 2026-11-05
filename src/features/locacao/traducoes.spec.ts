@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 vi.mock('@/services/core/api', () => ({ default: {} }));
 
 import { aluguelHoje, dePainel, deReajuste, deRepasses, deSegundaVia, diasAte, reajusteSemIndice } from './locacaoService';
-import { rotuloDoTotalDoAcerto } from './textos';
+import { quandoSaiu, rotuloDoTotalDoAcerto } from './textos';
 import type { Contrato, Repasse } from './tipos';
 
 const contrato = (over: Partial<Contrato> = {}) =>
@@ -107,5 +107,19 @@ describe('rotuloDoTotalDoAcerto', () => {
   it('total negativo é devolução ao inquilino (a caução sobrou); positivo é dívida dele', () => {
     expect(rotuloDoTotalDoAcerto(-5699.55)).toBe('Total a devolver ao inquilino');
     expect(rotuloDoTotalDoAcerto(320)).toBe('Total que o inquilino ainda deve');
+  });
+});
+
+describe('quandoSaiu', () => {
+  it('mostra a hora real do envio, não 00:00 (mensagem copiada da API de produção)', () => {
+    const m = { data: '2026-11-04', created_at: '2026-11-04T17:53:48-03:00' };
+    const texto = quandoSaiu(m);
+    expect(texto).toMatch(/^04\/11\/2026 às \d{2}:\d{2}$/);
+    expect(texto).not.toContain('00:00');
+    expect(texto).toBe(quandoSaiu({ data: '2026-11-04', created_at: new Date(m.created_at).toISOString() }));
+  });
+
+  it('mensagem antiga sem created_at ainda mostra o dia', () => {
+    expect(quandoSaiu({ data: '2026-11-04' })).toMatch(/^04\/11\/2026/);
   });
 });

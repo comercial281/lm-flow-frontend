@@ -1,7 +1,7 @@
 import Carregando from '@/components/base/Carregando';
 import EmptyState from '@/components/base/EmptyState';
 import { Card } from '@/components/ui/ds';
-import { dataHora } from '@/lib/formato';
+import { quandoSaiu } from '@/features/locacao/textos';
 import { locacaoService } from '@/features/locacao/locacaoService';
 import type { MensagemDoSistema, Severidade } from '@/features/locacao/tipos';
 import { Falha, Selo, Titulo } from './comum';
@@ -43,7 +43,7 @@ export default function Mensagens() {
               <div key={m.id} className="grid gap-1 px-3 py-3">
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                   <span className="text-sm font-medium">{m.para_nome}</span>
-                  <span className="text-xs text-muted-foreground">{DESTINATARIO[m.destinatario_tipo]} · {m.canal} · {dataHora(m.data)}</span>
+                  <span className="text-xs text-muted-foreground">{DESTINATARIO[m.destinatario_tipo]} · {m.canal} · {quandoSaiu(m)}</span>
                   {selo && <Selo sev={selo.sev}>{selo.rotulo}</Selo>}
                 </div>
                 <p className="whitespace-pre-line text-sm text-muted-foreground">{m.texto}</p>
