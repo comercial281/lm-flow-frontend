@@ -6365,6 +6365,17 @@ Armadilhas:
 6. **apex × www:** cada host faz o próprio `resolve`, e o domínio confirmado vale só para o host exato. Redirecionamento entre os dois é da Vercel/DNS.
 7. Não é `featureKey` nem `clientToggleKey`.
 
+## Meu site · texto pro Google fora da vista (desde 2026-11-05)
+
+> Conserto do #654 (site que ranqueia). Estilo em `middleware/headDoSite.ts` (`ESTILO_DO_TEXTO`).
+
+**O problema:** o texto que o servidor põe no HTML pro robô (`#lmf-ssr`: título, imóveis com foto e preço, perguntas) aparecia na tela por ~1 s, em letra do navegador e sem layout, antes do site carregar. O dono viu no Moeda Forte e chamou de "página sem UI nenhuma, bem estranha".
+
+**Decisões (não reabrir sem o dono pedir):**
+1. **O texto continua no HTML, mas fora da vista** (padrão "só leitor de tela": 1 px, recortado). Bing e robôs de IA leem o código, não a tela. O Google roda o app e lê a página final, de onde o `textoDoServidor.ts` tira o bloco.
+2. **Nunca `display:none`** no bloco: aí sim parece texto escondido de propósito pro Google.
+3. **Quem visita vê o "Carregando…" do site** (`[data-carregando]`), que antes era escondido enquanto o texto estava na tela.
+
 ## Meu site · Personalizar: aparência, menus e páginas (desde 2026-10-05)
 
 > Fase 2 (C3) do plano `LM FLOW/plans/2026-10-04-meu-site-fase-final.md` (spec `LM FLOW/specs/2026-10-04-meu-site-fase-final-design.md`, pasta do Tony). Backend no `lm-flow` (`saas-multitenant`): `Sites::AppearanceConfig`, `Sites::MenuConfig`, `Sites::PageHtml` (limpeza ao gravar), `Sites::PageTemplates`, `Sites::TaxDocument` e `POST /sites/:id/pages/from_template`.

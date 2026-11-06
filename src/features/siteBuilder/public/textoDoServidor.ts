@@ -1,8 +1,9 @@
 /**
  * O middleware põe o texto da página (`#lmf-ssr`: título, descrição, cards,
- * migalhas, FAQ) ANTES do `#root`, para o Google e para quem abre a página
- * ler alguma coisa antes do app subir. Quando o app desenha a página de
- * verdade, o texto sai — senão o visitante veria as duas.
+ * migalhas, FAQ) ANTES do `#root`, para os robôs. Ele fica fora da vista
+ * (estilo em `middleware/headDoSite.ts`): quem visita vê o "Carregando…".
+ * Quando o app desenha a página de verdade, o texto sai do HTML, para o
+ * Google (que roda o app) ler só a página final.
  *
  * "De verdade" = o `#root` tem conteúdo e nenhum `[data-carregando]` dentro
  * (o "Carregando…" das páginas). Página que ainda não desenhou nada deixa o

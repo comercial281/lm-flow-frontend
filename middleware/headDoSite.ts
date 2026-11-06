@@ -290,15 +290,17 @@ export function htmlDoConteudo(c: ConteudoDaPagina | null | undefined): string {
 }
 
 /**
- * Estilo mínimo do texto do servidor (fonte do sistema, largura de leitura). O
- * `[data-carregando]` é o "Carregando…" das páginas do site: some enquanto o
- * texto do servidor está na tela, para o visitante não ver as duas coisas.
+ * O texto do servidor é pra robô, não pra gente: fica no HTML (o Bing e os
+ * robôs de IA leem o código, não a tela) mas fora da vista, com o padrão de
+ * "só leitor de tela". Quem visita vê o "Carregando…" do site até o app
+ * desenhar, e não uma página crua de letra do navegador (era o que aparecia
+ * por ~1 s antes deste estilo). O Google roda o app e lê a página final, de
+ * onde o `textoDoServidor.ts` já tirou este bloco. Não usar `display:none`:
+ * aí sim parece texto escondido de propósito.
  */
 const ESTILO_DO_TEXTO =
-  '<style>#lmf-ssr{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;max-width:960px;margin:0 auto;padding:24px 16px;color:#1f2937;line-height:1.55}' +
-  '#lmf-ssr img{max-width:100%;height:auto;border-radius:8px}#lmf-ssr a{color:inherit}#lmf-ssr ol,#lmf-ssr nav ul{padding-left:18px}' +
-  '#lmf-ssr nav[aria-label="Você está em"] ol{display:flex;flex-wrap:wrap;gap:6px;list-style:none;padding:0;font-size:14px}' +
-  '#lmf-ssr article{margin:16px 0}body:has(#lmf-ssr) [data-carregando]{display:none!important}</style>';
+  '<style>#lmf-ssr{position:absolute;width:1px;height:1px;margin:-1px;padding:0;border:0;' +
+  'overflow:hidden;clip:rect(0,0,0,0);clip-path:inset(50%);white-space:nowrap}</style>';
 
 /** `<script type="application/ld+json">` de cada item (só objeto). `jsonForScript` escapa `<`, `>` e `&`. */
 function scriptsDeDados(jsonld: unknown): string[] {
