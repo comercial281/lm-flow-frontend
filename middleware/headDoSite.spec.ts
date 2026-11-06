@@ -353,7 +353,9 @@ describe('htmlDoConteudo (o texto que o robô lê)', () => {
     const ld = Array.from(d.querySelectorAll('script[type="application/ld+json"]'));
     expect(ld).toHaveLength(1);
     expect(JSON.parse(ld[0].textContent!)).toEqual({ '@type': 'RealEstateListing', name: '</script><script>alert(1)</script>' });
-    expect(html).toContain('[data-carregando]{display:none!important}');
+    // Fora da vista de quem visita (o "Carregando…" do site aparece), mas no HTML pro robô.
+    expect(html).toContain('#lmf-ssr{position:absolute;width:1px;height:1px');
+    expect(html).not.toContain('[data-carregando]');
   });
 });
 
