@@ -52,7 +52,24 @@ const stepRows = (list: unknown): FormAnswerRow[] => {
   });
 };
 
-export function normalizeFormAnswers(raw: unknown): FormAnswerRow[] {
+// O texto que o lead VIU no formulário do Meta, gravado pelo servidor ao lado da
+// resposta crua (`custom_attributes.form_answer_texts`, 06/11/2026). O Meta manda
+// a resposta pela CHAVE da pergunta, e a chave não muda quando alguém edita a
+// pergunta ou duplica o formulário: no [04/11] [LM CARRÃO] a chave
+// `qual_sua_renda?_` era "Você deseja falar com um corretor?", e o card dizia
+// "Qual sua renda?: sim, desejo". Lead sem texto gravado segue pela chave.
+export type FormAnswerTexts = Record<string, { question?: string; answer?: string }>;
+
+const textOf = (texts: unknown, key: string): { label: string; value: string } | null => {
+  if (!isRecord(texts)) return null;
+  const t = texts[key];
+  if (!isRecord(t)) return null;
+  const label = typeof t.question === 'string' ? t.question.trim() : '';
+  const value = typeof t.answer === 'string' ? t.answer.trim() : '';
+  return label && value ? { label, value } : null;
+};
+
+export function normalizeFormAnswers(raw: unknown, texts?: unknown): FormAnswerRow[] {
   if (!isRecord(raw)) return [];
 
   return Object.entries(raw).flatMap(([key, value]) => {
@@ -61,7 +78,8 @@ export function normalizeFormAnswers(raw: unknown): FormAnswerRow[] {
     if (k.toLowerCase() === 'answers') return stepRows(value);
 
     const text = toValue(value);
-    return text ? [{ label: toLabel(k), value: text }] : [];
+    if (!text) return [];
+    return [textOf(texts, key) ?? { label: toLabel(k), value: text }];
   });
 }
 
@@ -79,7 +97,7 @@ export function normalizeFormAnswers(raw: unknown): FormAnswerRow[] {
 // resposta que JÁ está na lista não vira linha. O que não é espelho (o campo que
 // alguém gravou à mão no contato) continua aparecendo.
 const HIDDEN_ATTRIBUTE_KEYS = new Set([
-  'empreendimento', 'imovel_codigo', 'origem_lead', 'form_answers',
+  'empreendimento', 'imovel_codigo', 'origem_lead', 'form_answers', 'form_answer_texts',
 ]);
 
 // "Você está buscando?" e "voce_esta_buscando" têm que virar a MESMA coisa —

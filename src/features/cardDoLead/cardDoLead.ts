@@ -78,8 +78,11 @@ export function podeEditarNome(contato: ContatoDoCard | null | undefined): boole
  */
 export function respostasDoLead(contato: ContatoDoCard | null | undefined): FormAnswerRow[] {
   const ca = (contato?.custom_attributes ?? {}) as Record<string, unknown>;
-  const respostas = normalizeFormAnswers(ca.form_answers);
-  return [...respostas, ...extraAttributeRows(ca, respostas)];
+  const respostas = normalizeFormAnswers(ca.form_answers, ca.form_answer_texts);
+  // O espelho solto que o servidor grava vem da CHAVE do Meta, não do texto que
+  // o lead viu: a comparação usa as duas, pra não repetir a pergunta.
+  const pelaChave = normalizeFormAnswers(ca.form_answers);
+  return [...respostas, ...extraAttributeRows(ca, [...respostas, ...pelaChave])];
 }
 
 // Ordem de preferência do detalhe que acompanha a origem numa linha só.
