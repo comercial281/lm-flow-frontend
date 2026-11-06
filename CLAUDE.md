@@ -10838,3 +10838,21 @@ Armadilhas:
 3. **Voltar o backend com a tela nova no ar** faz o botão dar erro: voltar a tela junto (ver armadilha 4 do `LM FLOW/CLAUDE.md`).
 
 Testes: `FollowupAdicionarMensagem.spec.tsx`, `FollowupCondicoesAutomaticasCanvas.spec.tsx`, `JanelaColocarEmFollowup.spec.tsx`.
+
+## Respostas do lead: a pergunta como o lead viu no formulário (06/11/2026)
+
+O Meta manda cada resposta pela **chave** da pergunta, e a chave não muda quando alguém
+edita a pergunta ou duplica o formulário. Casos reais: no [04/11] [LM CARRÃO] (Pandora)
+o card mostrava "Qual sua renda?: sim, desejo" para a pergunta "Você deseja falar com um
+corretor?"; no [28/10] [TIKOA PENHA 2.0] (Alexandre), "Renda familiar: ate_3500" para quem
+marcou "Busco para moradia"; no [03/11] [LINE PARADA INGLESA] (Igor e Paulo), "r0"/"r2"
+em vez das faixas de renda.
+
+- Desde o backend #(este PR do backend), a entrada do lead grava ao lado das respostas
+  o texto da pergunta e da opção que o lead viu (`custom_attributes.form_answer_texts`).
+- O bloco **Respostas do lead** e a aba **Origem** mostram esse texto. Lead sem texto
+  gravado (landing, portal, lead antigo que o Meta não devolve) segue como sempre.
+- A IA lê pelo texto também: o "já respondida no formulário" e o morar ou investir saem
+  da pergunta real, não da chave.
+- As respostas cruas não mudam: condição "Resposta do formulário" do construtor, variáveis
+  de funil e o ensaio da IA continuam pela chave. Não trocar isso sem rever a condição.

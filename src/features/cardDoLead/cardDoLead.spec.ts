@@ -81,6 +81,20 @@ describe('respostasDoLead', () => {
     expect(rows.map(r => r.value)).toEqual(['Até 500 mil', 'Lapa']);
   });
 
+  it('mostra a pergunta pelo texto que o lead viu, sem repetir o espelho da chave', () => {
+    const rows = respostasDoLead({
+      custom_attributes: {
+        form_answers: { 'qual_sua_renda?_': 'sim,_desejo' },
+        form_answer_texts: {
+          'qual_sua_renda?_': { question: 'Você deseja falar com um corretor?', answer: 'Sim, desejo' },
+        },
+        qual_sua_renda: 'sim,_desejo',
+      },
+    });
+
+    expect(rows).toEqual([{ label: 'Você deseja falar com um corretor?', value: 'Sim, desejo' }]);
+  });
+
   it('sem respostas devolve lista vazia', () => {
     expect(respostasDoLead({ custom_attributes: {} })).toEqual([]);
     expect(respostasDoLead(null)).toEqual([]);

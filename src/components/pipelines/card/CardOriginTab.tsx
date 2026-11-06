@@ -74,7 +74,9 @@ export default function CardOriginTab({
   // por pergunta. A normalização entende os dois formatos e vale também
   // para o lead que já foi capturado. Ver formAnswers.ts.
   const extraRows = normalizeFormAnswers((ar as Record<string, unknown>).extra_fields);
-  const answerRows = extraRows.length > 0 ? extraRows : normalizeFormAnswers(formAnswers);
+  // Pergunta e opção pelo texto que o lead viu (ver formAnswers.ts).
+  const answerTexts = (item.contact as any)?.custom_attributes?.form_answer_texts;
+  const answerRows = extraRows.length > 0 ? extraRows : normalizeFormAnswers(formAnswers, answerTexts);
   // Resultado da régua da landing, gravado no card na captura.
   const verdict = landingVerdict(item.custom_fields);
   const hasTrackedData = entries.length > 0 || answerRows.length > 0 || !!meta || !!verdict;
