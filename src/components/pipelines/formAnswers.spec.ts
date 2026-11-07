@@ -82,6 +82,35 @@ describe('normalizeFormAnswers', () => {
   });
 });
 
+// O Meta manda a resposta pela CHAVE da pergunta, que não muda quando alguém
+// edita a pergunta ou duplica o formulário. O servidor grava ao lado o texto que
+// o lead viu (form_answer_texts, 06/11/2026): no [04/11] [LM CARRÃO] a chave
+// `qual_sua_renda?_` era "Você deseja falar com um corretor?".
+describe('normalizeFormAnswers com o texto que o lead viu', () => {
+  const textos = {
+    'qual_sua_renda?_': { question: 'Você deseja falar com um corretor?', answer: 'Sim, desejo' },
+  };
+
+  it('mostra a pergunta e a opção como o lead viu, não a chave do Meta', () => {
+    expect(normalizeFormAnswers({ 'qual_sua_renda?_': 'sim,_desejo' }, textos)).toEqual([
+      { label: 'Você deseja falar com um corretor?', value: 'Sim, desejo' },
+    ]);
+  });
+
+  it('a resposta sem texto gravado segue como sempre', () => {
+    expect(normalizeFormAnswers({ 'qual_sua_renda?_': 'sim,_desejo', bairro: 'Mooca' }, textos)).toEqual([
+      { label: 'Você deseja falar com um corretor?', value: 'Sim, desejo' },
+      { label: 'bairro', value: 'Mooca' },
+    ]);
+  });
+
+  it('texto quebrado (sem pergunta) não apaga a resposta', () => {
+    expect(normalizeFormAnswers({ renda: 'ate_3500' }, { renda: { answer: 'x' } as never })).toEqual([
+      { label: 'renda', value: 'ate_3500' },
+    ]);
+  });
+});
+
 describe('extraAttributeRows', () => {
   // O caso do print do dono do produto (16/09/2026): o lead do formulário do Meta
   // mostrava cada pergunta duas vezes — uma com acento e "?", outra sem.
