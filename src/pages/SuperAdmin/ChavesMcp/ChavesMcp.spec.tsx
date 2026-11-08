@@ -43,6 +43,8 @@ describe('Chaves do MCP', () => {
     expect(screen.queryByLabelText(/Endereço com a chave/)).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Já guardei' }));
     await waitFor(() => expect(screen.queryByDisplayValue('Authorization: Bearer lmf_segredo')).not.toBeInTheDocument());
+    expect(await screen.findByText('Celular')).toBeInTheDocument();
+    expect(document.body.innerHTML).not.toContain('lmf_segredo');
   });
 
   it('"chave no endereço" mostra também o endereço com a chave', async () => {
@@ -77,6 +79,27 @@ describe('Chaves do MCP', () => {
     await userEvent.click(gerar);
     expect(svc.gerar).toHaveBeenCalledWith({ name: 'Robô', profile: 'agent', tenant_schemas: ['tenant_a'],
       allowed_ips: ['203.0.113.10'], url_allowed: false });
+  });
+
+  it('perfil Operador não leva clientes nem IP preenchidos antes como Agente', async () => {
+    svc.gerar.mockResolvedValue({ ...ativa, id: 'k6', name: 'Volta', key: 'lmf_z', url: 'https://api.x/mcp', header: 'Authorization: Bearer lmf_z' });
+    abrir();
+    await screen.findByText('Claude do Tony');
+    await userEvent.click(screen.getByRole('button', { name: 'Gerar chave' }));
+    await userEvent.type(screen.getByLabelText(/Nome da chave/), 'Volta');
+    const perfil = screen.getByRole('combobox', { name: 'Perfil' });
+    await userEvent.selectOptions(perfil, 'agent');
+    await userEvent.click(await screen.findByRole('button', { name: 'Cliente Alfa' }));
+    await userEvent.type(screen.getByLabelText(/IP de origem/), '203.0.113.10');
+    await userEvent.selectOptions(perfil, 'operator');
+    await userEvent.click(screen.getByRole('button', { name: 'Gerar' }));
+    expect(svc.gerar).toHaveBeenCalledWith({ name: 'Volta', profile: 'operator', url_allowed: false });
+  });
+
+  it('avisa quando a lista de clientes não carrega', async () => {
+    svc.clientes.mockRejectedValue(new Error('x'));
+    abrir();
+    await waitFor(() => expect(toast.error).toHaveBeenCalled());
   });
 
   it('lista mostra perfil, vencimento, clientes (todos ou nomes), IP e endereço', async () => {

@@ -55,7 +55,10 @@ export default function ChavesMcp() {
 
   // A lista de clientes serve à janela e aos nomes na lista de chaves.
   useEffect(() => {
-    mcpKeysService.clientes().then(setClientes).catch(() => setClientes([]));
+    mcpKeysService.clientes().then(setClientes).catch(() => {
+      setClientes([]);
+      toast.error('Não deu pra carregar a lista de clientes.');
+    });
   }, []);
 
   const limpar = () => { setNome(''); setPerfil('operator'); setEscolhidos([]); setIps(''); setNoEndereco(false); };
@@ -67,11 +70,15 @@ export default function ChavesMcp() {
       const nova = await mcpKeysService.gerar({
         name: nome.trim(),
         profile: perfil,
-        ...(escolhidos.length > 0 ? { tenant_schemas: escolhidos } : {}),
-        ...(listaIps.length > 0 ? { allowed_ips: listaIps } : {}),
+        ...(agente ? { tenant_schemas: escolhidos, allowed_ips: listaIps } : {}),
         url_allowed: !agente && noEndereco,
       });
-      setChaves((atual) => [nova, ...(atual ?? [])]);
+      // Na lista fica só o resumo; a chave crua vive apenas em `gerada`.
+      const resumo: ChaveMcp = { ...nova };
+      delete (resumo as Partial<ChaveMcpGerada>).key;
+      delete (resumo as Partial<ChaveMcpGerada>).url;
+      delete (resumo as Partial<ChaveMcpGerada>).header;
+      setChaves((atual) => [resumo, ...(atual ?? [])]);
       setGerada(nova);
       setGerando(false);
       limpar();
