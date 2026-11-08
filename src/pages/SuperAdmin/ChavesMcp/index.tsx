@@ -73,6 +73,12 @@ export default function ChavesMcp() {
         ...(agente ? { tenant_schemas: escolhidos, allowed_ips: listaIps } : {}),
         url_allowed: !agente && noEndereco,
       });
+      // Resposta sem a chave, sem o cabeçalho ou com outro perfil: não abre a janela com campo vazio.
+      if (!nova?.key || !nova?.header || nova.profile !== perfil) {
+        toast.error('A resposta veio incompleta. Confira a lista, revogue a chave que apareceu (se houver) e gere de novo.');
+        void carregar();
+        return;
+      }
       // Na lista fica só o resumo; a chave crua vive apenas em `gerada`.
       const resumo: ChaveMcp = { ...nova };
       delete (resumo as Partial<ChaveMcpGerada>).key;
@@ -211,7 +217,7 @@ export default function ChavesMcp() {
       </Dialog>
 
       <Dialog open={gerada !== null} onOpenChange={(aberto) => { if (!aberto) setGerada(null); }}>
-        <DialogContent>
+        <DialogContent data-clarity-mask="true">
           <DialogHeader><DialogTitle>Guarde a chave agora</DialogTitle></DialogHeader>
           <Aviso tom="atencao">Ela não aparece de novo. Guarde num lugar seguro.</Aviso>
           <CampoDaJanela rotulo="Cabeçalho (cole no Claude Code)" htmlFor="mcp-cabecalho">

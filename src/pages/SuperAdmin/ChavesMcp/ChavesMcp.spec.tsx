@@ -47,6 +47,34 @@ describe('Chaves do MCP', () => {
     expect(document.body.innerHTML).not.toContain('lmf_segredo');
   });
 
+  it.each([
+    ['sem a chave', { key: '', header: 'Authorization: Bearer lmf_x' }, 'operator'],
+    ['sem o cabeçalho', { key: 'lmf_x', header: '' }, 'operator'],
+    ['com perfil diferente do pedido', { key: 'lmf_x', header: 'Authorization: Bearer lmf_x' }, 'owner'],
+  ])('resposta da criação %s mostra erro e não abre a janela da chave', async (_nome, resposta, perfil) => {
+    svc.gerar.mockResolvedValue({ ...ativa, id: 'k9', name: 'Celular', url: 'https://api.x/mcp', profile: perfil, ...resposta });
+    abrir();
+    await screen.findByText('Claude do Tony');
+    await userEvent.click(screen.getByRole('button', { name: 'Gerar chave' }));
+    await userEvent.type(screen.getByLabelText(/Nome da chave/), 'Celular');
+    await userEvent.click(screen.getByRole('button', { name: 'Gerar' }));
+    await waitFor(() => expect(toast.error).toHaveBeenCalled());
+    expect(screen.queryByText('Guarde a chave agora')).not.toBeInTheDocument();
+    expect(screen.queryByText('Celular')).not.toBeInTheDocument();
+  });
+
+  it('a janela da chave criada é mascarada na gravação de sessão', async () => {
+    svc.gerar.mockResolvedValue({ ...ativa, id: 'k2', name: 'Celular', key: 'lmf_segredo', url: 'https://api.x/mcp',
+      header: 'Authorization: Bearer lmf_segredo' });
+    abrir();
+    await screen.findByText('Claude do Tony');
+    await userEvent.click(screen.getByRole('button', { name: 'Gerar chave' }));
+    await userEvent.type(screen.getByLabelText(/Nome da chave/), 'Celular');
+    await userEvent.click(screen.getByRole('button', { name: 'Gerar' }));
+    const campo = await screen.findByDisplayValue('Authorization: Bearer lmf_segredo');
+    expect(campo.closest('[data-clarity-mask="true"]')).not.toBeNull();
+  });
+
   it('"chave no endereço" mostra também o endereço com a chave', async () => {
     svc.gerar.mockResolvedValue({ ...ativa, id: 'k3', name: 'Navegador', url_allowed: true, key: 'lmf_segredo',
       url: 'https://api.x/mcp/lmf_segredo', header: 'Authorization: Bearer lmf_segredo' });
