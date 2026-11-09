@@ -576,6 +576,9 @@ function ConstructionProgressBlock({ config }: BlockComponentProps<'construction
 function ConsultantBlock({ config, property }: BlockComponentProps<'consultant'>) {
   const name = config.name ?? property?.responsibleName;
   if (empty(name)) return null;
+  // CRECI do bloco; vazio, o de quem atende — só se o nome mostrado é o dele
+  // (nome digitado à mão não leva o CRECI de outra pessoa).
+  const creci = config.creci || (config.name ? undefined : property?.responsibleCreci);
   return (
     <Section>
       <div className="flex items-center gap-4">
@@ -588,7 +591,7 @@ function ConsultantBlock({ config, property }: BlockComponentProps<'consultant'>
         )}
         <div>
           <div className="font-semibold">{name}</div>
-          {config.creci && <div className="text-xs opacity-70">CRECI {config.creci}</div>}
+          {creci && <div className="text-xs opacity-70">CRECI {creci}</div>}
           {config.phone && <div className="text-sm opacity-90">{config.phone}</div>}
         </div>
       </div>

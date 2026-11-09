@@ -4,6 +4,7 @@ import { fetchAllPortalProperties } from './portalProperties';
 import { imovelHref } from './finalidade';
 import { ehAba, itensDoMenu, menuPersonalizado, NOME_DE_FABRICA, type LinkDoMenu } from '@/features/siteBuilder/public/menuConfig';
 import { caminhoDoSite, type CtxDoSite } from '@/features/siteBuilder/public/dominioDoSite';
+import { linhaDoCreci } from '@/features/siteBuilder/public/creci';
 import { useCtxDoSite } from '@/features/siteBuilder/public/useTenantDoSite';
 import { cabecalhosDoSite, ehPrevia } from '@/features/siteBuilder/public/previa';
 import { comModeloDaPrevia, ehPreviaDoModelo, nomeDoModelo, sairDaPreviaDoModelo, urlSemModelo } from '@/features/siteBuilder/public/previaDoModelo';
@@ -89,6 +90,8 @@ export interface SiteInfo {
   domain?: string | null;
   /** Caixinha "Aparecer no Google". Ausente (servidor velho) = desligada. */
   google?: { indexable?: boolean | null } | null;
+  /** CRECI da imobiliária (Configurações › Conta). Ausente ou nulo = não aparece. */
+  creci?: string | null;
   name?: string;
   branding?: Branding;
   /** Banner da home: vídeo tem prioridade; sem os dois, a capa do primeiro imóvel. */
@@ -766,6 +769,10 @@ function RodapeEmManutencao({ site, tenant }: PropsDaMoldura) {
         </Link>
         {waHref && <BotaoWhatsApp href={waHref} rotuloSempre />}
       </div>
+      {/* A ficha segue no ar pelo anúncio: o CRECI fica mesmo em manutenção. */}
+      {linhaDoCreci(site.creci) && (
+        <p className="mx-auto max-w-6xl px-4 pb-6 text-[12px] text-neutral-400 sm:px-6">{linhaDoCreci(site.creci)}</p>
+      )}
     </footer>
   );
 }
@@ -1016,10 +1023,11 @@ function linksDoRodapeDoMenu(menu: LinkDoMenu[]) {
  * "feito com LM Flow": fica sempre, discreto, com o link pro site do LM Flow.
  * O cliente não tira (não há opção na Aparência).
  */
-function CreditoDoRodape({ nome }: { nome?: string }) {
+function CreditoDoRodape({ nome, creci }: { nome?: string; creci?: string | null }) {
+  const linha = linhaDoCreci(creci);
   return (
     <>
-      © {nome || 'Portal'} — feito com{' '}
+      © {nome || 'Portal'}{linha && ` · ${linha}`} — feito com{' '}
       <a href="https://lmflow.com.br" target="_blank" rel="noopener" className="transition-colors hover:text-neutral-600">LM Flow</a>.
     </>
   );
@@ -1064,7 +1072,7 @@ function RodapeCompleto({ site, tenant, onHome = false, abas }: PropsDaMoldura) 
         <div className="border-t border-black/[0.06]">
           <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-6 gap-y-1 px-4 py-4 text-[12px] text-neutral-400 sm:px-6">
             <p className="whitespace-pre-line text-neutral-500">{frase}</p>
-            <p><CreditoDoRodape nome={site.name} /></p>
+            <p><CreditoDoRodape nome={site.name} creci={site.creci} /></p>
           </div>
         </div>
       </footer>
@@ -1108,7 +1116,7 @@ function RodapeCompleto({ site, tenant, onHome = false, abas }: PropsDaMoldura) 
         </div>
       </div>
       <div className="border-t border-black/[0.06] py-5 text-center text-[12px] text-neutral-400">
-        <CreditoDoRodape nome={site.name} />
+        <CreditoDoRodape nome={site.name} creci={site.creci} />
       </div>
     </footer>
   );

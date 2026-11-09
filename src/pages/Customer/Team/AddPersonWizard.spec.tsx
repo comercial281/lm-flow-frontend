@@ -301,4 +301,36 @@ describe('AddPersonWizard', () => {
     expect(within(rodape).queryByRole('button', { name: 'Continuar' })).toBeNull();
     expect(within(rodape).getByRole('button', { name: 'Voltar' })).toBeInTheDocument();
   });
+
+  it('CRECI e UF vão no cadastro; vazios não vão', async () => {
+    open();
+    await userEvent.type(screen.getByPlaceholderText('Ex: Ana Souza'), 'Ana Souza');
+    await userEvent.type(screen.getByPlaceholderText('ana@imobiliaria.com.br'), 'ana@x.com');
+    await userEvent.type(screen.getByPlaceholderText('Ex: 11 94087 1974'), '11940871974');
+    await userEvent.type(screen.getByLabelText('CRECI (opcional)'), '12345-F');
+    await userEvent.selectOptions(screen.getByLabelText('UF do CRECI'), 'SP');
+    await userEvent.click(screen.getByRole('button', { name: 'Continuar' }));
+    await userEvent.click(screen.getByText('Corretor'));
+    await userEvent.click(screen.getByRole('button', { name: 'Continuar' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Só cadastrar' }));
+    await waitFor(() => expect(s.createUser).toHaveBeenCalledWith(expect.objectContaining({ creci: '12345-F', creci_state: 'SP' })));
+  });
+
+  it('sem CRECI o cadastro sai sem as chaves', async () => {
+    open();
+    await preencher();
+    await userEvent.click(screen.getByRole('button', { name: 'Só cadastrar' }));
+    await waitFor(() => expect(s.createUser).toHaveBeenCalled());
+    expect(s.createUser.mock.calls[0][0]).not.toHaveProperty('creci');
+  });
+
+  it('fechar limpa CRECI e UF: a próxima pessoa não herda o número de quem veio antes', async () => {
+    const props = open();
+    await userEvent.type(screen.getByLabelText('CRECI (opcional)'), '12345-F');
+    await userEvent.selectOptions(screen.getByLabelText('UF do CRECI'), 'SP');
+    await userEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
+    expect(props.onClose).toHaveBeenCalled();
+    expect(screen.getByLabelText('CRECI (opcional)')).toHaveValue('');
+    expect(screen.getByLabelText('UF do CRECI')).toHaveValue('');
+  });
 });

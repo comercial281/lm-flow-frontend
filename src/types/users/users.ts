@@ -113,6 +113,8 @@ export interface UserCreateData {
   auto_offline?: boolean;
   availability?: 'online' | 'busy' | 'offline';
   whatsapp_number?: string;
+  creci?: string | null;
+  creci_state?: string | null;
 }
 
 export interface UserUpdateData {
@@ -125,6 +127,8 @@ export interface UserUpdateData {
   avatar?: File;
   password?: string;
   whatsapp_number?: string;
+  creci?: string | null;
+  creci_state?: string | null;
 }
 
 export interface UsersResponse extends PaginatedResponse<User> {}

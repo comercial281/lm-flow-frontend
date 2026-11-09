@@ -57,6 +57,23 @@ export interface PersonDraft {
   name: string;
   phone: string;
   cargo: CargoOption | null;
+  /** CRECI e UF da pessoa: saem no site ao lado do nome de quem atende o imóvel. */
+  creci: string;
+  creciState: string;
+}
+
+/** As 27 UFs do CRECI (o servidor recusa outra coisa). */
+export const UFS = [
+  'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG', 'PA',
+  'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO',
+] as const;
+
+/** "CRECI 12345-F/SP", "CRECI 12345-F" ou nada (UF sem número não aparece). */
+export function creciDaPessoa(p: { creci?: string | null; creci_state?: string | null }): string | null {
+  const numero = p.creci?.trim();
+  if (!numero) return null;
+  const uf = p.creci_state?.trim();
+  return uf ? `CRECI ${numero}/${uf}` : `CRECI ${numero}`;
 }
 
 /**
@@ -65,7 +82,7 @@ export interface PersonDraft {
  * administrador — e mandar o celular sem mudança regravaria o número.
  */
 export function buildUserPatch(
-  member: Pick<TeamAccessMember, 'name' | 'whatsapp_number'>,
+  member: Pick<TeamAccessMember, 'name' | 'whatsapp_number' | 'creci' | 'creci_state'>,
   draft: PersonDraft,
   initialCargoKey: string | null,
 ): Record<string, unknown> {
@@ -77,6 +94,11 @@ export function buildUserPatch(
   const phone = national(draft.phone);
   if (phone !== national(member.whatsapp_number)) patch.whatsapp_number = phone;
   if (draft.cargo && draft.cargo.key !== initialCargoKey) Object.assign(patch, cargoPayload(draft.cargo));
+  // CRECI e UF: vazio apaga (vai nulo); igual ao gravado não vai.
+  const creci = draft.creci.trim();
+  if (creci !== (member.creci ?? '').trim()) patch.creci = creci || null;
+  const uf = draft.creciState.trim();
+  if (uf !== (member.creci_state ?? '').trim()) patch.creci_state = uf || null;
   return patch;
 }
 

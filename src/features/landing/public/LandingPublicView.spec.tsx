@@ -131,3 +131,47 @@ describe('LandingPublicView: limite de envios', () => {
     expect(screen.getByRole('button', { name: /Tentar de novo/ })).toBeEnabled();
   });
 });
+
+describe('LandingPublicView: CRECI', () => {
+  beforeEach(() => { vi.restoreAllMocks(); });
+
+  const imovel = (extra: Record<string, unknown> = {}) =>
+    ({ code: 'C1', title: 'Casa', photos: [], responsible_name: 'Fulano', responsible_creci: '12345-F/SP', ...extra }) as never;
+  const consultor = (config: Record<string, unknown> = {}) => {
+    const b = createBlock('consultant');
+    Object.assign(b.config, config);
+    return b;
+  };
+
+  it('termina com a imobiliária e o CRECI dela', async () => {
+    await abrir(dto({ agency: { name: 'Imob Silva', creci: 'J-12345' } }));
+    expect(screen.getByText('Imob Silva · CRECI J-12345')).toBeInTheDocument();
+  });
+
+  it('sem CRECI da imobiliária, sem a linha', async () => {
+    await abrir(dto({ agency: { name: 'Imob Silva', creci: null } }));
+    expect(screen.queryByText(/CRECI/)).toBeNull();
+  });
+
+  it('Consultor sem nome nem CRECI no bloco usa o CRECI do responsável', async () => {
+    await abrir(dto({ property: imovel(), content_blocks: [consultor()] }));
+    expect(screen.getByText('Fulano')).toBeInTheDocument();
+    expect(screen.getByText('CRECI 12345-F/SP')).toBeInTheDocument();
+  });
+
+  it('Consultor com CRECI no bloco: vale o do bloco', async () => {
+    await abrir(dto({ property: imovel(), content_blocks: [consultor({ creci: '777' })] }));
+    expect(screen.getByText('CRECI 777')).toBeInTheDocument();
+  });
+
+  it('Consultor com outro nome digitado: não mistura o CRECI do responsável', async () => {
+    await abrir(dto({ property: imovel(), content_blocks: [consultor({ name: 'Outra Pessoa' })] }));
+    expect(screen.getByText('Outra Pessoa')).toBeInTheDocument();
+    expect(screen.queryByText(/CRECI/)).toBeNull();
+  });
+
+  it('a linha do CRECI não fica apagada por cima da cor suave do tema', async () => {
+    await abrir(dto({ agency: { name: 'Imob Silva', creci: 'J-12345' } }));
+    expect(screen.getByText('Imob Silva · CRECI J-12345').className).not.toMatch(/opacity-/);
+  });
+});

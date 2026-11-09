@@ -77,6 +77,21 @@ describe('ImovelPublicPage', () => {
     expect(screen.queryByText('condo_house')).toBeNull();
   });
 
+  describe('CRECI', () => {
+    it('quadro de contato (computador e celular) e linha do atendimento', async () => {
+      await abrirFicha({ creci: 'J-12345' }, { responsible_name: 'Fulano', responsible_creci: '12345-F/SP' });
+      expect(screen.getAllByText('Código C1 · CRECI J-12345')).toHaveLength(2);
+      expect(screen.getAllByText('Atendimento: Fulano · CRECI 12345-F/SP')).toHaveLength(2);
+    });
+
+    it('sem CRECI: só o código e só o nome', async () => {
+      await abrirFicha({}, { responsible_name: 'Fulano' });
+      expect(screen.queryByText(/CRECI/)).toBeNull();
+      expect(screen.getAllByText('Código C1')).toHaveLength(2);
+      expect(screen.getAllByText('Atendimento: Fulano')).toHaveLength(2);
+    });
+  });
+
   describe('revenda', () => {
     it('values: false some com Condomínio, IPTU e Valor do m²', async () => {
       await abrirFicha({ property_page: { resale: { values: false } } });

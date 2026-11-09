@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { CheckCircle2, Circle } from 'lucide-react';
 import { Card, Button } from '@/components/ui/ds';
 import { EmptyState } from '@/components/base';
+import Aviso from '@/components/base/Aviso';
+import { useAppDataStore } from '@/store/appDataStore';
 import {
   siteBuilderService, type DashboardScope, type Site, type SiteDashboard, type SiteFormData,
 } from '@/services/siteBuilder/siteBuilderService';
@@ -39,6 +41,14 @@ export default function TelaPainel({ site, irPara, setF, podeAnuncios = false }:
   const [erro, setErro] = useState(false);
 
   const [tentativa, setTentativa] = useState(0);
+  // CRECI da imobiliária (Configurações › Conta): todo anúncio de imóvel precisa
+  // do número. Só avisa com a conta carregada, pra não acusar à toa.
+  const conta = useAppDataStore(st => st.account);
+  const fetchAccount = useAppDataStore(st => st.fetchAccount);
+  useEffect(() => { void fetchAccount(); }, [fetchAccount]);
+  // Conta guardada antes da mudança (sem a chave) não acusa: o site pode ter o
+  // CRECI antigo do Meu site, que o servidor novo já devolve na chave.
+  const semCreci = !!conta && 'creci' in conta && !conta.creci;
 
   useEffect(() => {
     let vivo = true;
@@ -58,6 +68,15 @@ export default function TelaPainel({ site, irPara, setF, podeAnuncios = false }:
 
   return (
     <div className="space-y-5">
+      {semCreci && (
+        <Aviso
+          tom="atencao"
+          titulo="Seu site está sem CRECI."
+          acao={<Button asChild size="sm" variant="outline"><Link to="/settings/account">Preencher</Link></Button>}
+        >
+          Todo anúncio de imóvel precisa do número.
+        </Aviso>
+      )}
       <div className="flex flex-wrap items-center justify-end gap-3">
         {podeAnuncios && (
           <div className="flex gap-1" role="group" aria-label="O que contar">

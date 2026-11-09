@@ -387,3 +387,23 @@ describe('PersonSheet — fechar com alteração por salvar', () => {
     await waitFor(() => expect(props.onClose).toHaveBeenCalled());
   });
 });
+
+describe('PersonSheet — CRECI', () => {
+  it('abre com CRECI e UF gravados e salva só o que mudou', async () => {
+    abrir(pessoa({ creci: '12345-F', creci_state: 'SP' }));
+    const campo = screen.getByLabelText('CRECI');
+    expect(campo).toHaveValue('12345-F');
+    expect(screen.getByLabelText('UF do CRECI')).toHaveValue('SP');
+    await userEvent.clear(campo);
+    await userEvent.type(campo, '999-F');
+    await userEvent.selectOptions(screen.getByLabelText('UF do CRECI'), 'RJ');
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+    await waitFor(() => expect(s.updateUser).toHaveBeenCalledWith('a1', { creci: '999-F', creci_state: 'RJ' }));
+  });
+
+  it('quem só pode ver lê o CRECI formatado', () => {
+    s.perms = new Set();
+    abrir(pessoa({ creci: '12345-F', creci_state: 'SP' }));
+    expect(screen.getByText('CRECI 12345-F/SP')).toBeInTheDocument();
+  });
+});

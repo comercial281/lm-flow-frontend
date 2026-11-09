@@ -63,6 +63,9 @@ export interface TeamAccessMember {
   name: string;
   email: string;
   whatsapp_number?: string | null;
+  /** CRECI e UF da pessoa (servidor antigo não manda). */
+  creci?: string | null;
+  creci_state?: string | null;
   confirmed: boolean;
   availability: number;
   role: TeamAccessRole;

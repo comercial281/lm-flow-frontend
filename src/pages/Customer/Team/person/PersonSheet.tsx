@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import {
-  Link2, Loader2, MessageCircle, Plus, ShieldCheck, Smartphone, Star, Trash2, Undo2, UserCheck, UserRound, UserX, X,
+  BadgeCheck, Link2, Loader2, MessageCircle, Plus, ShieldCheck, Smartphone, Star, Trash2, Undo2, UserCheck, UserRound, UserX, X,
 } from 'lucide-react';
 import {
   Badge, Button, Input, Label, Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle,
@@ -37,7 +37,8 @@ import { DOT_CLASS, STATE_TEXT } from '../people/NumberChip';
 import { numberState } from '../people/peopleFilters';
 import { TONE_CLASS, accessStatus } from '../people/accessStatus';
 import {
-  PHONE_TOO_SHORT, READ_ONLY_NOTE, buildUserPatch, liberatedDiff, phoneIsValid, targetRefusal, viewerIsAdmin,
+  PHONE_TOO_SHORT, READ_ONLY_NOTE, UFS, buildUserPatch, creciDaPessoa, liberatedDiff, phoneIsValid, targetRefusal,
+  viewerIsAdmin,
 } from './personSheetRules';
 import type { UserUpdateData } from '@/types/users';
 import type { MemberNumber, TeamAccessInbox, TeamAccessMember } from '@/types/teamAccess';
@@ -138,6 +139,8 @@ export default function PersonSheet({
   // recarga da lista: semear no render apagaria o que o gestor está digitando.
   const [name, setName] = useState(member.name);
   const [phone, setPhone] = useState(national(member.whatsapp_number));
+  const [creci, setCreci] = useState(member.creci ?? '');
+  const [creciState, setCreciState] = useState(member.creci_state ?? '');
   const [cargoKey, setCargoKey] = useState<string>(initialCargoKey ?? '');
   // Números: guarda só o que o gestor MUDOU. A base vem sempre da pessoa da
   // lista, então uma recarga no meio (depois de escolher o principal, por
@@ -168,7 +171,7 @@ export default function PersonSheet({
   const automatic = inboxes.filter(ib => member.auto_access?.[String(ib.id)] && !known.has(String(ib.id)));
 
   const cargo = roles.find(o => o.key === cargoKey) ?? null;
-  const patch = buildUserPatch(member, { name, phone, cargo }, initialCargoKey);
+  const patch = buildUserPatch(member, { name, phone, cargo, creci, creciState }, initialCargoKey);
   const dirty = Object.keys(patch).length > 0 || diff.add.length > 0 || diff.remove.length > 0;
   const status = accessStatus(member);
   const nomeDoNumero = (id: string) => inboxes.find(ib => String(ib.id) === id)?.name ?? 'o número';
@@ -426,6 +429,36 @@ export default function PersonSheet({
               <p className="text-sm">{formatPhone(member.whatsapp_number) || 'Sem celular cadastrado'}</p>
             )}
             <p className="text-xs text-muted-foreground">Recebe o link de acesso e os avisos de lead novo.</p>
+          </Bloco>
+
+          {/* CRECI e UF: saem no site ao lado do nome de quem atende o imóvel.
+              Quem não tem (recepção, SDR) deixa vazio. */}
+          <Bloco icon={<BadgeCheck className="h-4 w-4" aria-hidden="true" />} title="CRECI">
+            {canEdit ? (
+              <div className="flex gap-2">
+                <Input
+                  aria-label="CRECI"
+                  value={creci}
+                  onChange={e => setCreci(e.target.value)}
+                  placeholder="12345-F"
+                  disabled={saving}
+                  className="flex-1"
+                />
+                <Seletor
+                  aria-label="UF do CRECI"
+                  value={creciState}
+                  onChange={e => setCreciState(e.target.value)}
+                  disabled={saving}
+                  className="w-24"
+                >
+                  <option value="">UF</option>
+                  {UFS.map(uf => <option key={uf} value={uf}>{uf}</option>)}
+                </Seletor>
+              </div>
+            ) : (
+              <p className="text-sm">{creciDaPessoa(member) ?? 'Sem CRECI'}</p>
+            )}
+            <p className="text-xs text-muted-foreground">Aparece no site ao lado do nome, nos imóveis que a pessoa atende.</p>
           </Bloco>
 
           <Bloco icon={<Smartphone className="h-4 w-4" aria-hidden="true" />} title="Números de WhatsApp">

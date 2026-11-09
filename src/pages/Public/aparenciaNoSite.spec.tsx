@@ -388,6 +388,24 @@ describe('rodapé', () => {
   });
 });
 
+describe('rodapé — CRECI', () => {
+  it.each(['columns', 'compact'] as const)('com CRECI, ele entra na linha do crédito (%s)', async layout => {
+    const c = await rodape(comAp({ footer_layout: layout }, { creci: 'J-12345' }));
+    const link = within(c).getByRole('link', { name: 'LM Flow' });
+    expect(link.parentElement).toHaveTextContent('© Imob Teste · CRECI J-12345 — feito com LM Flow.');
+  });
+
+  it('sem CRECI (servidor antigo ou não preenchido), o crédito de sempre', async () => {
+    const c = await rodape(comAp({}));
+    expect(within(c).queryByText(/CRECI/)).toBeNull();
+  });
+
+  it('site em manutenção: o rodapé enxuto mostra o CRECI', async () => {
+    const c = await rodape({ ...base, maintenance: true, creci: 'J-12345' });
+    expect(within(c).getByText('CRECI J-12345')).toBeInTheDocument();
+  });
+});
+
 describe('cor de destaque', () => {
   it('texto do selo escuro em destaque claro e branco em destaque escuro', () => {
     expect(tokensDoSite({ branding: { accent_color: '#FACC15' } }).cssVars).toMatchObject({ '--accent': '#FACC15', '--accent-ink': '#17140F' });

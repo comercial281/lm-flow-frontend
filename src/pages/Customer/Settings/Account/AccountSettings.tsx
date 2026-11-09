@@ -34,6 +34,7 @@ import type { Account, FormDataOptions, UpdateAccount } from '@/types/settings';
 import { Copy, Users2 } from 'lucide-react';
 import { CampoDaJanela, GrupoDaJanela } from '@/components/base/janela';
 import { useNavigate } from 'react-router-dom';
+import { lerContas } from '@/features/siteBuilder/contasDoGoogle';
 
 
 // Tela piloto da Fase 3 (base de design e linguagem). Antes, três jeitos de
@@ -81,6 +82,7 @@ interface FormState {
   locale: string;
   domain: string;
   supportEmail: string;
+  creci: string;
   autoResolveAfter: number;
   autoResolveMessage: string;
   autoResolveIgnoreWaiting: boolean;
@@ -97,6 +99,7 @@ const FORM_VAZIO: FormState = {
   locale: 'pt-BR',
   domain: '',
   supportEmail: '',
+  creci: '',
   autoResolveAfter: 0,
   autoResolveMessage: '',
   autoResolveIgnoreWaiting: false,
@@ -166,10 +169,12 @@ export default function AccountSettings() {
   const pedidoAberto = useRef<PedidoLigarResolucao | null>(null);
 
   const prazoMudou = !!carregado && formData.staleAfterDays !== carregado.staleAfterDays;
+  const creciMudou = !!carregado && formData.creci.trim() !== carregado.creci.trim();
   const temAlteracao =
     !!carregado &&
     (!mesmoConteudo(camposGerais(formData), camposGerais(carregado)) ||
       prazoMudou ||
+      creciMudou ||
       (formData.autoResolveEnabled && !mesmoConteudo(camposResolucao(formData), camposResolucao(carregado))));
   useAlteracoesNaoSalvas(temAlteracao);
 
@@ -216,6 +221,7 @@ export default function AccountSettings() {
         locale: normalizeAccountLocale(accountData.locale || 'pt-BR'),
         domain: accountData.domain || '',
         supportEmail: accountData.support_email || '',
+        creci: accountData.creci || '',
         autoResolveAfter: settings.auto_resolve_after || 0,
         autoResolveMessage: settings.auto_resolve_message || '',
         autoResolveIgnoreWaiting: settings.auto_resolve_ignore_waiting || false,
@@ -266,6 +272,10 @@ export default function AccountSettings() {
       newErrors.staleAfterDays = `Escolha de ${PRAZO_MINIMO} a ${PRAZO_MAXIMO} dias.`;
     }
 
+    if (formData.creci.trim() && !lerContas.creci(formData.creci)) {
+      newErrors.creci = t('validation.creciInvalid');
+    }
+
     if (formData.autoResolveEnabled && formData.autoResolveAfter < TEMPO_MINIMO) {
       newErrors.autoResolveAfter = t('validation.minAutoResolveTime');
     }
@@ -296,6 +306,10 @@ export default function AccountSettings() {
       payload.locale = normalizeAccountLocale(formData.locale);
       payload.domain = formData.domain;
       payload.support_email = formData.supportEmail;
+    }
+    // CRECI: vazio apaga (o servidor volta a usar o antigo do Meu site, se houver).
+    if (creciMudou) {
+      payload.creci = formData.creci.trim() || null;
     }
     if (prazoMudou) {
       payload.properties_stale_after_days = formData.staleAfterDays;
@@ -506,6 +520,26 @@ export default function AccountSettings() {
                   />
                 </div>
               )}
+
+              {/* CRECI da imobiliária: aparece no rodapé do site, em cada imóvel e
+                  nas landings. Antes ficava escondido em Meu site › Google. */}
+              <div className="space-y-2">
+                <Label htmlFor="creci">{t('fields.creci.label')}</Label>
+                <Input
+                  id="creci"
+                  value={formData.creci}
+                  onChange={e => handleFieldChange('creci', e.target.value)}
+                  placeholder={t('fields.creci.placeholder')}
+                  aria-invalid={!!errors.creci}
+                  className={`bg-sidebar border-sidebar-border text-sidebar-foreground ${
+                    errors.creci ? 'border-red-500' : ''
+                  }`}
+                  disabled={saving}
+                />
+                {errors.creci
+                  ? <p className="text-sm text-red-500">{errors.creci}</p>
+                  : <p className="text-xs text-sidebar-foreground/60">{t('fields.creci.description')}</p>}
+              </div>
             </div>
           </SectionLayout>
           </div>

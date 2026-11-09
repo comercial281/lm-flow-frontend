@@ -10870,3 +10870,33 @@ Armadilhas:
 
 1. **Fixtures com `portal_zap` nos specs de Portais são só dados de teste**; não "consertar".
 2. Agrupar por contrato (pendência de 12/10) deixou de existir: era a pergunta que este card responde.
+## CRECI no site e na Equipe (desde 2026-11-09)
+
+Todo anúncio de imóvel precisa do número de inscrição no CRECI (Lei 6.530/78, Resolução
+COFECI 1.065/2007). Antes o CRECI da imobiliária ficava escondido em Meu site › Google e só
+ia pros dados que o Google lê; o site não mostrava em lugar nenhum.
+
+- **CRECI da imobiliária mora em Configurações › Conta** ("CRECI da imobiliária"). Saiu de
+  Meu site › Google, que agora só aponta pra Conta. O que estava gravado lá (`google.creci`)
+  segue valendo enquanto a Conta estiver vazia, e a Conta já abre com ele. Por isso o
+  `google` continua viajando inteiro ao salvar o site: **não tirar o `creci` do bloco**.
+- **CRECI e UF da pessoa** em Equipe › Adicionar pessoa e na ficha da pessoa. Opcionais
+  (recepção e SDR não têm). UF só as 27 siglas. Fora do Adicionar em lote, por enquanto.
+- **Onde aparece:** rodapé de todas as páginas do site, nos dois modelos e no de manutenção
+  ("© Nome · CRECI J-12345 — feito com LM Flow."); na ficha do imóvel, junto do código
+  ("Código AP0123 · CRECI J-12345", computador e celular) e na linha do atendimento
+  ("Atendimento: Fulano · CRECI 12345-F/SP"); na landing, uma linha fixa no fim
+  ("Imob Silva · CRECI J-12345") e no bloco Consultor.
+- **Bloco Consultor da landing:** vale o CRECI digitado no bloco; vazio, o de quem atende o
+  imóvel, mas só quando o nome mostrado é o dele. Nome digitado à mão não leva o CRECI de
+  outra pessoa.
+- **Sem número, nada aparece.** Responsável desativado fica só com o nome.
+- **Aviso no painel do Meu site** quando a Conta está sem CRECI ("Seu site está sem CRECI."),
+  com "Preencher" pra Conta. Não impede publicar.
+- Helpers: `features/siteBuilder/public/creci.ts` (`linhaDoCreci`, `linhaDoAtendimento`) e
+  `Team/person/personSheetRules.ts` (`UFS`, `creciDaPessoa`). No servidor, a fonte única é
+  `Accounts::Creci` (backend).
+
+Fica de fora: CRECI obrigatório pra publicar, conferência no site do conselho, CRECI em
+mensagem de WhatsApp ou na IA, e o número do registro da incorporação em anúncio de
+lançamento (outra exigência, por empreendimento). Não reabrir sem o dono pedir.

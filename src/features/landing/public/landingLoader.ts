@@ -45,6 +45,8 @@ export interface PublicLandingDTO {
   theme?: Record<string, unknown> | null;
   content_blocks: unknown[];
   pixel?: LandingPixel | null;
+  /** Imobiliária dona da landing: a linha do fim leva o CRECI dela. Servidor antigo não manda. */
+  agency?: { name?: string | null; creci?: string | null } | null;
   property?: {
     code: string;
     title: string;
@@ -63,6 +65,8 @@ export interface PublicLandingDTO {
     latitude?: number | null;
     longitude?: number | null;
     responsible_name?: string;
+    /** CRECI de quem atende, já "12345-F/SP" (servidor antigo não manda). */
+    responsible_creci?: string | null;
     listing_kind?: 'development' | 'resale' | null;
     transaction?: 'sale' | 'rent' | 'sale_rent' | 'season';
     rent_price?: number | null;

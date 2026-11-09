@@ -21,7 +21,8 @@ import type { CreatedWhatsappNumber } from '@/types/users';
 import type { CustomRole } from '@/types/customRoles';
 import type { TeamAccessInbox, TeamAccessMember } from '@/types/teamAccess';
 import { assignableCargoOptions, buildCargoOptions, cargoPayload } from './cargoOptions';
-import { viewerIsAdmin } from './person/personSheetRules';
+import { UFS, viewerIsAdmin } from './person/personSheetRules';
+import { Seletor } from '@/components/base/Seletor';
 import CreateNumberDialog from './numbers/CreateNumberDialog';
 import NumberCreatedSummary from './numbers/NumberCreatedSummary';
 import { digitsOf, national, qrPath, sendAccessLink, toApiPhone, validPhone, type LinkOutcome } from './numbers/numberPhone';
@@ -78,6 +79,8 @@ export default function AddPersonWizard({ open, roles, inboxes, members = [], on
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [whatsapp, setWhatsapp] = useState('');
+  const [creci, setCreci] = useState('');
+  const [creciState, setCreciState] = useState('');
   const [cargoKey, setCargoKey] = useState<string | null>(null);
   const [inboxIds, setInboxIds] = useState<Set<string>>(new Set());
 
@@ -134,7 +137,7 @@ export default function AddPersonWizard({ open, roles, inboxes, members = [], on
   const numberReady = numberHint === null;
 
   const reset = () => {
-    setStep(0); setName(''); setEmail(''); setWhatsapp('');
+    setStep(0); setName(''); setEmail(''); setWhatsapp(''); setCreci(''); setCreciState('');
     setCargoKey(null); setInboxIds(new Set());
     setMakeNumberEdit(null); setNumberNameEdit(null); setNumberPhoneEdit(null);
     setResult(null); setRetryOpen(false); setRetryingLink(false);
@@ -177,6 +180,9 @@ export default function AddPersonWizard({ open, roles, inboxes, members = [], on
           name: name.trim(),
           email: email.trim().toLowerCase(),
           whatsapp_number: celular,
+          // CRECI e UF só quando preenchidos (opcionais: recepção e SDR não têm).
+          ...(creci.trim() ? { creci: creci.trim() } : {}),
+          ...(creciState ? { creci_state: creciState } : {}),
           // Sem senha: quem a define é a própria pessoa, ao abrir o link de
           // acesso. O servidor gera uma provisória que ninguém precisa saber.
           ...(selectedCargo ? cargoPayload(selectedCargo) : {}),
@@ -410,6 +416,19 @@ export default function AddPersonWizard({ open, roles, inboxes, members = [], on
                 <p className="mt-1 text-xs text-muted-foreground">
                   É para onde vai o link de acesso, no último passo. Quem cria a senha é a própria
                   pessoa, ao abrir o link.
+                </p>
+              </div>
+              <div>
+                <UILabel htmlFor="wizard-creci">CRECI (opcional)</UILabel>
+                <div className="mt-1 flex gap-2">
+                  <Input id="wizard-creci" value={creci} onChange={e => setCreci(e.target.value)} placeholder="12345-F" className="flex-1" />
+                  <Seletor aria-label="UF do CRECI" value={creciState} onChange={e => setCreciState(e.target.value)} className="w-24">
+                    <option value="">UF</option>
+                    {UFS.map(uf => <option key={uf} value={uf}>{uf}</option>)}
+                  </Seletor>
+                </div>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Aparece no site ao lado do nome, nos imóveis que a pessoa atende.
                 </p>
               </div>
               {onBulk && (

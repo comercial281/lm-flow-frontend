@@ -62,6 +62,8 @@ export interface Account {
   locale: string;
   domain?: string;
   support_email?: string;
+  /** CRECI da imobiliária que vale de fato (o da Conta ou, vazio, o antigo do Meu site). */
+  creci?: string | null;
   auto_resolve_duration?: number;
   features: AccountFeatures;
   settings?: {
@@ -114,6 +116,7 @@ export interface UpdateAccount {
   auto_resolve_label?: string | null;
   audio_transcriptions?: boolean;
   properties_stale_after_days?: number;
+  creci?: string | null;
 }
 
 // Form data options for account forms
