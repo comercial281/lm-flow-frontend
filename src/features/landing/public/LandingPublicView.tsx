@@ -8,6 +8,7 @@ import {
   type LandingTheme,
   type LeadSubmitPayload,
 } from '@/features/landing/blocks';
+import { linhaDoCreci } from '@/features/siteBuilder/public/creci';
 import { loadLanding, type LandingPixel, type PublicLandingDTO } from './landingLoader';
 import { installPixel } from './metaPixel';
 import { sendSiteVisit } from '@/features/siteBuilder/public/siteVisits';
@@ -26,6 +27,14 @@ export interface LandingPublicViewProps {
   slug: string;
   /** Aberta no domínio do cliente: o resultado vai para `/lp/<slug>/obrigado`. */
   noDominio?: boolean;
+}
+
+/** Nome da imobiliária + CRECI; sem CRECI, nada (o nome sozinho não é exigência). */
+function linhaDaLanding(agency: PublicLandingDTO['agency']): string | null {
+  const creci = linhaDoCreci(agency?.creci);
+  if (!creci) return null;
+  const nome = agency?.name?.trim();
+  return nome ? `${nome} · ${creci}` : creci;
 }
 
 function toProperty(p: PublicLandingDTO['property']): LandingProperty | null {
@@ -48,6 +57,7 @@ function toProperty(p: PublicLandingDTO['property']): LandingProperty | null {
     latitude: p.latitude ?? null,
     longitude: p.longitude ?? null,
     responsibleName: p.responsible_name,
+    responsibleCreci: p.responsible_creci ?? undefined,
     // Dados novos: servidor velho não manda, e a ausência vira null.
     listingKind: p.listing_kind ?? null,
     transaction: p.transaction ?? undefined,
@@ -85,6 +95,8 @@ export function LandingPublicView({ tenant, slug, noDominio = false }: LandingPu
   const [theme, setTheme] = useState<Partial<LandingTheme>>({});
   const [property, setProperty] = useState<LandingProperty | null>(null);
   const [pixel, setPixel] = useState<LandingPixel | null>(null);
+  // "Imob Silva · CRECI J-12345" no fim da página (null = não aparece).
+  const [linhaDaImobiliaria, setLinhaDaImobiliaria] = useState<string | null>(null);
 
   // Eventos padrão da Meta vão em `track`; o resto é evento personalizado e vai
   // em `trackCustom` — mandar um pelo caminho do outro faz a Meta descartar.
@@ -242,6 +254,7 @@ export function LandingPublicView({ tenant, slug, noDominio = false }: LandingPu
       setTheme((dto.theme ?? {}) as Partial<LandingTheme>);
       setProperty(toProperty(dto.property));
       setPixel(dto.pixel ?? null);
+      setLinhaDaImobiliaria(linhaDaLanding(dto.agency));
       document.title = dto.title || 'Landing';
       setState('ok');
     })();
@@ -296,6 +309,13 @@ export function LandingPublicView({ tenant, slug, noDominio = false }: LandingPu
       {fonteHref && <link rel="stylesheet" href={fonteHref} />}
       <div className={`relative w-full ${largo ? 'max-w-[460px] lg:max-w-[1200px]' : 'max-w-[460px]'} shadow-2xl`}>
         <BlockRenderer blocks={blocks} property={property} theme={theme} onSubmitLead={onSubmitLead} wide={largo} />
+        {/* Todo anúncio de imóvel precisa do CRECI da imobiliária: linha fixa no
+            fim, sem bloco pra ligar. Sem número, não aparece. */}
+        {linhaDaImobiliaria && (
+          <p className="px-4 pb-6 pt-2 text-center text-xs opacity-60" style={{ color: theme.muted ?? theme.text ?? '#FFFFFF' }}>
+            {linhaDaImobiliaria}
+          </p>
+        )}
       </div>
     </div>
   );

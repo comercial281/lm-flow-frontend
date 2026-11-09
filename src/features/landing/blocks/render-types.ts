@@ -42,6 +42,8 @@ export interface LandingProperty {
   longitude?: number | null;
   photos?: LandingPhoto[];
   responsibleName?: string;
+  /** CRECI de quem atende ("12345-F/SP"): o bloco Consultor usa quando o dele está vazio. */
+  responsibleCreci?: string;
   /** Empreendimento (lançamento) ou revenda; o servidor velho não manda. */
   listingKind?: 'development' | 'resale' | null;
   transaction?: 'sale' | 'rent' | 'sale_rent' | 'season';
