@@ -8763,7 +8763,7 @@ Decisões do dono (não reabrir sem ele pedir):
   regra é um nível só. O site passou a usar as mesmas duas seções (mesmo bloco,
   `SaleRentDestination`) em 12/10/2026.
 - **Agrupar por contrato (Canal Pro) ficou de fora** até confirmar se o plano do Canal Pro é
-  um só pros três portais.
+  um só pros três portais. Resolvido em 05/11/2026: é um card só (ver "Portais: o Canal Pro é um card só").
 
 Armadilhas:
 
@@ -10856,3 +10856,17 @@ em vez das faixas de renda.
   da pergunta real, não da chave.
 - As respostas cruas não mudam: condição "Resposta do formulário" do construtor, variáveis
   de funil e o ensaio da IA continuam pela chave. Não trocar isso sem rever a condição.
+
+## Portais: o Canal Pro é um card só (05/11/2026)
+
+O suporte do Grupo OLX confirmou: **uma URL de XML publica igual no ZAP, no Viva Real e na OLX**. Não existe lista nem destaque por portal, e trocar o XML substitui todos os anúncios anteriores. Servidor: lm-flow #582.
+
+- **O card é `portal_vivareal`**, agora "Grupo OLX (Canal Pro)". Mesma chave, URL do feed e do webhook do Viva Real não mudam: quem colou a do Viva Real no Canal Pro não refaz nada. Quem colou a do ZAP ou da OLX (antes de 14/09 o card único era o `portal_zap`) cola a do card novo, porque as antigas passam a responder 404.
+- **Os cards ZAP e OLX somem porque o servidor deixou de servir os dois** (lista e páginas vêm do catálogo dele). `portal_zap` e `portal_olx` seguem válidos como tipo de integração e os dados antigos ficam. A tela só perdeu a referência no `PortalLogo`.
+- **Lista ou destaque por portal está fora**: o Grupo não aceita. Não reabrir sem o dono pedir.
+- A etiqueta do lead desse canal passa a ser `grupo olx`.
+
+Armadilhas:
+
+1. **Fixtures com `portal_zap` nos specs de Portais são só dados de teste**; não "consertar".
+2. Agrupar por contrato (pendência de 12/10) deixou de existir: era a pergunta que este card responde.
