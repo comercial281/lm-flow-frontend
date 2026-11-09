@@ -312,7 +312,7 @@ export function LandingPublicView({ tenant, slug, noDominio = false }: LandingPu
         {/* Todo anúncio de imóvel precisa do CRECI da imobiliária: linha fixa no
             fim, sem bloco pra ligar. Sem número, não aparece. */}
         {linhaDaImobiliaria && (
-          <p className="px-4 pb-6 pt-2 text-center text-xs opacity-60" style={{ color: theme.muted ?? theme.text ?? '#FFFFFF' }}>
+          <p className="px-4 pb-6 pt-2 text-center text-xs" style={{ color: theme.muted ?? theme.text ?? '#FFFFFF' }}>
             {linhaDaImobiliaria}
           </p>
         )}

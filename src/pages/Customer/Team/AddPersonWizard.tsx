@@ -137,7 +137,7 @@ export default function AddPersonWizard({ open, roles, inboxes, members = [], on
   const numberReady = numberHint === null;
 
   const reset = () => {
-    setStep(0); setName(''); setEmail(''); setWhatsapp('');
+    setStep(0); setName(''); setEmail(''); setWhatsapp(''); setCreci(''); setCreciState('');
     setCargoKey(null); setInboxIds(new Set());
     setMakeNumberEdit(null); setNumberNameEdit(null); setNumberPhoneEdit(null);
     setResult(null); setRetryOpen(false); setRetryingLink(false);

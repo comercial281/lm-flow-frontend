@@ -323,4 +323,14 @@ describe('AddPersonWizard', () => {
     await waitFor(() => expect(s.createUser).toHaveBeenCalled());
     expect(s.createUser.mock.calls[0][0]).not.toHaveProperty('creci');
   });
+
+  it('fechar limpa CRECI e UF: a próxima pessoa não herda o número de quem veio antes', async () => {
+    const props = open();
+    await userEvent.type(screen.getByLabelText('CRECI (opcional)'), '12345-F');
+    await userEvent.selectOptions(screen.getByLabelText('UF do CRECI'), 'SP');
+    await userEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
+    expect(props.onClose).toHaveBeenCalled();
+    expect(screen.getByLabelText('CRECI (opcional)')).toHaveValue('');
+    expect(screen.getByLabelText('UF do CRECI')).toHaveValue('');
+  });
 });

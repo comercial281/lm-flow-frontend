@@ -153,4 +153,11 @@ describe('TelaPainel — aviso do CRECI', () => {
     await waitFor(() => expect(siteBuilderService.getDashboard).toHaveBeenCalled());
     expect(screen.queryByText('Seu site está sem CRECI.')).toBeNull();
   });
+
+  it('conta guardada antes da mudança (sem a chave creci): sem aviso falso', async () => {
+    conta.atual = {};
+    montar();
+    await waitFor(() => expect(siteBuilderService.getDashboard).toHaveBeenCalled());
+    expect(screen.queryByText('Seu site está sem CRECI.')).toBeNull();
+  });
 });

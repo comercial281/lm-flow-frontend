@@ -46,7 +46,9 @@ export default function TelaPainel({ site, irPara, setF, podeAnuncios = false }:
   const conta = useAppDataStore(st => st.account);
   const fetchAccount = useAppDataStore(st => st.fetchAccount);
   useEffect(() => { void fetchAccount(); }, [fetchAccount]);
-  const semCreci = !!conta && !conta.creci;
+  // Conta guardada antes da mudança (sem a chave) não acusa: o site pode ter o
+  // CRECI antigo do Meu site, que o servidor novo já devolve na chave.
+  const semCreci = !!conta && 'creci' in conta && !conta.creci;
 
   useEffect(() => {
     let vivo = true;

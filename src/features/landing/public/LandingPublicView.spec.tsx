@@ -169,4 +169,9 @@ describe('LandingPublicView: CRECI', () => {
     expect(screen.getByText('Outra Pessoa')).toBeInTheDocument();
     expect(screen.queryByText(/CRECI/)).toBeNull();
   });
+
+  it('a linha do CRECI não fica apagada por cima da cor suave do tema', async () => {
+    await abrir(dto({ agency: { name: 'Imob Silva', creci: 'J-12345' } }));
+    expect(screen.getByText('Imob Silva · CRECI J-12345').className).not.toMatch(/opacity-/);
+  });
 });
