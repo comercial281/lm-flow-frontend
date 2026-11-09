@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { Checkbox, Label as UILabel } from '@/components/ui/ds';
 import { getTenantSlug } from '@/services/core/tenant';
 import { enderecoNoGoogle } from '@/features/siteBuilder/enderecoDoSite';
@@ -81,11 +82,13 @@ export default function TelaGoogle({ site, siteForm, setF }: FormProps) {
           ajuda="Liga o site à ficha da imobiliária no Google Maps. Onde achar: pesquise a imobiliária no Google › no seu perfil, Compartilhar › Copiar link."
           erro={erro(google.business_profile_url, lerContas.perfil, 'Cole o link inteiro, começando com https://.')}
           aoMudar={business_profile_url => mudar({ business_profile_url })} />
-        <CampoTexto id="google-creci" rotulo="CRECI da imobiliária" placeholder="J-12345"
-          valor={google.creci ?? ''}
-          ajuda="Vai junto com o nome da imobiliária nos dados que o Google lê. Pode escrever com ou sem a palavra CRECI."
-          erro={erro(google.creci, lerContas.creci, 'Use só letras, números, ponto, barra e hífen. Ex.: J-12345.')}
-          aoMudar={creci => mudar({ creci })} />
+        {/* O CRECI saiu daqui (11/2026): mora na Conta e aparece no rodapé e em
+            cada imóvel. O gravado no bloco segue viajando inteiro (mudar()) e
+            vale como reserva enquanto a Conta estiver vazia. */}
+        <p className="text-sm text-muted-foreground">
+          O CRECI agora fica em{' '}
+          <Link to="/settings/account" className="font-medium text-primary underline-offset-2 hover:underline">Configurações › Conta</Link>.
+        </p>
         <p className="text-sm text-muted-foreground">Google Analytics, Pixel do Meta, Tag Manager e Clarity ficam em Rastreamento.</p>
       </Secao>
     </Secoes>

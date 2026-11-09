@@ -9,6 +9,12 @@ vi.mock('@/services/siteBuilder/siteBuilderService', () => ({
   siteBuilderService: { getDashboard: vi.fn(), listLeads: vi.fn(), aiSetup: vi.fn() },
 }));
 
+// A conta (CRECI da imobiliária) vem do store global; o aviso olha pra ela.
+const conta = vi.hoisted(() => ({ atual: { creci: 'J-1' } as { creci?: string | null } | null, fetchAccount: vi.fn() }));
+vi.mock('@/store/appDataStore', () => ({
+  useAppDataStore: (sel: (st: unknown) => unknown) => sel({ account: conta.atual, fetchAccount: conta.fetchAccount }),
+}));
+
 const site = { id: 's1', branding: {}, contact: {}, tracking: {}, social_links: {} } as never;
 const zerado = { period_days: 30, scope: 'site', counting_since: null, visits: 0, visitors: 0, contacts: 0,
   conversion_rate: null, previous: null, published_properties: 0, top_properties: [],
@@ -116,5 +122,35 @@ describe('TelaPainel', () => {
     expect(screen.getByText('Ao menos 1 imóvel no site')).toBeTruthy();
     await userEvent.click(screen.getByText('Dados de contato'));
     expect(irPara).toHaveBeenCalledWith('dados');
+  });
+});
+
+describe('TelaPainel — aviso do CRECI', () => {
+  beforeEach(() => {
+    vi.mocked(siteBuilderService.getDashboard).mockResolvedValue(zerado as never);
+    vi.mocked(siteBuilderService.listLeads).mockResolvedValue({ data: [], meta: { total: 0 } } as never);
+  });
+
+  it('conta sem CRECI mostra o aviso com o caminho pra Conta', async () => {
+    conta.atual = { creci: null };
+    montar();
+    expect(await screen.findByText('Seu site está sem CRECI.')).toBeInTheDocument();
+    expect(screen.getByText('Todo anúncio de imóvel precisa do número.')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Preencher' })).toHaveAttribute('href', '/settings/account');
+    expect(conta.fetchAccount).toHaveBeenCalled();
+  });
+
+  it('com CRECI, nada de aviso', async () => {
+    conta.atual = { creci: 'J-1' };
+    montar();
+    await waitFor(() => expect(siteBuilderService.getDashboard).toHaveBeenCalled());
+    expect(screen.queryByText('Seu site está sem CRECI.')).toBeNull();
+  });
+
+  it('conta ainda não carregada: sem aviso (não acusa à toa)', async () => {
+    conta.atual = null;
+    montar();
+    await waitFor(() => expect(siteBuilderService.getDashboard).toHaveBeenCalled());
+    expect(screen.queryByText('Seu site está sem CRECI.')).toBeNull();
   });
 });
