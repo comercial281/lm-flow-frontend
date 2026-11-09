@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { Link, useLocation, useParams, useSearchParams } from 'react-router-dom';
 import { useCtxDoSite, useTenantDoSite } from '@/features/siteBuilder/public/useTenantDoSite';
 import { caminhoDoSite } from '@/features/siteBuilder/public/dominioDoSite';
+import { linhaDoAtendimento, linhaDoCreci } from '@/features/siteBuilder/public/creci';
 import { TEXTO_ENVIO_NA_PREVIA, cabecalhosDoSite, ehPrevia, envioFoiPrevia } from '@/features/siteBuilder/public/previa';
 import { comModeloDaPrevia, ehPreviaDoModelo } from '@/features/siteBuilder/public/previaDoModelo';
 import { trackLead } from '@/features/siteBuilder/public/siteTracking';
@@ -57,7 +58,10 @@ interface PropertyDTO extends CamposDaFicha {
   latitude?: number | null; longitude?: number | null;
   features?: string[] | null; condo_features?: string[] | null;
   typologies?: PropertyTypology[] | null;
-  responsible_name?: string; photos?: Photo[];
+  responsible_name?: string;
+  /** CRECI de quem atende, já no formato "12345-F/SP" (servidor antigo não manda). */
+  responsible_creci?: string | null;
+  photos?: Photo[];
   /** Só o booleano: o endereço do book nunca vem para a página pública. */
   has_book?: boolean;
 }
@@ -300,6 +304,11 @@ export default function ImovelPublicPage() {
   ].filter(Boolean) as { label: string; value: string }[];
   // Revenda com "Valores" desligado: some a linha toda (aqui, no card e no celular).
   const money = ficha.valores ? moneyRows : [];
+  // CRECI (todo anúncio de imóvel precisa): o da imobiliária junto do código,
+  // e o de quem atende ao lado do nome. Sem número, nada aparece.
+  const creciDaImobiliaria = linhaDoCreci(site.creci);
+  const linhaDoCodigo = creciDaImobiliaria ? `Código ${prop.code} · ${creciDaImobiliaria}` : `Código ${prop.code}`;
+  const atendimento = linhaDoAtendimento(prop.responsible_name, prop.responsible_creci);
 
   // Características/comodidades → rótulos (via catálogo compartilhado).
   const featureLabels = labelsFor(prop.features);
@@ -572,7 +581,7 @@ export default function ImovelPublicPage() {
                 </div>
               )}
               {fase && <div className="mt-1.5 text-[14px] font-medium text-[var(--brand)]">{fase}</div>}
-              <div className="mt-1 text-[13px] text-neutral-500">Código {prop.code}</div>
+              <div className="mt-1 text-[13px] text-neutral-500">{linhaDoCodigo}</div>
               {money.length > 0 && (
                 <div className="mt-3 space-y-1">
                   {money.map((m, i) => (
@@ -586,7 +595,7 @@ export default function ImovelPublicPage() {
               <div className="my-4 border-t border-black/[0.06]" />
               <p className="mb-3 text-[14px] font-medium text-neutral-600">Fale com um especialista sobre este imóvel</p>
               {ContactForm}
-              {prop.responsible_name && <p className="mt-4 text-center text-[12px] text-neutral-400">Atendimento: {prop.responsible_name}</p>}
+              {atendimento && <p className="mt-4 text-center text-[12px] text-neutral-400">{atendimento}</p>}
             </div>
           </aside>
         </div>
@@ -604,8 +613,10 @@ export default function ImovelPublicPage() {
               {money.map((m, i) => <span key={i}>{m.label} <span className="font-medium text-[var(--ink)]">{m.value}</span></span>)}
             </div>
           )}
+          <div className="mt-1 text-[12px] text-neutral-500">{linhaDoCodigo}</div>
           <p className="mb-3 mt-2 text-[14px] text-neutral-500">Fale com um especialista sobre este imóvel</p>
           {ContactForm}
+          {atendimento && <p className="mt-4 text-center text-[12px] text-neutral-400">{atendimento}</p>}
         </section>
 
         {/* Imóveis recomendados */}
