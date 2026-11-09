@@ -57,6 +57,11 @@
       "label": "Aplicar etiqueta",
       "placeholder": "Selecionar etiqueta",
       "none": "Nenhuma etiqueta"
+    },
+    "creci": {
+      "label": "CRECI da imobiliária",
+      "placeholder": "J-12345",
+      "description": "Aparece no rodapé do site, em cada imóvel e nas páginas de anúncio. Pode escrever com ou sem a palavra CRECI."
     }
   },
   "buttons": {
@@ -96,7 +101,8 @@
   "validation": {
     "nameRequired": "Nome da conta é obrigatório",
     "localeRequired": "Idioma é obrigatório",
-    "minAutoResolveTime": "Tempo mínimo é de 10 minutos"
+    "minAutoResolveTime": "Tempo mínimo é de 10 minutos",
+    "creciInvalid": "Use só letras, números, ponto, barra e hífen. Ex.: J-12345."
   },
   "deletion": {
     "scheduledMessage": "Esta conta está programada para exclusão em {{date}}"

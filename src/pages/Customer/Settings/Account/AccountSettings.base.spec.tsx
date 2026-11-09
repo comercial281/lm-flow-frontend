@@ -248,3 +248,33 @@ describe('Atualização dos imóveis', () => {
     expect(await lista()).toHaveTextContent('60 dias');
   });
 });
+
+describe('CRECI da imobiliária', () => {
+  it('abre com o CRECI que vale e grava só ele quando muda', async () => {
+    mocks.getAccount.mockResolvedValue({ ...CONTA(), creci: 'J-9' });
+    montar();
+    const campo = await screen.findByLabelText('fields.creci.label');
+    expect(campo).toHaveValue('J-9');
+    await userEvent.clear(campo);
+    await userEvent.type(campo, 'J-12345');
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+    await waitFor(() => expect(mocks.updateAccount).toHaveBeenCalledWith({ creci: 'J-12345' }));
+  });
+
+  it('apagado vai como nulo', async () => {
+    mocks.getAccount.mockResolvedValue({ ...CONTA(), creci: 'J-9' });
+    montar();
+    await userEvent.clear(await screen.findByLabelText('fields.creci.label'));
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+    await waitFor(() => expect(mocks.updateAccount).toHaveBeenCalledWith({ creci: null }));
+  });
+
+  it('o que não é número de inscrição mostra o aviso e não grava', async () => {
+    mocks.getAccount.mockResolvedValue(CONTA());
+    montar();
+    await userEvent.type(await screen.findByLabelText('fields.creci.label'), '<b>');
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+    expect(await screen.findByText('validation.creciInvalid')).toBeInTheDocument();
+    expect(mocks.updateAccount).not.toHaveBeenCalled();
+  });
+});
