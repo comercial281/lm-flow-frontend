@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import BulkDispatchModal from './BulkDispatchModal';
@@ -444,6 +444,164 @@ describe('BulkDispatchModal · campanha direta (mensagem) e ritmo', () => {
     await userEvent.click(await screen.findByRole('button', { name: /Disparar pra 300/ }));
     await waitFor(() => expect(s.criar).toHaveBeenCalled());
     expect(s.criar.mock.calls[0][0]).toMatchObject({ pace: 'fast' });
+  });
+});
+
+describe('BulkDispatchModal · limite por dia e agendar o início (10/11/2026)', () => {
+  afterEach(() => vi.useRealTimers());
+
+  // Chega no passo Ritmo pelo funil pronto, numa terça às 10h.
+  const irProRitmo = async (contagem = 300) => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(TERCA_10H);
+    s.previa.mockResolvedValue(previa(contagem, {}, ETA));
+    s.funil.mockResolvedValue({ ...funilPronto, initial_node_id: null, nodes: [] });
+    abrir();
+    await screen.findByText(`${contagem} leads`);
+    await userEvent.click(screen.getByRole('button', { name: 'Próximo' }));
+    await userEvent.click(await screen.findByRole('radio', { name: 'Funil pronto' }));
+    await userEvent.selectOptions(await screen.findByLabelText('Funil'), 'f1');
+    await userEvent.click(screen.getByRole('button', { name: 'Próximo' }));
+    await screen.findByRole('radio', { name: 'Normal' });
+  };
+  const irProRevisar = async (contagem = 300) => {
+    await irProRitmo(contagem);
+    await userEvent.click(screen.getByRole('button', { name: 'Próximo' }));
+    await screen.findByRole('group', { name: 'Quando começar' });
+  };
+  const agendar = async (dataEscolhida: string, horaEscolhida = '09:00') => {
+    await userEvent.click(screen.getByRole('radio', { name: 'Agendar' }));
+    fireEvent.change(screen.getByLabelText('Data'), { target: { value: dataEscolhida } });
+    fireEvent.change(screen.getByLabelText('Hora'), { target: { value: horaEscolhida } });
+  };
+
+  it('a caixinha "Limite por dia" nasce desligada e o disparo vai sem limite', async () => {
+    await irProRevisar();
+    expect(screen.getByText('Sem limite')).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: 'Agora' })).toHaveAttribute('aria-checked', 'true');
+    expect(screen.queryByLabelText('Data')).toBeNull();
+    await userEvent.click(screen.getByRole('button', { name: /Disparar pra 300/ }));
+    await waitFor(() => expect(s.criar).toHaveBeenCalled());
+    const payload = s.criar.mock.calls[0][0];
+    expect(payload).not.toHaveProperty('daily_limit');
+    expect(payload).not.toHaveProperty('starts_at');
+  });
+
+  it('ligar o limite mostra "Até [20] por dia", a explicação, e o número vai no disparo', async () => {
+    await irProRitmo();
+    const caixinha = screen.getByRole('checkbox', { name: 'Limite por dia' });
+    expect(caixinha).not.toBeChecked();
+    expect(screen.queryByLabelText('Quantos por dia')).toBeNull();
+    expect(screen.getByText('Bateu o limite, o disparo para e continua no próximo dia útil às 8h.')).toBeInTheDocument();
+    await userEvent.click(caixinha);
+    const campo = screen.getByLabelText('Quantos por dia');
+    expect(campo).toHaveValue(20);
+    await userEvent.clear(campo);
+    await userEvent.type(campo, '30');
+    await userEvent.click(screen.getByRole('button', { name: 'Próximo' }));
+    expect(await screen.findByText('Até 30 por dia')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: /Disparar pra 300/ }));
+    await waitFor(() => expect(s.criar).toHaveBeenCalled());
+    expect(s.criar.mock.calls[0][0]).toMatchObject({ daily_limit: 30, pace: 'normal' });
+  });
+
+  it('desligar de novo tira o limite do disparo', async () => {
+    await irProRitmo();
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Limite por dia' }));
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Limite por dia' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Próximo' }));
+    await userEvent.click(await screen.findByRole('button', { name: /Disparar pra 300/ }));
+    await waitFor(() => expect(s.criar).toHaveBeenCalled());
+    expect(s.criar.mock.calls[0][0]).not.toHaveProperty('daily_limit');
+  });
+
+  it('limite fora de 1 a 1000 mostra o erro e trava o Próximo', async () => {
+    await irProRitmo();
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Limite por dia' }));
+    const campo = screen.getByLabelText('Quantos por dia');
+    await userEvent.clear(campo);
+    await userEvent.type(campo, '0');
+    expect(screen.getByText('O limite por dia vai de 1 a 1000.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Próximo' })).toBeDisabled();
+  });
+
+  it('ligar o limite pede a prévia de novo com o limite e mostra a previsão que o servidor devolve', async () => {
+    await irProRitmo(50);
+    expect(screen.getByText('50 leads no ritmo Normal: termina amanhã por volta das 15h')).toBeInTheDocument();
+    // Com limite, o servidor devolve o término já com ele (quinta 22/10, 9h em SP).
+    s.previa.mockResolvedValue(previa(50, {}, { ...ETA, normal: '2026-10-22T12:00:00Z' }));
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Limite por dia' }));
+    await waitFor(() =>
+      expect(s.previa).toHaveBeenLastCalledWith('p1', expect.anything(), 'in2', undefined, { daily_limit: 20 }),
+    );
+    expect(await screen.findByText('50 leads no ritmo Normal: termina quinta por volta das 9h')).toBeInTheDocument();
+  });
+
+  it('agendar também vai na prévia, com o fuso', async () => {
+    await irProRevisar();
+    await agendar('2026-12-24', '09:00');
+    await waitFor(() =>
+      expect(s.previa).toHaveBeenLastCalledWith('p1', expect.anything(), 'in2', undefined, {
+        starts_at: '2026-12-24T09:00:00-03:00',
+      }),
+    );
+  });
+
+  it('agendar pra 24/12 às 9h manda o início com o fuso, muda o botão e a confirmação', async () => {
+    await irProRevisar();
+    await agendar('2026-12-24', '09:00');
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.getByText('24/12 às 09:00')).toBeInTheDocument();
+    expect(screen.queryByText(/Fora do horário comercial/)).toBeNull();
+    const botao = screen.getByRole('button', { name: 'Agendar disparo' });
+    // A prévia reconta com o início (a previsão vem do servidor): o botão espera.
+    await waitFor(() => expect(botao).toBeEnabled());
+    await userEvent.click(botao);
+    await waitFor(() => expect(s.criar).toHaveBeenCalled());
+    expect(s.criar.mock.calls[0][0]).toMatchObject({ starts_at: '2026-12-24T09:00:00-03:00' });
+    expect(await screen.findByText('Disparo agendado')).toBeInTheDocument();
+    expect(screen.queryByText('Disparo criado')).toBeNull();
+  });
+
+  it('agendar no passado trava o botão com a frase embaixo do campo', async () => {
+    await irProRevisar();
+    await agendar('2026-10-19', '09:00');
+    expect(screen.getByText('Escolha uma data e hora no futuro.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Agendar disparo' })).toBeDisabled();
+  });
+
+  it('mais de 1 ano à frente também trava', async () => {
+    await irProRevisar();
+    await agendar('2027-12-24', '09:00');
+    expect(screen.getByText('Escolha uma data e hora até um ano à frente.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Agendar disparo' })).toBeDisabled();
+  });
+
+  it('fora do horário comercial avisa quando começa de verdade, sem travar', async () => {
+    await irProRevisar();
+    await agendar('2026-12-27', '10:00'); // domingo
+    expect(screen.getByText('Fora do horário comercial: começa às 8h de segunda, 28/12.')).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Agendar disparo' })).toBeEnabled());
+  });
+
+  it('voltar pra "Agora" tira o início do disparo', async () => {
+    await irProRevisar();
+    await agendar('2026-12-24');
+    await userEvent.click(screen.getByRole('radio', { name: 'Agora' }));
+    await userEvent.click(screen.getByRole('button', { name: /Disparar pra 300/ }));
+    await waitFor(() => expect(s.criar).toHaveBeenCalled());
+    expect(s.criar.mock.calls[0][0]).not.toHaveProperty('starts_at');
+    expect(await screen.findByText('Disparo criado')).toBeInTheDocument();
+  });
+
+  it('recusa do servidor mostra a frase dele e volta pro Revisar', async () => {
+    const { toast } = await import('sonner');
+    s.criar.mockRejectedValue({ response: { data: { errors: ['O início tem que ser daqui pra frente.'] } } });
+    await irProRevisar();
+    await agendar('2026-12-24');
+    await userEvent.click(screen.getByRole('button', { name: 'Agendar disparo' }));
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith('O início tem que ser daqui pra frente.'));
+    expect(await screen.findByRole('button', { name: 'Agendar disparo' })).toBeInTheDocument();
   });
 });
 

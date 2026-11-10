@@ -17,7 +17,7 @@ import NoAccessState from '@/components/permissions/NoAccessState';
 import { isForbiddenError } from '@/services/core/forbidden';
 import { useCan } from '@/hooks/useCan';
 import { telefone, terminaPorVoltaDe } from '@/lib/formato';
-import { STATUS_META, PACOTE, rotuloDoModo } from './rotulos';
+import { PACOTE, estadoDoDisparo, linhaDoAgendamento, linhaDoLimiteBatido, rotuloDoLimite, rotuloDoModo } from './rotulos';
 
 export default function Disparos() {
   const navigate = useNavigate();
@@ -148,7 +148,10 @@ export default function Disparos() {
                   </thead>
                   <tbody>
                     {campanhas.map(c => {
-                      const estado = STATUS_META[c.status];
+                      const estado = estadoDoDisparo(c);
+                      const agendamento = linhaDoAgendamento(c);
+                      const limiteDoDia = rotuloDoLimite(c);
+                      const limiteBatido = linhaDoLimiteBatido(c);
                       const feitas = c.sent_count + c.failed_count + c.skipped_count;
                       const pct = c.total_count ? Math.min(100, Math.round((feitas / c.total_count) * 100)) : 0;
                       return (
@@ -173,7 +176,10 @@ export default function Disparos() {
                             {c.sender_phone && <div className="text-xs text-muted-foreground">{telefone(c.sender_phone)}</div>}
                           </td>
                           <td className="px-4 py-3">{rotuloDoModo(c)}</td>
-                          <td className="px-4 py-3">{c.pace ? PACOTE[c.pace] ?? '' : ''}</td>
+                          <td className="px-4 py-3">
+                            <div>{c.pace ? PACOTE[c.pace] ?? '' : ''}</div>
+                            {limiteDoDia && <div className="text-xs text-muted-foreground whitespace-nowrap">{limiteDoDia}</div>}
+                          </td>
                           <td className="px-4 py-3">
                             <div className="flex items-center gap-2">
                               <div className="h-2 w-full min-w-[70px] overflow-hidden rounded-full bg-muted">
@@ -187,6 +193,12 @@ export default function Disparos() {
                           </td>
                           <td className="px-4 py-3">
                             <Badge className={`text-xs border ${estado.cls}`}>{estado.label}</Badge>
+                            {agendamento && (
+                              <div className="text-xs text-muted-foreground mt-1 whitespace-nowrap">{agendamento}</div>
+                            )}
+                            {limiteBatido && (
+                              <div className="text-xs text-muted-foreground mt-1 max-w-[240px]">{limiteBatido}</div>
+                            )}
                             {c.status === 'paused' && c.pause_message && (
                               <div className="text-xs text-muted-foreground mt-1 max-w-[240px]">{c.pause_message}</div>
                             )}

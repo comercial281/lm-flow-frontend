@@ -9338,7 +9338,7 @@ O que aparece na tela:
 Decisões (não reabrir sem o dono pedir):
 
 1. **Ritmo é um dos 3 pacotes**, sem campo livre. A tela manda `pace: 'fast' | 'normal' | 'slow'` e o servidor grava os números. Rápido 30 a 50 s, lote 10, pausa 300 s; Normal 60 a 120 s, lote 10, pausa 600 s; Devagar 120 a 240 s, lote 10, pausa 1200 s. Padrão Normal.
-2. **Limites fixos, sem caixinha:** só dentro do horário comercial (seg a sex 8h às 20h, sáb 9h às 18h, domingo fechado), quem pediu pra parar fica de fora e ninguém recebe de novo antes de 7 dias.
+2. **Limites fixos:** só dentro do horário comercial (seg a sex 8h às 20h, sáb 9h às 18h, domingo fechado), quem pediu pra parar fica de fora e ninguém recebe de novo antes de 7 dias. **Reaberta pelo dono em 10/11/2026:** o "sem caixinha" caiu. Agora há a caixinha "Limite por dia" (por disparo, desligada por padrão) e o início pode ser agendado; ver "Disparo em massa: agendar o início e limite por dia (desde 2026-11-10)". Os três limites fixos continuam valendo do mesmo jeito.
 3. **O número de saída fica no passo 1, não no 2.** Quem fica de fora por "lead de outro corretor" depende do número escolhido (vale "um lead, um dono": o lead de um corretor não responde pelo número de outro), então a contagem só fecha com o número na mão. O número da imobiliária, sem dono, manda pra todos.
 4. **Funil pronto entra, não copia.** O lead entra no funil na vez dele dentro do ritmo, pela conversa dele no número escolhido (se não tem, o disparo cria), e daí quem manda é o funil (esperas, "Aguardar resposta", caminhos, mover etapa, IA). Valem as travas do funil (roda uma vez por lead, janela de "Pode rodar de novo", recuperado pelo follow-up): o lead recusado vira "Ficou de fora" com o motivo, e não conta como falha. "Já estava no funil" também não é falha.
 5. **Quem fica de fora:** pediu pra parar; recebeu disparo nos últimos 7 dias; lead de outro corretor; já está em outra régua (follow-up rodando, funil de conversa em andamento ou IA atendendo). A conferência acontece também na hora do envio de cada lead, porque o disparo dura dias.
@@ -9985,6 +9985,48 @@ Armadilhas:
 4. **Pausar, Retomar e Cancelar do corretor:** a tela mostra os botões com a chave da ação OU `broadcasts.own`. O JSON do disparo só traz `created_by_name` (sem id), então a tela não confere dono; quem recusa disparo alheio é o servidor (404).
 
 Código: `src/components/pipelines/BulkDispatchModal.tsx` (`modoCorretor`, recontagem parada com painel aberto), `src/components/pipelines/disparo/PassoQuemRecebe.tsx` (campo travado e aviso) e `PainelDeLeads.tsx`, `src/pages/Customer/Disparos/Disparos.tsx`, `src/pages/Customer/Pipelines/boardActions.ts`, `src/routes/permissionRoutes.ts` + `index.tsx`, `src/components/layout/config/menuItems.ts`.
+
+Não reabrir sem o dono pedir.
+
+## Disparo em massa: agendar o início e limite por dia (desde 2026-11-10)
+
+Pedido do dono (Tony): montar disparo como campanha (deixar o do Natal pronto hoje pra começar em 24/12) e, na base fria, segurar quantos saem por dia em cada disparo (caso real: 5 corretores, 20 leads por chip por dia; antes isso exigia recriar o disparo todo dia). **O PR do backend (`comercial281/lm-flow#591`, branch `claude/disparo-agendado-limite`) entra PRIMEIRO.** Reabre a decisão 2 da seção de 16/10 ("sem caixinha").
+
+O que aparece na tela:
+
+- **Passo Ritmo:** embaixo dos 3 cartões, a caixinha **"Limite por dia"**, desligada, com a explicação "Bateu o limite, o disparo para e continua no próximo dia útil às 8h.". Ligada, aparece "Até [20] por dia" (campo numérico, 1 a 1000, padrão 20). Fora disso, "O limite por dia vai de 1 a 1000." embaixo do campo e o Próximo trava. A previsão de término ("termina quinta por volta das 9h") passa a contar o limite e o início agendado (vem do servidor, ver decisão 7).
+- **Passo Revisar, "Quando começar":** **Agora** (padrão) ou **Agendar**. Agendar abre Data e Hora ("Hora de São Paulo."), já sugerindo amanhã às 9h. Data/hora no passado ("Escolha uma data e hora no futuro.") ou a mais de 1 ano ("Escolha uma data e hora até um ano à frente.") mostra a frase embaixo do campo Data e trava o botão. Hora fora do horário comercial não trava: aparece o aviso "Fora do horário comercial: começa às 8h de segunda, 28/12." com o próximo horário calculado igual ao servidor.
+- **Resumo do Revisar:** linhas "Início" (Agora ou "24/12 às 09:00") e "Limite por dia" ("Até 20 por dia" ou "Sem limite"), antes do Ritmo. O botão final diz **"Agendar disparo"** quando agendado (senão "Disparar pra N").
+- **Depois de criar agendado:** "Disparo agendado" ("Começa em 24/12 às 09:00, no ritmo escolhido. Pra mudar, cancele e crie outro."), no lugar de "Disparo criado". O Acompanhar é o mesmo.
+- **Página Disparos:** agendado mostra o selo **"Agendado"** e embaixo "começa 24/12 às 09:00"; a previsão de término do servidor já conta o início e o limite. Com limite, "Até 20 por dia" embaixo do ritmo. Limite de hoje batido: "Limite de hoje atingido · volta amanhã às 8h" embaixo do selo Enviando (o "quando volta" vem do `next_run_at`).
+- **Tela do disparo:** o cabeçalho ganha "Começa 24/12 às 09:00" (agendado), "Até 20 por dia · hoje 12/20" e a frase do limite batido. Pausar, Retomar e Cancelar funcionam no agendado (pausado, o selo vira Pausado e o "Começa..." continua).
+
+Decisões (não reabrir sem o dono pedir):
+
+1. **A lista de quem recebe fecha na criação**, como sempre. Agendar não recalcula a lista no dia do início.
+2. **Disparo agendado não se edita.** Pra mudar, Cancelar e criar outro. Não há botão "Editar" nem "Começar agora".
+3. **O limite é POR DISPARO**, desligado por padrão. Não existe limite por número nem por conta.
+4. **O corretor ("Disparos próprios") também agenda e limita.** Nada na tela é só do gestor.
+5. **Nada de botão solto nem aba dentro de aba:** o limite mora no passo Ritmo e o início no passo Revisar, como escolhas do próprio passo.
+6. **Quem manda é o servidor.** A tela só valida antes de criar (data no futuro, até 1 ano, limite de 1 a 1000, com as mesmas frases do servidor) e mostra o aviso de fora do horário; 422 do servidor aparece com a frase dele (`errors[0]`).
+7. **A previsão de término é do servidor, nunca da tela.** A prévia (`POST /broadcasts/audience_preview`) recebe `starts_at` e `daily_limit` (só os válidos) e devolve o `eta` por ritmo já com os dois; a lista e o detalhe usam o `estimated_finish_at`, que também já conta. Mexer no limite ou no início pede a prévia de novo, e o botão final espera ela voltar. A tela não calcula previsão.
+8. **"Agendado" só com `scheduled: true`, que o servidor só liga quando o disparo tem `starts_at`.** Disparo comum criado depois das 20h não vira Agendado: aparece como sempre (Enviando, esperando o horário comercial).
+9. **"Começa 24/12 às 09:00" mostra o início real:** se o escolhido caiu fora do horário comercial, a lista e a tela mostram o próximo horário comercial (o mesmo do aviso na criação), não a hora digitada.
+10. **Hora sempre de São Paulo, fuso fixo `-03:00`** (sem horário de verão desde 2019). O `starts_at` sai como `2026-12-24T09:00:00-03:00`.
+
+Contrato com o servidor: `POST /api/v1/broadcasts` aceita `starts_at` (ISO com fuso; ausente = agora) e `daily_limit` (1..1000; ausente = sem limite). O JSON do disparo (lista, detalhe, create) traz `starts_at`, `daily_limit`, `sent_today`, `scheduled`, `next_run_at` e `daily_limit_reached`. A tela supõe que o disparo agendado chega com `status: 'running'` e `scheduled: true` (pausado: `paused` e `scheduled: true`); o contrato não fixou o `status`, então o selo "Agendado" segue o `scheduled` em qualquer estado que não seja Pausado, Concluído, Cancelado ou Falhou.
+
+Armadilhas:
+
+1. **Backend primeiro.** Com o backend antigo os campos novos não chegam e a tela se comporta como hoje (sem selo Agendado, sem limite na lista), mas o servidor antigo **ignoraria** `starts_at` e `daily_limit` no create: o disparo "agendado" sairia na hora e sem limite. Não publicar a tela antes.
+2. **O horário comercial está duplicado** (`disparo/agenda.ts`, só pro aviso "Fora do horário comercial" e pro "Começa ..." real, e `Broadcasts::BusinessClock` no servidor). Mudou no servidor: mudar aqui junto, senão o aviso mente. A previsão não tem esse risco (vem do servidor).
+3. **"Próximo dia útil às 8h" no texto:** o servidor volta no próximo horário comercial: limite batido na sexta volta sábado às 9h; no sábado, segunda às 8h. A lista e a tela dizem o certo ("volta sábado às 9h") pelo `next_run_at`. O texto da caixinha ficou o que o dono pediu.
+4. **O relógio não conhece feriado** (nem o do servidor, nem o da tela): agendado pra 25/12 sai em 25/12 se for dia de semana, e limite batido na véspera volta no feriado. Quem agenda pra feriado escolhe outro dia à mão.
+5. **Estado desconhecido não quebra a lista:** `estadoDoDisparo` mostra Agendado quando `scheduled` vem ligado e, sem isso, cai no selo de Concluído se o servidor mandar um `status` que a tela não conhece. Pausar, Retomar e Cancelar seguem o `status` (`running`/`paused`): se o servidor um dia mandar outro `status` pro agendado, os botões somem.
+6. **Voltar o backend** pra antes do PR dele com esta tela no ar: o disparo agendado criado nessa janela sai na hora e o limite é ignorado, e a prévia volta a prever "agora, sem limite". Voltar a tela junto.
+7. **Repo público:** testes sem dado real de cliente.
+
+Código: `src/components/pipelines/BulkDispatchModal.tsx` (Quando começar, resumo, botão), `src/components/pipelines/disparo/PassoRitmo.tsx` (caixinha do limite), `disparo/agenda.ts` (horário comercial, validação do início e do limite, frases), `src/pages/Customer/Disparos/rotulos.ts` (`estadoDoDisparo`, `linhaDoAgendamento`, `rotuloDoLimite`, `linhaDoLimiteBatido`), `Disparos.tsx`, `DisparoDetalhe.tsx`, `src/services/broadcasts/broadcastsService.ts` (`audiencePreviewFull` com a agenda). Testes: `agenda.spec.ts`, `BulkDispatchModal.spec.tsx`, `Disparos.spec.tsx`, `DisparoDetalhe.spec.tsx`.
 
 Não reabrir sem o dono pedir.
 
