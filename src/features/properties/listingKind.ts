@@ -216,7 +216,8 @@ export interface FiltrosRevenda {
   precoMax: string;
   quartos: number[];
   vagas: number[];
-  captador: string;
+  /** Corretor = captador OU responsável (?broker_id). Até 10/11/2026 era só o captador. */
+  corretor: string;
 }
 
 export interface FiltrosEmpreendimento {
@@ -244,7 +245,7 @@ export type Filtros = FiltrosRevenda | FiltrosEmpreendimento | FiltrosLeilao;
 
 export const FILTROS_VAZIOS: { development: FiltrosEmpreendimento; resale: FiltrosRevenda; auction: FiltrosLeilao } = {
   development: { fases: [], bairro: '', situacao: '', precoMin: '', precoMax: '', quartos: [], entregaAte: '', comBook: false },
-  resale: { finalidade: '', tipo: '', bairro: '', situacao: '', precoMin: '', precoMax: '', quartos: [], vagas: [], captador: '' },
+  resale: { finalidade: '', tipo: '', bairro: '', situacao: '', precoMin: '', precoMax: '', quartos: [], vagas: [], corretor: '' },
   auction: { ocupacao: '', bairro: '', situacao: '', precoMin: '', precoMax: '', quartos: [] },
 };
 
@@ -271,7 +272,7 @@ export function paramsDosFiltros(kind: ListingKind, f: Filtros): Record<string, 
     if (r.finalidade === 'locacao') p['transaction_type[]'] = ['rent', 'sale_rent', 'season'];
     if (r.tipo) p.property_type = r.tipo;
     if (r.vagas.length) p['parking[]'] = r.vagas.map(String);
-    if (r.captador) p.captor_id = r.captador;
+    if (r.corretor) p.broker_id = r.corretor;
   }
   return p;
 }
@@ -282,7 +283,7 @@ export function filtrosAtivos(
   kind: ListingKind,
   f: Filtros,
   rotuloTipo: (v: string) => string = v => v,
-  rotuloCaptador: (id: string) => string = id => id,
+  rotuloCorretor: (id: string) => string = id => id,
 ): { chave: string; rotulo: string }[] {
   const out: { chave: string; rotulo: string }[] = [];
   const preco = (min: string, max: string) =>
@@ -316,7 +317,7 @@ export function filtrosAtivos(
   if (r.precoMin || r.precoMax) out.push({ chave: 'preco', rotulo: `Preço: ${preco(r.precoMin, r.precoMax)}` });
   if (r.quartos.length) out.push({ chave: 'quartos', rotulo: `Dorms: ${quartosTexto(r.quartos)}` });
   if (r.vagas.length) out.push({ chave: 'vagas', rotulo: `Vagas: ${quartosTexto(r.vagas)}` });
-  if (r.captador) out.push({ chave: 'captador', rotulo: `Captador: ${rotuloCaptador(r.captador)}` });
+  if (r.corretor) out.push({ chave: 'corretor', rotulo: `Corretor: ${rotuloCorretor(r.corretor)}` });
   return out;
 }
 

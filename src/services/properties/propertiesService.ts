@@ -296,6 +296,8 @@ export interface PropertiesListParams {
   occupancy?: string;
   neighborhood?: string;
   captor_id?: string;
+  /** Corretor: imóveis em que a pessoa é captadora OU responsável. */
+  broker_id?: string;
   min_price?: string;
   max_price?: string;
   delivery_until?: string;
@@ -352,9 +354,11 @@ export const propertiesService = {
   /** Bairros, tipos e captadores que existem naquele tipo, para os seletores do filtro. */
   async facets(kind: ListingKind, opts: { mine?: boolean } = {}): Promise<{
     neighborhoods: string[]; property_types: string[]; captors: { id: string; name: string }[];
+    /** Captadores + responsáveis. Ausente em servidor antigo (antes de 10/11/2026). */
+    brokers?: { id: string; name: string }[];
   }> {
     const res = await api.get('/properties/facets', { params: { listing_kind: kind, mine: opts.mine ? '1' : undefined } });
-    return (res.data as { data: { neighborhoods: string[]; property_types: string[]; captors: { id: string; name: string }[] } }).data;
+    return (res.data as { data: { neighborhoods: string[]; property_types: string[]; captors: { id: string; name: string }[]; brokers?: { id: string; name: string }[] } }).data;
   },
 
   /**

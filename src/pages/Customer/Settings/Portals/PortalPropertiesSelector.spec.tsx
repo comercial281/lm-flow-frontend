@@ -99,7 +99,7 @@ describe('PortalPropertiesSelector — tipo de anúncio e cota', () => {
   it('com um tipo só não há seletor — não existe o que escolher', async () => {
     montar([tipos[0]], [{ property_id: 'a', ad_type: 'standard' }]);
     await screen.findByText('Imóvel a');
-    expect(screen.queryByRole('combobox')).toBeNull();
+    expect(screen.queryByRole('combobox', { name: /Tipo de anúncio/ })).toBeNull();
     expect(screen.getByTestId('contador-standard')).toHaveTextContent('Padrão');
   });
 
@@ -377,3 +377,62 @@ describe('PortalPropertiesSelector — carteira completa, só ativos', () => {
     );
   });
 });
+
+describe('PortalPropertiesSelector — filtros por corretor, tipo e desatualizados (10/11/2026)', () => {
+  const leo = { id: 'u-leo', name: 'Leonardo' };
+  const ivan = { id: 'u-ivan', name: 'Ivan' };
+  const wagner = { id: 'u-wagner', name: 'Wagner' };
+  beforeEach(() => {
+    [list, updatePublications, updatePublicationsLegacy, toastError].forEach(m => m.mockReset());
+    list.mockResolvedValue({ data: [
+      { ...imovel('a'), captor: leo, cover_photo_url: 'https://x/a.jpg', bedrooms: 2, photos_count: 33 },
+      { ...imovel('b'), captor: ivan, responsible: wagner },
+      { ...imovel('c'), captor: wagner, stale_due_on: '2020-01-01' },
+    ] });
+    updatePublications.mockResolvedValue({});
+  });
+
+  const montar = (pubs: Array<{ property_id: string; ad_type: string }> = []) =>
+    render(<PortalPropertiesSelector portalKey="zap" adTypes={tipos} initialPublications={pubs} supportsHighlight />);
+
+  it('mostra a foto e os detalhes do imóvel na linha', async () => {
+    montar();
+    await screen.findByText('Imóvel a');
+    expect(screen.getByRole('img', { name: 'Imóvel a' })).toHaveAttribute('src', 'https://x/a.jpg');
+    expect(screen.getByText(/2 dorms · 33 fotos · Captador: Leonardo/)).toBeInTheDocument();
+  });
+
+  it('corretor pega captador OU responsável', async () => {
+    const usuario = userEvent.setup();
+    montar();
+    await screen.findByText('Imóvel a');
+    await usuario.selectOptions(screen.getByLabelText('Corretor'), 'Wagner');
+    expect(screen.queryByText('Imóvel a')).toBeNull();
+    expect(screen.getByText('Imóvel b')).toBeInTheDocument();
+    expect(screen.getByText('Imóvel c')).toBeInTheDocument();
+  });
+
+  it('com filtro, desmarcar age só nos imóveis da lista', async () => {
+    const usuario = userEvent.setup();
+    montar([{ property_id: 'a', ad_type: 'standard' }, { property_id: 'c', ad_type: 'premium' }]);
+    await screen.findByText('Imóvel a');
+    await usuario.click(screen.getByRole('button', { name: 'Desatualizados' }));
+    expect(screen.queryByText('Imóvel a')).toBeNull();
+    await usuario.click(screen.getByRole('button', { name: 'Desmarcar os da lista' }));
+    expect(screen.getByText(/1 selecionado/)).toBeInTheDocument();
+    await usuario.click(screen.getByRole('button', { name: 'Limpar filtros' }));
+    expect(screen.getByRole('checkbox', { name: 'Publicar COD-a' })).toBeChecked();
+    expect(screen.getByRole('checkbox', { name: 'Publicar COD-c' })).not.toBeChecked();
+  });
+
+  it('tipo de anúncio mostra só quem está marcado naquele tipo', async () => {
+    const usuario = userEvent.setup();
+    montar([{ property_id: 'a', ad_type: 'standard' }, { property_id: 'c', ad_type: 'premium' }]);
+    await screen.findByText('Imóvel a');
+    await usuario.selectOptions(screen.getByLabelText('Tipo de anúncio'), 'Destaque');
+    expect(screen.queryByText('Imóvel a')).toBeNull();
+    expect(screen.queryByText('Imóvel b')).toBeNull();
+    expect(screen.getByText('Imóvel c')).toBeInTheDocument();
+  });
+});
+

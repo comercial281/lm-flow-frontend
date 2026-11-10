@@ -94,6 +94,10 @@ describe('filtros', () => {
     // Locação inclui Venda e locação e Temporada; Venda inclui Venda e locação (Ruling R11).
     expect(paramsDosFiltros('resale', rev)).toEqual({ 'transaction_type[]': ['rent', 'sale_rent', 'season'], 'bedrooms[]': ['2', '4'] });
     expect(paramsDosFiltros('resale', { ...FILTROS_VAZIOS.resale, finalidade: 'venda' })).toEqual({ 'transaction_type[]': ['sale', 'sale_rent'] });
+    // Corretor = captador OU responsável: vai como broker_id, não captor_id.
+    const comCorretor = { ...FILTROS_VAZIOS.resale, corretor: 'u9' };
+    expect(paramsDosFiltros('resale', comCorretor)).toEqual({ broker_id: 'u9' });
+    expect(filtrosAtivos('resale', comCorretor, t => t, () => 'Leandro').map(c => c.rotulo)).toEqual(['Corretor: Leandro']);
 
     const emp = { ...FILTROS_VAZIOS.development, fases: ['launch'], entregaAte: '2028', precoMin: '300000' };
     expect(paramsDosFiltros('development', emp)).toEqual({
