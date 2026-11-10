@@ -1,13 +1,13 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { toast } from 'sonner';
-import { plural } from '@/lib/formato';
+import { plural, dataCurta } from '@/lib/formato';
 import { Card, Button, Input, Checkbox } from '@/components/ui/ds';
 import { Seletor } from '@/components/base/Seletor';
 import BarraSalvar from '@/components/base/BarraSalvar';
 import { COR_DO_TOM } from '@/components/base/Aviso';
 import BotoesDeEscolha from '@/components/base/BotoesDeEscolha';
 import { mesmoConteudo, useAlteracoesNaoSalvas } from '@/hooks/useAlteracoesNaoSalvas';
-import { Star, Search } from 'lucide-react';
+import { Star, Search, Building2 } from 'lucide-react';
 import {
   propertiesService,
   Property,
@@ -33,9 +33,17 @@ import {
   tipoBase,
 } from '@/features/portals/adPlan';
 import { tiposEmUso } from '@/features/portals/situacao';
+import {
+  FILTROS_DO_PORTAL_VAZIOS,
+  type FiltrosDoPortal,
+  type Mostrar,
+  corretoresDaLista,
+  filtrarImoveisDoPortal,
+  temFiltro,
+} from '@/features/portals/filtrosDoSeletor';
+import { vencido } from '@/features/properties/emDia';
 
-type Filtro = 'todos' | 'no_portal' | 'fora';
-const FILTROS: Array<{ valor: Filtro; rotulo: string }> = [
+const FILTROS: Array<{ valor: Mostrar; rotulo: string }> = [
   { valor: 'todos', rotulo: 'Todos' },
   { valor: 'no_portal', rotulo: 'No portal' },
   { valor: 'fora', rotulo: 'Fora' },
@@ -95,8 +103,8 @@ export default function PortalPropertiesSelector({
   const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
   const [properties, setProperties] = useState<Property[]>([]);
   const [publications, setPublications] = useState<Map<string, string>>(() => mapaDe(initialPublications));
-  const [search, setSearch] = useState('');
-  const [filtro, setFiltro] = useState<Filtro>('todos');
+  const [filtros, setFiltros] = useState<FiltrosDoPortal>(FILTROS_DO_PORTAL_VAZIOS);
+  const mudar = (parcial: Partial<FiltrosDoPortal>) => setFiltros(f => ({ ...f, ...parcial }));
   const [todosOsTipos, setTodosOsTipos] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadFailed, setLoadFailed] = useState(false);
@@ -146,18 +154,16 @@ export default function PortalPropertiesSelector({
     [selecionadas],
   );
 
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    return properties.filter(p => {
-      if (filtro === 'no_portal' && !publications.has(p.id)) return false;
-      if (filtro === 'fora' && publications.has(p.id)) return false;
-      if (!q) return true;
-      return p.title.toLowerCase().includes(q) ||
-        p.code.toLowerCase().includes(q) ||
-        (p.address_neighborhood ?? '').toLowerCase().includes(q) ||
-        (p.address_city ?? '').toLowerCase().includes(q);
-    });
-  }, [properties, search, filtro, publications]);
+  const filtered = useMemo(
+    () => filtrarImoveisDoPortal(properties, publications, filtros),
+    [properties, publications, filtros],
+  );
+  const filtrando = temFiltro(filtros);
+  const corretores = useMemo(() => corretoresDaLista(properties), [properties]);
+  // Tipo de anúncio só filtra onde há o que escolher: vários tipos, ou a estrela do modo legado.
+  const tiposDoFiltro = modoLegado
+    ? (supportsHighlight ? [{ key: LEGADO_BASE, label: 'Padrão' }, { key: LEGADO_DESTAQUE, label: 'Destaque' }] : [])
+    : (comSeletor ? adTypes.map(t => ({ key: t.key, label: t.label })) : []);
 
   // Os contadores mostram só o tipo com cota ou com imóvel marcado agora; o resto
   // fica atrás de "+N tipos sem uso" (o ZAP tem seis tipos e quase ninguém usa todos).
@@ -196,10 +202,20 @@ export default function PortalPropertiesSelector({
   };
 
   // Quem já estava marcado mantém o tipo; quem entra agora entra no base.
+  // Com filtro, age só no que aparece: filtrar "Leonardo" e desmarcar todos não
+  // pode tirar do portal os imóveis do resto da equipe.
   const selectAll = () => {
     setPublications(prev => {
       const next = new Map(prev);
-      properties.forEach(p => { if (!next.has(p.id)) next.set(p.id, base); });
+      filtered.forEach(p => { if (!next.has(p.id)) next.set(p.id, base); });
+      return next;
+    });
+  };
+  const deselectAll = () => {
+    if (!filtrando) { setPublications(new Map()); return; }
+    setPublications(prev => {
+      const next = new Map(prev);
+      filtered.forEach(p => next.delete(p.id));
       return next;
     });
   };
@@ -268,7 +284,7 @@ export default function PortalPropertiesSelector({
     await enviar(pubs, confirmOverflow);
   };
 
-  const limparFiltros = () => { setSearch(''); setFiltro('todos'); };
+  const limparFiltros = () => setFiltros(FILTROS_DO_PORTAL_VAZIOS);
 
   return (
     <div className="space-y-4">
@@ -315,20 +331,46 @@ export default function PortalPropertiesSelector({
               className="pl-9"
               aria-label="Buscar imóvel"
               placeholder="Buscar por código, título, bairro ou cidade..."
-              value={search}
-              onChange={e => setSearch(e.target.value)}
+              value={filtros.busca}
+              onChange={e => mudar({ busca: e.target.value })}
             />
           </div>
-          <BotoesDeEscolha rotulo="Mostrar" valor={filtro} opcoes={FILTROS} aoEscolher={setFiltro} />
-          <div className="flex items-center gap-1">
-            <Button variant="ghost" size="sm" onClick={selectAll}>Selecionar todos</Button>
-            <Button variant="ghost" size="sm" onClick={() => setPublications(new Map())}>Desmarcar todos</Button>
-          </div>
+          <BotoesDeEscolha rotulo="Mostrar" valor={filtros.mostrar} opcoes={FILTROS} aoEscolher={mostrar => mudar({ mostrar })} />
         </div>
-        <p className="px-4 pt-3 text-xs text-muted-foreground">
-          {plural(selecionadas.size, 'selecionado', 'selecionados')}
-          {modoLegado && supportsHighlight ? ` · ${emDestaque} em destaque` : ''}
-        </p>
+        <div className="flex flex-wrap items-center gap-2 border-b border-border px-4 py-3">
+          <Seletor className="w-full sm:w-52" aria-label="Corretor" value={filtros.corretor}
+            onChange={e => mudar({ corretor: e.target.value })}>
+            <option value="">Todos os corretores</option>
+            {corretores.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </Seletor>
+          {tiposDoFiltro.length > 0 && (
+            <Seletor className="w-full sm:w-60" aria-label="Tipo de anúncio" value={filtros.tipo}
+              onChange={e => mudar({ tipo: e.target.value })}>
+              <option value="">Qualquer tipo de anúncio</option>
+              {tiposDoFiltro.map(t => <option key={t.key} value={t.key}>{t.label}</option>)}
+            </Seletor>
+          )}
+          <Button variant={filtros.desatualizados ? 'default' : 'outline'} size="sm"
+            aria-pressed={filtros.desatualizados}
+            onClick={() => mudar({ desatualizados: !filtros.desatualizados })}>
+            Desatualizados
+          </Button>
+          {/* Sem resultado, quem oferece limpar é o aviso da lista. */}
+          {filtrando && filtered.length > 0 && <Button variant="ghost" size="sm" onClick={limparFiltros}>Limpar filtros</Button>}
+        </div>
+        <div className="flex flex-wrap items-center gap-2 px-4 pt-3">
+          <p className="mr-auto text-xs text-muted-foreground">
+            {filtrando ? `${plural(filtered.length, 'imóvel', 'imóveis')} na lista · ` : ''}
+            {plural(selecionadas.size, 'selecionado', 'selecionados')}
+            {modoLegado && supportsHighlight ? ` · ${emDestaque} em destaque` : ''}
+          </p>
+          <Button variant="ghost" size="sm" onClick={selectAll}>
+            {filtrando ? 'Selecionar os da lista' : 'Selecionar todos'}
+          </Button>
+          <Button variant="ghost" size="sm" onClick={deselectAll}>
+            {filtrando ? 'Desmarcar os da lista' : 'Desmarcar todos'}
+          </Button>
+        </div>
 
         {loading ? (
           <Carregando linhas={4} rotulo="Carregando imóveis..." className="p-4" />
@@ -364,17 +406,21 @@ export default function PortalPropertiesSelector({
                     onCheckedChange={() => toggle(p.id)}
                     className="shrink-0"
                   />
-                  <div className="min-w-0 flex-1 cursor-pointer" onClick={() => toggle(p.id)}>
-                    <p className="text-sm font-medium truncate">
-                      <span className="text-muted-foreground font-mono text-xs mr-2">{p.code}</span>
-                      {p.title}
-                    </p>
-                    <p className="text-xs text-muted-foreground truncate">
-                      {TRANSACTION_TYPE_LABELS[p.transaction_type] ?? p.transaction_type}
-                      {p.display_price ? ` · ${p.display_price}` : ''}
-                      {p.address_neighborhood ? ` · ${p.address_neighborhood}` : ''}
-                      {p.address_city ? `, ${p.address_city}` : ''}
-                    </p>
+                  <div className="flex min-w-0 flex-1 cursor-pointer items-center gap-3" onClick={() => toggle(p.id)}>
+                    <FotoDaLinha url={p.cover_photo_url} titulo={p.title} />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium truncate">
+                        <span className="text-muted-foreground font-mono text-xs mr-2">{p.code}</span>
+                        {p.title}
+                      </p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {TRANSACTION_TYPE_LABELS[p.transaction_type] ?? p.transaction_type}
+                        {p.display_price ? ` · ${p.display_price}` : ''}
+                        {p.address_neighborhood ? ` · ${p.address_neighborhood}` : ''}
+                        {p.address_city ? `, ${p.address_city}` : ''}
+                      </p>
+                      <p className="text-xs text-muted-foreground truncate">{detalhesDaLinha(p)}</p>
+                    </div>
                   </div>
                   {comSeletor && isSelected && (
                     <div className="w-36 sm:w-44 shrink-0">
@@ -422,4 +468,33 @@ export default function PortalPropertiesSelector({
       {dialogoDeConfirmacao}
     </div>
   );
+}
+
+// Foto grande na linha: no portal a equipe reconhece o imóvel pela foto, não pelo
+// código (como no "Visualizar carga" da Kenlo). Guarda a URL que falhou, não um
+// booleano, porque a linha é reaproveitada quando a lista filtra.
+function FotoDaLinha({ url, titulo }: { url?: string | null; titulo: string }) {
+  const [falhou, setFalhou] = useState<string | null>(null);
+  const valida = url && url !== falhou ? url : null;
+  return (
+    <div className="relative h-16 w-24 shrink-0 overflow-hidden rounded-md bg-muted">
+      {valida ? (
+        <img src={valida} alt={titulo} loading="lazy" onError={() => setFalhou(valida)}
+          className="absolute inset-0 h-full w-full object-cover" />
+      ) : (
+        <Building2 className="absolute left-1/2 top-1/2 h-5 w-5 -translate-x-1/2 -translate-y-1/2 text-muted-foreground/50" aria-hidden="true" />
+      )}
+    </div>
+  );
+}
+
+function detalhesDaLinha(p: Property): string {
+  const partes: string[] = [];
+  if (p.bedrooms) partes.push(plural(p.bedrooms, 'dorm', 'dorms'));
+  if (p.parking_spaces) partes.push(plural(p.parking_spaces, 'vaga', 'vagas'));
+  if (p.photos_count) partes.push(plural(p.photos_count, 'foto', 'fotos'));
+  const corretor = p.captor?.name ?? p.responsible?.name;
+  if (corretor) partes.push(`${p.captor?.name ? 'Captador' : 'Responsável'}: ${corretor}`);
+  if (p.updated_at) partes.push(`${vencido(p) ? 'Desatualizado · ' : ''}Atualizado ${dataCurta(p.updated_at)}`);
+  return partes.join(' · ');
 }

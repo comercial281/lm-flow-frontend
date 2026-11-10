@@ -25,11 +25,12 @@ describe('PainelDeFiltros', () => {
     expect(aoMudar).toHaveBeenCalledWith({ ...FILTROS_VAZIOS.development, comBook: true });
   });
 
-  it('Revenda mostra finalidade e captador, sem fase', () => {
+  it('Revenda mostra finalidade e corretor, sem fase', () => {
     render(<PainelDeFiltros kind="resale" filtros={FILTROS_VAZIOS.resale} facetas={facetas}
       aoMudar={vi.fn()} aoLimpar={vi.fn()} aoRecolher={vi.fn()} />);
     expect(screen.getByText('Finalidade')).toBeInTheDocument();
-    expect(screen.getByLabelText('Captador')).toBeInTheDocument();
+    expect(screen.getByLabelText('Corretor')).toBeInTheDocument();
+    expect(screen.getByText('Captador ou responsável do imóvel.')).toBeInTheDocument();
     expect(screen.queryByText('Fase da obra')).toBeNull();
   });
 });

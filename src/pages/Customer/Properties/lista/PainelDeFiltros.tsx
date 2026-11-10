@@ -17,6 +17,7 @@ export interface Facetas {
   neighborhoods: string[];
   property_types: string[];
   captors: { id: string; name: string }[];
+  brokers?: { id: string; name: string }[];
 }
 
 interface Props {
@@ -205,10 +206,11 @@ export default function PainelDeFiltros({ kind, filtros, facetas, aoMudar, aoLim
           <Pilulas rotuloId={`${id}-dorms`} opcoes={QUARTOS} marcadas={f.quartos} aoTrocar={quartos => set({ quartos })} /></div>
         <div className="flex flex-col gap-1.5"><span id={`${id}-vagas`} className={rotulo}>Vagas</span>
           <Pilulas rotuloId={`${id}-vagas`} opcoes={QUARTOS} marcadas={f.vagas} aoTrocar={vagas => set({ vagas })} /></div>
-        <label className="flex flex-col gap-1.5"><span className={rotulo}>Captador</span>
-          <Seletor aria-label="Captador" className={campo} value={f.captador} onChange={e => set({ captador: e.target.value })}>
-            <option value="">Todos</option>{(facetas?.captors ?? []).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </Seletor></label>
+        <label className="flex flex-col gap-1.5"><span className={rotulo}>Corretor</span>
+          <Seletor aria-label="Corretor" className={campo} value={f.corretor} onChange={e => set({ corretor: e.target.value })}>
+            <option value="">Todos</option>{(facetas?.brokers ?? facetas?.captors ?? []).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </Seletor>
+          <span className="text-[11px] text-muted-foreground">Captador ou responsável do imóvel.</span></label>
       </>
     );
   })();

@@ -480,7 +480,7 @@ export default function Properties() {
   if (recusado) return <NoAccessState />;
 
   const filtrosDaTela = kind
-    ? filtrosAtivos(kind, filtros[kind], t => PROPERTY_TYPE_LABELS[t] ?? t, id => facetas?.captors.find(c => c.id === id)?.name ?? 'captador')
+    ? filtrosAtivos(kind, filtros[kind], t => PROPERTY_TYPE_LABELS[t] ?? t, id => (facetas?.brokers ?? facetas?.captors)?.find(c => c.id === id)?.name ?? 'corretor')
     : [];
   const temFiltro = filtrosDaTela.length > 0 || buscaAtiva.trim() !== '';
   const totalDaAba = kind && contagem ? contagem[kind] : null;
