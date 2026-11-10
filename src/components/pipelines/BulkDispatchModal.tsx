@@ -46,13 +46,16 @@ import type { TemplateVariable } from '@/types/messageFunnels';
 import { type SequenceDraftItem, newSequenceItem } from '@/components/messaging/MessageSequenceEditor';
 
 import { PhoneInput } from '@/components/shared/PhoneInput';
-import { CaixaDaJanela, CampoDaJanela, GrupoDaJanela } from '@/components/base/janela';
+import { CaixaDaJanela, CampoDaJanela, GradeDaJanela, GrupoDaJanela } from '@/components/base/janela';
+import Aviso from '@/components/base/Aviso';
+import BotoesDeEscolha from '@/components/base/BotoesDeEscolha';
 import { useCan } from '@/hooks/useCan';
 import PassoQuemRecebe from './disparo/PassoQuemRecebe';
 import PainelDeLeads from './disparo/PainelDeLeads';
 import PassoMensagem, { type ModoDoEnvio } from './disparo/PassoMensagem';
 import PassoRitmo from './disparo/PassoRitmo';
 import { previsaoDoPacote, rotuloDoPacote } from './disparo/ritmo';
+import { LIMITE_MAX, LIMITE_MIN, LIMITE_PADRAO, avisoForaDoHorario, comecaEm, hojeSp, lerInicio, lerLimite } from './disparo/agenda';
 import { frasesDaRevisao, linhaDeFora, motivoSemDisparo, numeroProprio } from './disparo/automacao';
 
 interface BulkDispatchModalProps {
@@ -66,6 +69,12 @@ interface BulkDispatchModalProps {
 }
 
 type Step = 'audience' | 'messages' | 'cadence' | 'review' | 'creating' | 'done';
+type QuandoComecar = 'agora' | 'agendar';
+
+// Agendar sugere amanhã às 9h (hora de São Paulo): dá pra trocar, e já nasce válido.
+function amanhaSp(): string {
+  return hojeSp(new Date(Date.now() + 24 * 60 * 60 * 1000));
+}
 
 // contact/sticker/property_book entram só pra satisfazer o tipo (SequenceDraftItem
 // cobre os tipos do editor compartilhado) — nunca aparecem aqui de verdade: o
@@ -193,6 +202,15 @@ export default function BulkDispatchModal({
   const [pace, setPace] = useState<BroadcastPace>('normal');
   // Teto de gasto (R$) do disparo oficial.
   const [maxSpend, setMaxSpend] = useState('');
+  // Limite por dia (10/11/2026): desligado por padrão; ligado, "Até 20 por dia".
+  const [limiteLigado, setLimiteLigado] = useState(false);
+  const [limiteTexto, setLimiteTexto] = useState(String(LIMITE_PADRAO));
+  // Quando começar: agora (padrão) ou numa data e hora de São Paulo.
+  const [quandoComecar, setQuandoComecar] = useState<QuandoComecar>('agora');
+  const [dataInicio, setDataInicio] = useState('');
+  const [horaInicio, setHoraInicio] = useState('09:00');
+  // O que foi criado era agendado: muda a confirmação.
+  const [criouAgendado, setCriouAgendado] = useState<string | null>(null);
 
   // Teste
   const [testPhone, setTestPhone] = useState('');
@@ -228,6 +246,12 @@ export default function BulkDispatchModal({
     setPostLabel('');
     setPace('normal');
     setMaxSpend('');
+    setLimiteLigado(false);
+    setLimiteTexto(String(LIMITE_PADRAO));
+    setQuandoComecar('agora');
+    setDataInicio('');
+    setHoraInicio('09:00');
+    setCriouAgendado(null);
     setTestPhone('');
     setCreatedId('');
   }, []);
@@ -359,6 +383,26 @@ export default function BulkDispatchModal({
     [senderOptions, senderInboxId],
   );
 
+  // Limite por dia: inteiro de 1 a 1000; inválido trava o Próximo do passo Ritmo.
+  const limite = limiteLigado ? lerLimite(limiteTexto) : null;
+  const erroDoLimite = limiteLigado && limite === null ? `O limite por dia vai de ${LIMITE_MIN} a ${LIMITE_MAX}.` : '';
+  // Início agendado: data no passado ou a mais de 1 ano trava o botão final.
+  const agendado = quandoComecar === 'agendar';
+  const inicio = agendado ? lerInicio(dataInicio, horaInicio) : null;
+  const inicioValido = inicio && !inicio.erro ? inicio : null;
+  const inicioOk = !agendado || !!inicioValido;
+  const foraDoHorario = inicioValido?.data ? avisoForaDoHorario(inicioValido.data) : null;
+
+  // A prévia leva o início e o limite válidos: o servidor devolve o `eta` com os dois.
+  const inicioIso = inicioValido?.iso ?? null;
+  const agendaDaPrevia = useMemo(
+    () =>
+      limite !== null || inicioIso
+        ? { ...(inicioIso && { starts_at: inicioIso }), ...(limite !== null && { daily_limit: limite }) }
+        : undefined,
+    [limite, inicioIso],
+  );
+
   // Conta quem recebe com o número de saída: lead de outro corretor depende dele.
   const audiencePayload = useMemo(
     () => ({
@@ -405,9 +449,11 @@ export default function BulkDispatchModal({
     if (painelDeLeads && audienceMode === 'manual') return;
     let alive = true;
     setCountingAudience(true);
-    (flowOpts
-      ? broadcastsService.audiencePreviewFull(pipelineId, audiencePayload, previewInboxId, flowOpts)
-      : broadcastsService.audiencePreviewFull(pipelineId, audiencePayload, previewInboxId))
+    (agendaDaPrevia
+      ? broadcastsService.audiencePreviewFull(pipelineId, audiencePayload, previewInboxId, flowOpts, agendaDaPrevia)
+      : flowOpts
+        ? broadcastsService.audiencePreviewFull(pipelineId, audiencePayload, previewInboxId, flowOpts)
+        : broadcastsService.audiencePreviewFull(pipelineId, audiencePayload, previewInboxId))
       .then(r => { if (alive) setAudiencePreview(r); })
       .catch(() => {
         if (!alive) return;
@@ -418,7 +464,7 @@ export default function BulkDispatchModal({
     return () => {
       alive = false;
     };
-  }, [open, pipelineId, audienceMode, stageId, selectedLabels, contactIds, audiencePayload, previewInboxId, esperandoNumeros, flowOpts, painelDeLeads, modoCorretor, senderOptions]);
+  }, [open, pipelineId, audienceMode, stageId, selectedLabels, contactIds, audiencePayload, previewInboxId, esperandoNumeros, flowOpts, agendaDaPrevia, painelDeLeads, modoCorretor, senderOptions]);
   // O número que a automação impõe (null = vale o número do passo 1).
   const forcedInbox = automacaoId ? audiencePreview?.forced_inbox ?? null : null;
   // O número imposto também tem que estar conectado (mesma regra do passo 1).
@@ -476,6 +522,7 @@ export default function BulkDispatchModal({
         ? !!automacao && !motivoSemDisparo(automacao) && !forcedDesconectado && (recipientCount ?? 0) > 0
         : itemsValid;
 
+  // A previsão vem pronta do servidor, já com o início agendado e o limite.
   const eta = audiencePreview?.eta ?? {};
   const previsao = previsaoDoPacote(eta, pace);
 
@@ -536,10 +583,15 @@ export default function BulkDispatchModal({
             : undefined,
         pace,
         max_spend: teto,
+        // Sem campo = como sempre (começa agora, sem limite): servidor antigo segue igual.
+        ...(limite !== null && { daily_limit: limite }),
+        ...(agendado && inicioValido?.iso && { starts_at: inicioValido.iso }),
       });
       setCreatedId(campanha?.id ?? '');
+      const agendadoPara = agendado && inicioValido?.iso ? comecaEm(inicioValido.iso) : null;
+      setCriouAgendado(agendadoPara);
       setStep('done');
-      toast.success('Disparo criado. As mensagens saem em lotes.');
+      toast.success(agendadoPara ? `Disparo agendado. Começa em ${agendadoPara}.` : 'Disparo criado. As mensagens saem em lotes.');
     } catch (err: any) {
       const msg = err?.response?.data?.errors?.[0] || err?.message || 'Não consegui criar o disparo';
       toast.error(msg);
@@ -698,7 +750,17 @@ export default function BulkDispatchModal({
         )}
         {/* STEP 3 — Ritmo */}
         {step === 'cadence' && (
-          <PassoRitmo pace={pace} aoEscolher={setPace} quantidade={recipientCount ?? 0} eta={eta} />
+          <PassoRitmo
+            pace={pace}
+            aoEscolher={setPace}
+            quantidade={recipientCount ?? 0}
+            previsao={previsao}
+            limiteLigado={limiteLigado}
+            aoLigarLimite={setLimiteLigado}
+            limite={limiteTexto}
+            aoMudarLimite={setLimiteTexto}
+            erroDoLimite={erroDoLimite}
+          />
         )}
 
         {/* STEP 4 — Revisão */}
@@ -715,6 +777,50 @@ export default function BulkDispatchModal({
                   className="h-9"
                 />
               </CampoDaJanela>
+            </GrupoDaJanela>
+
+            {/* Quando começar (10/11/2026): agora ou numa data e hora. A escolha mora no passo. */}
+            <GrupoDaJanela titulo="Quando começar">
+              <BotoesDeEscolha<QuandoComecar>
+                rotulo="Quando começar"
+                semNome
+                valor={quandoComecar}
+                aoEscolher={v => {
+                  setQuandoComecar(v);
+                  if (v === 'agendar' && !dataInicio) setDataInicio(amanhaSp());
+                }}
+                opcoes={[
+                  { valor: 'agora', rotulo: 'Agora' },
+                  { valor: 'agendar', rotulo: 'Agendar' },
+                ]}
+              />
+              {agendado && (
+                <>
+                  <GradeDaJanela>
+                    <CampoDaJanela rotulo="Data" htmlFor="disparo-inicio-data" colunas={2} erro={inicio?.erro || undefined}>
+                      <Input
+                        id="disparo-inicio-data"
+                        type="date"
+                        min={hojeSp()}
+                        value={dataInicio}
+                        onChange={e => setDataInicio(e.target.value)}
+                        aria-invalid={inicio?.erro ? true : undefined}
+                        className="h-9"
+                      />
+                    </CampoDaJanela>
+                    <CampoDaJanela rotulo="Hora" htmlFor="disparo-inicio-hora" colunas={2} ajuda="Hora de São Paulo.">
+                      <Input
+                        id="disparo-inicio-hora"
+                        type="time"
+                        value={horaInicio}
+                        onChange={e => setHoraInicio(e.target.value)}
+                        className="h-9"
+                      />
+                    </CampoDaJanela>
+                  </GradeDaJanela>
+                  {foraDoHorario && <Aviso tom="atencao" compacto>{foraDoHorario}</Aviso>}
+                </>
+              )}
             </GrupoDaJanela>
 
             {/* Após o envio (opcional): mover pra etapa + criar/aplicar tag */}
@@ -798,6 +904,16 @@ export default function BulkDispatchModal({
                     <strong className="text-right">{teto !== undefined ? dinheiro(teto) : 'Sem teto'}</strong>
                   </div>
                 )}
+                <div className="flex justify-between gap-3 py-2">
+                  <span className="text-muted-foreground">Início</span>
+                  <strong className="text-right">
+                    {agendado ? (inicioValido?.iso ? comecaEm(inicioValido.iso) : 'Escolha a data e a hora') : 'Agora'}
+                  </strong>
+                </div>
+                <div className="flex justify-between gap-3 py-2">
+                  <span className="text-muted-foreground">Limite por dia</span>
+                  <strong className="text-right">{limite !== null ? `Até ${limite} por dia` : 'Sem limite'}</strong>
+                </div>
                 <div className="flex justify-between gap-3 py-2">
                   <span className="text-muted-foreground">Ritmo</span>
                   <strong className="text-right">
@@ -894,9 +1010,11 @@ export default function BulkDispatchModal({
         {step === 'done' && (
           <div className="space-y-3 py-8 text-center">
             <CheckCircle2 className="h-10 w-10 text-green-500 mx-auto" />
-            <div className="text-lg font-semibold">Disparo criado</div>
+            <div className="text-lg font-semibold">{criouAgendado ? 'Disparo agendado' : 'Disparo criado'}</div>
             <div className="text-sm text-muted-foreground">
-              As mensagens saem em lotes respeitando o ritmo escolhido. Acompanhe o andamento na página do disparo.
+              {criouAgendado
+                ? `Começa em ${criouAgendado}, no ritmo escolhido. Pra mudar, cancele e crie outro.`
+                : 'As mensagens saem em lotes respeitando o ritmo escolhido. Acompanhe o andamento na página do disparo.'}
             </div>
           </div>
         )}
@@ -927,7 +1045,7 @@ export default function BulkDispatchModal({
               <Button variant="outline" onClick={() => setStep('messages')}>
                 <ChevronLeft className="w-4 h-4 mr-1" /> Voltar
               </Button>
-              <Button onClick={() => setStep('review')}>
+              <Button onClick={() => setStep('review')} disabled={!!erroDoLimite}>
                 Próximo
               </Button>
             </>
@@ -937,8 +1055,8 @@ export default function BulkDispatchModal({
               <Button variant="outline" onClick={() => setStep('cadence')}>
                 <ChevronLeft className="w-4 h-4 mr-1" /> Voltar
               </Button>
-              <Button onClick={handleCreate} disabled={creating || !step1Ok || !step2Ok}>
-                <Megaphone className="w-4 h-4 mr-1" /> Disparar pra {recipientCount}
+              <Button onClick={handleCreate} disabled={creating || !step1Ok || !step2Ok || !!erroDoLimite || !inicioOk}>
+                <Megaphone className="w-4 h-4 mr-1" /> {agendado ? 'Agendar disparo' : `Disparar pra ${recipientCount}`}
               </Button>
             </>
           )}

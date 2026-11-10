@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
@@ -132,5 +132,55 @@ describe('Disparos', () => {
     s.listAll.mockResolvedValueOnce(resposta([c1]));
     await userEvent.click(screen.getByRole('button', { name: 'Tentar de novo' }));
     expect(await screen.findByText('Oferta junho')).toBeInTheDocument();
+  });
+  describe('agendar o início e limite por dia (10/11/2026)', () => {
+    afterEach(() => vi.useRealTimers());
+    // Terça 20/10/2026, 10h em São Paulo.
+    const agora = () => { vi.useFakeTimers({ toFake: ['Date'] }); vi.setSystemTime(new Date('2026-10-20T13:00:00Z')); };
+
+    it('agendado aparece como "Agendado · começa 24/12 às 09:00", com a previsão do servidor', async () => {
+      agora();
+      s.listAll.mockResolvedValue(resposta([{
+        ...c1, scheduled: true, starts_at: '2026-12-24T09:00:00-03:00', next_run_at: '2026-12-24T12:00:00Z',
+        estimated_finish_at: '2026-12-24T15:00:00Z', sent_count: 0, failed_count: 0, skipped_count: 0,
+      }]));
+      tela();
+      expect(await screen.findByText('Agendado')).toBeInTheDocument();
+      expect(screen.getByText('começa 24/12 às 09:00')).toBeInTheDocument();
+      expect(screen.queryByText('Enviando')).toBeNull();
+      expect(screen.getByText('termina em 24/12 por volta das 12h')).toBeInTheDocument();
+    });
+
+    it('com limite mostra "Até 20 por dia" junto do ritmo', async () => {
+      s.listAll.mockResolvedValue(resposta([{ ...c1, daily_limit: 20, sent_today: 5 }]));
+      tela();
+      expect(await screen.findByText('Até 20 por dia')).toBeInTheDocument();
+      expect(screen.getByText('Normal')).toBeInTheDocument();
+    });
+
+    it('limite de hoje batido diz quando volta, pelo next_run_at', async () => {
+      agora();
+      s.listAll.mockResolvedValue(resposta([{
+        ...c1, daily_limit: 20, sent_today: 20, daily_limit_reached: true, next_run_at: '2026-10-21T11:00:00Z',
+      }]));
+      tela();
+      expect(await screen.findByText('Limite de hoje atingido · volta amanhã às 8h')).toBeInTheDocument();
+      expect(screen.getByText('Enviando')).toBeInTheDocument();
+    });
+
+    it('sem os campos novos (servidor antigo), tudo como antes', async () => {
+      s.listAll.mockResolvedValue(resposta([c1]));
+      tela();
+      expect(await screen.findByText('Enviando')).toBeInTheDocument();
+      expect(screen.queryByText(/por dia/)).toBeNull();
+      expect(screen.queryByText('Agendado')).toBeNull();
+      expect(screen.queryByText(/Limite de hoje/)).toBeNull();
+    });
+
+    it('estado desconhecido não quebra a lista', async () => {
+      s.listAll.mockResolvedValue(resposta([{ ...c1, status: 'scheduled' }]));
+      tela();
+      expect(await screen.findByText('Oferta junho')).toBeInTheDocument();
+    });
   });
 });

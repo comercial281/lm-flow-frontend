@@ -261,4 +261,51 @@ describe('DisparoDetalhe', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Tentar de novo' }));
     expect(await screen.findByText('Maria')).toBeInTheDocument();
   });
+  describe('agendar o início e limite por dia (10/11/2026)', () => {
+    it('agendado: selo "Agendado", quando começa, e Pausar e Cancelar funcionam', async () => {
+      vi.useFakeTimers({ toFake: ['Date'] });
+      vi.setSystemTime(new Date('2026-10-20T13:00:00Z'));
+      s.get.mockResolvedValue({
+        ...campanha, scheduled: true, starts_at: '2026-12-24T09:00:00-03:00', daily_limit: 20, sent_today: 0,
+        estimated_finish_at: '2026-12-24T15:00:00Z',
+      });
+      s.pause.mockResolvedValue({ ...campanha, status: 'paused', scheduled: true, starts_at: '2026-12-24T09:00:00-03:00' });
+      tela();
+      expect(await screen.findByText('Agendado')).toBeInTheDocument();
+      expect(screen.getByText('Começa 24/12 às 09:00')).toBeInTheDocument();
+      expect(screen.getByText('Até 20 por dia')).toBeInTheDocument();
+      expect(screen.getByText('Termina em 24/12 por volta das 12h')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Cancelar' })).toBeInTheDocument();
+      await userEvent.click(screen.getByRole('button', { name: 'Pausar' }));
+      await waitFor(() => expect(s.pause).toHaveBeenCalledWith('c1'));
+      expect(await screen.findByText('Pausado')).toBeInTheDocument();
+      expect(screen.getByText('Começa 24/12 às 09:00')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Retomar' })).toBeInTheDocument();
+    });
+
+    it('rodando com limite: "Até 20 por dia · hoje 12/20"', async () => {
+      s.get.mockResolvedValue({ ...campanha, daily_limit: 20, sent_today: 12 });
+      tela();
+      expect(await screen.findByText('Até 20 por dia · hoje 12/20')).toBeInTheDocument();
+    });
+
+    it('limite de hoje batido diz quando volta', async () => {
+      vi.useFakeTimers({ toFake: ['Date'] });
+      vi.setSystemTime(new Date('2026-10-23T22:00:00Z')); // sexta 19h em SP
+      s.get.mockResolvedValue({
+        ...campanha, daily_limit: 20, sent_today: 20, daily_limit_reached: true, next_run_at: '2026-10-24T12:00:00Z',
+      });
+      tela();
+      expect(await screen.findByText('Limite de hoje atingido · volta amanhã às 9h')).toBeInTheDocument();
+      expect(screen.getByText('Até 20 por dia · hoje 20/20')).toBeInTheDocument();
+    });
+
+    it('sem os campos novos (servidor antigo), cabeçalho como antes', async () => {
+      tela();
+      expect(await screen.findByText('Pacote Normal')).toBeInTheDocument();
+      expect(screen.queryByText(/por dia/)).toBeNull();
+      expect(screen.queryByText(/Começa/)).toBeNull();
+      expect(screen.getByText('Enviando')).toBeInTheDocument();
+    });
+  });
 });

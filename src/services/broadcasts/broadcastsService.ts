@@ -68,6 +68,17 @@ export interface BroadcastCampaign {
   pending_count?: number;
   estimated_finish_at?: string | null;
   created_by_name?: string | null;
+  // Agendar o início e limite por dia (10/11/2026). Backend antigo não manda: sem campo = como antes.
+  /** Início escolhido (ISO com fuso); null = começou na criação. */
+  starts_at?: string | null;
+  /** Até quantos por dia; null = sem limite. */
+  daily_limit?: number | null;
+  /** Quantos já saíram hoje (conta pro limite). */
+  sent_today?: number;
+  /** Ainda não começou: espera o `starts_at`. */
+  scheduled?: boolean;
+  /** Bateu o limite de hoje: volta no `next_run_at`. */
+  daily_limit_reached?: boolean;
 }
 
 /**
@@ -191,6 +202,10 @@ export interface CreateBroadcastPayload {
   include_passed?: boolean;
   /** Automação: reiniciar quem está no meio dela (por padrão fica de fora). */
   restart_running?: boolean;
+  /** Início agendado, ISO com fuso (2026-12-24T09:00:00-03:00). Ausente = agora. */
+  starts_at?: string;
+  /** Até quantos por dia (1 a 1000). Ausente = sem limite. */
+  daily_limit?: number;
 }
 
 /** Estimativa de custo de um disparo oficial (Fase 4). */
@@ -240,6 +255,12 @@ export interface FlowSummary {
   passed_error: number;
   running: number;
   first_time: number;
+}
+
+/** Início agendado e limite por dia na prévia: o servidor devolve o `eta` já com os dois. */
+export interface AudiencePreviewAgenda {
+  starts_at?: string;
+  daily_limit?: number;
 }
 
 /** Opções extras do preview quando o disparo roda uma automação. */
@@ -313,6 +334,7 @@ class BroadcastsService {
     audience: BroadcastAudience,
     inboxId?: string,
     flowOpts?: AudiencePreviewFlowOptions,
+    agenda?: AudiencePreviewAgenda,
   ): Promise<AudiencePreviewFull> {
     const res = await api.post(`${this.base}/audience_preview`, {
       pipeline_id: pipelineId,
@@ -321,6 +343,8 @@ class BroadcastsService {
       ...(flowOpts?.flow_automation_id !== undefined && { flow_automation_id: flowOpts.flow_automation_id }),
       ...(flowOpts?.include_passed !== undefined && { include_passed: flowOpts.include_passed }),
       ...(flowOpts?.restart_running !== undefined && { restart_running: flowOpts.restart_running }),
+      ...(agenda?.starts_at && { starts_at: agenda.starts_at }),
+      ...(agenda?.daily_limit !== undefined && { daily_limit: agenda.daily_limit }),
     });
     const d = extractData<Partial<AudiencePreviewFull>>(res);
     return {

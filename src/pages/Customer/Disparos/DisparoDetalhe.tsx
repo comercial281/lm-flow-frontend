@@ -32,7 +32,7 @@ import { serverMessage } from '@/features/flowAutomations/guide';
 import { useCan } from '@/hooks/useCan';
 import { useConfirmacao } from '@/hooks/useConfirmacao';
 import { capitalizar, dataHora, diaEHoraEmSaoPaulo, telefone, terminaPorVoltaDe } from '@/lib/formato';
-import { STATUS_META, PACOTE, rotuloDoModo } from './rotulos';
+import { PACOTE, estadoDoDisparo, linhaDoAgendamento, linhaDoLimiteBatido, rotuloDoLimite, rotuloDoModo } from './rotulos';
 
 const ATUALIZA_A_CADA_MS = 20_000;
 
@@ -265,7 +265,15 @@ export default function DisparoDetalhe() {
   const funil = campanha.mode === 'flow' || automacao;
   const oficial = campanha.mode === 'template' || campanha.channel_kind === 'whatsapp_cloud';
   const rotuloEnviadas = automacao ? 'Entraram na automação' : funil ? 'Entraram no funil' : 'Enviadas';
-  const estado = STATUS_META[campanha.status] ?? STATUS_META.completed;
+  const estado = estadoDoDisparo(campanha);
+  const agendamento = linhaDoAgendamento(campanha);
+  const limiteDoDia = rotuloDoLimite(campanha);
+  // "hoje 12/20" só enquanto o disparo ainda anda (rodando ou pausado) e já começou.
+  const hojeNoLimite =
+    limiteDoDia && !agendamento && (campanha.status === 'running' || campanha.status === 'paused')
+      ? ` · hoje ${campanha.sent_today ?? 0}/${campanha.daily_limit}`
+      : '';
+  const limiteBatido = linhaDoLimiteBatido(campanha);
   const conta = (k: string) => contagem[k] ?? 0;
 
   const numeros = [
@@ -331,7 +339,10 @@ export default function DisparoDetalhe() {
           {remetente && <span>Sai por {remetente}</span>}
           <span>{rotuloDoModo(campanha)}</span>
           {campanha.pace && PACOTE[campanha.pace] && <span>Pacote {PACOTE[campanha.pace]}</span>}
+          {limiteDoDia && <span>{limiteDoDia}{hojeNoLimite}</span>}
+          {agendamento && <span>{capitalizar(agendamento)}</span>}
           <span>{criado}</span>
+          {limiteBatido && <span>{limiteBatido}</span>}
           {rodando && campanha.estimated_finish_at && (
             <span>{capitalizar(terminaPorVoltaDe(campanha.estimated_finish_at))}</span>
           )}
