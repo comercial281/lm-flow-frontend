@@ -76,6 +76,13 @@ describe('ImovelPublicPage', () => {
     expect(screen.getByText('Condomínio Cyrela Arti Perdizes')).toBeInTheDocument();
   });
 
+  it('nome do condomínio que já começa com "Edifício" não ganha o prefixo de novo', async () => {
+    await abrirFicha({}, { condominium_name: 'Edifício Itália' });
+
+    expect(screen.getByText('Edifício Itália')).toBeInTheDocument();
+    expect(screen.queryByText(/Condomínio Edifício/)).toBeNull();
+  });
+
   it('sem condomínio, a ficha não mostra linha de condomínio', async () => {
     await abrirFicha({});
 

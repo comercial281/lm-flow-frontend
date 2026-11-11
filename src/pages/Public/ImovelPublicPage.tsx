@@ -27,6 +27,7 @@ import { usePortalTracking } from './usePortalTracking';
 import { useIconeDaAba } from '@/features/siteBuilder/public/useIconeDaAba';
 import { FINALIDADE_PARAM, finalidadeDoImovel, finalidadeInicial, type Finalidade } from './finalidade';
 import { consultaDoMapa } from './mapaDoImovelPublico';
+import { linhaDoCondominio } from './nomeDoCondominio';
 import { rotuloTipo } from '@/features/siteBuilder/public/tiposDeImovel';
 import { resolverFicha } from '@/features/siteBuilder/public/fichaConfig';
 import {
@@ -465,7 +466,7 @@ export default function ImovelPublicPage() {
             <h1 className="mt-1.5 font-[var(--display)] text-3xl font-semibold leading-tight sm:text-4xl">{prop.title}</h1>
             <SelosDoImovel selos={selos} />
             {regionText && <p className="mt-2 flex items-center gap-1.5 text-[15px] text-neutral-500"><Ic d={I.pin} s={16} /> {regionText}</p>}
-            {prop.condominium_name && <p className="mt-1 text-[15px] text-neutral-500">Condomínio {prop.condominium_name}</p>}
+            {prop.condominium_name && <p className="mt-1 text-[15px] text-neutral-500">{linhaDoCondominio(prop.condominium_name)}</p>}
 
             {specs.length > 0 && (
               <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
