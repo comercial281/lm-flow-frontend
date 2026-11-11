@@ -218,6 +218,20 @@ export interface SaveFlowPayload {
   initial_node_id: string | null;
 }
 
+export interface AiMessagePreview {
+  text: string;
+  source: 'ia' | 'reserva';
+  reason_text: string | null;
+  answers: Record<string, string>;
+}
+
+export interface AiMessageLead {
+  id: string;
+  name: string;
+  form_name: string | null;
+  created_at: string;
+}
+
 export interface TestRunResult {
   instance_id: string;
   state: string;

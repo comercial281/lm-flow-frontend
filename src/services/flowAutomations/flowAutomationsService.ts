@@ -1,5 +1,7 @@
 import api from '@/services/core/api';
 import type {
+  AiMessageLead,
+  AiMessagePreview,
   FlowAutomation,
   FlowAutomationFolder,
   FlowAutomationKind,
@@ -15,6 +17,7 @@ import {
   type FormSource,
 } from '@/features/flowAutomations/formAnswer';
 import { appliedFlowFrom, templatesFrom, type FlowTemplate } from '@/features/flowAutomations/templates';
+import { serverErrorOf } from '@/services/core/httpError';
 
 // Envelope do backend: { success: true, data: T } — mesmo padrão de
 // messageFunnelsService (feedback_response_envelope_pattern).
@@ -189,6 +192,27 @@ class FlowAutomationsService {
     const url = (res.data as { data?: { file_url?: string } } | null)?.data?.file_url;
     if (!url) throw new Error('O servidor não devolveu o arquivo');
     return url;
+  }
+
+  /**
+   * Testar do bloco Mensagem com IA: gera uma prévia com a IA, sem enviar nada.
+   * Erro (429 de limite, 422, 502) sai com a frase que o servidor mandou.
+   */
+  async aiMessagePreview(id: string, body: { instruction: string; fallback_text: string; contact_id: string; send_from_inbox_id?: string | null }): Promise<AiMessagePreview> {
+    try {
+      return unwrap<AiMessagePreview>(await api.post(`${this.baseUrl}/${id}/ai_message_preview`, body));
+    } catch (e) {
+      const mensagem = serverErrorOf(e);
+      if (mensagem) throw new Error(mensagem);
+      throw e;
+    }
+  }
+
+  /** Leads do Testar (escolher quem recebe a prévia), opcionalmente de um formulário. */
+  async aiMessageLeads(id: string, formId?: string): Promise<AiMessageLead[]> {
+    return unwrap<AiMessageLead[]>(await api.get(`${this.baseUrl}/${id}/ai_message_leads`, {
+      params: formId ? { form_id: formId } : {},
+    }));
   }
 
   async testRun(id: string, params: { contact_id?: string; test_contact?: Record<string, string>; forced?: Record<string, 'yes' | 'no'> } = {}): Promise<TestRunResult> {
