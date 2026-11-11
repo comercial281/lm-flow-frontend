@@ -13,9 +13,10 @@ import {
 import Aviso from '@/components/base/Aviso';
 import { usePendingOffers } from '@/contexts/PendingOffersContext';
 import OfferAiBriefing from './OfferAiBriefing';
-import { deadlineLabel, SEM_PRAZO } from './offerDeadline';
+import { deadlineLabel, hasDeadline, SEM_PRAZO } from './offerDeadline';
 import { reasonOf } from './offerReason';
 import { destinoDoLead, gravarVistas, lerVistas, ofertasNaoVistas } from './offerPopupState';
+import { useOfferRinger } from './useOfferRinger';
 
 // Pop-up de aceite da roleta: abre sobre QUALQUER tela do app quando chega uma
 // oferta que o corretor ainda não viu.
@@ -42,25 +43,6 @@ import { destinoDoLead, gravarVistas, lerVistas, ofertasNaoVistas } from './offe
 
 // Quanto tempo Aceitar/Recusar ficam travados ao abrir ou trocar de oferta.
 export const TRAVA_MS = 600;
-
-// As ofertas que já tocaram som nesta aba. Fica fora do componente porque o
-// MainLayout existe em dois grupos de rota: cruzar de um para o outro remonta o
-// pop-up, e um ref voltaria vazio — o mesmo "ding" tocaria de novo.
-const tocadas = new Set<string>();
-
-const SOM_DA_OFERTA = '/audio/notifications/ding.mp3';
-
-function tocarSom() {
-  try {
-    const audio = new Audio(SOM_DA_OFERTA);
-    audio.volume = 0.6;
-    // Sem permissão de som do navegador (ninguém clicou na página ainda), o
-    // play é recusado: o pop-up abre calado.
-    void audio.play().catch(() => {});
-  } catch {
-    /* navegador sem áudio: abre calado */
-  }
-}
 
 function textoDoPrazo(prazo: string): string {
   if (prazo === SEM_PRAZO) return 'Sem prazo de aceite';
@@ -91,12 +73,12 @@ export default function OfferPopup() {
     return () => clearTimeout(t);
   }, [idAtual]);
 
-  // Som curto uma vez por oferta, quando ela aparece no pop-up.
-  useEffect(() => {
-    if (!aberto || !atual || tocadas.has(atual.id)) return;
-    tocadas.add(atual.id);
-    tocarSom();
-  }, [aberto, atual]);
+  // Som do Plantão (11/11/2026): o Chegou toca na hora e repete de 10 em 10 s
+  // até aceitar, recusar, "Ver depois" (a oferta vira vista e o pop-up fecha) ou
+  // o prazo vencer. Era um "ding" só, fácil de não ouvir.
+  const prazoMs = atual && hasDeadline(atual) ? new Date(atual.deadline as string).getTime() : null;
+  const prazoValido = prazoMs == null || Number.isNaN(prazoMs) ? null : prazoMs;
+  useOfferRinger(aberto && (prazoValido == null || prazoValido > Date.now()), prazoValido);
 
   function verDepois() {
     if (!atual) return;

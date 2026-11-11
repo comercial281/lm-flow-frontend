@@ -20,6 +20,11 @@ import { offerFor, type OfferLookup } from '@/components/roleta/pendingOffersMat
 // qualquer tela. Em troca, SÓ com a aba visível: aba escondida não checa, e na
 // volta para a aba checa na hora. Tempo real de verdade fica para quando a
 // conexão ao vivo for levada para o app inteiro (não reabrir antes disso).
+//
+// EXCEÇÃO (Som do Plantão, 11/11/2026): com oferta na lista, a aba escondida
+// TAMBÉM checa. A oferta toca de 10 em 10 s, e é esta checagem que descobre que
+// o corretor aceitou pelo celular e faz o PC parar de tocar. Sem oferta, volta
+// a regra de cima (quase todo ciclo é vazio).
 const REFRESH_MS = 15_000;
 
 // Vazia de novo = a MESMA lista: sem isso cada checagem de 15 s redesenharia
@@ -56,6 +61,8 @@ export function PendingOffersProvider({ children }: { children: ReactNode }) {
   const [offers, setOffers] = useState<BrokerAssignmentDetail[]>([]);
   const [loaded, setLoaded] = useState(false);
   const alive = useRef(true);
+  const temOferta = useRef(false);
+  temOferta.current = offers.length > 0;
 
   const refresh = useCallback(async () => {
     try {
@@ -76,7 +83,7 @@ export function PendingOffersProvider({ children }: { children: ReactNode }) {
     refresh();
     const visivel = () => document.visibilityState === 'visible';
     const id = setInterval(() => {
-      if (visivel()) void refresh();
+      if (visivel() || temOferta.current) void refresh();
     }, REFRESH_MS);
     const aoVoltar = () => {
       if (visivel()) void refresh();

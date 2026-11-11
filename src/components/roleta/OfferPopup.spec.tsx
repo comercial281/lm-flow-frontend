@@ -22,6 +22,12 @@ vi.mock('@/contexts/PendingOffersContext', () => ({
   usePendingOffers: () => ({ offers: ofertas, accept, refuse, refresh }),
 }));
 
+const playLeadAlert = vi.fn(async () => true);
+vi.mock('@/lib/plantaoSound/leadAlert', () => ({
+  playLeadAlert: () => playLeadAlert(),
+  isRingLeader: () => true,
+}));
+
 import OfferPopup, { TRAVA_MS } from './OfferPopup';
 import { CHAVE_OFERTAS_VISTAS } from './offerPopupState';
 
@@ -68,6 +74,7 @@ describe('OfferPopup', () => {
     accept.mockReset();
     refuse.mockReset();
     play.mockClear();
+    playLeadAlert.mockClear();
     toastErro.mockReset();
     refresh.mockClear();
     vi.useFakeTimers();
@@ -94,7 +101,65 @@ describe('OfferPopup', () => {
     expect(screen.getByText('Formulário do anúncio')).toBeInTheDocument();
     // deadline nulo NÃO é "prazo esgotado".
     expect(screen.getByText('Sem prazo de aceite')).toBeInTheDocument();
-    expect(play).toHaveBeenCalledTimes(1);
+    expect(playLeadAlert).toHaveBeenCalledTimes(1);
+  });
+
+  // Som do Plantão (11/11/2026): o Chegou repete de 10 em 10 s até o corretor
+  // responder. "Ver depois" para; prazo vencido para; a tela de aceite não toca.
+  describe('som da oferta', () => {
+    it('repete a cada 10 s enquanto a oferta está aberta, mesmo sem prazo', () => {
+      ofertas = [oferta('a')];
+      montar();
+      expect(playLeadAlert).toHaveBeenCalledTimes(1);
+      act(() => { vi.advanceTimersByTime(20_000); });
+      expect(playLeadAlert).toHaveBeenCalledTimes(3);
+    });
+
+    it('"Ver depois" para o som', () => {
+      ofertas = [oferta('a')];
+      montar();
+      fireEvent.click(screen.getByRole('button', { name: 'Ver depois' }));
+      act(() => { vi.advanceTimersByTime(30_000); });
+      expect(playLeadAlert).toHaveBeenCalledTimes(1);
+    });
+
+    it('oferta com o prazo já vencido não toca', () => {
+      const passou = new Date(Date.now() - 60_000).toISOString();
+      ofertas = [oferta('a', { deadline: passou, minutes_remaining: 0, timeout_minutes: 5, no_deadline: false })];
+      montar();
+      act(() => { vi.advanceTimersByTime(20_000); });
+      expect(playLeadAlert).not.toHaveBeenCalled();
+    });
+
+    it('para quando o prazo vence com o pop-up aberto', () => {
+      const daqui15s = new Date(Date.now() + 15_000).toISOString();
+      ofertas = [oferta('a', { deadline: daqui15s, minutes_remaining: 1, timeout_minutes: 5, no_deadline: false })];
+      montar();
+      act(() => { vi.advanceTimersByTime(10_000); });
+      expect(playLeadAlert).toHaveBeenCalledTimes(2);
+      act(() => { vi.advanceTimersByTime(30_000); });
+      expect(playLeadAlert).toHaveBeenCalledTimes(2);
+    });
+
+    it('na tela de aceite não toca', () => {
+      ofertas = [oferta('a')];
+      montar('/roleta/aceite/a');
+      act(() => { vi.advanceTimersByTime(20_000); });
+      expect(playLeadAlert).not.toHaveBeenCalled();
+    });
+
+    it('a oferta sai da lista (aceita em outro aparelho): para', () => {
+      ofertas = [oferta('a')];
+      const { rerender } = montar();
+      ofertas = [];
+      rerender(
+        <MemoryRouter initialEntries={['/pipelines']}>
+          <OfferPopup />
+        </MemoryRouter>,
+      );
+      act(() => { vi.advanceTimersByTime(30_000); });
+      expect(playLeadAlert).toHaveBeenCalledTimes(1);
+    });
   });
 
   it('mostra a contagem do prazo quando a roleta tem prazo', () => {
