@@ -10951,3 +10951,36 @@ Pedido da Mais que Imóveis (administrativo), comparando com a Kenlo: achar "os 
 - **Integrações → Portais → aba Imóveis:** cada linha ganhou a **foto** (a equipe reconhece o imóvel pela foto, como no "Visualizar carga" da Kenlo) e uma terceira linha com dorms, vagas, fotos, captador (ou responsável) e "Atualizado dd/mm" ("Desatualizado" quando venceu o prazo). Filtros novos, todos na tela (a lista já vem inteira): **Corretor**, **Tipo de anúncio** (só onde há o que escolher: vários tipos, ou a estrela do modo antigo) e **Desatualizados**. A referência continua na busca.
 - **Com filtro ligado, "Selecionar todos" e "Desmarcar todos" viram "Selecionar os da lista" e "Desmarcar os da lista"** e agem só no que aparece. Filtrar o Leonardo e desmarcar não pode tirar do portal os imóveis do resto da equipe.
 - Fora, de propósito: a faixa de preço ±10% do filtro da Kenlo (ninguém pediu). Da busca geral da Kenlo ficaram pra depois: referência em lote, Condomínio/Edifício, Suítes e Área.
+
+## Integrações: Sites e landing pages (desde 2026-11-11)
+
+Primeira landing externa na fila: a "LP Kovacs – Formulário site" (Pinot & Cheer), feita fora do LM Flow. A página manda o lead por POST pro endereço dela e o lead cai no funil como qualquer outro. Esta seção é a tela (PR do frontend). O servidor é o PR `comercial281/lm-flow#595`, e **entra primeiro**.
+
+**O que aparece na tela**
+- **Integrações → card "Sites e landing pages"** (mesma permissão dos Portais: quem vê Portais vê este card).
+- **Lista** em tabela, com as colunas Página, Para onde vai, Quem assume, Leads em 30 dias, Último envio e Ativa (a `Chave` da casa). O selo do Último envio é verde com a data do último envio, âmbar "Esperando o 1º envio" e vermelho em "N recusados" (últimas 24 h) ou "Erro no último envio". A linha inteira abre a janela. De 1280 px pra baixo cada linha vira cartão.
+- **Janela da página.** Esquerda: Nome da página, Para onde vai (funil e etapa), Quem assume (roleta ou corretor fixo), O que esta página vende (imóvel/empreendimento) e Etiquetas. Direita: o endereço com **Copiar** e **Trocar endereço** (pede confirmação, o endereço antigo para de valer), o que a página precisa mandar (nome, telefone e o resto), **Últimos envios** (hora, nome, telefone e desfecho; envio com falha sai em vermelho com o motivo) e **Mandar lead de teste**. **Excluir página** fica no rodapé, com confirmação "Excluir mesmo".
+- **Card do lead, aba Origem:** mostra o link da página de onde veio e, quando veio do botão flutuante, "pelo botão flutuante".
+- **Gatilho da automação "Quais páginas?"** filtra por página. Nenhuma marcada = qualquer página ou landing.
+- **Roleta:** o tipo de origem Site passa a incluir as páginas externas.
+
+**Decisões do dono (Tony), não reabrir sem ele**
+- Funciona como a entrada de lead de hoje: funil, etapa e roleta ou corretor fixo.
+- Mora em Integrações.
+- Uma entrada por página, cada uma com o endereço próprio.
+- Automação existente dispara como em portal e Meta, filtrada por "Quais páginas?".
+- IA Vendedora pro lead de site é entrega posterior.
+- O lead de teste conta no Painel até o card dele ser apagado.
+- Permissão: a mesma dos Portais.
+
+**Armadilhas**
+- A lista carrega sozinha só funis, usuários e roletas. **Não usa `useAutomationResources`** (puxaria o mundo pra abrir uma lista).
+- "Não encontrado" só aparece quando a lista **já carregou**. Antes disso é carregando.
+- Ao salvar, mandar **os dois**: `roleta_config_id` e `default_assignee_id` (um deles `null`). O servidor valida o estado final; nada escolhido = Ninguém.
+- A prop `aoAbrir` da lista **desliga a janela embutida**. Passar só em teste.
+- O glossário força **"Excluir"** no lugar de "Apagar".
+- "Nenhuma marcada = qualquer página ou landing." está nas exceções do `conferir-padrao` (a trava de caixinhas reclamaria da frase). Mover o arquivo pede mover a exceção.
+
+**Voltar versão:** voltar só a tela é seguro (o card some, as páginas e os endereços seguem recebendo lead). Voltar o backend com esta tela no ar quebra a lista e a janela: voltar a tela junto.
+
+**Testes:** `SitesELandingPages.spec.tsx`, `JanelaDaPagina.spec.tsx`, `CardOriginTab.sites.spec.tsx`, `gatilhoPaginaDeSite.spec.tsx`, `OrigensBloco.spec.tsx`, `cartoes.spec.ts`, `menuItems.spec.ts`.
