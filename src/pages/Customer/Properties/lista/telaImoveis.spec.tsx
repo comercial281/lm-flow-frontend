@@ -463,6 +463,17 @@ describe('Tela de Imóveis', () => {
       expect(screen.queryByRole('button', { name: /Gerar descrições com IA/ })).not.toBeInTheDocument();
     });
 
+    it('o subtítulo do topo fala do condomínio, não da contagem de imóveis', async () => {
+      svc.contarPorTipo.mockResolvedValue({ development: 12, resale: 38 });
+      abrir('/properties?aba=condominios');
+      expect(await screen.findByText('Cadastre o prédio uma vez e plugue os apartamentos nele.')).toBeInTheDocument();
+      expect(screen.queryByText(/· 50 cadastros/)).toBeNull();
+      expect(screen.queryByText(/Empreendimentos e imóveis de revenda da imobiliária/)).toBeNull();
+      await userEvent.click(screen.getByRole('tab', { name: 'Revenda (38)' }));
+      expect(await screen.findByText(/· 50 cadastros/)).toBeInTheDocument();
+      expect(screen.queryByText('Cadastre o prédio uma vez e plugue os apartamentos nele.')).toBeNull();
+    });
+
     it('ignora ?visao=mapa na aba', async () => {
       svc.contarPorTipo.mockResolvedValue({ development: 12, resale: 38 });
       abrir('/properties?aba=condominios&visao=mapa');

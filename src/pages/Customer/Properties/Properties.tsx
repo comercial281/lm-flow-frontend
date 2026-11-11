@@ -65,7 +65,7 @@ import {
 import PainelDeFiltros, { type Facetas } from './lista/PainelDeFiltros';
 import EtiquetasDosFiltros from './lista/EtiquetasDosFiltros';
 import ListaDeCondominios from './lista/ListaDeCondominios';
-import { ABA_CONDOMINIOS, estaNaAbaDeCondominios } from '@/features/properties/condominios/regrasDoCondominio';
+import { ABA_CONDOMINIOS, SUBTITULO_DOS_CONDOMINIOS, estaNaAbaDeCondominios } from '@/features/properties/condominios/regrasDoCondominio';
 import { condominiumsService } from '@/services/condominiums/condominiumsService';
 import { podeMarcarEmDia, vencido } from '@/features/properties/emDia';
 import LinhaRevenda from './lista/LinhaRevenda';
@@ -596,9 +596,12 @@ export default function Properties() {
         <BaseHeader
           title="Meus imóveis"
           // Com link ou "Só os meus" a soma seria do recorte, não da imobiliária. No Mapa ela é a inteira.
-          subtitle={contagem && (visao === 'mapa' || !recorteAtivo)
-            ? `${subtituloDosImoveis(contagem)} · ${plural(totalDeCadastros(contagem), 'cadastro', 'cadastros')}`
-            : subtituloDosImoveis(contagem)}
+          // Na aba Condomínios a contagem de imóveis não diz nada: o topo fala do condomínio.
+          subtitle={emCondominios
+            ? SUBTITULO_DOS_CONDOMINIOS
+            : contagem && (visao === 'mapa' || !recorteAtivo)
+              ? `${subtituloDosImoveis(contagem)} · ${plural(totalDeCadastros(contagem), 'cadastro', 'cadastros')}`
+              : subtituloDosImoveis(contagem)}
           aDireita={kind && !emCondominios && canAiBatch && !ehCelular && (
             <Button variant="outline" onClick={() => { setBatchSelected(new Set()); setBatchResults(null); setBatchModalOpen(true); }}>
               <Wand2 className="h-4 w-4 mr-2" />

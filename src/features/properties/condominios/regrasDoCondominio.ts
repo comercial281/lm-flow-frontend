@@ -7,6 +7,9 @@ import { nomeNoFormulario } from '../cadastro/travasDoSite';
 
 export const ABA_CONDOMINIOS = 'condominios';
 
+/** Subtítulo do topo de Imóveis na aba Condomínios (no lugar da contagem de imóveis). */
+export const SUBTITULO_DOS_CONDOMINIOS = 'Cadastre o prédio uma vez e plugue os apartamentos nele.';
+
 export const estaNaAbaDeCondominios = (sp: URLSearchParams): boolean => sp.get('aba') === ABA_CONDOMINIOS;
 
 export const CONDOMINIO_VAZIO: CondominiumFormData = {
