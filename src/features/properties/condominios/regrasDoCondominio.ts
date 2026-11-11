@@ -211,6 +211,19 @@ export function destinoDepoisDeCriar(voltar: string | null, id: string): string 
   return `${volta}${volta.includes('?') ? '&' : '?'}condominio=${encodeURIComponent(id)}`;
 }
 
+/**
+ * "+ Cadastrar condomínio" no cadastro da unidade: abre o cadastro do condomínio com
+ * a volta para esta unidade. Um `condominio=` que ainda esteja no endereço sai, senão
+ * a volta ficaria com dois (o velho e o novo).
+ */
+export function linkParaCadastrarCondominio(pathname: string, search: string): string {
+  const sp = new URLSearchParams(search);
+  sp.delete('condominio');
+  const resto = sp.toString();
+  const voltar = resto ? `${pathname}?${resto}` : pathname;
+  return `/properties/condominios/novo?voltar=${encodeURIComponent(voltar)}`;
+}
+
 /** O `?voltar=` só vale como caminho interno de Imóveis; qualquer outro vira nulo. */
 export function caminhoDeVolta(voltar: string | null): string | null {
   const interno = !!voltar && voltar.startsWith('/properties/') && !voltar.includes('//') && !voltar.includes('\\');

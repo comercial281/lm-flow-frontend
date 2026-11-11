@@ -5,6 +5,7 @@ import {
   ABA_CONDOMINIOS, CONDOMINIO_VAZIO, camposHerdados, difereDoCondominio, errosDoCondominio,
   estaNaAbaDeCondominios, formularioDoCondominio, podePlugar, textoDasFotosDoCondominio,
   textoDasUnidades, valoresHerdados, condominioNaTela, payloadDoCondominio, destinoDepoisDeCriar, caminhoDeVolta, pedidoDeExclusao, secaoDoErro,
+  linkParaCadastrarCondominio,
 } from './regrasDoCondominio';
 
 const condo = {
@@ -151,5 +152,19 @@ describe('excluir', () => {
     });
     expect(pedidoDeExclusao('Sol', 1).descricao).toBe('A unidade plugada fica com o endereço e as comodidades de hoje e passa a ser editada nela.');
     expect(pedidoDeExclusao('Sol', 0).descricao).toBe('Não dá para desfazer.');
+  });
+});
+
+describe('+ Cadastrar condomínio na unidade', () => {
+  it('volta para a unidade, sem um condominio= que já estava no endereço', () => {
+    const link = linkParaCadastrarCondominio('/properties/new', '?tipo=revenda&condominio=c1&proprietario=o1');
+    expect(link.startsWith('/properties/condominios/novo?voltar=')).toBe(true);
+    expect(new URLSearchParams(link.split('?')[1]).get('voltar')).toBe('/properties/new?tipo=revenda&proprietario=o1');
+  });
+  it('sem nada no endereço, volta só para o caminho', () => {
+    const link = linkParaCadastrarCondominio('/properties/p1/editar', '?condominio=c1');
+    expect(new URLSearchParams(link.split('?')[1]).get('voltar')).toBe('/properties/p1/editar');
+    // Volta e criação se encaixam: o cadastro do condomínio acrescenta o novo.
+    expect(destinoDepoisDeCriar('/properties/p1/editar', 'c9')).toBe('/properties/p1/editar?condominio=c9');
   });
 });
