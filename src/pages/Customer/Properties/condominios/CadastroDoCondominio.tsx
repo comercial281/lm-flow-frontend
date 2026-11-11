@@ -80,6 +80,8 @@ function Cadastro() {
   useNomeDaAba(condominio?.name ?? null);
   const [erroDeCarga, setErroDeCarga] = useState(false);
   const [recusado, setRecusado] = useState(false);
+  // 404: o condomínio não existe (excluído ou endereço errado). Não é recusa por cargo.
+  const [naoEncontrado, setNaoEncontrado] = useState(false);
   const [form, setForm] = useState<CondominioNaTela>(() => condominioNaTela(CONDOMINIO_VAZIO));
   const [inicial, setInicial] = useState(form);
   const setF = (patch: Mudanca) => setForm(prev => ({ ...prev, ...(typeof patch === 'function' ? patch(prev) : patch) }));
@@ -104,11 +106,14 @@ function Cadastro() {
   const carregar = useCallback(() => {
     if (!editandoId) return;
     setErroDeCarga(false);
+    setNaoEncontrado(false);
     condominiumsService.get(editandoId)
       .then(c => { setCondominio(c); const f = condominioNaTela(formularioDoCondominio(c)); setForm(f); setInicial(f); })
       .catch(e => {
         const status = (e as { response?: { status?: number } } | null)?.response?.status;
-        if (isForbiddenError(e) || status === 404) setRecusado(true); else setErroDeCarga(true);
+        if (isForbiddenError(e)) setRecusado(true);
+        else if (status === 404) setNaoEncontrado(true);
+        else setErroDeCarga(true);
       });
   }, [editandoId]);
   useEffect(() => { carregar(); }, [carregar]);
@@ -165,7 +170,8 @@ function Cadastro() {
       await condominiumsService.update(condominio.id, payload);
       toast.success('Condomínio atualizado');
       setInicial(form);
-      navigate(ABA_DA_LISTA);
+      // Aberto de "Editar no condomínio" (?voltar=): volta pra unidade, como o Cancelar.
+      navigate(caminhoDeVolta(sp.get('voltar')) ?? ABA_DA_LISTA);
     } catch (e) {
       toast.error(mensagemDoErro(e, 'Erro ao salvar o condomínio'));
     } finally {
@@ -302,7 +308,13 @@ function Cadastro() {
           }
         >
           {!pronto ? (
-            erroDeCarga ? <EmptyState tipo="erro" aoTentarDeNovo={carregar} /> : (
+            naoEncontrado ? (
+              <EmptyState
+                title="Condomínio não encontrado"
+                description="Ele pode ter sido excluído."
+                action={{ label: 'Voltar para Condomínios', onClick: () => navigate(ABA_DA_LISTA) }}
+              />
+            ) : erroDeCarga ? <EmptyState tipo="erro" aoTentarDeNovo={carregar} /> : (
               <div role="status" className="flex flex-col gap-3">
                 <span className="sr-only">Carregando o condomínio</span>
                 {[0, 1, 2].map(i => <div key={i} className="h-32 animate-pulse rounded-xl border bg-muted/40" />)}

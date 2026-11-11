@@ -102,8 +102,11 @@ describe('Condomínio na unidade', () => {
     // Aviso com o link pro condomínio, e o mesmo nome nas comodidades.
     const aviso = screen.getAllByText(/Vem do condomínio Cyrela Arti Perdizes\./);
     expect(aviso.length).toBe(2);
-    expect(screen.getByRole('link', { name: 'Editar no condomínio' })).toHaveAttribute('href', '/properties/condominios/c1');
-    expect(screen.getByText('Mais 8 fotos do condomínio entram depois destas no site e nos portais.')).toBeInTheDocument();
+    // Editar no condomínio leva a volta para esta unidade (o salvar do condomínio volta pra cá).
+    expect(screen.getByRole('link', { name: 'Editar no condomínio' }))
+      .toHaveAttribute('href', `/properties/condominios/c1?voltar=${encodeURIComponent('/properties/new?tipo=revenda')}`);
+    // Sem mídia escolhida ainda: a primeira foto do condomínio vira a capa.
+    expect(screen.getByText('As 8 fotos do condomínio entram no site e nos portais; a primeira vira a capa.')).toBeInTheDocument();
   });
 
   it('com rua diferente já digitada, pergunta antes; cancelar não pluga', async () => {
@@ -157,7 +160,7 @@ describe('Condomínio na unidade', () => {
     // Condomínio de casas: o alfinete é da unidade, livre e sem texto de "vem do site".
     expect(screen.getByTestId('mapa')).toHaveAttribute('data-travado', 'false');
     expect(screen.queryByText('O ponto no mapa vem do site da imobiliária.')).not.toBeInTheDocument();
-    expect(screen.getByText('Mais 1 foto do condomínio entra depois destas no site e nos portais.')).toBeInTheDocument();
+    expect(screen.getByText('A foto do condomínio entra no site e nos portais e vira a capa.')).toBeInTheDocument();
   });
 
   it('empreendimento não tem o campo', async () => {
@@ -197,6 +200,8 @@ describe('Condomínio na unidade', () => {
     expect(screen.getByLabelText('Rua')).toBeDisabled();
     expect(screen.getByLabelText('Bairro')).toBeEnabled();
     expect(cond.get).not.toHaveBeenCalled();
+    expect(screen.getByRole('link', { name: 'Editar no condomínio' }))
+      .toHaveAttribute('href', `/properties/condominios/c1?voltar=${encodeURIComponent('/properties/e1/editar')}`);
     await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
     await waitFor(() => expect(svc.update).toHaveBeenCalled());
     // Chave ausente = o servidor mantém: não desfaz um plugar feito em outro lugar.

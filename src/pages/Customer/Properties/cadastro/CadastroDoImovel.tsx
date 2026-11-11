@@ -6,7 +6,7 @@
 // Quais seções cada tipo tem mora em `secoesDoCadastro`; a validação e o que
 // vai para o servidor, em `formularioDoCadastro`.
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { propertiesService, type Property, type PropertyFormData } from '@/services/properties/propertiesService';
 import { propertyPhotosService } from '@/services/propertyPhotos/propertyPhotosService';
@@ -34,6 +34,7 @@ import {
   difereDoCondominio,
   podePlugar,
   valoresHerdados,
+  linkParaEditarCondominio,
 } from '@/features/properties/condominios/regrasDoCondominio';
 import { cleanTypologies } from '@/features/properties/typologies';
 import { secoesDoCadastro, tipoDaUrl, type SecaoId } from '@/features/properties/cadastro/secoesDoCadastro';
@@ -229,6 +230,10 @@ function Cadastro() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- roda ao ficar pronto ou chegar um id novo
   }, [pronto, condominioDaUrl]);
 
+  // "Editar no condomínio" leva a volta para esta unidade: salvar ou cancelar lá volta pra cá.
+  const location = useLocation();
+  const linkDoCondominio = condominio ? linkParaEditarCondominio(condominio.id, location.pathname, location.search) : '';
+
   // Sair pra editar o condomínio: com alteração não salva, pergunta antes.
   const sairPara = async (destino: string) => {
     if (temAlteracao && !(await confirmar({ ...PEDIDO_SAIR_SEM_SALVAR, rotuloDaAcao: 'Sair' }))) return;
@@ -390,8 +395,8 @@ function Cadastro() {
                         <>
                           {' '}
                           <Link
-                            to={`/properties/condominios/${condominio.id}`}
-                            onClick={e => { if (temAlteracao) { e.preventDefault(); void sairPara(`/properties/condominios/${condominio.id}`); } }}
+                            to={linkDoCondominio}
+                            onClick={e => { if (temAlteracao) { e.preventDefault(); void sairPara(linkDoCondominio); } }}
                             className="text-primary underline"
                           >
                             Editar no condomínio

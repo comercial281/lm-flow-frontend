@@ -122,8 +122,17 @@ export function textoDasUnidades(n: number): string {
   return n === 1 ? 'Mudanças aqui valem para a unidade plugada.' : `Mudanças aqui valem para as ${n} unidades plugadas.`;
 }
 
-export function textoDasFotosDoCondominio(n: number): string {
+/**
+ * Faixa de fotos do condomínio em Fotos e vídeos da unidade. Sem foto própria (no
+ * cadastro novo: sem mídia escolhida), a primeira do condomínio vira a capa.
+ */
+export function textoDasFotosDoCondominio(n: number, temFotoPropria: boolean): string {
   if (n <= 0) return '';
+  if (!temFotoPropria) {
+    return n === 1
+      ? 'A foto do condomínio entra no site e nos portais e vira a capa.'
+      : `As ${n} fotos do condomínio entram no site e nos portais; a primeira vira a capa.`;
+  }
   return n === 1
     ? 'Mais 1 foto do condomínio entra depois destas no site e nos portais.'
     : `Mais ${n} fotos do condomínio entram depois destas no site e nos portais.`;
@@ -217,11 +226,19 @@ export function destinoDepoisDeCriar(voltar: string | null, id: string): string 
  * a volta ficaria com dois (o velho e o novo).
  */
 export function linkParaCadastrarCondominio(pathname: string, search: string): string {
+  return `/properties/condominios/novo?voltar=${encodeURIComponent(voltaParaAUnidade(pathname, search))}`;
+}
+
+/** "Editar no condomínio" na unidade: abre o condomínio com a volta para esta unidade. */
+export function linkParaEditarCondominio(id: string, pathname: string, search: string): string {
+  return `/properties/condominios/${encodeURIComponent(id)}?voltar=${encodeURIComponent(voltaParaAUnidade(pathname, search))}`;
+}
+
+function voltaParaAUnidade(pathname: string, search: string): string {
   const sp = new URLSearchParams(search);
   sp.delete('condominio');
   const resto = sp.toString();
-  const voltar = resto ? `${pathname}?${resto}` : pathname;
-  return `/properties/condominios/novo?voltar=${encodeURIComponent(voltar)}`;
+  return resto ? `${pathname}?${resto}` : pathname;
 }
 
 /** O `?voltar=` só vale como caminho interno de Imóveis; qualquer outro vira nulo. */

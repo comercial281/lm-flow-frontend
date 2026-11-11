@@ -5,7 +5,7 @@ import {
   ABA_CONDOMINIOS, CONDOMINIO_VAZIO, camposHerdados, difereDoCondominio, errosDoCondominio,
   estaNaAbaDeCondominios, formularioDoCondominio, podePlugar, textoDasFotosDoCondominio,
   textoDasUnidades, valoresHerdados, condominioNaTela, payloadDoCondominio, destinoDepoisDeCriar, caminhoDeVolta, pedidoDeExclusao, secaoDoErro,
-  linkParaCadastrarCondominio,
+  linkParaCadastrarCondominio, linkParaEditarCondominio,
 } from './regrasDoCondominio';
 
 const condo = {
@@ -93,9 +93,14 @@ describe('textos', () => {
     expect(textoDasUnidades(3)).toBe('Mudanças aqui valem para as 3 unidades plugadas.');
   });
   it('fotos', () => {
-    expect(textoDasFotosDoCondominio(0)).toBe('');
-    expect(textoDasFotosDoCondominio(1)).toBe('Mais 1 foto do condomínio entra depois destas no site e nos portais.');
-    expect(textoDasFotosDoCondominio(4)).toBe('Mais 4 fotos do condomínio entram depois destas no site e nos portais.');
+    expect(textoDasFotosDoCondominio(0, true)).toBe('');
+    expect(textoDasFotosDoCondominio(0, false)).toBe('');
+    expect(textoDasFotosDoCondominio(1, true)).toBe('Mais 1 foto do condomínio entra depois destas no site e nos portais.');
+    expect(textoDasFotosDoCondominio(4, true)).toBe('Mais 4 fotos do condomínio entram depois destas no site e nos portais.');
+  });
+  it('fotos, sem foto própria: a primeira do condomínio vira a capa', () => {
+    expect(textoDasFotosDoCondominio(1, false)).toBe('A foto do condomínio entra no site e nos portais e vira a capa.');
+    expect(textoDasFotosDoCondominio(4, false)).toBe('As 4 fotos do condomínio entram no site e nos portais; a primeira vira a capa.');
   });
 });
 
@@ -166,5 +171,18 @@ describe('+ Cadastrar condomínio na unidade', () => {
     expect(new URLSearchParams(link.split('?')[1]).get('voltar')).toBe('/properties/p1/editar');
     // Volta e criação se encaixam: o cadastro do condomínio acrescenta o novo.
     expect(destinoDepoisDeCriar('/properties/p1/editar', 'c9')).toBe('/properties/p1/editar?condominio=c9');
+  });
+});
+
+describe('Editar no condomínio, na unidade', () => {
+  it('abre o condomínio com a volta para a unidade, sem condominio= no endereço', () => {
+    const link = linkParaEditarCondominio('c1', '/properties/p1/editar', '?condominio=c1&passo=divulgar');
+    expect(link.startsWith('/properties/condominios/c1?voltar=')).toBe(true);
+    const voltar = new URLSearchParams(link.split('?')[1]).get('voltar');
+    expect(voltar).toBe('/properties/p1/editar?passo=divulgar');
+    expect(caminhoDeVolta(voltar)).toBe(voltar);
+  });
+  it('id com caractere especial vai codificado', () => {
+    expect(linkParaEditarCondominio('a/b', '/properties/p1/editar', '').startsWith('/properties/condominios/a%2Fb?voltar=')).toBe(true);
   });
 });

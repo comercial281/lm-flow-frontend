@@ -26,6 +26,7 @@ const permitido = vi.hoisted(() => ({ fn: (_r: string, _a: string) => true }));
 vi.mock('@/hooks/useCan', () => ({ useCan: () => (r: string, a: string) => permitido.fn(r, a) }));
 
 import CadastroDoCondominio from './CadastroDoCondominio';
+import { NO_ACCESS_MESSAGE } from '@/components/permissions/noAccessCopy';
 
 function Onde() { const l = useLocation(); return <p data-testid="onde">{l.pathname}{l.search}</p>; }
 function abrir(url: string) {
@@ -165,6 +166,41 @@ describe('CadastroDoCondominio', () => {
     await userEvent.type(nome, 'Edifício Sol Nascente');
     await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
     await waitFor(() => expect(svc.update).toHaveBeenCalledWith('c1', expect.objectContaining({ name: 'Edifício Sol Nascente', address_cep: '11000-000' })));
+  });
+
+  it('salvar a edição sem voltar volta pra aba de Condomínios', async () => {
+    svc.get.mockResolvedValue(condominio());
+    svc.update.mockResolvedValue(condominio());
+    abrir('/properties/condominios/c1');
+    await screen.findByLabelText('Nome do condomínio');
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+    await waitFor(() => expect(screen.getByTestId('onde')).toHaveTextContent('/properties?aba=condominios'));
+  });
+
+  it('salvar a edição aberta de "Editar no condomínio" volta pra unidade', async () => {
+    svc.get.mockResolvedValue(condominio());
+    svc.update.mockResolvedValue(condominio());
+    abrir('/properties/condominios/c1?voltar=%2Fproperties%2Fp1%2Feditar');
+    await screen.findByLabelText('Nome do condomínio');
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+    await waitFor(() => expect(svc.update).toHaveBeenCalled());
+    await waitFor(() => expect(screen.getByTestId('onde')).toHaveTextContent(/^\/properties\/p1\/editar$/));
+  });
+
+  it('condomínio que não existe (404): "Condomínio não encontrado" com a volta, não "sem acesso"', async () => {
+    svc.get.mockRejectedValue({ response: { status: 404 } });
+    abrir('/properties/condominios/zz');
+    expect(await screen.findByText('Condomínio não encontrado')).toBeInTheDocument();
+    expect(screen.queryByText(NO_ACCESS_MESSAGE)).toBeNull();
+    await userEvent.click(screen.getByRole('button', { name: 'Voltar para Condomínios' }));
+    expect(screen.getByTestId('onde')).toHaveTextContent('/properties?aba=condominios');
+  });
+
+  it('recusa por cargo (403) continua "sem acesso"', async () => {
+    svc.get.mockRejectedValue({ response: { status: 403 } });
+    abrir('/properties/condominios/c1');
+    expect(await screen.findByText(NO_ACCESS_MESSAGE)).toBeInTheDocument();
+    expect(screen.queryByText('Condomínio não encontrado')).toBeNull();
   });
 
   it('excluir pede confirmação com os textos e volta pra aba', async () => {
