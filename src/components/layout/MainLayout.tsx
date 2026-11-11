@@ -36,6 +36,7 @@ import { injectDashboardAppsIntoMenu } from '@/utils/injectDashboardApps';
 import InstallAppPrompt from './components/InstallAppPrompt';
 import PendingOffersBanner from '@/components/roleta/PendingOffersBanner';
 import OfferPopup from '@/components/roleta/OfferPopup';
+import SoundBlockedBar from './SoundBlockedBar';
 import { PendingOffersProvider } from '@/contexts/PendingOffersContext';
 import { WelcomeModal } from '@/components/WelcomeModal';
 import ConnectNumberPrompt from '@/components/numbers/ConnectNumberPrompt';
@@ -191,6 +192,9 @@ export default function MainLayout({ children }: MainLayoutProps) {
       {/* Pop-up de aceite: abre sobre qualquer tela com oferta nova (não abre na
           tela de aceite; "Ver depois" deixa a oferta só na faixa acima) */}
       <OfferPopup />
+
+      {/* Som do plantão bloqueado pelo navegador: só depois de uma recusa real */}
+      <SoundBlockedBar />
 
       {/* Header */}
       <Header

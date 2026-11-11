@@ -4,6 +4,8 @@ import notificationsService, { Notification } from '@/services/notifications/Not
 import { useAuth } from '@/contexts/AuthContext';
 import { useGlobalWebSocket } from '@/hooks/useGlobalWebSocket';
 import { playNotificationSound, getAudioSettings } from '@/utils/audioNotificationUtils';
+import { isRingLeader, playLeadAlert } from '@/lib/plantaoSound/leadAlert';
+import { soundForNotification } from '@/lib/plantaoSound/soundForNotification';
 
 interface NotificationsMeta {
   count: number;
@@ -456,6 +458,19 @@ const NotificationsProviderInner: React.FC<NotificationsProviderProps> = ({ chil
 
       if (isConversationOpen) {
         return; // Não tocar som nem mostrar notificação se a conversa está aberta
+      }
+
+      // Som do Plantão (11/11/2026): "Lead virou seu" toca o Chegou, obrigatório
+      // (só a aba líder, para duas abas não tocarem juntas); a oferta da roleta
+      // fica com o pop-up, que repete. O resto segue a chave "Alertas de áudio".
+      const som = soundForNotification({
+        notification_type: notificationData.notification_type,
+        meta: notificationData.meta,
+      });
+      if (som === 'skip') return;
+      if (som === 'lead') {
+        if (isRingLeader()) void playLeadAlert();
+        return;
       }
 
       // Play notification sound if enabled

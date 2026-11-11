@@ -11062,3 +11062,60 @@ Decisões (não reabrir sem o dono pedir):
 - **O servidor confere, não só a tela.** Só a MUDANÇA de responsável ou da chave é conferida: o formulário inteiro chega em todo salvar, e editar a foto de um imóvel de colega não pode levar recusa.
 - **"Gestor" é quem lê a equipe (`users.read`)**, o mesmo sinal que já decidia se a lista de pessoas aparece no seletor.
 - **Vale pros leads de portal e de landing do imóvel** (é a mesma chave do imóvel). Formulário do Meta e anúncio de WhatsApp seguem a ficha da campanha, que a Leal Mídia configura: ficou de fora de propósito.
+
+## Som do Plantão: o Chegou (desde 2026-11-11)
+
+Pedido do dono do produto: *"precisamos de algum som pra avisar os caras que o
+lead chegou pra eles… não precisa ser opcional, se o cara tá no PC e ligou o
+modo plantão no desktop, ele precisa receber"*. Antes havia um "ding" baixo, uma
+vez só, no pop-up da roleta, e o som do Perfil nascia desligado e só tocava com
+a aba escondida. O som foi escolhido pelo dono entre quatro opções (prévia em
+claude.ai/artifact/6trfNS5hPj7LFxeETcjmoi): **Chegou**, duas notas subindo em
+timbre de sino, tocado duas vezes (`public/audio/notifications/chegou.mp3`,
+gerado por `scripts/sons/render-chegou.mjs`).
+
+O que acontece:
+
+- **Oferta da roleta:** o Chegou toca na hora e repete de 10 em 10 s até
+  Aceitar, Recusar, *Ver depois*, o prazo vencer ou a oferta sair da lista
+  (aceita pelo celular). Plantão ligado: toca mesmo com o LM Flow em segundo
+  plano. Plantão desligado: toca quando o pop-up abre (checagem de 15 s com a
+  aba visível).
+- **"Lead virou seu":** toca o Chegou uma vez.
+- **Sem aba do LM Flow aberta:** o aviso do sistema sai com o som do Windows/Mac
+  e fica parado na tela até o clique.
+- **Celular:** som do próprio celular (site não troca esse som), push com
+  prioridade alta, e um segundo push *"Seu lead expira em 1 min"* (backend).
+- **Pop-up da oferta com o plantão desligado:** linha *"Com o Modo Plantão
+  ligado, você ouve o próximo lead mesmo com o LM Flow em segundo plano."* +
+  botão *Ligar*.
+- **Faixa *"O navegador bloqueou o som do plantão. Clique aqui pra ligar."*:**
+  só depois que o navegador recusou o som de verdade.
+
+Decisões do dono (não reabrir sem ele pedir):
+
+- **O som é obrigatório.** Não passa pela chave *Alertas de áudio* do Perfil,
+  que continua valendo só para o som de mensagem.
+- **"Ver depois" para o som.**
+- **Nada de faixa no topo pra todo mundo** cobrando o plantão (*"vai aparecer
+  pra geral, literalmente"*). O lembrete mora no pop-up da oferta.
+
+Armadilhas:
+
+1. **A lista de avisos que tocam (`roleta.oferta_recebida`, `lead.atribuido`)
+   existe duas vezes**: `EVENTOS_ALTOS` no `public/push-sw.js` e `LOUD_EVENTS`
+   em `Notifications::Channels` no backend. Mudou num, muda no outro.
+2. **Só a aba líder toca** (Web Locks, `lmflow-lead-ringer`, em
+   `src/lib/plantaoSound/leadAlert.ts`). Sem isso, duas abas abertas tocariam a
+   oferta em dobro a cada 10 s. Navegador sem a trava: toda aba toca.
+3. **O aviso do sistema só sai calado com resposta `played: true` de uma aba**
+   dentro de 1,5 s. Navegador bloqueou o som, aba não líder ou aba congelada:
+   sai com o som do sistema. Não inverter (calar por padrão deixaria o corretor
+   sem som nenhum).
+4. **Anti-duplo de 3 s**: o mesmo lead chega pelo push e pelo pop-up/sininho
+   quase juntos. `playLeadAlert` toca uma vez dentro da janela.
+5. **Com oferta na lista, a checagem de 15 s roda também com a aba escondida**
+   (`PendingOffersContext`). É ela que faz o PC parar de tocar quando o
+   corretor aceita pelo celular. Sem oferta, volta a só checar com a aba visível.
+6. **Push sem `event` segue o caminho de sempre** (mensagem, push manual da
+   Central, servidor antigo): sem perguntar às abas, sem `requireInteraction`.

@@ -4,6 +4,8 @@ import {
   type BrokerAssignmentDetail,
 } from '@/services/roletaConfig/brokerAssignmentsService';
 import { offerFor, type OfferLookup } from '@/components/roleta/pendingOffersMatch';
+import { preloadLeadAlert, startRingLeaderElection } from '@/lib/plantaoSound/leadAlert';
+import { installLeadAlertBridge } from '@/lib/plantaoSound/swBridge';
 
 // As ofertas da roleta esperando ESTE corretor, uma vez só para o app inteiro.
 //
@@ -20,6 +22,11 @@ import { offerFor, type OfferLookup } from '@/components/roleta/pendingOffersMat
 // qualquer tela. Em troca, SÓ com a aba visível: aba escondida não checa, e na
 // volta para a aba checa na hora. Tempo real de verdade fica para quando a
 // conexão ao vivo for levada para o app inteiro (não reabrir antes disso).
+//
+// EXCEÇÃO (Som do Plantão, 11/11/2026): com oferta na lista, a aba escondida
+// TAMBÉM checa. A oferta toca de 10 em 10 s, e é esta checagem que descobre que
+// o corretor aceitou pelo celular e faz o PC parar de tocar. Sem oferta, volta
+// a regra de cima (quase todo ciclo é vazio).
 const REFRESH_MS = 15_000;
 
 // Vazia de novo = a MESMA lista: sem isso cada checagem de 15 s redesenharia
@@ -56,6 +63,8 @@ export function PendingOffersProvider({ children }: { children: ReactNode }) {
   const [offers, setOffers] = useState<BrokerAssignmentDetail[]>([]);
   const [loaded, setLoaded] = useState(false);
   const alive = useRef(true);
+  const temOferta = useRef(false);
+  temOferta.current = offers.length > 0;
 
   const refresh = useCallback(async () => {
     try {
@@ -76,7 +85,7 @@ export function PendingOffersProvider({ children }: { children: ReactNode }) {
     refresh();
     const visivel = () => document.visibilityState === 'visible';
     const id = setInterval(() => {
-      if (visivel()) void refresh();
+      if (visivel() || temOferta.current) void refresh();
     }, REFRESH_MS);
     const aoVoltar = () => {
       if (visivel()) void refresh();
@@ -86,6 +95,22 @@ export function PendingOffersProvider({ children }: { children: ReactNode }) {
       alive.current = false;
       clearInterval(id);
       document.removeEventListener('visibilitychange', aoVoltar);
+    };
+  }, [refresh]);
+
+  // Som do Plantão (11/11/2026): disputa de aba líder (só ela toca) e ponte com
+  // o service worker. Push de oferta relê a lista na hora.
+  useEffect(() => {
+    preloadLeadAlert();
+    const pararEleicao = startRingLeaderElection();
+    const tirarPonte = installLeadAlertBridge(() => {
+      void refresh();
+    });
+    // A tela que sai (tela de aceite, Área de Membros) solta a liderança, e a
+    // outra aba assume.
+    return () => {
+      tirarPonte();
+      pararEleicao();
     };
   }, [refresh]);
 

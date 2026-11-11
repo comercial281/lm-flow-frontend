@@ -13,9 +13,11 @@ import {
 import Aviso from '@/components/base/Aviso';
 import { usePendingOffers } from '@/contexts/PendingOffersContext';
 import OfferAiBriefing from './OfferAiBriefing';
-import { deadlineLabel, SEM_PRAZO } from './offerDeadline';
+import { deadlineLabel, hasDeadline, SEM_PRAZO } from './offerDeadline';
 import { reasonOf } from './offerReason';
 import { destinoDoLead, gravarVistas, lerVistas, ofertasNaoVistas } from './offerPopupState';
+import { useOfferRinger } from './useOfferRinger';
+import { usePushNotifications } from '@/hooks/usePushNotifications';
 
 // Pop-up de aceite da roleta: abre sobre QUALQUER tela do app quando chega uma
 // oferta que o corretor ainda não viu.
@@ -43,25 +45,6 @@ import { destinoDoLead, gravarVistas, lerVistas, ofertasNaoVistas } from './offe
 // Quanto tempo Aceitar/Recusar ficam travados ao abrir ou trocar de oferta.
 export const TRAVA_MS = 600;
 
-// As ofertas que já tocaram som nesta aba. Fica fora do componente porque o
-// MainLayout existe em dois grupos de rota: cruzar de um para o outro remonta o
-// pop-up, e um ref voltaria vazio — o mesmo "ding" tocaria de novo.
-const tocadas = new Set<string>();
-
-const SOM_DA_OFERTA = '/audio/notifications/ding.mp3';
-
-function tocarSom() {
-  try {
-    const audio = new Audio(SOM_DA_OFERTA);
-    audio.volume = 0.6;
-    // Sem permissão de som do navegador (ninguém clicou na página ainda), o
-    // play é recusado: o pop-up abre calado.
-    void audio.play().catch(() => {});
-  } catch {
-    /* navegador sem áudio: abre calado */
-  }
-}
-
 function textoDoPrazo(prazo: string): string {
   if (prazo === SEM_PRAZO) return 'Sem prazo de aceite';
   if (/^\d+ min$/.test(prazo)) return `Aceite em até ${prazo}`;
@@ -70,6 +53,11 @@ function textoDoPrazo(prazo: string): string {
 
 export default function OfferPopup() {
   const { offers, accept, refuse, refresh } = usePendingOffers();
+  const plantao = usePushNotifications();
+  // Plantão desligado neste aparelho: o pop-up sugere ligar (o dono vetou faixa
+  // geral no topo; aqui só aparece para quem acabou de receber lead). Negado ou
+  // sem suporte não mostra: o botão não conseguiria ligar.
+  const sugerirPlantao = plantao.isSupported && plantao.status === 'unsubscribed';
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const [vistas, setVistas] = useState<Set<string>>(() => lerVistas());
@@ -91,12 +79,12 @@ export default function OfferPopup() {
     return () => clearTimeout(t);
   }, [idAtual]);
 
-  // Som curto uma vez por oferta, quando ela aparece no pop-up.
-  useEffect(() => {
-    if (!aberto || !atual || tocadas.has(atual.id)) return;
-    tocadas.add(atual.id);
-    tocarSom();
-  }, [aberto, atual]);
+  // Som do Plantão (11/11/2026): o Chegou toca na hora e repete de 10 em 10 s
+  // até aceitar, recusar, "Ver depois" (a oferta vira vista e o pop-up fecha) ou
+  // o prazo vencer. Era um "ding" só, fácil de não ouvir.
+  const prazoMs = atual && hasDeadline(atual) ? new Date(atual.deadline as string).getTime() : null;
+  const prazoValido = prazoMs == null || Number.isNaN(prazoMs) ? null : prazoMs;
+  useOfferRinger(aberto && (prazoValido == null || prazoValido > Date.now()), prazoValido);
 
   function verDepois() {
     if (!atual) return;
@@ -182,6 +170,17 @@ export default function OfferPopup() {
               </p>
             )}
           </div>
+
+          {sugerirPlantao && (
+            <div className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2">
+              <p className="text-xs text-muted-foreground">
+                Com o Modo Plantão ligado, você ouve o próximo lead mesmo com o LM Flow em segundo plano.
+              </p>
+              <Button type="button" variant="outline" size="sm" className="shrink-0" onClick={() => void plantao.subscribe()}>
+                Ligar
+              </Button>
+            </div>
+          )}
 
           {/* O bloco da IA foi desenhado para o fundo escuro da tela de aceite
               (texto branco): aqui ele ganha o mesmo fundo, nos dois temas. */}
