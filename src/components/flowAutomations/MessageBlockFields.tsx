@@ -141,6 +141,35 @@ export function SequenciaDaMensagem({ config, onChange, conversation = false, gu
   );
 }
 
+/**
+ * Por onde sai a mensagem num fluxo da equipe: a linha do número do fluxo ou, no
+ * fluxo antigo (sem regra de número), o "Enviar pelo número" do próprio bloco.
+ * A mesma da Mensagem e da Mensagem com IA.
+ */
+export function NumeroDoBloco({ config, onChange, numeroDoFluxo = null, numerosDiferentes = false, somenteLeitura = false }: {
+  config: FlowNodeConfig;
+  onChange: React.Dispatch<React.SetStateAction<FlowNodeConfig>>;
+  /** A linha "Sai pelo número do fluxo"; null = fluxo antigo. */
+  numeroDoFluxo?: string | null;
+  /** Fluxo antigo cujas Mensagens saem por números diferentes: aponta pras Configurações. */
+  numerosDiferentes?: boolean;
+  /** Modo guiado: só a linha do número do fluxo, nunca o seletor do bloco. */
+  somenteLeitura?: boolean;
+}) {
+  if (numeroDoFluxo) return <p className="text-sm font-medium" data-testid="sai-pelo-numero-do-fluxo">{numeroDoFluxo}</p>;
+  if (somenteLeitura) return null;
+  return (
+    <>
+      {numerosDiferentes && <Aviso tom="atencao" compacto>{FLOW_NUMBER_DIVERGENT}</Aviso>}
+      <SendFromField
+        scope="lead_automation_rules"
+        value={sendFromOf(config)}
+        onChange={v => onChange(c => applySendFrom(c, v))}
+      />
+    </>
+  );
+}
+
 interface Props extends EnvioPessoal {
   config: FlowNodeConfig;
   /** O `setConfig` do painel: as mudanças vão sobre o rascunho mais novo. */
@@ -187,17 +216,8 @@ export function MessageBlockFields({
               numeroPessoalCarregando={numeroPessoalCarregando}
               donoDoEnvio={donoDoEnvio}
             />
-          ) : numeroDoFluxo ? (
-            <p className="text-sm font-medium" data-testid="sai-pelo-numero-do-fluxo">{numeroDoFluxo}</p>
           ) : (
-            <>
-              {numerosDiferentes && <Aviso tom="atencao" compacto>{FLOW_NUMBER_DIVERGENT}</Aviso>}
-              <SendFromField
-                scope="lead_automation_rules"
-                value={sendFromOf(config)}
-                onChange={v => onChange(c => applySendFrom(c, v))}
-              />
-            </>
+            <NumeroDoBloco config={config} onChange={onChange} numeroDoFluxo={numeroDoFluxo} numerosDiferentes={numerosDiferentes} />
           )}
           {!doResponsavel && !semMarcarProgresso && <ProgressFields config={config} onChange={onChange} />}
           {!guided && (

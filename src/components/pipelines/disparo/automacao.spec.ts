@@ -44,6 +44,11 @@ describe('linhaDaPrevia', () => {
       .toBe('Começa com: Passar para a IA');
   });
 
+  it('Mensagem com IA como primeiro bloco mostra o texto que o servidor manda', () => {
+    expect(inicioDaPrevia(opcao({ first_step: { kind: 'ai_message', text: '(escrita pela IA na hora) Oi, tudo bem?', config: {} } })))
+      .toBe('Primeira mensagem: "(escrita pela IA na hora) Oi, tudo bem?"');
+  });
+
   it('Mensagem sem texto (só mídia) cai no nome do bloco', () => {
     expect(inicioDaPrevia(opcao({ first_step: { kind: 'send_whatsapp', text: null, config: {} } })))
       .toBe('Começa com: Mensagem');

@@ -10845,6 +10845,42 @@ Armadilhas:
 
 Código: `features/flowAutomations/randomizer.ts`, `components/flowAutomations/RandomizerFields.tsx`, `components/flowAutomations/FlowNodeCard.tsx` (`RandomizerPaths`), `lib/flowAutomationGraph.ts`, `components/flowAutomations/FlowEdge.tsx` (`labelAtEnd`). Servidor: `FlowAutomations::RandomDraw`, `NodeHandlers#handle_randomizer`, `FlowAutomationNode#random_branches`. Testes: `randomizer.spec.ts`, `RandomizerFields.spec.tsx`, e no backend `randomizer_spec.rb` e `flow_automations_randomizer_spec.rb`.
 
+## Construtor: bloco Mensagem com IA (11/11/2026)
+
+Pedido do Tony em 11/11/2026. A IA Vendedora só responde; quem abre a conversa com o lead de formulário é a automação, com texto fixo ("Olá, esse é o seu número?"), ignorando o que o lead já contou no formulário. O bloco novo escreve a primeira mensagem usando as respostas do formulário, pra mostrar que alguém leu e subir a taxa de resposta. Sai pelo número do fluxo, como uma Mensagem de um texto só.
+
+O que aparece:
+
+- **Lista de Blocos, grupo Mensagem:** "Mensagem com IA" ao lado da Mensagem.
+- **Janela:** *Instrução* (caixa grande com as variáveis, já vem com um exemplo editável), *Mensagem reserva* (sai se a IA não responder), o grupo *Testar*, a linha do número (a mesma da Mensagem), "Não mandar se a IA já estiver conversando" e um aviso fixo de que o próximo bloco precisa combinar com a pergunta que a instrução manda fazer.
+- **Testar:** escolhe um lead real com respostas de formulário (abre no mais novo), botão *Testar mensagem*, resultado num balão com cara de WhatsApp, *Gerar de novo* pra ver a variação e *Respostas que a IA leu* recolhido. Se saiu a reserva, um aviso diz por quê. Nada é enviado.
+- **Cartão no mapa:** começo da instrução como resumo (ou "Escreva a instrução"), linha de por onde sai, borda amarela se incompleto.
+- **Chave de ligar:** pede "Escreva a instrução.", "Troque o \"[descreva o imóvel ou a oferta]\" da instrução." (enquanto o exemplo não foi preenchido), "Escreva a mensagem reserva." e a mesma régua de número da Mensagem (`sendFrom.ts`). O servidor recusa ligar o fluxo com o bloco incompleto.
+
+Decisões (não reabrir sem o dono pedir):
+
+1. **Instrução livre do gestor, não modelo com lacunas.** Quem controla tudo é o texto da instrução. O exemplo já traz cada obrigação escrita ("apresente-se", "cite 1 ou 2 respostas", "varie a abertura", "termine perguntando"): a IA só segue à risca o que está escrito como obrigação (no teste de 11/11, "você é o corretor" sem "apresente-se" fez uma rodada sair sem apresentação).
+2. **Só formulário.** Sem catálogo de imóveis, sem documentos, sem histórico de conversa. Sem sequência, mídia, book ou espera dentro do bloco: pra isso, um bloco Mensagem depois.
+3. **Proibição de prometer aprovação, crédito, preço ou condição é regra fixa do servidor**, não da instrução. Na v1 não há conferência de frases na saída.
+4. **Liberado pra todos os clientes, sem chave**: a chamada da IA é da plataforma. No futuro, o cliente poderá usar a chave dele; a tela não muda por isso.
+5. **Reserva quando a IA falha:** erro, recusa, texto vazio ou longo demais, tempo estourado. O lead nunca fica sem mensagem por causa da IA.
+6. **Testar abre no lead mais novo** com respostas (do formulário do gatilho, quando o gatilho aponta pra um só). Limite de testes por hora no servidor, e a tela mostra a mensagem do limite.
+7. **Fora do funil de conversa, do follow-up e da automação pessoal** (`foraDoFunilDeConversa`, `foraDoFollowup`, `personal.ts`). O corretor só vê o bloco no modo guiado, não edita.
+8. **Uma saída só**, sem caminho de erro.
+
+Armadilhas:
+
+1. **O backend entra antes.** A janela chama `ai_message_preview` e `ai_message_leads`, e o tipo `ai_message` só existe no servidor novo. Frontend no ar sem backend: Testar dá erro e o bloco não salva. Merge do frontend só depois do backend no ar.
+2. **Voltar o backend sem a tela deixa o bloco calado:** o código antigo lê o bloco como `log_event` e o lead passa por ele sem receber nada. Antes de voltar, desligar as automações com o bloco e voltar a tela junto. Salvar o fluxo durante a volta apaga a marca do bloco.
+3. **O bloco só é tão bom quanto o formulário:** lead sem respostas gera mensagem genérica, e o Testar mostra isso. Por isso a lista do Testar só traz lead com resposta.
+4. **A instrução e o próximo bloco precisam combinar:** se a instrução manda perguntar "esse é o seu WhatsApp?", o bloco seguinte (Aguardar resposta, Condição) tem que esperar essa resposta. O aviso fixo da janela existe por isso.
+5. **Todo ponto que lista tipos de bloco precisa conhecer o novo:** `sendsMessage` em `numberWarnings.ts` (senão aparece o aviso "A IA só responde…"), `withFlowSendFrom` em `flowNumber.ts` (espelho do número ao salvar), `AI_TALKING_KINDS`, `progress.ts`. O `FLOW_NODE_DEF_BY_KIND` não é conferido pelo `tsc`: conferir à mão.
+6. **Texto da tela é literal em pt-BR, sem as palavras proibidas** (prompt, template, agente, robô...). Nada de função ou variável chamada `prompt(`: derruba a trava `conferir-caixinhas`.
+7. **O balão do WhatsApp (`BolhaDoWhatsapp`) é componente novo, só do bloco:** as cores copiam o celular do `TestarJanela.tsx` da IA Vendedora, mas são código separado. Mudar um não muda o outro.
+8. **Fluxo ligado não salva com o bloco incompleto:** o servidor recusa e a tela avisa antes no Salvar (abre a janela do bloco e não chama o servidor).
+
+Código: `features/flowAutomations/aiMessage.ts` (instrução de exemplo, `formularioDoGatilho`), `components/flowAutomations/AiMessageFields.tsx`, `components/flowAutomations/BolhaDoWhatsapp.tsx`, `FlowNodeCard.tsx`, `FlowNodePanel.tsx`, `palette.ts`, `readiness.ts`, `services/flowAutomations/flowAutomationsService.ts` (`aiMessagePreview`, `aiMessageLeads`). Servidor: tipo virtual `ai_message`, `handle_ai_message`, rotas `ai_message_preview` e `ai_message_leads`. Testes: `AiMessageFields.spec.tsx`, `flowAutomationsService.aiMessage.spec.ts`, `palette.spec.ts`, `readiness.spec.ts`.
+
 ## Quais leads do follow-up: a roleta antes da IA não tira mais (desde 2026-11-05)
 
 Pedido do dono do produto (04/11/2026, caso Pandora). A regra mora no servidor (ver o CLAUDE.md do `lm-flow`): o lead que passou pela roleta antes de falar com a IA pode receber follow-up e retomada; o que ela já passou pra um corretor, não. A retomada segue dependendo da chave do follow-up.

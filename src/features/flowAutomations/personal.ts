@@ -101,8 +101,10 @@ export function personalBlockState(
 export function personalAvailabilityState(
   item: PaletteItem,
   ctx: { temNumero: boolean; temIA: boolean },
-): 'ok' | 'indisponivel' {
+): 'ok' | 'indisponivel' | 'fora' {
   const key = item.key;
+  // O servidor recusa a Mensagem com IA na automação pessoal.
+  if (key === 'ai_message') return 'fora';
   if (key.startsWith('lead_action:')) {
     const type = key.slice('lead_action:'.length);
     const mandaMensagem = MESSAGE_ACTIONS.has(type) || type.startsWith('send_');

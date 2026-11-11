@@ -68,6 +68,11 @@ export function nodeProblem(node: BlockLike, kind: FlowAutomationKind = 'automat
       if (!hasMedia && !isContact && !String(config.text ?? '').trim()) return 'Escreva a mensagem.';
       return sendFromProblem(sendFromOf(config)) ?? progressProblem(config);
     }
+    case 'ai_message':
+      if (!String(config.instruction ?? '').trim()) return 'Escreva a instrução.';
+      if (String(config.instruction).includes('[descreva')) return 'Troque o "[descreva o imóvel ou a oferta]" da instrução.';
+      if (!String(config.fallback_text ?? '').trim()) return 'Escreva a mensagem reserva.';
+      return sendFromProblem(sendFromOf(config));
     case 'condition':
     case 'filter_label':
       return conditionProblem(config);
