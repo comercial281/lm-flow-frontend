@@ -77,4 +77,9 @@ describe('Condições e argumentos no formulário', () => {
     const erros = errosDoCadastro({ ...base, ...formularioNovo('resale'), transaction_type: '', sale_price: 1 });
     expect(erros).toEqual([{ secao: 'basico', mensagem: 'Marque À venda, Para alugar ou os dois.' }]);
   });
+  it('condomínio plugado vira condominium_id; sem condomínio vira null', () => {
+    const p = { ...base, id: 'p1', created_at: '', updated_at: '' } as unknown as Property;
+    expect(formularioDoImovel({ ...p, condominium: { id: 'c1', name: 'Edifício X', kind: 'vertical', locked_fields: [], photos_count: 0 } }).condominium_id).toBe('c1');
+    expect(formularioDoImovel(p).condominium_id).toBeNull();
+  });
 });

@@ -13,6 +13,7 @@ export interface ErroDoCadastro { secao: SecaoId; mensagem: string }
 // O formulário em branco (era o EMPTY_FORM de Properties.tsx). O cadastro novo
 // soma o `formularioNovo(kind)` por cima, para o tipo vir marcado.
 export const FORMULARIO_VAZIO: PropertyFormData = {
+  condominium_id: null,
   title: '',
   description: '',
   transaction_type: 'sale',
@@ -61,6 +62,7 @@ export const FORMULARIO_VAZIO: PropertyFormData = {
 
 export function formularioDoImovel(p: Property): PropertyFormData {
   return {
+    condominium_id: p.condominium?.id ?? null,
     title: p.title,
     description: p.description ?? '',
     // Empreendimento é sempre venda: o campo some da tela, então o valor salvo não pode mandar nos preços.

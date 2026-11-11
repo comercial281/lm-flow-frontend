@@ -1,6 +1,7 @@
 import api from '@/services/core/api';
 import type { PropertyTypology, TypologySummary } from '@/features/properties/typologies';
 import type { ListingKind, Ocupacao, Contagem } from '@/features/properties/listingKind';
+import type { CondominiumKind } from '@/services/condominiums/condominiumsService';
 import type { Intencao, Marca, RegraDaCasa } from '@/services/salesAgents/salesAgentsService';
 
 export type { PropertyTypology, TypologySummary };
@@ -20,6 +21,8 @@ export type PrecisaoDoPonto = 'number' | 'street' | 'neighborhood' | 'city';
 export interface PontoAchado { lat: number | null; lng: number | null; precision: PrecisaoDoPonto | null; failed: boolean }
 
 export interface Property {
+  /** Condomínio em que a unidade está plugada (null/ausente = avulsa). `locked_fields` usa nomes do servidor. */
+  condominium?: { id: string; name: string; kind: CondominiumKind; locked_fields: string[]; photos_count: number } | null;
   /** Imóvel que veio do site do cliente (Integrações → Sistemas → Site da imobiliária). */
   feed?: { source_id: string; external_url: string | null; locked_fields: string[] } | null;
   id: string;
@@ -159,6 +162,7 @@ export interface Property {
 }
 
 export interface PropertyFormData {
+  condominium_id: string | null;
   code?: string;
   title: string;
   description?: string;
