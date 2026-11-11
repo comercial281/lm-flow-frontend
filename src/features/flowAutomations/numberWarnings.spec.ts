@@ -69,4 +69,8 @@ describe('numberWarnings', () => {
     const nodes = [node('f', 'lead_action', 'h', { config: { action_type: 'add_label', params: {} } } as Partial<FlowAutomationNode>), node('h', 'hand_to_ai')];
     expect(numberWarnings({ ...base, trigger: trig('lead.created'), nodes, initialNodeId: 'f', setting: set('') })).toEqual([NO_OPEN]);
   });
+  it('Mensagem com IA conta como mensagem antes do Passar para a IA', () => {
+    const nodes = [node('m', 'ai_message', 'h'), node('h', 'hand_to_ai')];
+    expect(numberWarnings({ ...base, trigger: trig('lead.created'), nodes, initialNodeId: 'm', setting: set('') })).not.toContain(NO_OPEN);
+  });
 });

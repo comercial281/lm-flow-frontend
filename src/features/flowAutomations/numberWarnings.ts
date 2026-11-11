@@ -22,7 +22,7 @@ export const MESSAGE_SENDING_ACTIONS = new Set([
 
 function sendsMessage(n: FlowAutomationNode | undefined): boolean {
   if (!n) return false;
-  if (n.kind === 'send_whatsapp') return true;
+  if (n.kind === 'send_whatsapp' || n.kind === 'ai_message') return true;
   return n.kind === 'lead_action' && MESSAGE_SENDING_ACTIONS.has(String((n.config as Record<string, unknown> | null)?.action_type));
 }
 

@@ -7,7 +7,7 @@
 
 import {
   ArrowRightLeft, Bell, BellRing, CircleCheck, Clock, Dices, Eraser, FileText, Filter, GitBranch, Hourglass, Image,
-  ListOrdered, MessageSquare, Mic, Bot, BotOff, Repeat, Send, Shuffle, Sticker, Tag,
+  ListOrdered, MessageSquare, Mic, Bot, BotOff, Repeat, Send, Shuffle, Sparkles, Sticker, Tag,
   Trophy, UserCheck, ClipboardList, Video, Zap, type LucideIcon,
 } from 'lucide-react';
 import type { FlowAutomationNode, FlowNodeConfig, FlowNodeKind } from '@/types/flowAutomations';
@@ -23,6 +23,7 @@ export function blockKey(node: { kind: FlowNodeKind; config?: FlowNodeConfig | n
 
 const ICONS: Record<string, LucideIcon> = {
   send_whatsapp: MessageSquare,
+  ai_message: Sparkles,
   wait: Clock,
   wait_for_reply: Hourglass,
   condition: GitBranch,
@@ -63,6 +64,7 @@ const DESCRIPTIONS: Record<string, string> = {
   wait: 'Segura o fluxo um tempo antes de seguir pro próximo bloco.',
   wait_for_reply: 'Espera o lead responder e segue por um caminho ou pelo outro.',
   condition: 'Confere algo do lead e segue pelo Sim ou pelo Não.',
+  ai_message: 'Escreve a primeira mensagem com o que o lead respondeu no formulário.',
   randomizer: 'Sorteia um caminho pra cada lead, pela % de cada um.',
   filter_label: 'Só deixa o fluxo seguir se o lead passar na regra.',
   add_label: 'Coloca etiquetas no lead.',

@@ -43,7 +43,7 @@ export function sequenciaTravada(
 /** O bloco da paleta manda mensagem ao lead (grupo Mensagem: o bloco Mensagem e as ações `send_*`). */
 export function itemEnviaAoLead(item: Pick<PaletteItem, 'kind' | 'group' | 'config'>): boolean {
   if (item.group !== 'message') return false;
-  if (item.kind === 'send_whatsapp') return true;
+  if (item.kind === 'send_whatsapp' || item.kind === 'ai_message') return true;
   return item.kind === 'lead_action' && String(item.config?.action_type ?? '').startsWith('send_');
 }
 

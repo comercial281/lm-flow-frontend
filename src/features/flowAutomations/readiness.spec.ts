@@ -136,3 +136,28 @@ describe('bloco Mensagem em sequência (items)', () => {
     expect(nodeProblem(b('send_whatsapp', { text: 'Oi', items: [] }))).toBeNull();
   });
 });
+
+describe('bloco Mensagem com IA', () => {
+  const ia = (extra: Record<string, unknown> = {}) =>
+    b('ai_message', { instruction: 'Apresente-se.', fallback_text: 'Oi, tudo bem?', ...extra });
+
+  it('completo está pronto', () => {
+    expect(nodeProblem(ia())).toBeNull();
+  });
+  it('pede a instrução', () => {
+    expect(nodeProblem(ia({ instruction: '  ' }))).toBe('Escreva a instrução.');
+    expect(nodeProblem(ia({ instruction: '' }))).toBe('Escreva a instrução.');
+  });
+  it('pede a reserva', () => {
+    expect(nodeProblem(ia({ fallback_text: '' }))).toBe('Escreva a mensagem reserva.');
+  });
+  it('número igual à Mensagem: mesma régua do bloco Mensagem', () => {
+    for (const cfg of [{ send_from: 'number', send_from_inbox_id: '' }, { send_from: 'number', send_from_inbox_id: 'i1' }, { send_from: 'owner' }]) {
+      expect(nodeProblem(ia(cfg))).toBe(nodeProblem(b('send_whatsapp', { text: 'Oi', ...cfg })));
+    }
+  });
+  it('trava o Ligado dizendo qual bloco', () => {
+    expect(enableProblem(gatilho, [b('ai_message', { instruction: '', fallback_text: '' })]))
+      .toBe('Antes de ligar, complete o bloco "Mensagem com IA": escreva a instrução.');
+  });
+});

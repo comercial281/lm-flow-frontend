@@ -35,6 +35,10 @@ describe('personal', () => {
     expect(personalBlockState(item('disable_ai'), sem)).toBe('ok');
     expect(personalBlockState(item('wait'), sem)).toBe('ok');
   });
+  it('Mensagem com IA fica fora da automação pessoal', () => {
+    expect(personalBlockState(item('ai_message'), com)).toBe('fora');
+    expect(personalAvailabilityState(item('ai_message'), com)).toBe('fora');
+  });
   it('isPersonalFlow', () => {
     expect(isPersonalFlow({ permissions: { personal: true } as never })).toBe(true);
     expect(isPersonalFlow({})).toBe(false);

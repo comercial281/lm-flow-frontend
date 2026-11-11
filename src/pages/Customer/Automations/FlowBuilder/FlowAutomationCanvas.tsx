@@ -47,7 +47,7 @@ import {
 import { businessHoursOnlyOf } from '@/features/flowAutomations/businessHours';
 import { FLOW_KIND_COPY, kindOf } from '@/features/flowAutomations/kind';
 import { avisoLeadsSaindo, leadsDentro, pedidoDesligarFollowup } from '@/features/flowAutomations/desligarFollowup';
-import { configDoBlocoNovo, foraDoFunilDeConversa, freshBlockConfig, paletteItems, podeSoltarBloco, type PaletteItem } from '@/features/flowAutomations/palette';
+import { configDoBlocoNovo, foraDoFollowup, foraDoFunilDeConversa, freshBlockConfig, paletteItems, podeSoltarBloco, type PaletteItem } from '@/features/flowAutomations/palette';
 import {
   modoPessoal, numeroFixoNaEquipe, personalAvailabilityState, personalBlockState, personalTriggerGroups,
   presaNaEquipe, tirarDaEquipe, useEhCorretorDeAutomacao,
@@ -262,9 +262,10 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
     const ctx = { temNumero: capacidades.temNumero, temIA: capacidades.temIA };
     const porCargo = modo === 'corretor'
       ? (item: PaletteItem) => personalBlockState(item, ctx)
-      : modo === 'dono' ? (item: PaletteItem) => personalAvailabilityState(item, ctx) : undefined;
+      : modo === 'dono' ? (item: PaletteItem) => personalAvailabilityState(item, ctx)
+      : modo === 'de_outro' ? foraDoFollowup() : undefined;
     if (kind === 'conversation') return foraDoFunilDeConversa(porCargo);
-    if (!travada) return porCargo;
+    if (!travada) return kind === 'followup' ? foraDoFollowup(porCargo) : porCargo;
     return (item: PaletteItem) => (itemEnviaAoLead(item) ? 'fora' : porCargo ? porCargo(item) : 'ok');
   }, [kind, modo, capacidades.temNumero, capacidades.temIA, travada]);
   // Número do fluxo (Entrega 4): só na automação da equipe. Follow-up, funil

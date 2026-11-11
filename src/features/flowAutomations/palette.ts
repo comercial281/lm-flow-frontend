@@ -39,7 +39,7 @@ const GROUP_ORDER: FlowNodeGroup[] = ['message', 'contact', 'ai', 'distribution'
 
 // Os blocos da sprint 1 de cada grupo vêm antes das ações (ordem da spec).
 const NATIVE_BY_GROUP: Record<FlowNodeGroup, FlowNodeKind[]> = {
-  message: ['send_whatsapp'],
+  message: ['send_whatsapp', 'ai_message'],
   contact: ['add_label', 'remove_label', 'move_stage', 'followup_recovered'],
   ai: ['hand_to_ai', 'disable_ai'],
   distribution: [],
@@ -74,7 +74,7 @@ export function freshBlockConfig(config: FlowNodeConfig): FlowNodeConfig {
 }
 
 /** Blocos que mandam mensagem e têm a opção "Não mandar se a IA já estiver conversando". */
-export const AI_TALKING_KINDS: FlowNodeKind[] = ['send_whatsapp', 'sequence', 'funnel'];
+export const AI_TALKING_KINDS: FlowNodeKind[] = ['send_whatsapp', 'ai_message', 'sequence', 'funnel'];
 
 /**
  * A config de um bloco NOVO no canvas: a cópia própria do `freshBlockConfig` e,
@@ -157,7 +157,17 @@ export function paletteGroups(query = ''): Array<{ group: FlowNodeGroup; label: 
 export function foraDoFunilDeConversa(
   estado?: (item: PaletteItem) => 'ok' | 'indisponivel' | 'fora',
 ): (item: PaletteItem) => 'ok' | 'indisponivel' | 'fora' {
-  return item => (item.kind === 'randomizer' ? 'fora' : estado?.(item) ?? 'ok');
+  return item => (item.kind === 'randomizer' || item.kind === 'ai_message' ? 'fora' : estado?.(item) ?? 'ok');
+}
+
+/**
+ * A Mensagem com IA escreve a abertura de quem acabou de chegar: não cabe no
+ * follow-up (que retoma conversa) nem na automação pessoal. Fica fora da lista.
+ */
+export function foraDoFollowup(
+  estado?: (item: PaletteItem) => 'ok' | 'indisponivel' | 'fora',
+): (item: PaletteItem) => 'ok' | 'indisponivel' | 'fora' {
+  return item => (item.kind === 'ai_message' ? 'fora' : estado?.(item) ?? 'ok');
 }
 
 /** Guarda do arraste: só solta no canvas o bloco que a paleta deixa usar. */

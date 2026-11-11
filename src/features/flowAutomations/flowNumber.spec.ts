@@ -54,3 +54,19 @@ describe('withFlowSendFrom', () => {
     expect(out[1].config).toEqual(leadAction('send_whatsapp_message').config);
   });
 });
+
+describe('Mensagem com IA e o número do fluxo', () => {
+  const ia = (send_from: string, send_from_inbox_id: string): FlowAutomationNode =>
+    ({ id: 'ia1', kind: 'ai_message', config: { instruction: 'x', fallback_text: 'y', send_from, send_from_inbox_id } }) as unknown as FlowAutomationNode;
+
+  it('salvar espelha send_from e send_from_inbox_id no ai_message', () => {
+    const out = withFlowSendFrom([ia('', ''), msg('', '')], { mode: 'number', inboxId: 'i9', onConflict: 'pause' });
+    expect(out[0].config).toMatchObject({ instruction: 'x', fallback_text: 'y', send_from: 'number', send_from_inbox_id: 'i9' });
+    expect(out[1].config).toMatchObject({ send_from: 'number', send_from_inbox_id: 'i9' });
+  });
+  it('fluxo antigo: o número inferido também lê o ai_message', () => {
+    const r = flowNumberOf(flow({ send_from: null }), [ia('number', 'i3')]);
+    expect(r.setting).toMatchObject({ mode: 'number', inboxId: 'i3' });
+    expect(flowNumberOf(flow({ send_from: null }), [ia('number', 'i3'), msg('owner', '')]).divergent).toBe(true);
+  });
+});
