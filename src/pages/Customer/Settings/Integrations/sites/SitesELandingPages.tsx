@@ -9,6 +9,7 @@ import { pipelinesService } from '@/services/pipelines/pipelinesService';
 import usersService from '@/services/users/usersService';
 import { roletaConfigService, roletaLabel, type RoletaConfig } from '@/services/roletaConfig/roletaConfigService';
 import { externalLeadPagesService, type PaginaDeSite } from '@/services/externalLeadPages/externalLeadPagesService';
+import JanelaDaPagina, { type RecursosDaJanela } from './JanelaDaPagina';
 import TabelaDePaginas, { type Busca, type NomesDasPaginas } from './TabelaDePaginas';
 
 const SUBTITULO = 'Cada página ganha um endereço próprio. Quem preencher o formulário entra no funil e com o corretor que você escolher.';
@@ -25,7 +26,7 @@ interface Lista<T> { estado: Estado; itens: T }
 function useListas() {
   const [funis, setFunis] = useState<Lista<{ id: string; name: string }[]>>({ estado: 'carregando', itens: [] });
   const [etapas, setEtapas] = useState<Record<string, { id: string; name: string }[]>>({});
-  const [equipe, setEquipe] = useState<Lista<{ id: string; name: string }[]>>({ estado: 'carregando', itens: [] });
+  const [equipe, setEquipe] = useState<Lista<{ id: string; name: string; whatsapp?: string | null }[]>>({ estado: 'carregando', itens: [] });
   const [roletas, setRoletas] = useState<Lista<RoletaConfig[]>>({ estado: 'carregando', itens: [] });
 
   useEffect(() => {
@@ -43,7 +44,7 @@ function useListas() {
       })
       .catch(() => { if (vivo) setFunis({ estado: 'falhou', itens: [] }); });
     usersService.getUsers()
-      .then((r) => { if (vivo) setEquipe({ estado: 'ok', itens: (r.data ?? []).map((u) => ({ id: String(u.id), name: u.name })) }); })
+      .then((r) => { if (vivo) setEquipe({ estado: 'ok', itens: (r.data ?? []).map((u) => ({ id: String(u.id), name: u.name, whatsapp: u.whatsapp_number ?? null })) }); })
       .catch(() => { if (vivo) setEquipe({ estado: 'falhou', itens: [] }); });
     roletaConfigService.getAll()
       .then((r) => { if (vivo) setRoletas({ estado: 'ok', itens: r ?? [] }); })
@@ -51,7 +52,14 @@ function useListas() {
     return () => { vivo = false; };
   }, []);
 
-  return useMemo<NomesDasPaginas>(() => {
+  const recursos = useMemo<RecursosDaJanela>(() => ({
+    funis: funis.itens,
+    etapas,
+    equipe: equipe.estado === 'ok' ? equipe.itens : null,
+    roletas: roletas.estado === 'ok' ? roletas.itens : null,
+  }), [funis, etapas, equipe, roletas]);
+
+  const nomes = useMemo<NomesDasPaginas>(() => {
     const procurar = <T,>(l: Lista<unknown[]>, achar: () => T | undefined): Busca<T> => {
       if (l.estado === 'carregando') return { tipo: 'carregando' };
       if (l.estado === 'falhou') return { tipo: 'falhou' };
@@ -69,12 +77,15 @@ function useListas() {
       corretor: (id) => procurar(equipe, () => equipe.itens.find((u) => u.id === id)?.name),
     };
   }, [funis, etapas, equipe, roletas]);
+  return { nomes, recursos };
 }
 
 export default function SitesELandingPages({ aoAbrir }: SitesELandingPagesProps) {
   const [paginas, setPaginas] = useState<PaginaDeSite[] | null>(null);
   const [erro, setErro] = useState(false);
-  const nomes = useListas();
+  const { nomes, recursos } = useListas();
+  // Janela própria; com `aoAbrir` de fora (testes, outro dono da janela) só avisamos.
+  const [janela, setJanela] = useState<{ pagina: PaginaDeSite | null } | null>(null);
 
   const carregar = useCallback(async () => {
     setErro(false);
@@ -93,7 +104,7 @@ export default function SitesELandingPages({ aoAbrir }: SitesELandingPagesProps)
     setPaginas((lista) => (lista ?? []).map((x) => (x.id === p.id ? { ...x, active: nova?.active ?? active } : x)));
   }, []);
 
-  const abrir = (p: PaginaDeSite | null) => aoAbrir?.(p);
+  const abrir = (p: PaginaDeSite | null) => { if (aoAbrir) aoAbrir(p); else setJanela({ pagina: p }); };
   const temPaginas = (paginas ?? []).length > 0;
 
   return (
@@ -118,6 +129,10 @@ export default function SitesELandingPages({ aoAbrir }: SitesELandingPagesProps)
         />
       ) : (
         <TabelaDePaginas paginas={paginas} nomes={nomes} aoAbrir={abrir} aoLigar={ligar} />
+      )}
+      {janela && (
+        <JanelaDaPagina key={janela.pagina?.id ?? 'nova'} pagina={janela.pagina} recursos={recursos}
+          aoFechar={() => setJanela(null)} aoMudou={() => void carregar()} />
       )}
     </Pagina>
   );
