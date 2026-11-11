@@ -131,6 +131,7 @@ export const TIPO_DA_ORIGEM_LABELS: Record<RoletaOriginKind, string> = {
   portal_rent: 'Portal',
   site_sale: 'Site',
   site_rent: 'Site',
+  external_page: 'Site',
 };
 
 /** "Formulário do Meta · "21/08 - ALMA"" · "Formulário do Meta · nome contém "ALMA"" · "Portal · ZAP (venda)". */

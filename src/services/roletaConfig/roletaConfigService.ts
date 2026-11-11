@@ -339,7 +339,8 @@ export type RoletaOriginKind =
   | 'portal_sale'
   | 'portal_rent'
   | 'site_sale'
-  | 'site_rent';
+  | 'site_rent'
+  | 'external_page';
 
 /** Um formulário do Meta que a regra "nome contém" pega hoje. */
 export interface RoletaOriginMatch {

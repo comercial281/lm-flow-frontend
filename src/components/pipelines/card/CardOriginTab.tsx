@@ -52,14 +52,19 @@ export default function CardOriginTab({
     bolsao_lista: 'Lista do Bolsão',
     // Portal e formulário do site: o nome de qual portal/site trouxe o lead.
     portal: 'Portal', site: 'Site',
+    // Página de fora (Sites e landing pages): o endereço onde o lead preencheu.
+    page_url: 'Página',
   };
   // manual_origin sai da lista genérica: tem campo editável próprio no topo.
   // bolsao_batch_id/bolsao_lead_id são identificadores internos: quem
   // lê o card quer o NOME da lista, que sai em bolsao_lista.
   const HIDDEN = new Set(['thumbnail_url', 'source', 'entered_via', 'added_by_id', 'channel_type',
-    'bolsao_batch_id', 'bolsao_lead_id', 'reclassificado', MANUAL_ORIGIN_KEY]);
+    'bolsao_batch_id', 'bolsao_lead_id', 'reclassificado', MANUAL_ORIGIN_KEY,
+    // Página de fora: utm/clid são rastreio interno; o botão vira a frase "pelo botão flutuante".
+    'tracking', 'entry_button']);
   const source = (ar as any).source as string | undefined;
   const meta = source ? SOURCE_META[source] : undefined;
+  const pelaBotaoFlutuante = (ar as any).entry_button === 'flutuante';
   const entries = Object.entries(ar).filter(([k, v]) => k !== 'extra_fields' && !HIDDEN.has(k) && v != null && v !== '');
   // Respostas do formulário Meta: o backend grava o hash completo de
   // respostas em custom_attributes.form_answers (antes só nome/email/telefone
@@ -79,7 +84,7 @@ export default function CardOriginTab({
   const answerRows = extraRows.length > 0 ? extraRows : normalizeFormAnswers(formAnswers, answerTexts);
   // Resultado da régua da landing, gravado no card na captura.
   const verdict = landingVerdict(item.custom_fields);
-  const hasTrackedData = entries.length > 0 || answerRows.length > 0 || !!meta || !!verdict;
+  const hasTrackedData = entries.length > 0 || pelaBotaoFlutuante || answerRows.length > 0 || !!meta || !!verdict;
   return (
     <div className="space-y-4">
       {(meta || verdict) && (
@@ -141,9 +146,16 @@ export default function CardOriginTab({
         {entries.map(([k, v]) => (
           <div key={k} className="flex items-start justify-between gap-3 text-sm border-b border-border/50 pb-1.5">
             <span className="text-muted-foreground shrink-0">{LABELS[k] ?? k.replace(/_/g, ' ')}</span>
-            <span className="text-right font-medium break-all">{String(v)}</span>
+            <span className="text-right font-medium break-all">
+              {k === 'page_url' && /^https?:\/\//i.test(String(v)) ? (
+                <a href={String(v)} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{String(v)}</a>
+              ) : String(v)}
+            </span>
           </div>
         ))}
+        {pelaBotaoFlutuante && (
+          <p className="text-sm text-muted-foreground text-right">pelo botão flutuante</p>
+        )}
       </div>
       {answerRows.length > 0 && (
         <div>

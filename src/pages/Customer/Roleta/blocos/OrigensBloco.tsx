@@ -55,6 +55,7 @@ const ICONE_DO_TIPO: Record<RoletaOriginKind, LucideIcon> = {
   portal_rent: Building2,
   site_sale: Globe,
   site_rent: Globe,
+  external_page: Globe,
 };
 
 type TipoDeOrigem = 'meta' | 'sales_agent' | 'landing' | 'portal' | 'site';
@@ -64,7 +65,7 @@ const TIPOS: { chave: TipoDeOrigem; rotulo: string; descricao: string; kinds: Ro
   { chave: 'sales_agent', rotulo: 'IA Vendedora', descricao: 'Quando a IA passa o lead pra um corretor', kinds: ['sales_agent'], icone: Bot, vazio: 'Nenhuma IA Vendedora ainda.' },
   { chave: 'landing', rotulo: 'Página de anúncio', descricao: 'O formulário das páginas de anúncio', kinds: ['landing'], icone: LayoutTemplate, vazio: 'Nenhuma página de anúncio ainda.' },
   { chave: 'portal', rotulo: 'Portal', descricao: 'Os leads dos portais de imóveis', kinds: ['portal_sale', 'portal_rent'], icone: Building2, vazio: 'Nenhum portal ligado ainda.' },
-  { chave: 'site', rotulo: 'Site', descricao: 'Os formulários do seu site', kinds: ['site_sale', 'site_rent'], icone: Globe, vazio: 'O site ainda não está no ar.' },
+  { chave: 'site', rotulo: 'Site', descricao: 'O seu site e as páginas de fora', kinds: ['site_sale', 'site_rent', 'external_page'], icone: Globe, vazio: 'O site ainda não está no ar.' },
 ];
 
 /** O item como aparece na lista do passo 2 (sem o tipo, que já está no título). */

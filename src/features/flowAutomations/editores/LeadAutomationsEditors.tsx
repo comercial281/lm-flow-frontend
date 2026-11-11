@@ -47,6 +47,7 @@ import {
 import EmptyState from '@/components/base/EmptyState';
 import Carregando from '@/components/base/Carregando';
 import { BOOKED_BY_OPTIONS, BOOKED_BY_TRIGGERS, bookedByCondition, bookedByOf, bookedBySummary, type BookedBy } from './bookedByFilter';
+import { externalLeadPagesService, type PaginaDeSite } from '@/services/externalLeadPages/externalLeadPagesService';
 import { roletaConfigService, roletaLabel, type RoletaConfig } from '@/services/roletaConfig/roletaConfigService';
 import { VariableChipBar } from '@/components/flowAutomations/VariableChipBar';
 import { FLOW_KIND_COPY } from '@/features/flowAutomations/kind';
@@ -252,6 +253,50 @@ function instanceStatusLabel(status: string): string {
   }
 }
 
+// "Quais páginas?" do gatilho Formulário do site / landing. Carrega a lista só
+// quando o bloco aparece. Falha (inclusive 403 de permissão) some com a lista
+// sem gritar: o seletor de origem continua funcionando.
+function QuaisPaginas({ selecionadas, onChange }: { selecionadas: string[]; onChange: (ids: string[]) => void }) {
+  const [paginas, setPaginas] = useState<PaginaDeSite[] | null>(null);
+  const [falhou, setFalhou] = useState(false);
+  useEffect(() => {
+    let vivo = true;
+    externalLeadPagesService.listar()
+      .then(l => { if (vivo) setPaginas(l); })
+      .catch(() => { if (vivo) setFalhou(true); });
+    return () => { vivo = false; };
+  }, []);
+  if (falhou) return null;
+  const alternar = (id: string) =>
+    onChange(selecionadas.includes(id) ? selecionadas.filter(x => x !== id) : [...selecionadas, id]);
+  return (
+    <div>
+      <UILabel>Quais páginas? (opcional)</UILabel>
+      <div className="mt-1 max-h-52 overflow-y-auto rounded-md border border-border divide-y divide-border">
+        {paginas === null ? (
+          <Carregando linhas={2} rotulo="Carregando as páginas…" className="p-2" />
+        ) : paginas.length === 0 ? (
+          <EmptyState
+            tamanho="compacto"
+            className="rounded-none border-0 p-3"
+            title="Nenhuma página ligada ainda — veja Integrações → Sites e landing pages."
+          />
+        ) : (
+          paginas.map(p => (
+            <label key={p.id} className="flex items-center gap-2 px-2.5 py-2 cursor-pointer hover:bg-muted/50 text-sm">
+              <Checkbox checked={selecionadas.includes(p.id)} onCheckedChange={() => alternar(p.id)} />
+              <span className="truncate">{p.name}</span>
+            </label>
+          ))
+        )}
+      </div>
+      <p className="text-xs text-muted-foreground mt-1">
+        Nenhuma marcada = qualquer página ou landing.
+      </p>
+    </div>
+  );
+}
+
 export function ConditionEditor({ trigger, condition, onChange, resources, semQuemAceitou }: ConditionEditorProps) {
   if (!triggerNeedsCondition(trigger)) return null;
   if (semQuemAceitou && trigger === 'lead.roleta_accepted') return null;
@@ -263,15 +308,27 @@ export function ConditionEditor({ trigger, condition, onChange, resources, semQu
   // Condição emitida (sempre 1 só, o backend casa por form_id ou por source):
   //   form X selecionado → { form_id eq X }   (já implica formulário)
   //   formulário sem form específico → { source eq formulario }
+  //   formulário do site/landing com páginas marcadas → { site_page_id in [ids] }
+  //   formulário do site/landing sem página marcada → { source eq formulario_site }
   //   outras origens → { source eq <origem> }
   if (trigger === 'lead.created') {
     const field = condition?.field;
     const rawValue = typeof condition?.value === 'string' ? condition.value : '';
-    const origin = field === 'form_id' ? 'formulario' : (field === 'source' ? rawValue : '');
+    const origin = field === 'form_id' ? 'formulario'
+      : field === 'site_page_id' ? 'formulario_site'
+      : (field === 'source' ? rawValue : '');
     // Formulários selecionados: aceita array (operator "in") ou valor único legado (eq).
     const selectedForms: string[] = field === 'form_id'
       ? (Array.isArray(condition?.value) ? condition!.value : (rawValue ? [rawValue] : []))
       : [];
+
+    const selectedPages: string[] = field === 'site_page_id' && Array.isArray(condition?.value) ? condition.value : [];
+    const commitPages = (ids: string[]) => {
+      // Nenhuma marcada = qualquer página ou landing (só filtra por origem).
+      onChange(ids.length
+        ? { field: 'site_page_id', operator: 'in', value: ids }
+        : { field: 'source', operator: 'eq', value: 'formulario_site' });
+    };
 
     const commitOrigin = (o: string) => {
       if (!o) return onChange(null);
@@ -344,6 +401,10 @@ export function ConditionEditor({ trigger, condition, onChange, resources, semQu
               daqueles formulários.
             </p>
           </div>
+        )}
+
+        {origin === 'formulario_site' && (
+          <QuaisPaginas selecionadas={selectedPages} onChange={commitPages} />
         )}
       </div>
     );
@@ -1666,8 +1727,13 @@ export function formatConditionSummary(
       const names = ids.map(id => resources.formOrigins.find(x => x.form_id === id)?.form_name || id);
       return `${names.length > 1 ? 'Formulários' : 'Formulário'}: ${names.join(', ')}`;
     }
+    if (condition.field === 'site_page_id') {
+      const n = Array.isArray(condition.value) ? condition.value.length : 1;
+      return `Formulário do site / landing · ${n} ${n === 1 ? 'página' : 'páginas'}`;
+    }
     const labels: Record<string, string> = {
       formulario: 'Formulário (Meta Lead Ads)',
+      formulario_site: 'Formulário do site / landing',
       lead_whats_meta: 'Lead de anúncio no WhatsApp',
       organico: 'Orgânico (sem anúncio)',
     };
