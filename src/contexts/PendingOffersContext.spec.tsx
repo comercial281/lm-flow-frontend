@@ -63,6 +63,24 @@ describe('PendingOffersProvider — checagem das ofertas', () => {
     expect(listMine).toHaveBeenCalledTimes(1);
   });
 
+  // Som do Plantão (11/11/2026): com oferta tocando, a lista confere também com
+  // a aba escondida. É o que faz o PC parar de tocar quando o corretor aceita
+  // pelo celular.
+  it('com oferta na lista e a aba escondida, segue checando a cada 15 s', async () => {
+    listMine.mockImplementation(async () => [{ id: 'a' }]);
+    await montar();
+    act(() => { mudarVisibilidade('hidden'); });
+    await act(async () => { vi.advanceTimersByTime(15_000); });
+    expect(listMine).toHaveBeenCalledTimes(2);
+
+    listMine.mockImplementation(async () => []);
+    await act(async () => { vi.advanceTimersByTime(15_000); });
+    expect(listMine).toHaveBeenCalledTimes(3);
+    // A oferta saiu: escondida de novo não checa mais.
+    await act(async () => { vi.advanceTimersByTime(60_000); });
+    expect(listMine).toHaveBeenCalledTimes(3);
+  });
+
   it('na volta para a aba, checa na hora', async () => {
     await montar();
     act(() => { mudarVisibilidade('hidden'); });

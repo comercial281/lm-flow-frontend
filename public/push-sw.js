@@ -16,6 +16,44 @@ function enviarRecibo(data, evento) {
   }).catch(function () {});
 }
 
+// Som do Plantão (11/11/2026). Avisos de lead que tocam o Chegou na aba do LM
+// Flow. A MESMA lista mora no backend (Notifications::Channels::LOUD_EVENTS):
+// mudou lá, muda aqui.
+var EVENTOS_ALTOS = ['roleta.oferta_recebida', 'lead.atribuido'];
+var ESPERA_DA_ABA_MS = 1500;
+
+// Pergunta a TODAS as abas abertas se alguma tocou o Chegou. Só a aba líder toca
+// (as outras respondem played: false). Resolve true na primeira que tocou e
+// false quando nenhuma tocou a tempo: sem aba, navegador bloqueou o som (ninguém
+// clicou na página), aba congelada. Nesses casos o aviso do sistema sai COM som.
+function perguntarAbas(payload) {
+  return self.clients
+    .matchAll({ type: 'window', includeUncontrolled: true })
+    .then(function(abas) {
+      if (!abas.length) return false;
+      return new Promise(function(resolve) {
+        var faltam = abas.length;
+        var feito = false;
+        var fim = function(valor) {
+          if (feito) return;
+          feito = true;
+          resolve(valor);
+        };
+        setTimeout(function() { fim(false); }, ESPERA_DA_ABA_MS);
+        abas.forEach(function(aba) {
+          var canal = new MessageChannel();
+          canal.port1.onmessage = function(e) {
+            if (e.data && e.data.played) return fim(true);
+            faltam -= 1;
+            if (faltam === 0) fim(false);
+          };
+          aba.postMessage({ type: 'lmflow:lead-alert', event: payload.event, url: payload.url }, [canal.port2]);
+        });
+      });
+    })
+    .catch(function() { return false; });
+}
+
 self.addEventListener('push', function(event) {
   if (!event.data) return;
 
@@ -40,9 +78,30 @@ self.addEventListener('push', function(event) {
     vibrate: [200, 100, 200],
   };
 
-  event.waitUntil(
-    self.registration.showNotification(payload.title, options).then(function () {
+  var mostrar = function () {
+    return self.registration.showNotification(payload.title, options).then(function () {
       return enviarRecibo(options.data, 'shown');
+    });
+  };
+
+  if (EVENTOS_ALTOS.indexOf(payload.event) === -1) {
+    event.waitUntil(mostrar());
+    return;
+  }
+
+  // Aviso de lead: fica parado na tela até o corretor clicar. Se a aba tocou o
+  // Chegou, o aviso do sistema sai calado (som em dobro incomoda e o corretor
+  // desliga o plantão).
+  options.requireInteraction = true;
+  event.waitUntil(
+    perguntarAbas(payload).then(function (tocou) {
+      if (tocou) {
+        options.silent = true;
+        // O Chrome RECUSA aviso calado com vibração (TypeError: "Silent
+        // notifications must not specify vibration patterns") e o aviso sumiria.
+        delete options.vibrate;
+      }
+      return mostrar();
     })
   );
 });
