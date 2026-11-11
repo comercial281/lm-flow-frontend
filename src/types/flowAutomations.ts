@@ -2,9 +2,10 @@
 // fluxos do LM Hub. Backend: app/controllers/api/v1/flow_automations_controller.rb
 
 import type { SendFromMode } from '@/features/numbers/sendFrom';
+import { INSTRUCAO_DE_EXEMPLO } from '@/features/flowAutomations/aiMessage';
 
 export type FlowNodeKind =
-  | 'send_whatsapp' | 'send_email' | 'notify_group' | 'send_capi' | 'notify_bell'
+  | 'send_whatsapp' | 'ai_message' | 'send_email' | 'notify_group' | 'send_capi' | 'notify_bell'
   | 'sequence' | 'funnel' | 'call_flow'
   | 'add_label' | 'remove_label' | 'create_pipeline_item' | 'move_stage' | 'move_pipeline'
   | 'assign_owner' | 'assign_round_robin' | 'set_next_action' | 'log_event'
@@ -217,6 +218,20 @@ export interface SaveFlowPayload {
   initial_node_id: string | null;
 }
 
+export interface AiMessagePreview {
+  text: string;
+  source: 'ia' | 'reserva';
+  reason_text: string | null;
+  answers: Record<string, string>;
+}
+
+export interface AiMessageLead {
+  id: string;
+  name: string;
+  form_name: string | null;
+  created_at: string;
+}
+
 export interface TestRunResult {
   instance_id: string;
   state: string;
@@ -262,6 +277,7 @@ export const FLOW_NODE_DEFS: FlowNodeDef[] = [
   { kind: 'wait_for_reply', label: 'Aguardar resposta', group: 'control', canFail: false, defaultConfig: { minutes: 1440, indefinite: false } },
   { kind: 'condition', label: 'Condição', group: 'control', canFail: false, defaultConfig: { criterion: 'replied', window_hours: 24 } },
   // Os ids são trocados ao criar o bloco (freshBlockConfig).
+  { kind: 'ai_message', label: 'Mensagem com IA', group: 'message', canFail: false, defaultConfig: { instruction: INSTRUCAO_DE_EXEMPLO, fallback_text: '' } },
   { kind: 'randomizer', label: 'Randomizador', group: 'control', canFail: false, defaultConfig: { branches: [{ id: 'a', percent: 50, next_node_id: null }, { id: 'b', percent: 50, next_node_id: null }] } },
   { kind: 'webhook', label: 'Avisar um sistema de fora', group: 'notify', canFail: true, defaultConfig: { event_name: '' } },
   { kind: 'http_call', label: 'Chamar uma API', group: 'notify', canFail: true, defaultConfig: { method: 'POST', url: '', headers: '', body: '' } },
@@ -282,7 +298,7 @@ export const FLOW_NODE_DEF_BY_KIND: Record<FlowNodeKind, FlowNodeDef> = FLOW_NOD
 // o bloco com o aviso de que ele volta na próxima versão. A ordem da paleta
 // mora em features/flowAutomations/palette.ts.
 export const FLOW_VISIBLE_NODE_KINDS: FlowNodeKind[] = [
-  'send_whatsapp',
+  'send_whatsapp', 'ai_message',
   'wait', 'wait_for_reply', 'condition', 'randomizer', 'filter_label',
   'add_label', 'remove_label', 'move_stage',
   'lead_action',

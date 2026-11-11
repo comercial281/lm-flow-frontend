@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { FLOW_NODE_DEFS } from '@/types/flowAutomations';
+import { FLOW_NODE_DEFS, FLOW_NODE_DEF_BY_KIND } from '@/types/flowAutomations';
 import { ACTION_TYPE_LABELS } from '@/services/leadAutomation/leadAutomationService';
-import { configDoBlocoNovo, freshBlockConfig, isVisibleKind, isVisibleNode, paletteGroups, paletteItems, blockLabel, HIDDEN_BLOCK_NOTICE } from './palette';
+import { INSTRUCAO_DE_EXEMPLO } from './aiMessage';
+import { AI_TALKING_KINDS, configDoBlocoNovo, foraDoFunilDeConversa, foraDoFollowup, freshBlockConfig, isVisibleKind, isVisibleNode, paletteGroups, paletteItems, blockLabel, HIDDEN_BLOCK_NOTICE } from './palette';
 import { summaryLine } from '@/components/flowAutomations/FlowNodeCard';
 
 const node = (kind: string, config: Record<string, unknown> = {}) => ({
@@ -13,7 +14,7 @@ describe('paleta da sprint 2', () => {
   it('os blocos da spec, nos seis grupos e na ordem da tabela', () => {
     expect(paletteGroups().map(g => [g.label, g.items.map(i => i.label)])).toEqual([
       // PR 8 (16/10/2026): áudio, imagem, vídeo, documento e figurinha viraram itens do bloco Mensagem.
-      ['Mensagem', ['Mensagem', 'Disparar funil de mensagens']],
+      ['Mensagem', ['Mensagem', 'Mensagem com IA', 'Disparar funil de mensagens']],
       ['Lead', [
         'Aplicar etiqueta', 'Tirar etiqueta', 'Mover de etapa', 'Lead recuperado',
         'Criar tarefa', 'Iniciar follow-up',
@@ -140,5 +141,35 @@ describe('configDoBlocoNovo (não mandar se a IA já estiver conversando)', () =
     const it0 = item('send_whatsapp');
     configDoBlocoNovo(it0, 'lead.created');
     expect(it0.config).toEqual({ a: 1 });
+  });
+});
+
+describe('bloco Mensagem com IA no catálogo', () => {
+  it('tem definição (o tsc não confere o mapa) e o texto de exemplo na config', () => {
+    const def = FLOW_NODE_DEF_BY_KIND.ai_message;
+    expect(def).toBeDefined();
+    expect(def).toMatchObject({ kind: 'ai_message', label: 'Mensagem com IA', group: 'message', canFail: false });
+    expect(def.defaultConfig).toEqual({ instruction: INSTRUCAO_DE_EXEMPLO, fallback_text: '' });
+    expect(INSTRUCAO_DE_EXEMPLO).toContain('Você é {{corretor}}');
+    expect(INSTRUCAO_DE_EXEMPLO).toContain('No máximo 3 frases.');
+  });
+
+  it('aparece na paleta e é um bloco visível', () => {
+    expect(isVisibleKind('ai_message')).toBe(true);
+    expect(blockLabel(node('ai_message'))).toBe('Mensagem com IA');
+  });
+
+  it('respeita "não mandar se a IA já estiver conversando" no Lead criado', () => {
+    expect(AI_TALKING_KINDS).toContain('ai_message');
+    const item = paletteItems().find(i => i.kind === 'ai_message')!;
+    expect(configDoBlocoNovo(item, 'lead.created').skip_if_ai_talking).toBe(true);
+    expect(configDoBlocoNovo(item, 'lead.stage_changed').skip_if_ai_talking).toBeUndefined();
+  });
+
+  it('fica fora do funil de conversa e do follow-up', () => {
+    const item = paletteItems().find(i => i.kind === 'ai_message')!;
+    expect(foraDoFunilDeConversa()(item)).toBe('fora');
+    expect(foraDoFollowup()(item)).toBe('fora');
+    expect(foraDoFollowup()(paletteItems().find(i => i.kind === 'randomizer')!)).toBe('ok');
   });
 });

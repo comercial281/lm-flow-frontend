@@ -32,7 +32,7 @@ export function flowNumberOf(
     };
   }
   const values = nodes
-    .filter(n => n.kind === 'send_whatsapp')
+    .filter(n => n.kind === 'send_whatsapp' || n.kind === 'ai_message')
     .map(n => sendFromOf(n.config as { send_from?: unknown; send_from_inbox_id?: unknown }));
   const first = values[0];
   if (!first) return { setting: { mode: '', inboxId: '', onConflict: 'follow_conversation' }, saved: false, divergent: false };
@@ -53,10 +53,10 @@ export function serializeFlowNumber(s: FlowNumberSetting): {
   return { send_from: s.mode, send_from_inbox_id: s.inboxId, number_conflict: s.onConflict };
 }
 
-/** Espelha o número em cada Mensagem (send_whatsapp). Não toca ação de lead. */
+/** Espelha o número em cada Mensagem (send_whatsapp) e Mensagem com IA (ai_message). Não toca ação de lead. */
 export function withFlowSendFrom(nodes: FlowAutomationNode[], s: FlowNumberSetting): FlowAutomationNode[] {
   return nodes.map(n =>
-    n.kind === 'send_whatsapp'
+    n.kind === 'send_whatsapp' || n.kind === 'ai_message'
       ? { ...n, config: applySendFrom(n.config as Record<string, unknown>, { send_from: s.mode, send_from_inbox_id: s.inboxId }) as FlowAutomationNode['config'] }
       : n,
   );
