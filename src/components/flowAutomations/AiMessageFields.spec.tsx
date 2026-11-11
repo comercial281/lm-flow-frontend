@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { act, render, screen, fireEvent } from '@testing-library/react';
 import { ReactFlowProvider } from '@xyflow/react';
 
 // Bloco "Mensagem com IA" (11/11/2026): a janela (instrução, reserva, Testar) e o cartão.
@@ -19,6 +19,7 @@ import { FlowNodeCard, type FlowNodeCardData } from './FlowNodeCard';
 import { FlowNodePanel } from './FlowNodePanel';
 import type { AutomationResources } from '@/features/flowAutomations/editores/LeadAutomationsEditors';
 import { formularioDoGatilho } from '@/features/flowAutomations/aiMessage';
+import { nodeProblem } from '@/features/flowAutomations/readiness';
 import type { FlowAutomationNode, FlowNodeConfig } from '@/types/flowAutomations';
 
 const LEADS = [
@@ -158,12 +159,51 @@ describe('janela da Mensagem com IA', () => {
     expect(screen.getByRole('button', { name: 'Testar mensagem' })).toBeDisabled();
   });
 
-  it('sem lead escolhido o botão fica desligado', async () => {
+  it('abre no lead mais novo, pronto pra testar', async () => {
     render(<Janela />);
     await screen.findByRole('option', { name: /Rodrigo Teste/ });
-    expect(screen.getByRole('button', { name: 'Testar mensagem' })).toBeDisabled();
-    await escolherLead();
+    expect(screen.getByLabelText('Lead pra testar')).toHaveValue('c1');
     expect(screen.getByRole('button', { name: 'Testar mensagem' })).toBeEnabled();
+  });
+
+  it('sem lead nenhum o botão fica desligado', async () => {
+    aiMessageLeads.mockResolvedValue([]);
+    render(<Janela />);
+    expect(await screen.findByText('Nenhum lead com respostas de formulário ainda.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Testar mensagem' })).toBeDisabled();
+  });
+
+  it('mexer na instrução depois do teste some com o balão', async () => {
+    aiMessagePreview.mockResolvedValue({ text: 'Primeira versão', source: 'reserva', reason_text: 'A IA demorou, saiu a mensagem reserva.', answers: { 'Qual região?': 'Zona Leste' } });
+    render(<Janela />);
+    await escolherLead();
+    fireEvent.click(screen.getByRole('button', { name: 'Testar mensagem' }));
+    expect(await screen.findByTestId('bolha-do-whatsapp')).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText(/Instrução para a IA/), { target: { value: 'Outra instrução.' } });
+    expect(screen.queryByTestId('bolha-do-whatsapp')).toBeNull();
+    expect(screen.queryByText('A IA demorou, saiu a mensagem reserva.')).toBeNull();
+    expect(screen.queryByRole('button', { name: /Respostas que a IA leu/ })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Testar mensagem' })).toBeEnabled();
+  });
+
+  it('resposta que chega depois de mexer na reserva é descartada', async () => {
+    let soltar: (v: unknown) => void = () => {};
+    aiMessagePreview.mockReturnValue(new Promise(res => { soltar = res; }));
+    render(<Janela />);
+    await escolherLead();
+    fireEvent.click(screen.getByRole('button', { name: 'Testar mensagem' }));
+    expect(screen.getByRole('button', { name: 'Escrevendo…' })).toBeDisabled();
+    fireEvent.change(screen.getByLabelText(/Mensagem reserva/), { target: { value: 'Nova reserva' } });
+    await act(async () => { soltar({ text: 'Texto velho', source: 'ia', reason_text: null, answers: {} }); });
+    expect(screen.queryByText('Texto velho')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Testar mensagem' })).toBeEnabled();
+  });
+
+  it('sem o fluxo salvo: avisa no lugar do Testar', () => {
+    render(<AiMessageFields config={{ instruction: 'Oi', fallback_text: 'Oi' }} onChange={() => {}} readOnly={false} automationId="" />);
+    expect(screen.getByText('Salve o fluxo pra testar a mensagem.')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Testar mensagem' })).toBeNull();
+    expect(aiMessageLeads).not.toHaveBeenCalled();
   });
 
   it('somente leitura no modo guiado: campos desligados e sem Testar', () => {
@@ -199,9 +239,9 @@ const bloco = (config: FlowNodeConfig): FlowAutomationNode => ({
   pos_x: 0, pos_y: 0, steps: [],
 });
 
-function renderCard(node: FlowAutomationNode) {
+function renderCard(node: FlowAutomationNode, problem: string | null = null) {
   const data: FlowNodeCardData = {
-    node, lookups: {}, problem: null,
+    node, lookups: {}, problem,
     onEdit: vi.fn(), onDuplicate: vi.fn(), onRemove: vi.fn(), onAddFrom: vi.fn(), onRename: vi.fn(),
   };
   return render(
@@ -240,6 +280,27 @@ describe('janela do bloco no construtor', () => {
   });
 });
 
+describe('janela do bloco no modo guiado', () => {
+  it('fluxo antigo sem número do fluxo: nada de escolher o número', () => {
+    render(
+      <FlowNodePanel node={bloco({ instruction: 'Oi', fallback_text: 'Oi' })} resources={resources} onClose={() => {}} onSave={() => {}} guided automationId="flow-1" />,
+    );
+    expect(screen.queryByText('Enviar pelo número')).toBeNull();
+    expect(sendNumbers).not.toHaveBeenCalled();
+    expect(screen.queryByRole('button', { name: 'Testar mensagem' })).toBeNull();
+  });
+
+  it('com número do fluxo: só a linha', () => {
+    render(
+      <FlowNodePanel
+        node={bloco({ instruction: 'Oi', fallback_text: 'Oi' })} resources={resources} onClose={() => {}} onSave={() => {}}
+        guided automationId="flow-1" numeroDoFluxo={{ mode: 'owner', final: null }}
+      />,
+    );
+    expect(screen.getByTestId('sai-pelo-numero-do-fluxo')).toBeInTheDocument();
+  });
+});
+
 describe('cartão da Mensagem com IA', () => {
   it('resumo é o começo da instrução', () => {
     renderCard(bloco({
@@ -255,5 +316,12 @@ describe('cartão da Mensagem com IA', () => {
   it('sem instrução: Escreva a instrução', () => {
     renderCard(bloco({ instruction: '  ', fallback_text: '' }));
     expect(screen.getByText('Escreva a instrução')).toBeInTheDocument();
+  });
+
+  it('incompleto: borda amarela e o que falta, pela régua de sempre (readiness)', () => {
+    const node = bloco({ instruction: 'Oi', fallback_text: '' });
+    const { container } = renderCard(node, nodeProblem(node));
+    expect(container.querySelector('.fluxo-bloco')).toHaveClass('border-amber-500');
+    expect(screen.getByText('Escreva a mensagem reserva.')).toBeInTheDocument();
   });
 });

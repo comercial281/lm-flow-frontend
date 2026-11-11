@@ -55,7 +55,13 @@ function TestarMensagem({ config, automationId, formId, inboxDoTeste }: {
     setResultado(null);
     flowAutomationsService
       .aiMessageLeads(automationId, formId ?? undefined)
-      .then(lista => { if (vivo) setLeads({ estado: 'pronto', lista }); })
+      .then(lista => {
+        if (!vivo) return;
+        setLeads({ estado: 'pronto', lista });
+        // Abre no lead mais novo: escolher nome é um passo a mais que faz desistir
+        // de testar (mesma regra do Testar da IA Vendedora).
+        setLeadId(lista[0]?.id ?? '');
+      })
       .catch((e: unknown) => { if (vivo) setLeads({ estado: 'erro', frase: e instanceof Error ? e.message : String(e) }); });
     return () => {
       vivo = false;
@@ -63,14 +69,28 @@ function TestarMensagem({ config, automationId, formId, inboxDoTeste }: {
     };
   }, [automationId, formId]);
 
-  const escolherLead = (id: string) => {
+  // Esquece o resultado na tela e qualquer resposta ainda a caminho.
+  const esquecerResultado = () => {
     pedido.current += 1;
-    setLeadId(id);
     setResultado(null);
     setErro(null);
     setTestando(false);
     setRespostasAbertas(false);
   };
+
+  const escolherLead = (id: string) => {
+    esquecerResultado();
+    setLeadId(id);
+  };
+
+  // Mexeu na instrução ou na reserva: o balão mostrado já não é o desse texto.
+  const instrucao = texto(config.instruction);
+  const reserva = texto(config.fallback_text);
+  const primeiraVez = useRef(true);
+  useEffect(() => {
+    if (primeiraVez.current) { primeiraVez.current = false; return; }
+    esquecerResultado();
+  }, [instrucao, reserva]); // eslint-disable-line react-hooks/exhaustive-deps -- só quando o texto muda
 
   const testar = async () => {
     const meu = ++pedido.current;
@@ -78,8 +98,8 @@ function TestarMensagem({ config, automationId, formId, inboxDoTeste }: {
     setErro(null);
     try {
       const r = await flowAutomationsService.aiMessagePreview(automationId, {
-        instruction: texto(config.instruction),
-        fallback_text: texto(config.fallback_text),
+        instruction: instrucao,
+        fallback_text: reserva,
         contact_id: leadId,
         send_from_inbox_id: inboxDoTeste,
       });
@@ -215,9 +235,14 @@ export function AiMessageFields({ config, onChange, readOnly, automationId, form
           {!readOnly && <VariableChipBar targetRef={reservaRef} value={reserva} onChange={next => set('fallback_text', next)} />}
         </CampoDaJanela>
       </GrupoDaJanela>
-      {!readOnly && automationId && (
+      {!readOnly && (automationId ? (
         <TestarMensagem config={config} automationId={automationId} formId={formId} inboxDoTeste={inboxDoTeste} />
-      )}
+      ) : (
+        // Guarda: o construtor só abre com o fluxo já salvo, então isto não deveria aparecer.
+        <GrupoDaJanela titulo="Testar">
+          <Aviso tom="neutro" compacto>Salve o fluxo pra testar a mensagem.</Aviso>
+        </GrupoDaJanela>
+      ))}
       <GrupoDaJanela titulo="Envio">
         {numeroDoFluxo}
         {!readOnly && (

@@ -146,15 +146,18 @@ export function SequenciaDaMensagem({ config, onChange, conversation = false, gu
  * fluxo antigo (sem regra de número), o "Enviar pelo número" do próprio bloco.
  * A mesma da Mensagem e da Mensagem com IA.
  */
-export function NumeroDoBloco({ config, onChange, numeroDoFluxo = null, numerosDiferentes = false }: {
+export function NumeroDoBloco({ config, onChange, numeroDoFluxo = null, numerosDiferentes = false, somenteLeitura = false }: {
   config: FlowNodeConfig;
   onChange: React.Dispatch<React.SetStateAction<FlowNodeConfig>>;
   /** A linha "Sai pelo número do fluxo"; null = fluxo antigo. */
   numeroDoFluxo?: string | null;
   /** Fluxo antigo cujas Mensagens saem por números diferentes: aponta pras Configurações. */
   numerosDiferentes?: boolean;
+  /** Modo guiado: só a linha do número do fluxo, nunca o seletor do bloco. */
+  somenteLeitura?: boolean;
 }) {
   if (numeroDoFluxo) return <p className="text-sm font-medium" data-testid="sai-pelo-numero-do-fluxo">{numeroDoFluxo}</p>;
+  if (somenteLeitura) return null;
   return (
     <>
       {numerosDiferentes && <Aviso tom="atencao" compacto>{FLOW_NUMBER_DIVERGENT}</Aviso>}

@@ -427,6 +427,7 @@ export function FlowNodePanel({ node, resources, onClose, onSave, onDirtyChange,
                 onChange={setConfig}
                 numeroDoFluxo={numeroDoFluxo ? flowNumberMessageLine(numeroDoFluxo) : null}
                 numerosDiferentes={numerosDiferentes}
+                somenteLeitura={guided}
               />
             )}
           />
