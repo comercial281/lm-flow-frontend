@@ -201,3 +201,16 @@ describe('De onde vem o lead', () => {
     expect(screen.queryByRole('button', { name: /Form 1 Casa/ })).toBeNull();
   });
 });
+
+describe('tipo Site com página de fora', () => {
+  it('lista a página de fora no tipo Site', async () => {
+    svc.getOriginOptions.mockResolvedValue([
+      { kind: 'external_page', ref_id: 'x1', label: 'LP Centro', detail: 'página de fora', roleta_config_id: null, roleta_name: null },
+    ]);
+    abrir();
+    await userEvent.click(screen.getByRole('button', { name: 'Adicionar origem' }));
+    expect(screen.getByText('O seu site e as páginas de fora')).toBeInTheDocument();
+    await userEvent.click(await screen.findByRole('button', { name: /^Site/ }));
+    expect(await screen.findByText('LP Centro')).toBeInTheDocument();
+  });
+});

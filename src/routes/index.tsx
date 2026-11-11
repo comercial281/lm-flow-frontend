@@ -88,6 +88,7 @@ import SurveyResponse from '@/pages/Public/Survey/SurveyResponse';
 // DashboardAppPage, Tutorials — importadas de
 // ./lazyPages, ver import acima.)
 // Lista completa e antiga de cargos (editar/duplicar/histórico/excluir), fora da aba Cargos.
+const SitesELandingPages = lazyWithRetry(() => import('@/pages/Customer/Settings/Integrations/sites/SitesELandingPages'));
 const RolesFullList = lazyWithRetry(() => import('@/pages/Customer/Team/roles/RolesFullListPage'));
 const SaasSignup = lazyWithRetry(() => import('@/pages/Auth/SaasSignup'));
 const ChannelSettings = lazyWithRetry(() => import('@/pages/Customer/Channels').then(m => ({ default: m.ChannelSettings })));
@@ -995,6 +996,14 @@ const AppRouter = () => {
                 element={
                   <PermissionRoute>
                     <IntegracoesEntrada />
+                  </PermissionRoute>
+                }
+              />
+              <Route
+                path="/settings/integrations/sites"
+                element={
+                  <PermissionRoute resource="portals" action="read">
+                    <SitesELandingPages />
                   </PermissionRoute>
                 }
               />

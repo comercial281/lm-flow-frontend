@@ -53,6 +53,7 @@ describe('o menu do CRM confere o cargo', () => {
     ['/properties', 'properties.read'],
     ['/property-owners', 'properties.read'],
     ['/settings/portals', 'portals.read'],
+    ['/settings/integrations/sites', 'portals.read'],
     ['/visits', 'visits.read'],
     ['/automations/message-funnels', 'message_funnels.read'],
     ['/settings/pixel-capi', 'capi_configs.read'],
@@ -173,6 +174,11 @@ describe('menu novo: seções (fase 4)', () => {
     expect(item.marcador).toBeUndefined();
   });
 
+  it('Sites e landing pages usa a mesma função dos Portais (quem não tem automações vê como vê os Portais)', () => {
+    expect(achar('/settings/integrations/sites').featureKey).toBe('properties');
+    expect(achar('/settings/integrations/sites').featureKey).toBe(achar('/settings/portals').featureKey);
+  });
+
   it('o Bolsão do Corretor fica com uma aba só (Listas e regras é do gestor)', () => {
     const bolsao = comCargo(CORRETOR).flatMap(s => s.itens).find(i => i.name === 'Bolsão')!;
     expect(bolsao.abas?.map(a => a.name)).toEqual(['Pegar leads']);
@@ -193,7 +199,7 @@ describe('menu novo: seções (fase 4)', () => {
     const soPortais = new Set(['portals.read']);
     const integracoes = comCargo(soPortais).flatMap(s => s.itens).find(i => i.name === 'Integrações')!;
     expect(integracoes.href).toBe(ENTRADA_INTEGRACOES);
-    expect(integracoes.abas?.map(a => a.name)).toEqual(['Portais']);
+    expect(integracoes.abas?.map(a => a.name)).toEqual(['Portais', 'Sites e landing pages']);
   });
 
   it('seção sem nenhum item visível some', () => {
@@ -211,7 +217,7 @@ describe('menu novo: seções (fase 4)', () => {
   it('a Página do Facebook é aba de Integrações, e Campanhas (era Formulários) fica sozinho em Minha imobiliária', () => {
     const imobiliaria = secoes.find(s => s.id === 'imobiliaria')!;
     const integracoes = imobiliaria.itens.find(i => i.name === 'Integrações')!;
-    expect(integracoes.abas?.map(a => a.name)).toEqual(['WhatsApp', 'WhatsApp Oficial', 'Facebook', 'Pixel', 'Portais', 'CVCRM', 'Site da imobiliária']);
+    expect(integracoes.abas?.map(a => a.name)).toEqual(['WhatsApp', 'WhatsApp Oficial', 'Facebook', 'Pixel', 'Portais', 'Sites e landing pages', 'CVCRM', 'Site da imobiliária']);
     expect(imobiliaria.itens.find(i => i.href === '/automations/origem')?.name).toBe('Campanhas');
   });
 
@@ -293,6 +299,7 @@ describe('Integrações em cartões (07/10/2026)', () => {
       ['/settings/facebook', 'facebook'],
       ['/settings/pixel-capi', 'facebook'],
       ['/settings/portals', 'portais'],
+      ['/settings/integrations/sites', 'sites'],
       ['/settings/cvcrm', 'sistemas'],
       ['/settings/site-da-imobiliaria', 'sistemas'],
     ]);
