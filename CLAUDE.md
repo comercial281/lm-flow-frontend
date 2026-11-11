@@ -10855,7 +10855,7 @@ O que aparece:
 - **Janela:** *Instrução* (caixa grande com as variáveis, já vem com um exemplo editável), *Mensagem reserva* (sai se a IA não responder), o grupo *Testar*, a linha do número (a mesma da Mensagem), "Não mandar se a IA já estiver conversando" e um aviso fixo de que o próximo bloco precisa combinar com a pergunta que a instrução manda fazer.
 - **Testar:** escolhe um lead real com respostas de formulário (abre no mais novo), botão *Testar mensagem*, resultado num balão com cara de WhatsApp, *Gerar de novo* pra ver a variação e *Respostas que a IA leu* recolhido. Se saiu a reserva, um aviso diz por quê. Nada é enviado.
 - **Cartão no mapa:** começo da instrução como resumo (ou "Escreva a instrução"), linha de por onde sai, borda amarela se incompleto.
-- **Chave de ligar:** pede "Escreva a instrução." e "Escreva a mensagem reserva." (mais o problema de número igual à Mensagem). O servidor recusa ligar o fluxo com o bloco incompleto.
+- **Chave de ligar:** pede "Escreva a instrução.", "Escreva a mensagem reserva." e, quando nenhum número foi escolhido, "Escolha o número em 'Enviar pelo número'." (`sendFrom.ts`). O servidor recusa ligar o fluxo com o bloco incompleto.
 
 Decisões (não reabrir sem o dono pedir):
 
@@ -10876,7 +10876,7 @@ Armadilhas:
 4. **A instrução e o próximo bloco precisam combinar:** se a instrução manda perguntar "esse é o seu WhatsApp?", o bloco seguinte (Aguardar resposta, Condição) tem que esperar essa resposta. O aviso fixo da janela existe por isso.
 5. **Todo ponto que lista tipos de bloco precisa conhecer o novo:** `sendsMessage` em `numberWarnings.ts` (senão aparece o aviso "A IA só responde…"), `withFlowSendFrom` em `flowNumber.ts` (espelho do número ao salvar), `AI_TALKING_KINDS`, `progress.ts`. O `FLOW_NODE_DEF_BY_KIND` não é conferido pelo `tsc`: conferir à mão.
 6. **Texto da tela é literal em pt-BR, sem as palavras proibidas** (prompt, template, agente, robô...). Nada de função ou variável chamada `prompt(`: derruba a trava `conferir-caixinhas`.
-7. **O balão do WhatsApp é o mesmo do Testar da IA Vendedora** (`BolhaDoWhatsapp`, extraído num componente): mexer nele mexe nos dois.
+7. **O balão do WhatsApp (`BolhaDoWhatsapp`) é componente novo, só do bloco:** as cores copiam o celular do `TestarJanela.tsx` da IA Vendedora, mas são código separado. Mudar um não muda o outro.
 
 Código: `features/flowAutomations/aiMessage.ts` (instrução de exemplo, `formularioDoGatilho`), `components/flowAutomations/AiMessageFields.tsx`, `components/flowAutomations/BolhaDoWhatsapp.tsx`, `FlowNodeCard.tsx`, `FlowNodePanel.tsx`, `palette.ts`, `readiness.ts`, `services/flowAutomations/flowAutomationsService.ts` (`aiMessagePreview`, `aiMessageLeads`). Servidor: tipo virtual `ai_message`, `handle_ai_message`, rotas `ai_message_preview` e `ai_message_leads`. Testes: `AiMessageFields.spec.tsx`, `flowAutomationsService.aiMessage.spec.ts`, `palette.spec.ts`, `readiness.spec.ts`.
 
