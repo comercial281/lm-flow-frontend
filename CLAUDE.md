@@ -10985,3 +10985,23 @@ Primeira landing externa na fila: uma LP de cliente, feita fora do LM Flow. A p�
 **Voltar versão:** voltar só a tela é seguro (o card some, as páginas e os endereços seguem recebendo lead). Voltar o backend com esta tela no ar quebra a lista e a janela: voltar a tela junto. Com a tela antiga no ar, uma automação filtrada por página aparece como "Qualquer origem" (o filtro segue valendo no servidor).
 
 **Testes:** `SitesELandingPages.spec.tsx`, `JanelaDaPagina.spec.tsx`, `CardOriginTab.sites.spec.tsx`, `gatilhoPaginaDeSite.spec.tsx`, `OrigensBloco.spec.tsx`, `cartoes.spec.ts`, `menuItems.spec.ts`.
+
+## Imóveis: corretor recebe os leads dos próprios imóveis (11/11/2026)
+
+Pedido da Mais Que Imóveis: o corretor cadastra o imóvel e recebe direto os leads dele, sem passar pela roleta. Muda, por permissão, a decisão de 04/11 ("o corretor não se oferece como Corretor responsável").
+
+- **Chave nova em Cargos > Imóveis: "Receber os leads dos próprios imóveis"** (`properties.own_leads`). Desligada de fábrica pra todo cargo (só o administrador tem); o gestor liga por cargo. Backend: `Properties::LeadOwnerRule`.
+- **Com a chave, o corretor (quem não lê a equipe):**
+  - aparece pra si mesmo no seletor de **Corretor responsável** quando o imóvel não tem responsável e não é captação de colega;
+  - em imóvel novo já nasce **Corretor responsável** (como já nascia Captador);
+  - liga e desliga **"Leads deste imóvel vão direto para o responsável"** só quando o responsável é ele. A chave nasce desligada: tirar o lead da roleta continua sendo decisão por imóvel;
+  - pode se tirar de responsável.
+- **Imóvel de outro responsável ou captação de colega:** seletor e chave travados, com o motivo embaixo ("Fale com a gestão").
+- **Sem a chave, o corretor não mexe mais no responsável nem na chave de leads.** Antes ele trocava pra "Nenhum" e ligava/desligava a chave de qualquer imóvel que editasse (a trava era só de tela). Agora a tela trava e o servidor recusa.
+- **Gestor e administrador (`users.read`) seguem livres**, sem a chave nova.
+
+Decisões (não reabrir sem o dono pedir):
+
+- **O servidor confere, não só a tela.** Só a MUDANÇA de responsável ou da chave é conferida: o formulário inteiro chega em todo salvar, e editar a foto de um imóvel de colega não pode levar recusa.
+- **"Gestor" é quem lê a equipe (`users.read`)**, o mesmo sinal que já decidia se a lista de pessoas aparece no seletor.
+- **Vale pros leads de portal e de landing do imóvel** (é a mesma chave do imóvel). Formulário do Meta e anúncio de WhatsApp seguem a ficha da campanha, que a Leal Mídia configura: ficou de fora de propósito.

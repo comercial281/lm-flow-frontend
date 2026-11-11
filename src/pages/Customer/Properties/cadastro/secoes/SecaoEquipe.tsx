@@ -11,6 +11,8 @@ import {
 } from '@/features/properties/leadDestination';
 import { VISITAS_JUNTAS_HELP, VISITAS_JUNTAS_LABEL, aceitaVisitasJuntas } from '@/features/properties/visitasJuntas';
 import { opcoesDoSeletor } from '@/features/properties/cadastro/captadorPadrao';
+import { regraDoResponsavel } from '@/features/properties/cadastro/responsavelProprio';
+import { useCan } from '@/hooks/useCan';
 import { useAuthStore } from '@/store/authStore';
 import { CLASSE_SELETOR, type PropsDaSecao } from './tipos';
 
@@ -18,6 +20,7 @@ type UsuarioDaLista = { id: string | number; name?: string | null; email?: strin
 
 export default function SecaoEquipe({ form: f, setF, editando }: PropsDaSecao) {
   const eu = useAuthStore(s => s.currentUser);
+  const can = useCan();
   // Usuários do tenant (responsável/captador) e etiquetas. Toleram falha (ficam vazios).
   const [tenantUsers, setTenantUsers] = useState<Array<{ id: string; name: string }>>([]);
   const [labels, setLabels] = useState<Array<{ id: string; title: string }>>([]);
@@ -79,14 +82,25 @@ export default function SecaoEquipe({ form: f, setF, editando }: PropsDaSecao) {
   };
 
   const avisoDeDestino = leadDestinationWarning(f);
-  // Quem já está no imóvel aparece mesmo para quem não lê a equipe. A própria pessoa só
-  // entra no Captador, e só se o imóvel ainda não tem um: não toma captação de colega, e
-  // no Responsável a chave acima mandaria os leads do imóvel direto pra ela.
-  const euNoSeletor = eu?.id && !editando?.captor_id
-    ? { id: String(eu.id), name: eu.name || eu.email || '' }
-    : null;
-  const opcoesDeCaptador = opcoesDoSeletor(tenantUsers, [editando?.captor, euNoSeletor]);
-  const opcoesDeResponsavel = opcoesDoSeletor(tenantUsers, [editando?.responsible]);
+  // Quem já está no imóvel aparece mesmo para quem não lê a equipe. A própria pessoa
+  // entra no Captador só se o imóvel ainda não tem um (não toma captação de colega).
+  const euMesmo = eu?.id ? { id: String(eu.id), name: eu.name || eu.email || '' } : null;
+  const euNoCaptador = editando?.captor_id ? null : euMesmo;
+  // No Responsável, só com "Receber os leads dos próprios imóveis" (a chave abaixo manda
+  // os leads do imóvel direto pra ela), e só em imóvel livre que não é captação de colega.
+  const regra = regraDoResponsavel({
+    escolheQualquer: can('users', 'read'),
+    recebeOsProprios: can('properties', 'own_leads'),
+    meuId: euMesmo?.id ?? null,
+    responsavelAntes: editando?.responsible_id,
+    responsavelAgora: f.responsible_id,
+    captadorAgora: f.captor_id,
+  });
+  const opcoesDeCaptador = opcoesDoSeletor(tenantUsers, [editando?.captor, euNoCaptador]);
+  const opcoesDeResponsavel = opcoesDoSeletor(tenantUsers, [
+    editando?.responsible,
+    regra.euNoSeletor || f.responsible_id === euMesmo?.id ? euMesmo : null,
+  ]);
 
   return (
     <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -95,6 +109,7 @@ export default function SecaoEquipe({ form: f, setF, editando }: PropsDaSecao) {
         <Seletor
           value={f.responsible_id ?? ''}
           onChange={e => setF({ responsible_id: e.target.value || null })}
+          disabled={!regra.podeTrocar}
           className={CLASSE_SELETOR}
         >
           <option value="">Nenhum</option>
@@ -111,12 +126,16 @@ export default function SecaoEquipe({ form: f, setF, editando }: PropsDaSecao) {
             className="mt-0.5"
             checked={f.lead_goes_to_responsible === true}
             onCheckedChange={v => setF({ lead_goes_to_responsible: v === true })}
+            disabled={!regra.podeMexerNaChave}
           />
           <span>
             {LEAD_DESTINATION_LABEL}
             <span className="mt-0.5 block text-muted-foreground">{LEAD_DESTINATION_HELP}</span>
           </span>
         </label>
+        {regra.motivo && (
+          <p className="mt-1 text-xs text-muted-foreground">{regra.motivo}</p>
+        )}
         {avisoDeDestino && (
           <Aviso tom="atencao" compacto className="mt-1">{avisoDeDestino}</Aviso>
         )}

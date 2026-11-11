@@ -50,6 +50,7 @@ import SecaoMidia from './secoes/SecaoMidia';
 import SecaoDescricao from './secoes/SecaoDescricao';
 import SecaoEquipe from './secoes/SecaoEquipe';
 import { useCaptadorPadrao } from '@/features/properties/cadastro/captadorPadrao';
+import { useResponsavelPadrao } from '@/features/properties/cadastro/responsavelProprio';
 import SecaoDadosInternos from './secoes/SecaoDadosInternos';
 import SecaoConstrutora from './secoes/SecaoConstrutora';
 import SecaoComissao from './secoes/SecaoComissao';
@@ -116,6 +117,15 @@ function Cadastro() {
     setForm(preencher);
     setInicial(preencher);
   }, [editandoId, captadorPadrao]);
+  // Com "Receber os leads dos próprios imóveis", o corretor também nasce Corretor responsável.
+  // A chave de leads segue desligada: ele liga se quiser.
+  const responsavelPadrao = useResponsavelPadrao();
+  useEffect(() => {
+    if (editandoId || !responsavelPadrao) return;
+    const preencher = (f: PropertyFormData) => (f.responsible_id ? f : { ...f, responsible_id: responsavelPadrao });
+    setForm(preencher);
+    setInicial(preencher);
+  }, [editandoId, responsavelPadrao]);
   const setF = (patch: MudancaDoFormulario) =>
     setForm(prev => ({ ...prev, ...(typeof patch === 'function' ? patch(prev) : patch) }));
 
