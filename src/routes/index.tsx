@@ -88,6 +88,7 @@ import SurveyResponse from '@/pages/Public/Survey/SurveyResponse';
 // DashboardAppPage, Tutorials — importadas de
 // ./lazyPages, ver import acima.)
 // Lista completa e antiga de cargos (editar/duplicar/histórico/excluir), fora da aba Cargos.
+const SitesELandingPages = lazyWithRetry(() => import('@/pages/Customer/Settings/Integrations/sites/SitesELandingPages'));
 const RolesFullList = lazyWithRetry(() => import('@/pages/Customer/Team/roles/RolesFullListPage'));
 const SaasSignup = lazyWithRetry(() => import('@/pages/Auth/SaasSignup'));
 const ChannelSettings = lazyWithRetry(() => import('@/pages/Customer/Channels').then(m => ({ default: m.ChannelSettings })));
@@ -206,7 +207,6 @@ import OnboardingPage from '@/pages/Setup/OnboardingPage';
 import NotFound from '@/pages/NotFound';
 import Unauthorized from '@/pages/Unauthorized';
 import PaginaComAbas from '@/components/base/PaginaComAbas';
-import SitesELandingPages from '@/pages/Customer/Settings/Integrations/sites/SitesELandingPages';
 import MolduraDeIntegracao from '@/pages/Customer/Settings/Integrations/MolduraDeIntegracao';
 // Widget é lazy: rota pública de embed em iframe que a esmagadora maioria das
 // visitas nunca acessa — não faz sentido pesar o bundle inicial com ela. Já
