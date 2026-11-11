@@ -227,7 +227,7 @@ function Cadastro() {
           </fieldset>
         );
       case 'localizacao':
-        return <SecaoLocalizacao form={form} setF={setF} somenteLeitura={somenteLeitura} />;
+        return <SecaoLocalizacao form={form} setF={setF} somenteLeitura={somenteLeitura} oQue="condomínio" />;
       case 'comodidades':
         return (
           <fieldset disabled={somenteLeitura} className="m-0 mt-4 flex min-w-0 flex-wrap gap-2 border-0 p-0">

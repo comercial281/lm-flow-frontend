@@ -89,6 +89,11 @@ describe('CadastroDoCondominio', () => {
     await waitFor(() => expect(screen.getByTestId('onde')).toHaveTextContent('/properties/condominios/c9'));
   });
 
+  it('mapa sem endereço convida a marcar o condomínio, não o imóvel', async () => {
+    abrir('/properties/condominios/novo');
+    expect(await screen.findByText('Preencha o endereço para marcar o condomínio no mapa.')).toBeInTheDocument();
+  });
+
   it('salvar sem nome avisa e não cria', async () => {
     abrir('/properties/condominios/novo');
     await userEvent.type(screen.getByLabelText('Rua'), 'Rua B');

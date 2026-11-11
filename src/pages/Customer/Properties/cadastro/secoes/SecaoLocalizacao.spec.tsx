@@ -285,6 +285,12 @@ describe('SecaoLocalizacao', () => {
     expect(screen.queryByLabelText(/Latitude/)).toBeNull();
   });
 
+  it('no condomínio, o convite fala do condomínio', () => {
+    render(<SecaoLocalizacao form={{ ...base } as never} setF={vi.fn()} editando={null} oQue="condomínio" />);
+    expect(screen.getByText('Preencha o endereço para marcar o condomínio no mapa.')).toBeInTheDocument();
+    expect(screen.queryByText(/marcar o imóvel/)).toBeNull();
+  });
+
   it('ponto já salvo: aviso pela origem, e nenhum aviso no ponto antigo sem origem', async () => {
     const m = montar({ address_city: 'Campinas', address_street: 'Rua A', latitude: -22.9, longitude: -47.06, location_source: 'auto' });
     expect(await screen.findByText('Achamos pelo endereço. Arraste o alfinete se precisar ajustar.')).toBeInTheDocument();

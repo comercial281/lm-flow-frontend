@@ -34,6 +34,8 @@ interface Props {
   editando?: unknown;
   /** Quem não pode mudar (cargo sem a permissão): tudo desligado, alfinete parado. */
   somenteLeitura?: boolean;
+  /** De quem é o endereço, no texto da tela. Padrão: imóvel. */
+  oQue?: 'imóvel' | 'condomínio';
 }
 
 // O Leaflet só baixa quando o mapa aparece.
@@ -94,7 +96,7 @@ async function centroDaCidadeNoServidor(f: EnderecoDoFormulario): Promise<[numbe
 const textoDoPontoDeFora = (dica: string | undefined) =>
   !dica || dica === DICA_DO_CAMPO ? 'O ponto no mapa vem do site da imobiliária.' : dica;
 
-export default function SecaoLocalizacao({ form: f, setF, somenteLeitura = false }: Props) {
+export default function SecaoLocalizacao({ form: f, setF, somenteLeitura = false, oQue = 'imóvel' }: Props) {
   // O formulário mais recente, para quem volta de um await (CEP, busca do ponto).
   const formRef = useRef(f);
   formRef.current = f;
@@ -318,7 +320,7 @@ export default function SecaoLocalizacao({ form: f, setF, somenteLeitura = false
             )}
           </>
         ) : (
-          <p className="text-sm text-muted-foreground">Preencha o endereço para marcar o imóvel no mapa.</p>
+          <p className="text-sm text-muted-foreground">Preencha o endereço para marcar o {oQue} no mapa.</p>
         )}
         {f.listing_kind !== 'development' && (
           <p className="text-xs text-muted-foreground">No site e nos portais aparece só a região, não o endereço exato.</p>
