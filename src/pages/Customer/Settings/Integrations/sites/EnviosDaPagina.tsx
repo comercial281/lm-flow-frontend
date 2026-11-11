@@ -1,9 +1,11 @@
-// Últimos envios da página (Task 9): hora, nome + telefone e o desfecho. Envio 'failed' sai em vermelho com o motivo.
+// Últimos envios da página (Task 9): hora, nome + telefone e o desfecho. Envio 'failed' (Erro) ou 'rejected' (Recusado) sai em vermelho com o motivo; sem desfecho conhecido = Processando, neutro.
 import { cn } from '@/lib/utils';
 import { dataHora } from '@/lib/formato';
 import type { EnvioDaPagina, ResultadoDoEnvio } from '@/services/externalLeadPages/externalLeadPagesService';
 
-const ROTULO: Record<ResultadoDoEnvio, string> = { entered: 'Entrou', repeated: 'Repetido', rejected: 'Recusado', failed: 'Recusado' };
+const ROTULO: Record<ResultadoDoEnvio, string> = { entered: 'Entrou', repeated: 'Repetido', rejected: 'Recusado', failed: 'Erro' };
+
+const rotuloDe = (o: string | null | undefined): string => (o && ROTULO[o as ResultadoDoEnvio]) || 'Processando';
 
 const quando = (iso: string) => dataHora(iso);
 
@@ -35,7 +37,7 @@ export default function EnviosDaPagina({ itens, falhou, resultadoDoTeste }: {
                   <span className="shrink-0 text-xs text-muted-foreground">{quando(e.at)}</span>
                 </span>
                 <span className={cn('text-xs', ruim ? 'text-destructive' : 'text-muted-foreground')}>
-                  <strong>{ROTULO[e.outcome]}</strong>{e.summary ? <>: <span>{e.summary}</span></> : null}
+                  <strong>{rotuloDe(e.outcome)}</strong>{e.summary ? <>: <span>{e.summary}</span></> : null}
                 </span>
               </li>
             );

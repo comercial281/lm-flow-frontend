@@ -1,13 +1,17 @@
 // Sites e landing pages: a lista das páginas que mandam lead pro funil (Task 8, 10/11/2026).
 // A janela de cada página é a Task 9: aqui só avisamos `aoAbrir(pagina)` ou `aoAbrir(null)` (+ Nova página).
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Plus } from 'lucide-react';
+import { Button } from '@/components/ui/ds';
+import Aviso from '@/components/base/Aviso';
+import { useCan } from '@/hooks/useCan';
+import { rotuloDaRoleta } from '@/components/roleta/CampoQuemAssume';
 import { BaseHeader, Pagina } from '@/components/base';
 import EmptyState from '@/components/base/EmptyState';
 import Carregando from '@/components/base/Carregando';
 import { pipelinesService } from '@/services/pipelines/pipelinesService';
 import usersService from '@/services/users/usersService';
-import { roletaConfigService, roletaLabel, type RoletaConfig } from '@/services/roletaConfig/roletaConfigService';
+import { roletaConfigService, type RoletaConfig } from '@/services/roletaConfig/roletaConfigService';
 import { externalLeadPagesService, type PaginaDeSite } from '@/services/externalLeadPages/externalLeadPagesService';
 import JanelaDaPagina, { type RecursosDaJanela } from './JanelaDaPagina';
 import TabelaDePaginas, { type Busca, type NomesDasPaginas } from './TabelaDePaginas';
@@ -72,7 +76,7 @@ function useListas() {
       etapa: (funilId, etapaId) => procurar(funis, () => etapas[funilId]?.find((e) => e.id === etapaId)?.name),
       roleta: (id) => procurar(roletas, () => {
         const r = roletas.itens.find((x) => x.id === id);
-        return r ? { nome: roletaLabel(r), naFila: Array.isArray(r.members) ? r.members.filter((m) => m.is_active).length : null } : undefined;
+        return r ? { nome: rotuloDaRoleta(r), naFila: Array.isArray(r.members) ? r.members.filter((m) => m.is_active).length : null } : undefined;
       }),
       corretor: (id) => procurar(equipe, () => equipe.itens.find((u) => u.id === id)?.name),
     };
@@ -87,11 +91,19 @@ export default function SitesELandingPages({ aoAbrir }: SitesELandingPagesProps)
   // Janela própria; com `aoAbrir` de fora (testes, outro dono da janela) só avisamos.
   const [janela, setJanela] = useState<{ pagina: PaginaDeSite | null } | null>(null);
 
+  const can = useCan();
+  const podeEditar = can('portals', 'update');
+  // Cada recarga leva um número; resposta de recarga mais velha que a última é ignorada (não pisa na mais nova).
+  const chamada = useRef(0);
+
   const carregar = useCallback(async () => {
+    const minha = ++chamada.current;
     setErro(false);
     try {
-      setPaginas(await externalLeadPagesService.listar());
+      const lista = await externalLeadPagesService.listar();
+      if (minha === chamada.current) setPaginas(lista);
     } catch {
+      if (minha !== chamada.current) return;
       setErro(true);
       setPaginas((atual) => atual ?? []);
     }
@@ -113,7 +125,7 @@ export default function SitesELandingPages({ aoAbrir }: SitesELandingPagesProps)
         <BaseHeader
           title="Sites e landing pages"
           subtitle={SUBTITULO}
-          primaryAction={{ label: 'Nova página', icon: <Plus className="h-4 w-4" />, onClick: () => abrir(null), show: temPaginas }}
+          primaryAction={{ label: 'Nova página', icon: <Plus className="h-4 w-4" />, onClick: () => abrir(null), show: temPaginas && podeEditar }}
         />
       }
     >
@@ -125,10 +137,17 @@ export default function SitesELandingPages({ aoAbrir }: SitesELandingPagesProps)
         <EmptyState
           title="Ligue a primeira página"
           description="Cada página do seu site ou landing page ganha um endereço próprio. Quem preencher o formulário vira lead no funil e já cai com o corretor que você escolher."
-          action={{ label: '+ Nova página', onClick: () => abrir(null) }}
+          action={podeEditar ? { label: '+ Nova página', onClick: () => abrir(null) } : undefined}
         />
       ) : (
-        <TabelaDePaginas paginas={paginas} nomes={nomes} aoAbrir={abrir} aoLigar={ligar} />
+        <>
+          {erro && (
+            <Aviso tom="atencao" compacto className="mb-3" acao={<Button type="button" size="sm" variant="outline" onClick={() => void carregar()}>Tentar de novo</Button>}>
+              Não deu pra atualizar a lista. Tente de novo.
+            </Aviso>
+          )}
+          <TabelaDePaginas paginas={paginas} nomes={nomes} aoAbrir={abrir} aoLigar={ligar} podeLigar={podeEditar} />
+        </>
       )}
       {janela && (
         <JanelaDaPagina key={janela.pagina?.id ?? 'nova'} pagina={janela.pagina} recursos={recursos}

@@ -6,7 +6,9 @@ const svc = vi.hoisted(() => ({ criar: vi.fn(), salvar: vi.fn(), apagar: vi.fn()
 vi.mock('@/services/externalLeadPages/externalLeadPagesService', () => ({ externalLeadPagesService: svc }));
 const props = vi.hoisted(() => ({ get: vi.fn(), list: vi.fn() }));
 vi.mock('@/services/properties/propertiesService', () => ({ propertiesService: props }));
-vi.mock('@/store/authStore', () => ({ useAuthStore: (sel: (s: unknown) => unknown) => sel({ currentUser: { id: 'u1', whatsapp_number: '+5511999990000' } }) }));
+vi.mock('@/store/authStore', () => ({ useAuthStore: (sel: (s: unknown) => unknown) => sel({ currentUser: { id: 1, whatsapp_number: '+5511999990000' } }) }));
+const perm = vi.hoisted(() => ({ editar: true }));
+vi.mock('@/hooks/useCan', () => ({ useCan: () => () => perm.editar }));
 const toast = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn() }));
 vi.mock('sonner', () => ({ toast }));
 
@@ -34,6 +36,7 @@ beforeEach(() => {
   props.list.mockReset().mockResolvedValue({ data: [], meta: { total: 0 } });
   props.get.mockReset();
   svc.envios.mockResolvedValue([]);
+  perm.editar = true;
   fechar.mockReset(); mudou.mockReset(); toast.error.mockReset(); toast.success.mockReset();
 });
 
@@ -81,8 +84,69 @@ describe('JanelaDaPagina', () => {
   });
 
   it('envio recusado aparece com o motivo', async () => {
-    svc.envios.mockResolvedValue([{ at: '2026-11-10T16:40:00Z', name: 'Maria', phone: '+5511988887777', outcome: 'failed', summary: 'WhatsApp incompleto' }]);
+    svc.envios.mockResolvedValue([{ at: '2026-11-10T16:40:00Z', name: 'Maria', phone: '+5511988887777', outcome: 'rejected', summary: 'WhatsApp incompleto' }]);
     montar(pagina());
     expect(await screen.findByText('WhatsApp incompleto')).toBeInTheDocument();
+    expect(screen.getByText('Recusado')).toBeInTheDocument();
+  });
+
+  it('envio com erro aparece como "Erro" e o desfecho que não veio como "Processando"', async () => {
+    svc.envios.mockResolvedValue([
+      { at: '2026-11-10T16:40:00Z', name: 'Maria', phone: '+5511988887777', outcome: 'failed', summary: 'Erro ao processar o envio' },
+      { at: '2026-11-10T16:41:00Z', name: 'Joao', phone: '+5511977776666', outcome: null, summary: '' },
+    ]);
+    montar(pagina());
+    expect(await screen.findByText('Erro ao processar o envio')).toBeInTheDocument();
+    expect(screen.getByText('Erro')).toBeInTheDocument();
+    expect(screen.getByText('Processando')).toBeInTheDocument();
+  });
+
+  it('422 com details.field stage_id leva o foco à etapa e traz o aviso pra vista', async () => {
+    const rolar = vi.fn();
+    Element.prototype.scrollIntoView = rolar;
+    svc.salvar.mockRejectedValue({ response: { data: { error: { code: 'VALIDATION_ERROR', message: 'Etapa não pertence ao funil', details: { field: 'stage_id' } } } } });
+    montar(pagina());
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+    expect(await screen.findByText('Etapa não pertence ao funil')).toBeInTheDocument();
+    await waitFor(() => expect(document.activeElement).toBe(document.getElementById('destino_etapa')));
+    expect(rolar).toHaveBeenCalledWith({ block: 'nearest' });
+  });
+
+  it('lead de teste: avisa que usa o salvo e trava enquanto o formulário tem mudança não salva', async () => {
+    montar(pagina());
+    expect(await screen.findByText('Usa o que está salvo nesta página.')).toBeInTheDocument();
+    const botao = screen.getByRole('button', { name: 'Mandar lead de teste' });
+    expect(botao).toBeEnabled();
+    fireEvent.change(screen.getByLabelText(/Nome da página/), { target: { value: 'LP Outra' } });
+    expect(botao).toBeDisabled();
+    expect(screen.getByText('Salve antes de testar.')).toBeInTheDocument();
+  });
+
+  it('página nova: a segunda etiqueta nasce com o nome curto, em minúsculas, e dá pra tirar', async () => {
+    svc.criar.mockResolvedValue(pagina({ id: 'n', name: 'LP Nova' }));
+    montar(null);
+    fireEvent.change(screen.getByLabelText(/Nome da página/), { target: { value: '  LP Nova Do Centro  ' } });
+    expect(screen.getByText('lp nova do centro')).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText(/^Funil/), { target: { value: 'f1' } });
+    fireEvent.change(screen.getByLabelText(/^Etapa/), { target: { value: 'e1' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Criar' }));
+    await waitFor(() => expect(svc.criar).toHaveBeenCalled());
+    expect(svc.criar.mock.calls[0][0].labels).toEqual(['site', 'lp nova do centro']);
+  });
+
+  it('o texto de Quem assume muda com a escolha', async () => {
+    montar(pagina());
+    expect(screen.getByText(/O lead é oferecido a um corretor da fila assim que chega/)).toBeInTheDocument();
+  });
+
+  it('sem permissão de editar: sem Salvar, sem Trocar endereço, sem Mandar teste, sem Excluir', async () => {
+    perm.editar = false;
+    montar(pagina());
+    expect(await screen.findByText(/Você pode ver esta página, mas não mudar/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Salvar' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Trocar endereço' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Mandar lead de teste' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Excluir página' })).toBeNull();
+    expect(screen.getByLabelText(/Nome da página/)).toBeDisabled();
   });
 });

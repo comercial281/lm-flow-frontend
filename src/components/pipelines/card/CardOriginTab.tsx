@@ -64,7 +64,7 @@ export default function CardOriginTab({
     'tracking', 'entry_button']);
   const source = (ar as any).source as string | undefined;
   const meta = source ? SOURCE_META[source] : undefined;
-  const pelaBotaoFlutuante = (ar as any).entry_button === 'flutuante';
+  const peloBotaoFlutuante = (ar as any).entry_button === 'flutuante';
   const entries = Object.entries(ar).filter(([k, v]) => k !== 'extra_fields' && !HIDDEN.has(k) && v != null && v !== '');
   // Respostas do formulário Meta: o backend grava o hash completo de
   // respostas em custom_attributes.form_answers (antes só nome/email/telefone
@@ -84,7 +84,7 @@ export default function CardOriginTab({
   const answerRows = extraRows.length > 0 ? extraRows : normalizeFormAnswers(formAnswers, answerTexts);
   // Resultado da régua da landing, gravado no card na captura.
   const verdict = landingVerdict(item.custom_fields);
-  const hasTrackedData = entries.length > 0 || pelaBotaoFlutuante || answerRows.length > 0 || !!meta || !!verdict;
+  const hasTrackedData = entries.length > 0 || peloBotaoFlutuante || answerRows.length > 0 || !!meta || !!verdict;
   return (
     <div className="space-y-4">
       {(meta || verdict) && (
@@ -153,7 +153,7 @@ export default function CardOriginTab({
             </span>
           </div>
         ))}
-        {pelaBotaoFlutuante && (
+        {peloBotaoFlutuante && (
           <p className="text-sm text-muted-foreground text-right">pelo botão flutuante</p>
         )}
       </div>

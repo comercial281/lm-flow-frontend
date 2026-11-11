@@ -28,20 +28,25 @@ export interface TabelaDePaginasProps {
   nomes: NomesDasPaginas;
   aoAbrir: (pagina: PaginaDeSite) => void;
   aoLigar: (pagina: PaginaDeSite, ativa: boolean) => Promise<boolean | void>;
+  /** Sem `portals.update` a Chave fica parada (só leitura). */
+  podeLigar?: boolean;
 }
 
-type Tom = 'ambar' | 'vermelho' | 'verde';
+type Tom = 'ambar' | 'vermelho' | 'verde' | 'neutro';
 const CLASSE_DO_TOM: Record<Tom, string> = {
   ambar: 'border-amber-500/40 text-amber-700 dark:text-amber-400',
   vermelho: 'border-destructive/40 text-destructive',
   verde: 'border-emerald-500/40 text-emerald-700 dark:text-emerald-400',
+  neutro: 'border-border text-muted-foreground',
 };
 
 export function seloDoUltimoEnvio(p: PaginaDeSite): { texto: string; tom: Tom } {
   if (!p.last_delivery) return { texto: 'Esperando o 1º envio', tom: 'ambar' };
   if (p.rejected_last_24h > 0) return { texto: plural(p.rejected_last_24h, 'recusado', 'recusados'), tom: 'vermelho' };
   if (p.last_delivery.outcome === 'failed') return { texto: 'Erro no último envio', tom: 'vermelho' };
-  return { texto: dataHora(p.last_delivery.at), tom: 'verde' };
+  // Verde só com desfecho conhecido: envio sem desfecho (ainda processando) fica neutro.
+  const o = p.last_delivery.outcome;
+  return { texto: dataHora(p.last_delivery.at), tom: o === 'entered' || o === 'repeated' || o === 'rejected' ? 'verde' : 'neutro' };
 }
 
 function QuemAssume({ p, nomes }: { p: PaginaDeSite; nomes: NomesDasPaginas }) {
@@ -81,7 +86,7 @@ function ParaOndeVai({ p, nomes }: { p: PaginaDeSite; nomes: NomesDasPaginas }) 
   return <span className="min-w-0 break-words">{e?.tipo === 'achou' ? `${f.valor} › ${e.valor}` : f.valor}</span>;
 }
 
-export default function TabelaDePaginas({ paginas, nomes, aoAbrir, aoLigar }: TabelaDePaginasProps) {
+export default function TabelaDePaginas({ paginas, nomes, aoAbrir, aoLigar, podeLigar = true }: TabelaDePaginasProps) {
   return (
     <Tabela rotulo="Páginas que mandam lead">
       <CabecalhoDaTabela grade={GRADE} colunas={['Página', 'Para onde vai', 'Quem assume', 'Leads em 30 dias', 'Último envio', 'Ativa']} />
@@ -106,7 +111,7 @@ export default function TabelaDePaginas({ paginas, nomes, aoAbrir, aoLigar }: Ta
               </Celula>
               <Celula rotulo="Ativa" className="xl:justify-self-end">
                 <span data-nao-abre>
-                  <Chave rotulo={`Página ativa: ${p.name}`} ligada={p.active} semRotuloVisivel genero="a" aoMudar={(ativa) => aoLigar(p, ativa)} />
+                  <Chave rotulo={`Página ativa: ${p.name}`} ligada={p.active} semRotuloVisivel genero="a" desabilitada={!podeLigar} aoMudar={(ativa) => aoLigar(p, ativa)} />
                 </span>
               </Celula>
             </LinhaDaTabela>

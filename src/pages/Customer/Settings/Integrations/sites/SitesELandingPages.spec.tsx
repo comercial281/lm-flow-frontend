@@ -3,7 +3,11 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import { MemoryRouter } from 'react-router-dom';
 import type { PaginaDeSite } from '@/services/externalLeadPages/externalLeadPagesService';
 
-const svc = vi.hoisted(() => ({ listar: vi.fn(), salvar: vi.fn() }));
+const svc = vi.hoisted(() => ({ listar: vi.fn(), salvar: vi.fn(), trocarEndereco: vi.fn(), envios: vi.fn() }));
+const perm = vi.hoisted(() => ({ editar: true }));
+vi.mock('@/hooks/useCan', () => ({ useCan: () => () => perm.editar }));
+vi.mock('@/services/properties/propertiesService', () => ({ propertiesService: { get: vi.fn(), list: vi.fn().mockResolvedValue({ data: [], meta: { total: 0 } }) } }));
+vi.mock('@/store/authStore', () => ({ useAuthStore: (sel: (s: unknown) => unknown) => sel({ currentUser: { id: 'u1' } }) }));
 vi.mock('@/services/externalLeadPages/externalLeadPagesService', () => ({ externalLeadPagesService: svc }));
 const listas = vi.hoisted(() => ({ pipelines: vi.fn(), etapas: vi.fn(), users: vi.fn(), roletas: vi.fn() }));
 vi.mock('@/services/pipelines/pipelinesService', () => ({ pipelinesService: { getPipelines: listas.pipelines, getPipelineStages: listas.etapas } }));
@@ -30,9 +34,11 @@ const tres = () => [
 
 const abrir = vi.fn();
 const montar = () => render(<MemoryRouter><SitesELandingPages aoAbrir={abrir} /></MemoryRouter>);
+const montarReal = () => render(<MemoryRouter><SitesELandingPages /></MemoryRouter>);
 
 beforeEach(() => {
-  svc.listar.mockReset(); svc.salvar.mockReset(); abrir.mockReset();
+  perm.editar = true;
+  svc.listar.mockReset(); svc.salvar.mockReset(); svc.trocarEndereco.mockReset(); svc.envios.mockReset().mockResolvedValue([]); abrir.mockReset();
   listas.pipelines.mockReset().mockResolvedValue({ data: [{ id: 'f1', name: 'Vendas' }] });
   listas.etapas.mockReset().mockResolvedValue({ data: [{ id: 'e1', name: 'Novo' }] });
   listas.users.mockReset().mockResolvedValue({ data: [{ id: 'u1', name: 'Ana Lima' }] });
@@ -136,5 +142,79 @@ describe('SitesELandingPages', () => {
     montar();
     expect(await screen.findByText('Não deu pra carregar')).toBeInTheDocument();
     expect(screen.queryByText('Ligue a primeira página')).toBeNull();
+  });
+
+  it('caminho real (sem aoAbrir): trocar o endereço, fechar e reabrir a mesma linha mostra o endereço NOVO', async () => {
+    const velha = pagina({ id: 'a', name: 'LP Centro', endpoint_url: 'https://api/velho' });
+    const nova = { ...velha, endpoint_url: 'https://api/novo' };
+    svc.listar.mockResolvedValueOnce([velha]).mockResolvedValue([nova]);
+    svc.trocarEndereco.mockResolvedValue({ endpoint_url: 'https://api/novo' });
+    montarReal();
+    fireEvent.click((await screen.findAllByTestId('linha-da-pagina'))[0]);
+    expect(await screen.findByText('https://api/velho')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Trocar endereço' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Trocar agora' }));
+    expect(await screen.findByText('https://api/novo')).toBeInTheDocument();
+    await waitFor(() => expect(svc.listar).toHaveBeenCalledTimes(2));
+    fireEvent.click(screen.getAllByRole('button', { name: 'Fechar' })[0]);
+    await waitFor(() => expect(screen.queryByText('https://api/novo')).toBeNull());
+    fireEvent.click((await screen.findAllByTestId('linha-da-pagina'))[0]);
+    expect(await screen.findByText('https://api/novo')).toBeInTheDocument();
+    expect(screen.queryByText('https://api/velho')).toBeNull();
+  });
+
+  it('recarga que falhou com páginas na tela: aviso com tentar de novo, lista antiga fica', async () => {
+    svc.listar.mockResolvedValueOnce(tres()).mockRejectedValueOnce(new Error('500')).mockResolvedValue(tres());
+    svc.salvar.mockResolvedValue(pagina({ id: 'a', active: false }));
+    montarReal();
+    fireEvent.click((await screen.findAllByTestId('linha-da-pagina'))[0]);
+    fireEvent.click(await screen.findByRole('switch', { name: 'Página ativa' }));
+    expect(await screen.findByText('Não deu pra atualizar a lista. Tente de novo.')).toBeInTheDocument();
+    expect(screen.getAllByTestId('linha-da-pagina', { hidden: true }).length).toBe(3);
+    fireEvent.click(screen.getByText('Tentar de novo'));
+    await waitFor(() => expect(screen.queryByText('Não deu pra atualizar a lista. Tente de novo.')).toBeNull());
+  });
+
+  it('recarga mais velha que chega depois não pisa na mais nova', async () => {
+    let soltar: (v: PaginaDeSite[]) => void = () => undefined;
+    const lenta = new Promise<PaginaDeSite[]>((r) => { soltar = r; });
+    svc.listar.mockResolvedValueOnce([pagina({ id: 'a', name: 'LP Centro' })]).mockReturnValueOnce(lenta)
+      .mockResolvedValueOnce([pagina({ id: 'a', name: 'Página Nova' })]);
+    svc.salvar.mockResolvedValue(pagina({ id: 'a' }));
+    montarReal();
+    fireEvent.click((await screen.findAllByTestId('linha-da-pagina'))[0]);
+    fireEvent.click(await screen.findByRole('switch', { name: 'Página ativa' }));
+    await waitFor(() => expect(svc.listar).toHaveBeenCalledTimes(2));
+    fireEvent.click(screen.getByRole('switch', { name: 'Página ativa' }));
+    await waitFor(() => expect(svc.listar).toHaveBeenCalledTimes(3));
+    expect(await screen.findByText('Página Nova')).toBeInTheDocument();
+    soltar([pagina({ id: 'a', name: 'Página Velha' })]);
+    await new Promise((r) => setTimeout(r, 20));
+    expect(screen.queryByText('Página Velha')).toBeNull();
+    expect(screen.getByText('Página Nova')).toBeInTheDocument();
+  });
+
+  it('roleta desligada mostra "(desligada)" na lista', async () => {
+    listas.roletas.mockResolvedValue([{ id: 'r1', display_name: 'Roleta Centro', is_active: false, members: [] }]);
+    svc.listar.mockResolvedValue([pagina({ roleta_config_id: 'r1' })]);
+    montar();
+    expect(await screen.findByText('Roleta Centro (desligada)')).toBeInTheDocument();
+  });
+
+  it('último envio sem desfecho fica neutro, não verde', async () => {
+    svc.listar.mockResolvedValue([pagina({ last_delivery: { ...envio, outcome: null } })]);
+    montar();
+    const linha = await screen.findByTestId('linha-da-pagina');
+    const selo = within(linha).getByText(/10\/11\/2026/);
+    expect(selo.className).not.toMatch(/emerald/);
+  });
+
+  it('só leitura: sem + Nova página e a Chave da lista fica desabilitada', async () => {
+    perm.editar = false;
+    svc.listar.mockResolvedValue(tres());
+    montar();
+    const linhas = await screen.findAllByTestId('linha-da-pagina');
+    expect(screen.queryByRole('button', { name: /Nova página/ })).toBeNull();
+    expect(within(linhas[0]).getByRole('switch')).toBeDisabled();
   });
 });

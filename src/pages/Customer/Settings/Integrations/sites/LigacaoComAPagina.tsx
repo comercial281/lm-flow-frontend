@@ -16,8 +16,23 @@ export const mensagemDoErro = (e: unknown, padrao: string): string => {
   return m || padrao;
 };
 
-export default function LigacaoComAPagina({ pagina, telefoneInicial }: { pagina: PaginaDeSite; telefoneInicial: string }) {
-  const [endereco, setEndereco] = useState(pagina.endpoint_url);
+/** Campo que o servidor apontou num 422 (`error.details.field`), se veio. */
+export const campoDoErro = (e: unknown): string | null => {
+  const f = (e as { response?: { data?: { error?: { details?: { field?: unknown } } | string } } })?.response?.data?.error;
+  const campo = typeof f === 'object' && f ? f.details?.field : undefined;
+  return typeof campo === 'string' && campo ? campo : null;
+};
+
+export default function LigacaoComAPagina({ pagina, telefoneInicial, podeEditar = true, naoSalvo = false, aoTrocouEndereco }: {
+  pagina: PaginaDeSite;
+  telefoneInicial: string;
+  podeEditar?: boolean;
+  /** O formulário da esquerda tem mudança que ainda não foi salva: o teste usa o que está salvo. */
+  naoSalvo?: boolean;
+  /** O endereço novo, pra janela guardar e a lista recarregar. */
+  aoTrocouEndereco: (url: string) => void;
+}) {
+  const endereco = pagina.endpoint_url;
   const [confirmando, setConfirmando] = useState(false);
   const [trocando, setTrocando] = useState(false);
   const [envios, setEnvios] = useState<EnvioDaPagina[] | null>(null);
@@ -50,7 +65,7 @@ export default function LigacaoComAPagina({ pagina, telefoneInicial }: { pagina:
     setTrocando(true);
     try {
       const r = await externalLeadPagesService.trocarEndereco(pagina.id);
-      setEndereco(r.endpoint_url);
+      aoTrocouEndereco(r.endpoint_url);
       setConfirmando(false);
       toast.success('Endereço novo gerado. Cole na página.');
     } catch (e) {
@@ -75,9 +90,10 @@ export default function LigacaoComAPagina({ pagina, telefoneInicial }: { pagina:
         <p className="break-all rounded-md border border-border bg-muted/40 px-3 py-2 font-mono text-xs"><code ref={textoDoEndereco}>{endereco}</code></p>
         <div className="flex flex-wrap gap-2">
           <Button type="button" variant="outline" size="sm" onClick={() => void copiar()}>Copiar</Button>
-          <Button type="button" variant="ghost" size="sm" onClick={() => setConfirmando(true)} disabled={confirmando}>Trocar endereço</Button>
+          {podeEditar && <Button type="button" variant="ghost" size="sm" onClick={() => setConfirmando(true)} disabled={confirmando}>Trocar endereço</Button>}
         </div>
-        {confirmando && (
+        <p className="text-xs text-muted-foreground">O código no fim do endereço é a senha desta página. Se vazar ou chegar envio estranho, troque o endereço e cole o novo na LP.</p>
+        {confirmando && podeEditar && (
           <Aviso tom="atencao" compacto acao={
             <div className="flex gap-2">
               <Button type="button" size="sm" onClick={() => void trocar()} disabled={trocando}>{trocando ? 'Trocando...' : 'Trocar agora'}</Button>
@@ -93,6 +109,7 @@ export default function LigacaoComAPagina({ pagina, telefoneInicial }: { pagina:
           <li><strong>WhatsApp</strong> (<code>whatsapp</code>, <code>telefone</code> ou <code>phone</code>), com DDD</li>
           <li><strong>E-mail</strong> (<code>email</code>), opcional</li>
         </ul>
+        <p className="text-xs text-muted-foreground">Sem WhatsApp válido o envio é recusado e aparece em Últimos envios.</p>
         <p className="text-xs text-muted-foreground">Qualquer outro campo vira resposta no card do lead. Aceita formulário comum ou JSON, vindo direto do navegador do visitante.</p>
       </GrupoDaJanela>
 
@@ -105,7 +122,13 @@ export default function LigacaoComAPagina({ pagina, telefoneInicial }: { pagina:
           <Input id="telefone_do_teste" value={telefone} inputMode="tel" onChange={(e) => setTelefone(e.target.value)} />
         </CampoDaJanela>
         {erroDoTeste && <p role="alert" className="text-xs text-destructive">{erroDoTeste}</p>}
-        <div><Button type="button" variant="outline" onClick={() => void mandarTeste()} disabled={mandando || !telefone.trim()}>{mandando ? 'Mandando...' : 'Mandar lead de teste'}</Button></div>
+        {podeEditar && (
+          <div className="grid gap-1">
+            <div><Button type="button" variant="outline" onClick={() => void mandarTeste()} disabled={mandando || !telefone.trim() || naoSalvo}>{mandando ? 'Mandando...' : 'Mandar lead de teste'}</Button></div>
+            <p className="text-xs text-muted-foreground">Usa o que está salvo nesta página.</p>
+            {naoSalvo && <p className="text-xs text-amber-700 dark:text-amber-400">Salve antes de testar.</p>}
+          </div>
+        )}
       </GrupoDaJanela>
     </>
   );

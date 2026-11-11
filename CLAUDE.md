@@ -10954,12 +10954,12 @@ Pedido da Mais que Imóveis (administrativo), comparando com a Kenlo: achar "os 
 
 ## Integrações: Sites e landing pages (desde 2026-11-11)
 
-Primeira landing externa na fila: a "LP Kovacs – Formulário site" (Pinot & Cheer), feita fora do LM Flow. A página manda o lead por POST pro endereço dela e o lead cai no funil como qualquer outro. Esta seção é a tela (PR do frontend). O servidor é o PR `comercial281/lm-flow#595`, e **entra primeiro**.
+Primeira landing externa na fila: uma LP de cliente, feita fora do LM Flow. A página manda o lead por POST pro endereço dela e o lead cai no funil como qualquer outro. Esta seção é a tela (PR do frontend). O servidor é o PR `comercial281/lm-flow#595`, e **entra primeiro**.
 
 **O que aparece na tela**
-- **Integrações → card "Sites e landing pages"** (mesma permissão dos Portais: quem vê Portais vê este card).
-- **Lista** em tabela, com as colunas Página, Para onde vai, Quem assume, Leads em 30 dias, Último envio e Ativa (a `Chave` da casa). O selo do Último envio é verde com a data do último envio, âmbar "Esperando o 1º envio" e vermelho em "N recusados" (últimas 24 h) ou "Erro no último envio". A linha inteira abre a janela. De 1280 px pra baixo cada linha vira cartão.
-- **Janela da página.** Esquerda: Nome da página, Para onde vai (funil e etapa), Quem assume (roleta ou corretor fixo), O que esta página vende (imóvel/empreendimento) e Etiquetas. Direita: o endereço com **Copiar** e **Trocar endereço** (pede confirmação, o endereço antigo para de valer), o que a página precisa mandar (nome, telefone e o resto), **Últimos envios** (hora, nome, telefone e desfecho; envio com falha sai em vermelho com o motivo) e **Mandar lead de teste**. **Excluir página** fica no rodapé, com confirmação "Excluir mesmo".
+- **Integrações → card "Sites e landing pages"** (a mesma função e a mesma permissão dos Portais: `featureKey: 'properties'` e `portals.read`. Cliente sem a função de imóveis vê como vê os Portais; não depende de automações).
+- **Lista** em tabela, com as colunas Página, Para onde vai, Quem assume, Leads em 30 dias, Último envio e Ativa (a `Chave` da casa). O selo do Último envio é verde com a data do último envio, âmbar "Esperando o 1º envio" e vermelho em "N recusados" (últimas 24 h) ou "Erro no último envio". A linha inteira abre a janela. Abaixo de 1280 px cada linha vira cartão. Roleta desligada aparece como "(desligada)" em Quem assume; envio sem desfecho conhecido fica neutro (nunca verde). Se a recarga da lista falhar com páginas na tela, um aviso "Não deu pra atualizar a lista" com "Tentar de novo" aparece acima da tabela e a lista antiga fica. Recarga mais velha que chega depois da mais nova é ignorada.
+- **Janela da página.** Esquerda: Nome da página, Para onde vai (funil e etapa), Quem assume (roleta, corretor fixo ou ninguém, com uma frase explicando cada escolha), O que esta página vende (imóvel/empreendimento) e Etiquetas (página nova já vem com a etiqueta curta do nome, em minúsculas e até 30 letras, editável e removível). Direita: o endereço com **Copiar** e **Trocar endereço** (pede confirmação, o endereço antigo para de valer), o que a página precisa mandar (nome, telefone e o resto), **Últimos envios** (hora, nome, telefone e desfecho; envio com falha sai em vermelho com o motivo) e **Mandar lead de teste** (usa o que está salvo: com mudança não salva o botão trava e diz "Salve antes de testar."). Erro do servidor no Salvar traz o aviso pra vista e leva o foco ao campo apontado (`details.field`). **Excluir página** fica no rodapé, com confirmação "Excluir mesmo".
 - **Card do lead, aba Origem:** mostra o link da página de onde veio e, quando veio do botão flutuante, "pelo botão flutuante".
 - **Gatilho da automação "Quais páginas?"** filtra por página. Nenhuma marcada = qualquer página ou landing.
 - **Roleta:** o tipo de origem Site passa a incluir as páginas externas.
@@ -10971,16 +10971,17 @@ Primeira landing externa na fila: a "LP Kovacs – Formulário site" (Pinot & Ch
 - Automação existente dispara como em portal e Meta, filtrada por "Quais páginas?".
 - IA Vendedora pro lead de site é entrega posterior.
 - O lead de teste conta no Painel até o card dele ser apagado.
-- Permissão: a mesma dos Portais.
+- Permissão: a mesma dos Portais. Sem `portals.update` a tela é só leitura (como Campanhas): campos desabilitados e sem Salvar, Trocar endereço, Mandar teste, Excluir, "+ Nova página"; a Chave da lista fica parada.
 
 **Armadilhas**
 - A lista carrega sozinha só funis, usuários e roletas. **Não usa `useAutomationResources`** (puxaria o mundo pra abrir uma lista).
 - "Não encontrado" só aparece quando a lista **já carregou**. Antes disso é carregando.
 - Ao salvar, mandar **os dois**: `roleta_config_id` e `default_assignee_id` (um deles `null`). O servidor valida o estado final; nada escolhido = Ninguém.
 - A prop `aoAbrir` da lista **desliga a janela embutida**. Passar só em teste.
+- Envio "failed" aparece como **Erro**, "rejected" como **Recusado**, sem desfecho como **Processando**.
 - O glossário força **"Excluir"** no lugar de "Apagar".
 - "Nenhuma marcada = qualquer página ou landing." está nas exceções do `conferir-padrao` (a trava de caixinhas reclamaria da frase). Mover o arquivo pede mover a exceção.
 
-**Voltar versão:** voltar só a tela é seguro (o card some, as páginas e os endereços seguem recebendo lead). Voltar o backend com esta tela no ar quebra a lista e a janela: voltar a tela junto.
+**Voltar versão:** voltar só a tela é seguro (o card some, as páginas e os endereços seguem recebendo lead). Voltar o backend com esta tela no ar quebra a lista e a janela: voltar a tela junto. Com a tela antiga no ar, uma automação filtrada por página aparece como "Qualquer origem" (o filtro segue valendo no servidor).
 
 **Testes:** `SitesELandingPages.spec.tsx`, `JanelaDaPagina.spec.tsx`, `CardOriginTab.sites.spec.tsx`, `gatilhoPaginaDeSite.spec.tsx`, `OrigensBloco.spec.tsx`, `cartoes.spec.ts`, `menuItems.spec.ts`.

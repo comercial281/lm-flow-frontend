@@ -7,7 +7,8 @@ export type ResultadoDoEnvio = 'entered' | 'repeated' | 'rejected' | 'failed';
 
 export interface UltimoEnvio {
   at: string;
-  outcome: ResultadoDoEnvio;
+  /** null/desconhecido = ainda processando. */
+  outcome: ResultadoDoEnvio | null;
   summary: string | null;
   page_host: string | null;
 }
@@ -45,7 +46,7 @@ export interface EnvioDaPagina {
   at: string;
   name: string | null;
   phone: string | null;
-  outcome: ResultadoDoEnvio;
+  outcome: ResultadoDoEnvio | null;
   summary: string;
 }
 

@@ -174,6 +174,11 @@ describe('menu novo: seções (fase 4)', () => {
     expect(item.marcador).toBeUndefined();
   });
 
+  it('Sites e landing pages usa a mesma função dos Portais (quem não tem automações vê como vê os Portais)', () => {
+    expect(achar('/settings/integrations/sites').featureKey).toBe('properties');
+    expect(achar('/settings/integrations/sites').featureKey).toBe(achar('/settings/portals').featureKey);
+  });
+
   it('o Bolsão do Corretor fica com uma aba só (Listas e regras é do gestor)', () => {
     const bolsao = comCargo(CORRETOR).flatMap(s => s.itens).find(i => i.name === 'Bolsão')!;
     expect(bolsao.abas?.map(a => a.name)).toEqual(['Pegar leads']);
