@@ -53,9 +53,22 @@ describe('Mensagem com IA: serviço do Testar', () => {
     await expect(flowAutomationsService.aiMessagePreview('flow-1', BODY)).rejects.toThrow('Escreva a instrução do bloco.');
   });
 
-  it('sem frase do servidor (ex.: rede caiu), o erro original segue', async () => {
-    api.post.mockRejectedValueOnce(new Error('Network Error'));
+  it('erro 422 de leads também mostra a frase do servidor', async () => {
+    api.get.mockRejectedValueOnce(Object.assign(new Error('Request failed with status code 422'), {
+      response: { status: 422, data: { errors: ['Formulário não encontrado.'] } },
+    }));
 
-    await expect(flowAutomationsService.aiMessagePreview('flow-1', BODY)).rejects.toThrow('Network Error');
+    await expect(flowAutomationsService.aiMessageLeads('flow-1', 'form-9')).rejects.toThrow('Formulário não encontrado.');
+  });
+
+  it('sem frase do servidor (rede caiu ou 500 sem errors), os dois métodos dão o texto fixo', async () => {
+    const fixo = 'Não deu pra testar agora. Tente de novo em instantes.';
+    api.post.mockRejectedValueOnce(new Error('Network Error'));
+    await expect(flowAutomationsService.aiMessagePreview('flow-1', BODY)).rejects.toThrow(fixo);
+
+    api.get.mockRejectedValueOnce(Object.assign(new Error('Request failed with status code 500'), {
+      response: { status: 500, data: {} },
+    }));
+    await expect(flowAutomationsService.aiMessageLeads('flow-1')).rejects.toThrow(fixo);
   });
 });

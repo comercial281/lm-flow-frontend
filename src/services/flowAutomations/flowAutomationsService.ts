@@ -43,6 +43,12 @@ function unwrapComContagem(response: { data: { data: FlowAutomation; stopped_cou
   };
 }
 
+// Erro do Testar: a frase que o servidor mandou (429, 422, 502); sem frase, texto fixo.
+const TESTAR_SEM_FRASE = 'Não deu pra testar agora. Tente de novo em instantes.';
+function erroDoTestar(e: unknown): Error {
+  return new Error(serverErrorOf(e) ?? TESTAR_SEM_FRASE);
+}
+
 class FlowAutomationsService {
   private get baseUrl(): string {
     return '/flow_automations';
@@ -202,17 +208,19 @@ class FlowAutomationsService {
     try {
       return unwrap<AiMessagePreview>(await api.post(`${this.baseUrl}/${id}/ai_message_preview`, body));
     } catch (e) {
-      const mensagem = serverErrorOf(e);
-      if (mensagem) throw new Error(mensagem);
-      throw e;
+      throw erroDoTestar(e);
     }
   }
 
   /** Leads do Testar (escolher quem recebe a prévia), opcionalmente de um formulário. */
   async aiMessageLeads(id: string, formId?: string): Promise<AiMessageLead[]> {
-    return unwrap<AiMessageLead[]>(await api.get(`${this.baseUrl}/${id}/ai_message_leads`, {
-      params: formId ? { form_id: formId } : {},
-    }));
+    try {
+      return unwrap<AiMessageLead[]>(await api.get(`${this.baseUrl}/${id}/ai_message_leads`, {
+        params: formId ? { form_id: formId } : {},
+      }));
+    } catch (e) {
+      throw erroDoTestar(e);
+    }
   }
 
   async testRun(id: string, params: { contact_id?: string; test_contact?: Record<string, string>; forced?: Record<string, 'yes' | 'no'> } = {}): Promise<TestRunResult> {
