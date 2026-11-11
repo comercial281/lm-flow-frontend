@@ -788,6 +788,15 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
       requestPanel({ type: 'trigger' });
       return;
     }
+    // Fluxo ligado + Mensagem com IA incompleta: o servidor recusa, então avisa antes (e antes do cabeçalho gravar).
+    if (automation.is_enabled) {
+      const aberto = nodes.find(n => n.kind === 'ai_message' && nodeProblem(n, kind));
+      if (aberto) {
+        toast.error(`Fluxo ligado: complete o bloco "Mensagem com IA" antes de salvar (${nodeProblem(aberto, kind)})`);
+        requestPanel({ type: 'node', id: aberto.id });
+        return;
+      }
+    }
     await persist(nodes, initialNodeId);
   };
 

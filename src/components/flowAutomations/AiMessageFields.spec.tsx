@@ -93,21 +93,50 @@ describe('janela da Mensagem com IA', () => {
     expect(aiMessageLeads).toHaveBeenCalledWith('flow-1', 'form-9');
   });
 
+  it('formulário novo sem lead: busca de novo sem filtro e avisa', async () => {
+    aiMessageLeads.mockResolvedValueOnce([]).mockResolvedValueOnce(LEADS);
+    render(<Janela formId="form-novo" />);
+    await screen.findByRole('option', { name: /Rodrigo Teste/ });
+    expect(aiMessageLeads).toHaveBeenNthCalledWith(1, 'flow-1', 'form-novo');
+    expect(aiMessageLeads).toHaveBeenNthCalledWith(2, 'flow-1');
+    expect(screen.getByText('Ainda não há lead deste formulário: mostrando leads de outros formulários.')).toBeInTheDocument();
+  });
+
+  it('formulário com lead não busca de novo nem avisa', async () => {
+    render(<Janela formId="form-9" />);
+    await screen.findByRole('option', { name: /Rodrigo Teste/ });
+    expect(aiMessageLeads).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText(/Ainda não há lead deste formulário/)).toBeNull();
+  });
+
+  it('a barra da instrução não oferece Telefone, E-mail nem Respostas; a da reserva segue completa', async () => {
+    render(<Janela />);
+    const [daInstrucao, daReserva] = screen.getAllByRole('button', { name: 'Mais variáveis' });
+    fireEvent.click(daInstrucao);
+    expect(screen.queryByRole('button', { name: /Telefone/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /E-mail/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Respostas form/ })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Data {{data}}' })).toBeInTheDocument();
+    fireEvent.click(daReserva);
+    expect(screen.getByRole('button', { name: /Telefone/ })).toBeInTheDocument();
+    await screen.findByRole('option', { name: /Rodrigo Teste/ });
+  });
+
   it('Testar mensagem manda a instrução da tela e mostra o balão', async () => {
     aiMessagePreview.mockResolvedValue({
-      text: 'Oi Rodrigo, aqui é a *Thais*. Esse é o seu WhatsApp?',
+      text: 'Oi Rodrigo, aqui é a *Bianca*. Esse é o seu WhatsApp?',
       source: 'ia',
       reason_text: null,
       answers: { 'Qual região?': 'Zona Leste', 'Vai usar FGTS?': 'Sim' },
     });
     render(<Janela />);
-    fireEvent.change(screen.getByLabelText(/Instrução para a IA/), { target: { value: 'Apresente-se como Thais.' } });
+    fireEvent.change(screen.getByLabelText(/Instrução para a IA/), { target: { value: 'Apresente-se como Bianca.' } });
     await escolherLead();
     fireEvent.click(screen.getByRole('button', { name: 'Testar mensagem' }));
-    expect(await screen.findByTestId('bolha-do-whatsapp')).toHaveTextContent('Oi Rodrigo, aqui é a Thais. Esse é o seu WhatsApp?');
-    expect(screen.getByText('Thais').tagName).toBe('STRONG');
+    expect(await screen.findByTestId('bolha-do-whatsapp')).toHaveTextContent('Oi Rodrigo, aqui é a Bianca. Esse é o seu WhatsApp?');
+    expect(screen.getByText('Bianca').tagName).toBe('STRONG');
     expect(aiMessagePreview).toHaveBeenCalledWith('flow-1', {
-      instruction: 'Apresente-se como Thais.',
+      instruction: 'Apresente-se como Bianca.',
       fallback_text: 'Olá, esse é o seu WhatsApp?',
       contact_id: 'c1',
       send_from_inbox_id: null,
@@ -304,12 +333,12 @@ describe('janela do bloco no modo guiado', () => {
 describe('cartão da Mensagem com IA', () => {
   it('resumo é o começo da instrução', () => {
     renderCard(bloco({
-      instruction: 'Você é a Thais.\nApresente-se pelo nome.',
+      instruction: 'Você é a Bianca.\nApresente-se pelo nome.',
       fallback_text: 'Oi',
       send_from: 'owner',
       send_from_inbox_id: '',
     }));
-    expect(screen.getByText('Você é a Thais. Apresente-se pelo nome.')).toBeInTheDocument();
+    expect(screen.getByText('Você é a Bianca. Apresente-se pelo nome.')).toBeInTheDocument();
     expect(screen.getByText('Pelo número do responsável pelo lead')).toBeInTheDocument();
   });
 

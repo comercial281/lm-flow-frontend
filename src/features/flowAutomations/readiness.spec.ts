@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { enableProblem, nodeProblem } from './readiness';
-import type { FlowNodeKind } from '@/types/flowAutomations';
+import { FLOW_NODE_DEF_BY_KIND, type FlowNodeKind } from '@/types/flowAutomations';
 
 const b = (kind: FlowNodeKind, config: Record<string, unknown>, label: string | null = null) => ({ kind, config, label });
 const gatilho = { event: 'lead.created', conditions: [] };
@@ -155,6 +155,14 @@ describe('bloco Mensagem com IA', () => {
     for (const cfg of [{ send_from: 'number', send_from_inbox_id: '' }, { send_from: 'number', send_from_inbox_id: 'i1' }, { send_from: 'owner' }]) {
       expect(nodeProblem(ia(cfg))).toBe(nodeProblem(b('send_whatsapp', { text: 'Oi', ...cfg })));
     }
+  });
+  it('instrução com o exemplo por preencher pede pra trocar (antes da reserva)', () => {
+    const problema = 'Troque o "[descreva o imóvel ou a oferta]" da instrução.';
+    expect(nodeProblem(ia({ instruction: 'Fale do [descreva o imóvel ou a oferta].' }))).toBe(problema);
+    expect(nodeProblem(ia({ instruction: 'Fale do [descreva o imóvel ou a oferta].', fallback_text: '' }))).toBe(problema);
+  });
+  it('o bloco recém-criado (config padrão) já mostra esse problema', () => {
+    expect(nodeProblem(b('ai_message', FLOW_NODE_DEF_BY_KIND.ai_message.defaultConfig))).toBe('Troque o "[descreva o imóvel ou a oferta]" da instrução.');
   });
   it('trava o Ligado dizendo qual bloco', () => {
     expect(enableProblem(gatilho, [b('ai_message', { instruction: '', fallback_text: '' })]))

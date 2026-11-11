@@ -10855,14 +10855,14 @@ O que aparece:
 - **Janela:** *Instrução* (caixa grande com as variáveis, já vem com um exemplo editável), *Mensagem reserva* (sai se a IA não responder), o grupo *Testar*, a linha do número (a mesma da Mensagem), "Não mandar se a IA já estiver conversando" e um aviso fixo de que o próximo bloco precisa combinar com a pergunta que a instrução manda fazer.
 - **Testar:** escolhe um lead real com respostas de formulário (abre no mais novo), botão *Testar mensagem*, resultado num balão com cara de WhatsApp, *Gerar de novo* pra ver a variação e *Respostas que a IA leu* recolhido. Se saiu a reserva, um aviso diz por quê. Nada é enviado.
 - **Cartão no mapa:** começo da instrução como resumo (ou "Escreva a instrução"), linha de por onde sai, borda amarela se incompleto.
-- **Chave de ligar:** pede "Escreva a instrução.", "Escreva a mensagem reserva." e, quando nenhum número foi escolhido, "Escolha o número em 'Enviar pelo número'." (`sendFrom.ts`). O servidor recusa ligar o fluxo com o bloco incompleto.
+- **Chave de ligar:** pede "Escreva a instrução.", "Troque o \"[descreva o imóvel ou a oferta]\" da instrução." (enquanto o exemplo não foi preenchido), "Escreva a mensagem reserva." e a mesma régua de número da Mensagem (`sendFrom.ts`). O servidor recusa ligar o fluxo com o bloco incompleto.
 
 Decisões (não reabrir sem o dono pedir):
 
-1. **Instrução livre do gestor, não modelo com lacunas.** Quem controla tudo é o texto da instrução. O exemplo já traz cada obrigação escrita ("apresente-se", "cite 1 ou 2 respostas", "varie a abertura", "termine perguntando"): a IA só segue à risca o que está escrito como obrigação (no teste de 11/11, "você é a Thais" sem "apresente-se" fez uma rodada sair sem apresentação).
+1. **Instrução livre do gestor, não modelo com lacunas.** Quem controla tudo é o texto da instrução. O exemplo já traz cada obrigação escrita ("apresente-se", "cite 1 ou 2 respostas", "varie a abertura", "termine perguntando"): a IA só segue à risca o que está escrito como obrigação (no teste de 11/11, "você é o corretor" sem "apresente-se" fez uma rodada sair sem apresentação).
 2. **Só formulário.** Sem catálogo de imóveis, sem documentos, sem histórico de conversa. Sem sequência, mídia, book ou espera dentro do bloco: pra isso, um bloco Mensagem depois.
 3. **Proibição de prometer aprovação, crédito, preço ou condição é regra fixa do servidor**, não da instrução. Na v1 não há conferência de frases na saída.
-4. **Liberado pra todos os clientes, sem chave**, cobrado na conta Anthropic da LM. No futuro, o cliente poderá usar a chave dele; a tela não muda por isso.
+4. **Liberado pra todos os clientes, sem chave**: a chamada da IA é da plataforma. No futuro, o cliente poderá usar a chave dele; a tela não muda por isso.
 5. **Reserva quando a IA falha:** erro, recusa, texto vazio ou longo demais, tempo estourado. O lead nunca fica sem mensagem por causa da IA.
 6. **Testar abre no lead mais novo** com respostas (do formulário do gatilho, quando o gatilho aponta pra um só). Limite de testes por hora no servidor, e a tela mostra a mensagem do limite.
 7. **Fora do funil de conversa, do follow-up e da automação pessoal** (`foraDoFunilDeConversa`, `foraDoFollowup`, `personal.ts`). O corretor só vê o bloco no modo guiado, não edita.
@@ -10877,6 +10877,7 @@ Armadilhas:
 5. **Todo ponto que lista tipos de bloco precisa conhecer o novo:** `sendsMessage` em `numberWarnings.ts` (senão aparece o aviso "A IA só responde…"), `withFlowSendFrom` em `flowNumber.ts` (espelho do número ao salvar), `AI_TALKING_KINDS`, `progress.ts`. O `FLOW_NODE_DEF_BY_KIND` não é conferido pelo `tsc`: conferir à mão.
 6. **Texto da tela é literal em pt-BR, sem as palavras proibidas** (prompt, template, agente, robô...). Nada de função ou variável chamada `prompt(`: derruba a trava `conferir-caixinhas`.
 7. **O balão do WhatsApp (`BolhaDoWhatsapp`) é componente novo, só do bloco:** as cores copiam o celular do `TestarJanela.tsx` da IA Vendedora, mas são código separado. Mudar um não muda o outro.
+8. **Fluxo ligado não salva com o bloco incompleto:** o servidor recusa e a tela avisa antes no Salvar (abre a janela do bloco e não chama o servidor).
 
 Código: `features/flowAutomations/aiMessage.ts` (instrução de exemplo, `formularioDoGatilho`), `components/flowAutomations/AiMessageFields.tsx`, `components/flowAutomations/BolhaDoWhatsapp.tsx`, `FlowNodeCard.tsx`, `FlowNodePanel.tsx`, `palette.ts`, `readiness.ts`, `services/flowAutomations/flowAutomationsService.ts` (`aiMessagePreview`, `aiMessageLeads`). Servidor: tipo virtual `ai_message`, `handle_ai_message`, rotas `ai_message_preview` e `ai_message_leads`. Testes: `AiMessageFields.spec.tsx`, `flowAutomationsService.aiMessage.spec.ts`, `palette.spec.ts`, `readiness.spec.ts`.
 

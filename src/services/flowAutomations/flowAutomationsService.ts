@@ -46,7 +46,7 @@ function unwrapComContagem(response: { data: { data: FlowAutomation; stopped_cou
 // Erro do Testar: a frase que o servidor mandou (429, 422, 502); sem frase, texto fixo.
 const TESTAR_SEM_FRASE = 'Não deu pra testar agora. Tente de novo em instantes.';
 function erroDoTestar(e: unknown): Error {
-  return new Error(serverErrorOf(e) ?? TESTAR_SEM_FRASE);
+  return new Error(serverErrorOf(e) || TESTAR_SEM_FRASE);
 }
 
 class FlowAutomationsService {

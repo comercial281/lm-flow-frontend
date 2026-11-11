@@ -61,6 +61,11 @@ describe('Mensagem com IA: serviço do Testar', () => {
     await expect(flowAutomationsService.aiMessageLeads('flow-1', 'form-9')).rejects.toThrow('Formulário não encontrado.');
   });
 
+  it('frase vazia do servidor cai no texto fixo', async () => {
+    api.post.mockRejectedValueOnce(Object.assign(new Error('x'), { response: { status: 502, data: { errors: [''] } } }));
+    await expect(flowAutomationsService.aiMessagePreview('flow-1', BODY)).rejects.toThrow('Não deu pra testar agora. Tente de novo em instantes.');
+  });
+
   it('sem frase do servidor (rede caiu ou 500 sem errors), os dois métodos dão o texto fixo', async () => {
     const fixo = 'Não deu pra testar agora. Tente de novo em instantes.';
     api.post.mockRejectedValueOnce(new Error('Network Error'));

@@ -48,7 +48,7 @@ function rotuloDoPrimeiroBloco(step: AutomationOption['first_step']): string {
 
 /** 'Primeira mensagem: "Oi {{nome}}"' ou 'Começa com: Esperar 10 minutos' (sem o "e mais"). */
 export function inicioDaPrevia(opt: AutomationOption): string {
-  const texto = opt.first_step.kind === 'send_whatsapp' ? (opt.first_step.text ?? '').trim() : '';
+  const texto = (opt.first_step.kind === 'send_whatsapp' || opt.first_step.kind === 'ai_message') ? (opt.first_step.text ?? '').trim() : '';
   if (texto) return `Primeira mensagem: "${texto}"`;
   return `Começa com: ${rotuloDoPrimeiroBloco(opt.first_step)}`;
 }

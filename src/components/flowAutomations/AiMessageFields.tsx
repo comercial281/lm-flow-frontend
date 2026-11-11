@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
+import { useContext, useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { Button, Textarea } from '@/components/ui/ds';
 import Aviso from '@/components/base/Aviso';
 import { Seletor } from '@/components/base/Seletor';
@@ -6,7 +6,7 @@ import { CampoDaJanela, GrupoDaJanela } from '@/components/base/janela';
 import { flowAutomationsService } from '@/services/flowAutomations/flowAutomationsService';
 import { sendFromOf } from '@/features/numbers/sendFrom';
 import type { AiMessageLead, AiMessagePreview } from '@/types/flowAutomations';
-import { VariableChipBar } from './VariableChipBar';
+import { MessageVariablesContext, VariableChipBar } from './VariableChipBar';
 import { PularSeIaConversandoField } from './MessageBlockFields';
 import { BolhaDoWhatsapp } from './BolhaDoWhatsapp';
 
@@ -30,7 +30,11 @@ function rotuloDoLead(lead: AiMessageLead): string {
   return [lead.name, lead.form_name, quando].filter(Boolean).join(' · ');
 }
 
-type Leads = { estado: 'carregando' } | { estado: 'pronto'; lista: AiMessageLead[] } | { estado: 'erro'; frase: string };
+// O servidor nunca preenche estas na instrução (telefone, e-mail, respostas do formulário).
+const FORA_DA_INSTRUCAO = ['{{telefone}}', '{{email}}', '{{phone}}', '{{respostas}}'];
+const SEM_LEAD_DO_FORMULARIO = 'Ainda não há lead deste formulário: mostrando leads de outros formulários.';
+
+type Leads = { estado: 'carregando' } | { estado: 'pronto'; lista: AiMessageLead[]; deOutrosFormularios?: boolean } | { estado: 'erro'; frase: string };
 
 function TestarMensagem({ config, automationId, formId, inboxDoTeste }: {
   config: Config;
@@ -53,11 +57,16 @@ function TestarMensagem({ config, automationId, formId, inboxDoTeste }: {
     setLeads({ estado: 'carregando' });
     setLeadId('');
     setResultado(null);
+    // Formulário novo ainda sem lead: cai pra leads de qualquer formulário.
     flowAutomationsService
       .aiMessageLeads(automationId, formId ?? undefined)
-      .then(lista => {
+      .then(async primeira => {
+        if (primeira.length > 0 || !formId) return { lista: primeira, outros: false };
+        return { lista: await flowAutomationsService.aiMessageLeads(automationId), outros: true };
+      })
+      .then(({ lista, outros }) => {
         if (!vivo) return;
-        setLeads({ estado: 'pronto', lista });
+        setLeads({ estado: 'pronto', lista, deOutrosFormularios: outros && lista.length > 0 });
         // Abre no lead mais novo: escolher nome é um passo a mais que faz desistir
         // de testar (mesma regra do Testar da IA Vendedora).
         setLeadId(lista[0]?.id ?? '');
@@ -125,7 +134,9 @@ function TestarMensagem({ config, automationId, formId, inboxDoTeste }: {
         htmlFor={campoId}
         ajuda={leads.estado === 'pronto' && lista.length === 0
           ? 'Nenhum lead com respostas de formulário ainda.'
-          : 'Leads reais com respostas de formulário. O teste não manda nada pro lead.'}
+          : leads.estado === 'pronto' && leads.deOutrosFormularios
+            ? SEM_LEAD_DO_FORMULARIO
+            : 'Leads reais com respostas de formulário. O teste não manda nada pro lead.'}
       >
         <Seletor
           id={campoId}
@@ -196,6 +207,8 @@ export function AiMessageFields({ config, onChange, readOnly, automationId, form
   /** O número específico do fluxo: o Testar fala como o dono dele. */
   inboxDoFluxo?: string | null;
 }) {
+  const todasAsVariaveis = useContext(MessageVariablesContext);
+  const variaveisDaInstrucao = todasAsVariaveis.filter(v => !FORA_DA_INSTRUCAO.includes(v.token));
   const instrucaoId = useId();
   const reservaId = useId();
   const instrucaoRef = useRef<HTMLTextAreaElement>(null);
@@ -219,7 +232,7 @@ export function AiMessageFields({ config, onChange, readOnly, automationId, form
             maxLength={4000}
             disabled={readOnly}
           />
-          {!readOnly && <VariableChipBar targetRef={instrucaoRef} value={instrucao} onChange={next => set('instruction', next)} />}
+          {!readOnly && <VariableChipBar variables={variaveisDaInstrucao} targetRef={instrucaoRef} value={instrucao} onChange={next => set('instruction', next)} />}
         </CampoDaJanela>
         <CampoDaJanela rotulo="Mensagem reserva" htmlFor={reservaId} obrigatorio ajuda="Sai se a IA não responder.">
           <Textarea
