@@ -186,7 +186,7 @@ describe('Condomínio na unidade', () => {
     expect(screen.queryByText(/Vem do condomínio/)).not.toBeInTheDocument();
   });
 
-  it('unidade já plugada abre plugada e salvar manda o condomínio', async () => {
+  it('unidade já plugada abre plugada e salvar sem mexer não manda o condomínio', async () => {
     svc.get.mockResolvedValue({ ...IMOVEL, address_street: 'Rua Cardoso de Almeida', condominium: {
       id: 'c1', name: 'Cyrela Arti Perdizes', kind: 'vertical', locked_fields: ['address_cep', 'address_street', 'latitude', 'longitude', 'condo_features'], photos_count: 2 } });
     svc.update.mockResolvedValue({ id: 'e1' });
@@ -198,7 +198,41 @@ describe('Condomínio na unidade', () => {
     expect(screen.getByLabelText('Bairro')).toBeEnabled();
     expect(cond.get).not.toHaveBeenCalled();
     await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+    await waitFor(() => expect(svc.update).toHaveBeenCalled());
+    // Chave ausente = o servidor mantém: não desfaz um plugar feito em outro lugar.
+    expect(svc.update.mock.calls[0][1]).not.toHaveProperty('condominium_id');
+  });
+
+  it('aberta sem condomínio, mudar o preço e salvar não manda o condomínio', async () => {
+    svc.get.mockResolvedValue({ ...IMOVEL });
+    svc.update.mockResolvedValue({ id: 'e1' });
+    abrir('/properties/e1/editar');
+    const preco = await screen.findByLabelText('Valor de venda');
+    await userEvent.clear(preco);
+    await userEvent.type(preco, '500000');
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+    await waitFor(() => expect(svc.update).toHaveBeenCalled());
+    expect(svc.update.mock.calls[0][1]).not.toHaveProperty('condominium_id');
+  });
+
+  it('aberta sem condomínio, plugar e salvar manda o condomínio', async () => {
+    svc.get.mockResolvedValue({ ...IMOVEL });
+    svc.update.mockResolvedValue({ id: 'e1' });
+    abrir('/properties/e1/editar');
+    await screen.findByLabelText('Condomínio (opcional)');
+    await escolher('Cyrela Arti Perdizes');
+    await screen.findByRole('button', { name: 'Tirar do condomínio' });
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
     await waitFor(() => expect(svc.update).toHaveBeenCalledWith('e1', expect.objectContaining({ condominium_id: 'c1' })));
+  });
+
+  it('criar sem condomínio não manda a chave', async () => {
+    svc.create.mockResolvedValue({ id: 'n3', listing_kind: 'resale' });
+    abrir('/properties/new?tipo=revenda');
+    await userEvent.type(await screen.findByLabelText(/^Título/), 'Apê 53');
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar rascunho' }));
+    await waitFor(() => expect(svc.create).toHaveBeenCalled());
+    expect(svc.create.mock.calls[0][0]).not.toHaveProperty('condominium_id');
   });
 
   it('tirar e salvar manda sem condomínio', async () => {

@@ -273,7 +273,10 @@ function Cadastro() {
     if (erros.length) { irParaErro(erros[0]); return; }
     setSalvando(true);
     try {
-      const criado = await propertiesService.create(payloadDoCadastro(formLimpo(), { rascunho }));
+      const payload = payloadDoCadastro(formLimpo(), { rascunho });
+      // Sem condomínio, a chave nem vai (ausente = o servidor não mexe).
+      if (!payload.condominium_id) delete payload.condominium_id;
+      const criado = await propertiesService.create(payload);
       if (arquivos.length) {
         setEnviandoMidia(true);
         try {
@@ -323,6 +326,9 @@ function Cadastro() {
       delete semTipo.featured;
       delete semTipo.published_on_site;
       delete semTipo.ai_enabled;
+      // Condomínio só vai se mudou nesta página: ausente = o servidor mantém, null = tira.
+      // Assim um plugar feito em outra aba (ou pela migração) não é desfeito sem aviso.
+      if ((semTipo.condominium_id ?? null) === (inicial.condominium_id ?? null)) delete semTipo.condominium_id;
       await propertiesService.update(imovel.id, semTipo);
       toast.success('Imóvel atualizado');
       voltarParaLista();

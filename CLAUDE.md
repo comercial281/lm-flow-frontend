@@ -5930,6 +5930,7 @@ Chamadas aceitas (o dono pode vetar ao ler):
 7. **`?voltar=`** só aceita caminho interno; **`?condominio=`** (volta de "Cadastrar condomínio") é lido e limpo da URL depois, e o `voltar` montado já sai sem ele.
 8. **Preencher pelo texto** pula o campo travado pelo condomínio (o servidor também ignora, a tela não deve fingir que gravou).
 9. **Servidor velho sem `condominium` no JSON:** a unidade abre normal, sem campo travado.
+9a. **`condominium_id` só vai quando muda.** No servidor, chave ausente = mantém e `null` = tira do condomínio. Salvar a unidade só manda a chave se o condomínio mudou nesta página (comparado com o que abriu); criar só manda quando há condomínio. Mandar sempre desfazia, sem aviso, um plugar feito em outra aba ou pela migração.
 10. **Backend primeiro.** Erro 422 vem como `{error: {code, message}}`: mostrar `error.message`. Pendência menor: "Editar no condomínio" não leva `?voltar=` (salvar o condomínio volta para a aba, não para a unidade).
 
 ### Voltar versão

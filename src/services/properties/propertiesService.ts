@@ -162,7 +162,8 @@ export interface Property {
 }
 
 export interface PropertyFormData {
-  condominium_id: string | null;
+  /** Ausente = o servidor mantém o condomínio; null = tira a unidade do condomínio. */
+  condominium_id?: string | null;
   code?: string;
   title: string;
   description?: string;
