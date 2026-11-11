@@ -14,6 +14,7 @@ import { JanelaNovaMensagem } from '@/components/flowAutomations/JanelaNovaMensa
 import ResolverPausasDialog from '@/components/flowAutomations/ResolverPausasDialog';
 import { textoDePausados } from '@/features/flowAutomations/pausas';
 import { toCondition, willConvert } from '@/features/flowAutomations/filterToCondition';
+import { formularioDoGatilho } from '@/features/flowAutomations/aiMessage';
 import { flowAutomationsService } from '@/services/flowAutomations/flowAutomationsService';
 import type { FlowAutomation, FlowAutomationNode, FlowNodeConfig, TestRunResult } from '@/types/flowAutomations';
 import {
@@ -1162,6 +1163,8 @@ export default function FlowAutomationCanvas({ banner, highlightedNodeId }: Flow
               numeroDoFluxo={numberView}
               numerosDiferentes={numeroDoFluxoVale && !numeroAtivo && numberDivergent}
               inboxDoFluxo={numeroAtivo && numberSetting.mode === 'number' ? numberSetting.inboxId || null : null}
+              automationId={automation?.id ?? null}
+              formId={formularioDoGatilho(trigger)}
             />
           )}
           {openPanel?.type === 'trigger' && !semGatilho && (

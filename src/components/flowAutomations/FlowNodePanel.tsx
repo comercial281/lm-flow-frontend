@@ -43,7 +43,8 @@ import { FormAnswerPicker } from './FormAnswerPicker';
 import { FlowBlockDialog } from './FlowBlockDialog';
 import { NotificationFields } from './NotificationFields';
 import { isNotifyAction } from '@/features/flowAutomations/notification';
-import { LinhaDoEnvio, MessageBlockFields } from './MessageBlockFields';
+import { LinhaDoEnvio, MessageBlockFields, NumeroDoBloco } from './MessageBlockFields';
+import { AiMessageFields } from './AiMessageFields';
 import { EscolhaDoAgenteDoBloco } from './EscolhaDoAgenteDoBloco';
 import { ESCOLHA_DO_AGENTE } from '@/components/base/EscolhaDoAgente';
 import { flowNumberAiLine, flowNumberMessageLine, type FlowNumberView } from '@/features/flowAutomations/flowNumber';
@@ -84,6 +85,10 @@ interface Props {
   numerosDiferentes?: boolean;
   /** O número pelo qual o fluxo fala (número específico): o "Passar para a IA" lista os agentes dele. */
   inboxDoFluxo?: string | null;
+  /** O fluxo aberto: o Testar da Mensagem com IA é dele. */
+  automationId?: string | null;
+  /** O formulário do gatilho (um só): filtra os leads do Testar da Mensagem com IA. */
+  formId?: string | null;
 }
 
 // "Por um tempo, saindo só em horário comercial" (o modo `schedule`) virou a
@@ -267,7 +272,7 @@ function withOwnerSendFrom(kind: string, config: FlowNodeConfig): FlowNodeConfig
   return config;
 }
 
-export function FlowNodePanel({ node, resources, onClose, onSave, onDirtyChange, flowKind = 'automation', guided = false, saving = false, pessoal = false, numeroPessoal = null, numeroPessoalCarregando = false, donoDoEnvio = null, numeroDoFluxo = null, numerosDiferentes = false, inboxDoFluxo = null }: Props) {
+export function FlowNodePanel({ node, resources, onClose, onSave, onDirtyChange, flowKind = 'automation', guided = false, saving = false, pessoal = false, numeroPessoal = null, numeroPessoalCarregando = false, donoDoEnvio = null, numeroDoFluxo = null, numerosDiferentes = false, inboxDoFluxo = null, automationId = null, formId = null }: Props) {
   // Pessoal (a minha ou a de outra pessoa): a mensagem sai pelo número do dono.
   const peloDono = pessoal || donoDoEnvio != null;
   const [config, setConfig] = useState<FlowNodeConfig>(node?.config || {});
@@ -403,6 +408,27 @@ export function FlowNodePanel({ node, resources, onClose, onSave, onDirtyChange,
             numeroDoFluxo={numeroDoFluxo ? flowNumberMessageLine(numeroDoFluxo) : null}
             numerosDiferentes={numerosDiferentes}
             semMarcarProgresso={flowKind === 'followup'}
+          />
+        );
+      case 'ai_message':
+        // Fora do follow-up, do funil de conversa e do fluxo pessoal (palette.ts):
+        // só o fluxo da equipe, com a linha do número igual à da Mensagem.
+        return (
+          <AiMessageFields
+            config={config}
+            onChange={setConfig}
+            readOnly={guided}
+            automationId={automationId ?? ''}
+            formId={formId}
+            inboxDoFluxo={inboxDoFluxo}
+            numeroDoFluxo={(
+              <NumeroDoBloco
+                config={config}
+                onChange={setConfig}
+                numeroDoFluxo={numeroDoFluxo ? flowNumberMessageLine(numeroDoFluxo) : null}
+                numerosDiferentes={numerosDiferentes}
+              />
+            )}
           />
         );
       case 'add_label':
@@ -626,7 +652,7 @@ export function FlowNodePanel({ node, resources, onClose, onSave, onDirtyChange,
   return (
     <FlowBlockDialog
       testId="painel-do-bloco"
-      size={activeNode.kind === 'send_whatsapp' ? '2xl' : 'default'}
+      size={activeNode.kind === 'send_whatsapp' || activeNode.kind === 'ai_message' ? '2xl' : 'default'}
       title={title}
       description={description}
       icon={blockIcon(activeNode)}

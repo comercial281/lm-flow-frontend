@@ -155,6 +155,9 @@ export function summaryLine(node: FlowAutomationNode, lookups: FlowLookups = {})
   switch (node.kind) {
     case 'send_whatsapp':
       return messageLine(cfg);
+    case 'ai_message':
+      // O começo da instrução (o cartão corta em 2 linhas); as quebras viram espaço.
+      return String(cfg.instruction ?? '').replace(/\s+/g, ' ').trim() || 'Escreva a instrução';
     case 'wait':
       return describeWait(cfg);
     case 'wait_for_reply':
@@ -315,7 +318,7 @@ export function FlowNodeCard({ id, data, selected }: NodeProps) {
     const next = draft.trim();
     if (next !== (node.label ?? '')) onRename(id, next || null);
   };
-  const envio = node.kind === 'send_whatsapp' ? sendFromLine(node.config || {}, !!pessoal, donoDoEnvio ?? null) : null;
+  const envio = node.kind === 'send_whatsapp' || node.kind === 'ai_message' ? sendFromLine(node.config || {}, !!pessoal, donoDoEnvio ?? null) : null;
   const progresso = node.kind === 'send_whatsapp' && !ocultarProgresso ? progressLine(node.config) : null;
 
   return (
