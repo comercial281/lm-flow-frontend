@@ -54,7 +54,7 @@ export default function CampoDoCondominio({ escolhido, aoEscolher, aoTirar, desl
   const [texto, setTexto] = useState('');
   const [aberto, setAberto] = useState(false);
   const [lista, setLista] = useState<CondominiumRow[]>([]);
-  const [pronto, setPronto] = useState(false); // 1ª resposta da lista já veio (ou falhou)
+  const [pronto, setPronto] = useState(false); // a resposta desta busca já veio (ou falhou)
   const [erro, setErro] = useState(false);
   const [abrindo, setAbrindo] = useState<string | null>(null);
   const [erroAoAbrir, setErroAoAbrir] = useState(false);
@@ -66,6 +66,8 @@ export default function CampoDoCondominio({ escolhido, aoEscolher, aoTirar, desl
     if (!buscando) return;
     const q = texto.trim();
     let vivo = true;
+    // Busca nova: Carregando no lugar da lista da busca anterior.
+    setPronto(false);
     const buscar = () => {
       condominiumsService.list({ ...(q ? { q } : {}), per_page: POR_PAGINA })
         .then(r => { if (!vivo) return; setLista(r.data ?? []); setErro(false); setPronto(true); })

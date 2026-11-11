@@ -63,6 +63,22 @@ describe('CampoDoCondominio', () => {
     await waitFor(() => expect(cond.list).toHaveBeenCalledWith({ q: 'auro', per_page: 8 }));
   });
 
+  it('busca nova mostra Carregando, não a lista da busca anterior', async () => {
+    abrir();
+    const campo = screen.getByLabelText('Condomínio (opcional)');
+    await userEvent.click(campo);
+    expect(await screen.findByRole('button', { name: /Cyrela Arti Perdizes/ })).toBeInTheDocument();
+    let soltar: (v: unknown) => void = () => {};
+    cond.list.mockReturnValueOnce(new Promise(r => { soltar = r; }));
+    await userEvent.type(campo, 'auro');
+    expect(screen.getByText('Carregando condomínios…')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Cyrela Arti Perdizes/ })).toBeNull();
+    await waitFor(() => expect(cond.list).toHaveBeenCalledWith({ q: 'auro', per_page: 8 }));
+    await act(async () => { soltar({ data: [linha('c2', 'Edifício Aurora')], meta: { total: 1, page: 1, per_page: 8, cities: [] } }); });
+    expect(await screen.findByRole('button', { name: /Edifício Aurora/ })).toBeInTheDocument();
+    expect(screen.queryByText('Carregando condomínios…')).toBeNull();
+  });
+
   it('escolher busca o condomínio inteiro e entrega pra unidade', async () => {
     const c = completo(linha('c1', 'Cyrela Arti Perdizes'));
     cond.get.mockResolvedValue(c);
