@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Loader2, Search } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button, Input } from '@/components/ui/ds';
 import { Seletor } from '@/components/base/Seletor';
 import EmptyState from '@/components/base/EmptyState';
@@ -50,7 +51,7 @@ export default function ListaDeCondominios({ podeEditar }: { podeEditar: boolean
       setPagina(pag);
     } catch {
       if (minha !== chamada.current) return;
-      if (pag > 1) setErro(false); else { setErro(true); setLinhas([]); }
+      if (pag > 1) toast.error('Não deu pra carregar mais condomínios'); else { setErro(true); setLinhas([]); }
     } finally {
       if (minha === chamada.current) setMaisCarregando(false);
     }

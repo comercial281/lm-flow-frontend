@@ -4,6 +4,8 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 
 const svc = vi.hoisted(() => ({ list: vi.fn() }));
+const toastErro = vi.hoisted(() => vi.fn());
+vi.mock('sonner', () => ({ toast: { error: toastErro, success: vi.fn() } }));
 vi.mock('@/services/condominiums/condominiumsService', async (importOriginal) => {
   const real = await importOriginal<typeof import('@/services/condominiums/condominiumsService')>();
   return { ...real, condominiumsService: { ...real.condominiumsService, ...svc } };
@@ -75,5 +77,15 @@ describe('Lista de condomínios', () => {
     abrir();
     expect(await screen.findByRole('button', { name: /tentar de novo/i })).toBeInTheDocument();
     expect(screen.queryByText('Nenhum condomínio ainda')).not.toBeInTheDocument();
+  });
+
+  it('se o Mostrar mais falha, avisa e mantém as linhas', async () => {
+    svc.list.mockResolvedValueOnce({ data: [linha('c1', 'Edifício Aurora')], meta: { total: 2, page: 1, per_page: 50, cities: [] } });
+    svc.list.mockRejectedValueOnce(new Error('x'));
+    abrir();
+    await userEvent.click(await screen.findByRole('button', { name: 'Mostrar mais' }));
+    await waitFor(() => expect(toastErro).toHaveBeenCalledWith('Não deu pra carregar mais condomínios'));
+    expect(screen.getByText('Edifício Aurora')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Mostrar mais' })).toBeInTheDocument();
   });
 });
