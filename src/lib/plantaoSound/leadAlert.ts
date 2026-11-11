@@ -18,24 +18,59 @@ export const LEAD_ALERT_SRC = '/audio/notifications/chegou.mp3';
 export const DEDUPE_MS = 3_000;
 const LOCK_NAME = 'lmflow-lead-ringer';
 
-let ultimoToque = Number.NEGATIVE_INFINITY;
+// ── O som ────────────────────────────────────────────────────────────────────
+//
+// Um player só, pré-carregado quando o app abre (preloadLeadAlert). Baixar o
+// arquivo na hora do lead fazia o primeiro toque passar de 1,5 s: o service
+// worker já tinha mostrado o aviso com o som do sistema, e o Chegou vinha
+// depois (som em dobro).
 
-export async function playLeadAlert(): Promise<boolean> {
-  const agora = Date.now();
-  if (agora - ultimoToque < DEDUPE_MS) return true;
-  // Marca ANTES do play: duas chamadas no mesmo instante não podem tocar duas.
-  ultimoToque = agora;
-  try {
-    const audio = new Audio(LEAD_ALERT_SRC);
-    audio.volume = 1;
-    await audio.play();
-    setBlocked(false);
-    return true;
-  } catch (err) {
-    ultimoToque = Number.NEGATIVE_INFINITY;
-    if (err instanceof DOMException && err.name === 'NotAllowedError') setBlocked(true);
-    return false;
+let player: HTMLAudioElement | null = null;
+
+function pegarPlayer(): HTMLAudioElement {
+  if (!player) {
+    player = new Audio(LEAD_ALERT_SRC);
+    player.preload = 'auto';
   }
+  return player;
+}
+
+// Criar o player com `preload = 'auto'` já começa a baixar o arquivo.
+export function preloadLeadAlert(): void {
+  try {
+    pegarPlayer();
+  } catch {
+    /* navegador sem áudio: toca (ou não) na hora */
+  }
+}
+
+let ultimoToque = Number.NEGATIVE_INFINITY;
+// Pedido que chega no meio de um toque recebe o resultado REAL dele. Responder
+// "toquei" antes da hora faria o service worker calar o aviso do sistema mesmo
+// que o navegador recusasse o som.
+let emAndamento: Promise<boolean> | null = null;
+
+export function playLeadAlert(): Promise<boolean> {
+  if (emAndamento) return emAndamento;
+  if (Date.now() - ultimoToque < DEDUPE_MS) return Promise.resolve(true);
+
+  emAndamento = (async () => {
+    try {
+      const audio = pegarPlayer();
+      audio.currentTime = 0;
+      audio.volume = 1;
+      await audio.play();
+      ultimoToque = Date.now();
+      setBlocked(false);
+      return true;
+    } catch (err) {
+      if (err instanceof DOMException && err.name === 'NotAllowedError') setBlocked(true);
+      return false;
+    } finally {
+      emAndamento = null;
+    }
+  })();
+  return emAndamento;
 }
 
 // ── Bloqueio do navegador ────────────────────────────────────────────────────
@@ -66,30 +101,78 @@ export function useSoundBlocked(): boolean {
 
 // ── Aba líder ────────────────────────────────────────────────────────────────
 //
-// A trava do navegador (Web Locks) fica com UMA aba enquanto ela estiver aberta;
-// fechou, a próxima da fila assume sozinha. Navegador sem a trava: toda aba é
-// líder (preferimos tocar em dobro a não tocar).
+// A líder é a aba que o corretor está USANDO: ao ficar visível ou ganhar foco,
+// ela toma a trava do navegador (Web Locks, `steal`), e a que perdeu para de
+// tocar. Escondida, a aba só entra na fila; quando a líder fecha (ou a tela dela
+// sai do app), a próxima assume sozinha. Assim o "Ver depois" clicado numa aba
+// cala a oferta (quem clicou é a líder), e a aba que o corretor está olhando é
+// a que toca. Navegador sem a trava: toda aba é líder (preferimos tocar em dobro
+// a não tocar).
 
 let lider = false;
-let eleicaoIniciada = false;
+let ativo = false;
+let seq = 0;
+let dono = 0;
+let soltar: (() => void) | null = null;
 
 function travas(): LockManager | undefined {
   return typeof navigator === 'undefined' ? undefined : navigator.locks;
 }
 
-export function startRingLeaderElection(): void {
-  if (eleicaoIniciada) return;
-  eleicaoIniciada = true;
+function pedirTrava(roubar: boolean) {
   const locks = travas();
   if (!locks?.request) return;
-  void locks
-    .request(LOCK_NAME, () => {
-      lider = true;
-      return new Promise<void>(() => {});
-    })
-    .catch(() => {
-      lider = true;
+  const meu = ++seq;
+  const quandoChegar = () => {
+    // A tela já saiu: devolve a trava na hora pra outra aba assumir.
+    if (!ativo) return Promise.resolve();
+    dono = meu;
+    lider = true;
+    return new Promise<void>((devolver) => {
+      soltar = () => {
+        if (dono === meu) lider = false;
+        soltar = null;
+        devolver();
+      };
     });
+  };
+  const pedido = roubar ? locks.request(LOCK_NAME, { steal: true }, quandoChegar) : locks.request(LOCK_NAME, quandoChegar);
+  // Rejeitada = outra aba roubou (ou o navegador recusou). Só perde a liderança
+  // se ESTE pedido era o dono: um roubo da própria aba não pode derrubá-la.
+  void pedido.catch(() => {
+    if (dono === meu) {
+      lider = false;
+      soltar = null;
+    }
+  });
+}
+
+function assumirSeVisivel() {
+  if (!ativo || lider) return;
+  if (typeof document !== 'undefined' && document.visibilityState === 'visible') pedirTrava(true);
+}
+
+function aoFocar() {
+  if (!ativo || lider) return;
+  pedirTrava(true);
+}
+
+export function startRingLeaderElection(): () => void {
+  const locks = travas();
+  if (!locks?.request || ativo) return () => {};
+  ativo = true;
+  pedirTrava(false);
+  assumirSeVisivel();
+  document.addEventListener('visibilitychange', assumirSeVisivel);
+  window.addEventListener('focus', aoFocar);
+
+  return () => {
+    ativo = false;
+    document.removeEventListener('visibilitychange', assumirSeVisivel);
+    window.removeEventListener('focus', aoFocar);
+    soltar?.();
+    lider = false;
+  };
 }
 
 export function isRingLeader(): boolean {

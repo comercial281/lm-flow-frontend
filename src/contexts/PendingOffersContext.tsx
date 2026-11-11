@@ -4,7 +4,7 @@ import {
   type BrokerAssignmentDetail,
 } from '@/services/roletaConfig/brokerAssignmentsService';
 import { offerFor, type OfferLookup } from '@/components/roleta/pendingOffersMatch';
-import { startRingLeaderElection } from '@/lib/plantaoSound/leadAlert';
+import { preloadLeadAlert, startRingLeaderElection } from '@/lib/plantaoSound/leadAlert';
 import { installLeadAlertBridge } from '@/lib/plantaoSound/swBridge';
 
 // As ofertas da roleta esperando ESTE corretor, uma vez só para o app inteiro.
@@ -101,10 +101,17 @@ export function PendingOffersProvider({ children }: { children: ReactNode }) {
   // Som do Plantão (11/11/2026): disputa de aba líder (só ela toca) e ponte com
   // o service worker. Push de oferta relê a lista na hora.
   useEffect(() => {
-    startRingLeaderElection();
-    return installLeadAlertBridge(() => {
+    preloadLeadAlert();
+    const pararEleicao = startRingLeaderElection();
+    const tirarPonte = installLeadAlertBridge(() => {
       void refresh();
     });
+    // A tela que sai (tela de aceite, Área de Membros) solta a liderança, e a
+    // outra aba assume.
+    return () => {
+      tirarPonte();
+      pararEleicao();
+    };
   }, [refresh]);
 
   // Depois de aceitar/recusar a lista muda na hora: esperar o próximo ciclo

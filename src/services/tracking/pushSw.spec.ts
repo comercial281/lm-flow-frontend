@@ -104,6 +104,21 @@ describe('push-sw.js — aviso de lead toca o Chegou na aba', () => {
     });
   }
 
+  // O Chrome recusa aviso calado com vibração ("Silent notifications must not
+  // specify vibration patterns"): o aviso sumiria justamente quando a aba tocou.
+  it('aviso calado sai sem vibração; com som, mantém a vibração', async () => {
+    const calado = montarComAbas([aba({ played: true })]);
+    calado.disparar('push', push({ title: 'x', body: 'y', event: 'lead.atribuido' }));
+    await calado.esperar();
+    expect(opcoes(calado).silent).toBe(true);
+    expect(opcoes(calado)).not.toHaveProperty('vibrate');
+
+    const comSom = montarComAbas([]);
+    comSom.disparar('push', push({ title: 'x', body: 'y', event: 'lead.atribuido' }));
+    await comSom.esperar();
+    expect(opcoes(comSom).vibrate).toEqual([200, 100, 200]);
+  });
+
   it('sem aba aberta → aviso com o som do sistema, parado na tela', async () => {
     const sw = montarComAbas([]);
     sw.disparar('push', push({ title: 'Lead novo para você', body: 'Maria', event: 'lead.atribuido' }));

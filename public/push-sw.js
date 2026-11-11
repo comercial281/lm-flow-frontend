@@ -95,7 +95,12 @@ self.addEventListener('push', function(event) {
   options.requireInteraction = true;
   event.waitUntil(
     perguntarAbas(payload).then(function (tocou) {
-      if (tocou) options.silent = true;
+      if (tocou) {
+        options.silent = true;
+        // O Chrome RECUSA aviso calado com vibração (TypeError: "Silent
+        // notifications must not specify vibration patterns") e o aviso sumiria.
+        delete options.vibrate;
+      }
       return mostrar();
     })
   );
