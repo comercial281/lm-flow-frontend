@@ -28,6 +28,12 @@ vi.mock('@/lib/plantaoSound/leadAlert', () => ({
   isRingLeader: () => true,
 }));
 
+let plantao: { status: string; isSupported: boolean } = { status: 'subscribed', isSupported: true };
+const subscribe = vi.fn(async () => undefined);
+vi.mock('@/hooks/usePushNotifications', () => ({
+  usePushNotifications: () => ({ ...plantao, subscribe, unsubscribe: vi.fn() }),
+}));
+
 import OfferPopup, { TRAVA_MS } from './OfferPopup';
 import { CHAVE_OFERTAS_VISTAS } from './offerPopupState';
 
@@ -75,6 +81,8 @@ describe('OfferPopup', () => {
     refuse.mockReset();
     play.mockClear();
     playLeadAlert.mockClear();
+    plantao = { status: 'subscribed', isSupported: true };
+    subscribe.mockClear();
     toastErro.mockReset();
     refresh.mockClear();
     vi.useFakeTimers();
@@ -102,6 +110,34 @@ describe('OfferPopup', () => {
     // deadline nulo NÃO é "prazo esgotado".
     expect(screen.getByText('Sem prazo de aceite')).toBeInTheDocument();
     expect(playLeadAlert).toHaveBeenCalledTimes(1);
+  });
+
+  // Som do Plantão (11/11/2026): com o plantão desligado, o pop-up sugere ligar.
+  // Só aqui, no momento em que faz sentido (o dono vetou faixa geral no topo).
+  describe('linha do Modo Plantão', () => {
+    const LINHA = 'Com o Modo Plantão ligado, você ouve o próximo lead mesmo com o LM Flow em segundo plano.';
+
+    it('plantão desligado: mostra a linha e "Ligar" liga o plantão', () => {
+      plantao = { status: 'unsubscribed', isSupported: true };
+      ofertas = [oferta('a')];
+      montar();
+      expect(screen.getByText(LINHA)).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Ligar' }));
+      expect(subscribe).toHaveBeenCalledTimes(1);
+    });
+
+    for (const caso of [
+      { status: 'subscribed', isSupported: true },
+      { status: 'denied', isSupported: true },
+      { status: 'unsupported', isSupported: false },
+    ]) {
+      it(`plantão ${caso.status}: sem a linha`, () => {
+        plantao = caso;
+        ofertas = [oferta('a')];
+        montar();
+        expect(screen.queryByText(LINHA)).not.toBeInTheDocument();
+      });
+    }
   });
 
   // Som do Plantão (11/11/2026): o Chegou repete de 10 em 10 s até o corretor

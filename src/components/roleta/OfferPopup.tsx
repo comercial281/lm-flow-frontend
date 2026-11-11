@@ -17,6 +17,7 @@ import { deadlineLabel, hasDeadline, SEM_PRAZO } from './offerDeadline';
 import { reasonOf } from './offerReason';
 import { destinoDoLead, gravarVistas, lerVistas, ofertasNaoVistas } from './offerPopupState';
 import { useOfferRinger } from './useOfferRinger';
+import { usePushNotifications } from '@/hooks/usePushNotifications';
 
 // Pop-up de aceite da roleta: abre sobre QUALQUER tela do app quando chega uma
 // oferta que o corretor ainda não viu.
@@ -52,6 +53,11 @@ function textoDoPrazo(prazo: string): string {
 
 export default function OfferPopup() {
   const { offers, accept, refuse, refresh } = usePendingOffers();
+  const plantao = usePushNotifications();
+  // Plantão desligado neste aparelho: o pop-up sugere ligar (o dono vetou faixa
+  // geral no topo; aqui só aparece para quem acabou de receber lead). Negado ou
+  // sem suporte não mostra: o botão não conseguiria ligar.
+  const sugerirPlantao = plantao.isSupported && plantao.status === 'unsubscribed';
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const [vistas, setVistas] = useState<Set<string>>(() => lerVistas());
@@ -164,6 +170,17 @@ export default function OfferPopup() {
               </p>
             )}
           </div>
+
+          {sugerirPlantao && (
+            <div className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2">
+              <p className="text-xs text-muted-foreground">
+                Com o Modo Plantão ligado, você ouve o próximo lead mesmo com o LM Flow em segundo plano.
+              </p>
+              <Button type="button" variant="outline" size="sm" className="shrink-0" onClick={() => void plantao.subscribe()}>
+                Ligar
+              </Button>
+            </div>
+          )}
 
           {/* O bloco da IA foi desenhado para o fundo escuro da tela de aceite
               (texto branco): aqui ele ganha o mesmo fundo, nos dois temas. */}
