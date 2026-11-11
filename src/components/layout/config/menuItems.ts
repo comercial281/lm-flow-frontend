@@ -38,6 +38,7 @@ import {
   ListTodo,
   ListOrdered,
   Presentation,
+  PanelsTopLeft,
 } from 'lucide-react';
 import { openSupport } from '@/components/support/openSupport';
 
@@ -46,7 +47,7 @@ export const ENTRADA_INTEGRACOES = '/settings/integrations';
 export const SISTEMAS_INTEGRACOES = '/settings/integrations/sistemas';
 
 /** O cartão da página de Integrações em que a tela mora. */
-export type CartaoDeIntegracao = 'whatsapp' | 'facebook' | 'portais' | 'sistemas';
+export type CartaoDeIntegracao = 'whatsapp' | 'facebook' | 'portais' | 'sites' | 'sistemas';
 
 export interface MenuItem {
   id?: string;
@@ -399,6 +400,7 @@ export const getCustomerMenuSections = (): MenuSection[] => [
         { name: 'Pixel', href: '/settings/pixel-capi', icon: Target, ...permissionFromRoute('/settings/pixel-capi'), featureKey: 'lead_automations', cartao: 'facebook' },
         // Portais imobiliários (ZAP, Imóvel Web…) — feed + leads
         { name: 'Portais', href: '/settings/portals', icon: Share2, ...permissionFromRoute('/settings/portals'), featureKey: 'properties', cartao: 'portais' },
+        { name: 'Sites e landing pages', href: '/settings/integrations/sites', icon: PanelsTopLeft, ...permissionFromRoute('/settings/integrations/sites'), featureKey: 'lead_automations', cartao: 'sites' },
         // A conexão com o CVCRM do cliente (06/10/2026), usada pela IA no "Sistema
         // do cliente". Mesma liberação das automações de lead (Facebook, Pixel).
         { name: 'CVCRM', href: '/settings/cvcrm', icon: Building2, ...permissionFromRoute('/settings/cvcrm'), featureKey: 'lead_automations', cartao: 'sistemas' },

@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react';
-import { Puzzle, Share2 } from 'lucide-react';
+import { PanelsTopLeft, Puzzle, Share2 } from 'lucide-react';
 import whatsappLogo from '@/assets/channels/whatsapp.png';
 // O facebook.png dos canais é o ícone do Messenger; aqui vai o "f" do Facebook.
 import facebookLogo from '@/assets/integrations/facebook.svg';
@@ -27,6 +27,7 @@ export const CARTOES: readonly Cartao[] = [
   { id: 'whatsapp', nome: 'WhatsApp', frase: 'Os números que atendem seus leads', logo: whatsappLogo },
   { id: 'facebook', nome: 'Facebook', frase: 'Página dos anúncios e Pixel', logo: facebookLogo },
   { id: 'portais', nome: 'Portais', frase: 'ZAP, Imóvel Web e outros portais', icone: Share2 },
+  { id: 'sites', nome: 'Sites e landing pages', frase: 'Receba o lead dos formulários do seu site e das suas LPs', icone: PanelsTopLeft },
   // Peças, não o robô: o robô é a IA Vendedora no menu.
   { id: 'sistemas', nome: 'Sistemas', frase: 'Mande os leads pro sistema que você já usa', icone: Puzzle },
 ];

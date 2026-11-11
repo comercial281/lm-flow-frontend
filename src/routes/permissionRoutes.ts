@@ -93,6 +93,7 @@ export const ROUTE_PERMISSIONS: readonly RoutePermission[] = [
   { path: '/settings/pixel-capi', resource: 'capi_configs', action: 'read' },
   { path: '/settings/portals', resource: 'portals', action: 'read' },
   { path: '/settings/portals/:portalKey', resource: 'portals', action: 'read' },
+  { path: '/settings/integrations/sites', resource: 'portals', action: 'read' },
   { path: '/settings/whatsapp-oficial', resource: 'broadcasts', action: 'read' },
   { path: '/settings/facebook', resource: 'lead_ads_form_configs', action: 'read' },
   // Mesmas chaves do servidor (Api::V1::CvcrmConnectionController: integrations.*).

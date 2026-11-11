@@ -9,14 +9,15 @@ function filtrado(hrefs: string[]): MenuSection[] {
   const item: MenuItem = { ...integracoesCompleto, abas: integracoesCompleto.abas!.filter(a => hrefs.includes(a.href)) };
   return [{ id: 'imobiliaria', rotulo: 'Minha imobiliária', itens: [item] }];
 }
-const TODAS = ['/channels', '/settings/facebook', '/settings/pixel-capi', '/settings/portals', '/settings/cvcrm'];
+const TODAS = ['/channels', '/settings/facebook', '/settings/pixel-capi', '/settings/portals', '/settings/integrations/sites', '/settings/cvcrm'];
 
 describe('cartões de Integrações', () => {
-  it('os quatro cartões, nesta ordem, com as frases do desenho', () => {
+  it('os cinco cartões, nesta ordem, com as frases do desenho', () => {
     expect(CARTOES.map(c => [c.id, c.nome, c.frase])).toEqual([
       ['whatsapp', 'WhatsApp', 'Os números que atendem seus leads'],
       ['facebook', 'Facebook', 'Página dos anúncios e Pixel'],
       ['portais', 'Portais', 'ZAP, Imóvel Web e outros portais'],
+      ['sites', 'Sites e landing pages', 'Receba o lead dos formulários do seu site e das suas LPs'],
       ['sistemas', 'Sistemas', 'Mande os leads pro sistema que você já usa'],
     ]);
   });
@@ -26,12 +27,13 @@ describe('cartões de Integrações', () => {
     expect(itemDeIntegracoes([])).toBeNull();
   });
 
-  it('com tudo liberado: quatro cartões; Facebook leva à Página, Sistemas à página própria', () => {
+  it('com tudo liberado: cinco cartões; Facebook leva à Página, Sistemas à página própria', () => {
     const visiveis = cartoesVisiveis(itemDeIntegracoes(filtrado(TODAS)));
     expect(visiveis.map(v => [v.cartao.id, v.href])).toEqual([
       ['whatsapp', '/channels'],
       ['facebook', '/settings/facebook'],
       ['portais', '/settings/portals'],
+      ['sites', '/settings/integrations/sites'],
       ['sistemas', '/settings/integrations/sistemas'],
     ]);
   });
@@ -56,6 +58,10 @@ describe('barra do topo das telas de Integrações', () => {
     expect(barraDoEndereco(filtrado(TODAS), '/settings/pixel-capi')).toMatchObject({ voltarPara: '/settings/integrations', voltarRotulo: 'Integrações', nome: 'Facebook' });
     expect(barraDoEndereco(filtrado(TODAS), '/channels')).toMatchObject({ nome: 'WhatsApp' });
     expect(barraDoEndereco(filtrado(TODAS), '/settings/integrations/sistemas')).toMatchObject({ voltarPara: '/settings/integrations', nome: 'Sistemas' });
+  });
+
+  it('em Sites e landing pages: ← Integrações', () => {
+    expect(barraDoEndereco(filtrado(TODAS), '/settings/integrations/sites')).toMatchObject({ voltarPara: '/settings/integrations', voltarRotulo: 'Integrações', nome: 'Sites e landing pages' });
   });
 
   it('no CVCRM volta pra Sistemas', () => {

@@ -206,6 +206,7 @@ import OnboardingPage from '@/pages/Setup/OnboardingPage';
 import NotFound from '@/pages/NotFound';
 import Unauthorized from '@/pages/Unauthorized';
 import PaginaComAbas from '@/components/base/PaginaComAbas';
+import SitesELandingPages from '@/pages/Customer/Settings/Integrations/sites/SitesELandingPages';
 import MolduraDeIntegracao from '@/pages/Customer/Settings/Integrations/MolduraDeIntegracao';
 // Widget é lazy: rota pública de embed em iframe que a esmagadora maioria das
 // visitas nunca acessa — não faz sentido pesar o bundle inicial com ela. Já
@@ -995,6 +996,14 @@ const AppRouter = () => {
                 element={
                   <PermissionRoute>
                     <IntegracoesEntrada />
+                  </PermissionRoute>
+                }
+              />
+              <Route
+                path="/settings/integrations/sites"
+                element={
+                  <PermissionRoute resource="portals" action="read">
+                    <SitesELandingPages />
                   </PermissionRoute>
                 }
               />
