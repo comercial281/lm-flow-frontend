@@ -100,6 +100,9 @@ export interface CondominiumsResponse {
 
 const base = '/condominiums';
 
+// O id entra codificado: nunca vira pedaço de caminho nem parâmetro.
+const caminho = (id: string) => `${base}/${encodeURIComponent(id)}`;
+
 export const condominiumsService = {
   async list(params: CondominiumsListParams = {}): Promise<CondominiumsResponse> {
     const res = await api.get(base, { params });
@@ -107,7 +110,7 @@ export const condominiumsService = {
   },
 
   async get(id: string): Promise<Condominium> {
-    const res = await api.get(`${base}/${id}`);
+    const res = await api.get(caminho(id));
     return (res.data as { data: Condominium }).data;
   },
 
@@ -117,13 +120,13 @@ export const condominiumsService = {
   },
 
   async update(id: string, data: Partial<CondominiumFormData>): Promise<Condominium> {
-    const res = await api.put(`${base}/${id}`, { condominium: data });
+    const res = await api.put(caminho(id), { condominium: data });
     return (res.data as { data: Condominium }).data;
   },
 
   async remove(id: string): Promise<void> {
-    await api.delete(`${base}/${id}`);
+    await api.delete(caminho(id));
   },
 
-  fotos: criarServicoDeFotos(id => `${base}/${id}/photos`),
+  fotos: criarServicoDeFotos(id => `${caminho(id)}/photos`),
 };

@@ -28,6 +28,22 @@ describe('condominiumsService', () => {
     await condominiumsService.fotos.upload('c1', [new File(['a'], 'a.jpg')]);
     expect(api.post.mock.calls[0][0]).toBe('/condominiums/c1/photos/upload');
   });
+  it('id vai codificado no endereço (get, update, remove e fotos)', async () => {
+    api.get.mockResolvedValue({ data: { data: { id: 'a/b' } } });
+    api.put.mockResolvedValue({ data: { data: { id: 'a/b' } } });
+    api.delete.mockResolvedValue({ data: {} });
+    api.post.mockResolvedValue({ data: { data: [] } });
+    await condominiumsService.get('a/b?x');
+    expect(api.get).toHaveBeenLastCalledWith('/condominiums/a%2Fb%3Fx');
+    await condominiumsService.update('a/b', { name: 'X' });
+    expect(api.put).toHaveBeenCalledWith('/condominiums/a%2Fb', { condominium: { name: 'X' } });
+    await condominiumsService.remove('a/b');
+    expect(api.delete).toHaveBeenCalledWith('/condominiums/a%2Fb');
+    await condominiumsService.fotos.upload('a/b', [new File(['a'], 'a.jpg')]);
+    expect(api.post.mock.calls[0][0]).toBe('/condominiums/a%2Fb/photos/upload');
+    await condominiumsService.fotos.list('a/b');
+    expect(api.get).toHaveBeenLastCalledWith('/condominiums/a%2Fb/photos');
+  });
   it('propertyPhotosService.upload continua em /properties/p1/photos/upload', async () => {
     api.post.mockResolvedValue({ data: { data: [] } });
     await propertyPhotosService.upload('p1', [new File(['a'], 'a.jpg')]);
