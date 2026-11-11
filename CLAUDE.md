@@ -5886,6 +5886,61 @@ Armadilhas:
 2. **`mascaraReais`:** o PR #421 (máscara de preço dos filtros) cria um `mascaraReais`; `cadastro/secoes/campos.tsx` tem um helper local equivalente. Unificar depois que os dois entrarem.
 3. **Pendências conhecidas:** histórico de captações aprovadas/recusadas, abrir WhatsApp dentro do LM Flow, ficha da construtora e funil de captação com IA ficaram fora. O servidor ainda substitui a lista inteira do portal (endpoint por imóvel fecharia a corrida de vez).
 
+## Imóveis: Condomínios (desde 2026-11-11)
+
+Pedido do dono (11/11/2026), primeiro caso a MQI saindo do Kenlo (512 condomínios). Desenho: `docs/superpowers/specs/2026-11-11-condominios-design.md`. Servidor: lm-flow#599 (**entra primeiro**; a tela nova chamando o servidor velho quebra a aba).
+
+### O que aparece na tela
+
+1. **Aba Condomínios** em Imóveis, sempre a última (depois de Leilão, quando ela aparece). Na URL: `?aba=condominios`. Tem contagem como as outras, busca por nome ou bairro, filtro de cidade e **Mostrar mais** (50 por vez, a MQI terá 512). Vazia: "Nenhum condomínio ainda" com o convite para cadastrar o prédio uma vez.
+2. **Lista:** Nome, Endereço, Bairro, Cidade, Unidades, À venda, Vendidas e Atualizado. Clicar abre o cadastro; quem não tem a permissão abre em leitura (campos desligados, sem Salvar, Excluir nem foto).
+3. **Cadastro do condomínio** em página (`/properties/condominios/novo` e `/properties/condominios/:id`), com seções: Básico (Nome do condomínio, tipo, construtora, incorporadora, administradora, ano, observação interna), Localização (a mesma seção do imóvel), Comodidades do condomínio, Fotos das áreas comuns, Contatos (zelador, porteiro, síndico… uso interno) e, na edição, Unidades plugadas. Aviso fixo no topo: "Mudanças aqui valem para as N unidades plugadas." (N=1: "para a unidade plugada"; N=0 não mostra). Excluir fica no menu ⋮ do cabeçalho e diz quantas unidades ficam com a cópia do que herdaram.
+4. **Fotos das áreas comuns** têm tela própria (`/properties/condominios/:id/fotos`), com as mesmas ações do imóvel.
+5. **Na unidade (Revenda e Leilão):** primeiro campo da seção Localização, **Condomínio (opcional)**, com busca ao entrar no campo e "Cadastrar condomínio" para quem tem a permissão. Plugada, o endereço do prédio e a lista de comodidades do condomínio vêm preenchidos e travados, com a dica "Vem do condomínio: mude no cadastro do condomínio." e o aviso "Vem do condomínio {nome}." com o link **Editar no condomínio** dentro dele (só com a permissão). Complemento e o resto do cadastro seguem livres. Plugar em cima de dado diferente pergunta antes ("Plugar em {nome}?"). **Tirar do condomínio** deixa a unidade com a cópia, destravada.
+6. **Faixa de fotos** em Fotos e vídeos da unidade plugada, só de leitura: "Mais N fotos do condomínio entram depois destas no site e nos portais."
+7. **Nome no site:** a página pública do imóvel mostra "Condomínio {nome}" logo abaixo da região, só quando o servidor manda `condominium_name`.
+8. **12 comodidades novas** do condomínio em `CONDO_FEATURES` (portão eletrônico, quadra de tênis, brinquedoteca, salão de jogos, espaço pet, coworking, lavanderia coletiva, vaga para visitantes, churrasqueira, piscina infantil, piscina aquecida, sala de cinema).
+
+### Decisões do dono (não reabrir sem ele)
+
+1. **Plugar é opcional:** a unidade pode seguir preenchida à mão.
+2. **Vínculo vivo:** mudou o condomínio, mudam na hora as unidades plugadas (site, portais e IA).
+3. **Primeiro a tela, depois a migração** da MQI e mais campos.
+4. **Permissão:** `condominiums.manage` cria, edita e exclui condomínio e mexe nas fotos dele (gerente e diretor nascem com; corretor só se o gestor liberar). Ver é `properties.read`. Plugar é editar a unidade (`properties.update`).
+5. **O nome do condomínio vai pra fora:** página do imóvel no site e busca da IA. Portais: nenhum XML tem campo de nome do prédio hoje. Construtora, incorporadora, administradora, ano, observação e contatos ficam internos.
+6. **Pra fora, cada unidade continua sendo um imóvel** (decisão de 02/10): site, portais e IA não conhecem "condomínio" como coisa própria.
+
+Chamadas aceitas (o dono pode vetar ao ler):
+- **a)** Só Revenda e Leilão plugam; Empreendimento não.
+- **b)** O condomínio não é anúncio: sem situação de venda, fora do site, dos XMLs e da oferta da IA.
+- **c)** Lista de comodidades do condomínio ganha os 12 itens acima; os ~150 do Kenlo ficam pra depois.
+- **d)** Aba Condomínios sempre a última e fora do `ListingKind`.
+- **e)** Unidade que vem do site do cliente (fonte ligada) não pluga: o campo fica desligado com "Este imóvel vem do site da imobiliária: endereço e comodidades vêm de lá."
+- **f)** Condomínio de casas (horizontal): a unidade herda o endereço, mas o alfinete continua dela e arrastável. Em Prédio e Comercial o alfinete trava.
+- **g)** Sem foto própria, a primeira do condomínio vira a capa; os contadores internos ("sem foto", nota do anúncio) contam só as fotos da unidade. Mudança no condomínio não conta como "imóvel atualizado" (não tira ninguém do Desatualizado).
+
+### Armadilhas
+
+1. **Condomínios não é `ListingKind`.** A contagem e a lista vêm do endpoint próprio, fora do `contarPorTipo`; `trocarAba` ignora clicar na aba em que já está.
+2. **Três contextos de trava:** união (site + condomínio), só do site e só do condomínio. O aviso do site só aparece quando há trava **do site**; trava do condomínio mostra a dica do condomínio. Sem lista de motivo, o campo travado cai na dica do site (mantém o cadastro de hoje igual).
+3. **O site vence o condomínio campo a campo:** o campo travado pela fonte do site segue com o aviso do site; o condomínio preenche só os livres.
+4. **`criarServicoDeFotos`:** o serviço de fotos do imóvel e o do condomínio nascem da mesma fábrica (mesmas ações e formatos, rota `/condominiums/:id/photos`). Não copiar o serviço.
+5. **`SecaoLocalizacao` é genérica:** serve ao imóvel e ao condomínio. Texto de mapa e rótulo que diz "do imóvel" precisa olhar de qual dos dois está falando.
+6. **Rotas** `/properties/condominios/novo`, `/:id` e `/:id/fotos` estão em `permissionRoutes.ts`; as duas de cadastro entram no `ROTA_RECOLHE_MENU` (menu recolhido).
+7. **`?voltar=`** só aceita caminho interno; **`?condominio=`** (volta de "Cadastrar condomínio") é lido e limpo da URL depois, e o `voltar` montado já sai sem ele.
+8. **Preencher pelo texto** pula o campo travado pelo condomínio (o servidor também ignora, a tela não deve fingir que gravou).
+9. **Servidor velho sem `condominium` no JSON:** a unidade abre normal, sem campo travado.
+10. **Backend primeiro.** Erro 422 vem como `{error: {code, message}}`: mostrar `error.message`. Pendência menor: "Editar no condomínio" não leva `?voltar=` (salvar o condomínio volta para a aba, não para a unidade).
+
+### Voltar versão
+
+- **Voltar só a tela** com o backend novo no ar é seguro: a unidade plugada abre como hoje (sem o campo Condomínio) e o servidor segue travando endereço e comodidades; a aba Condomínios some.
+- **Voltar o backend pede voltar a tela junto:** a aba chamaria `/condominiums`, que não existe mais. Os dados herdados já estão copiados na unidade, então o anúncio mantém endereço e comodidades; somem só as fotos do condomínio no site e nos portais. Não rodar o `down` da migration `99990101000349`.
+
+### Testes
+
+`regrasDoCondominio.spec.ts`, `condominiumsService.spec.ts`, `amenities.spec.ts`, `formularioDoCadastro.spec.ts`, `travasDoSite.spec.ts`, `ListaDeCondominios.spec.tsx`, `telaImoveis.spec.tsx`, `CadastroDoCondominio.spec.tsx`, `CampoDoCondominio.spec.tsx`, `condominioNaUnidade.spec.tsx`, `SecaoLocalizacao.spec.tsx`, `SecaoMidia.spec.tsx`, `FotosDoImovel.spec.tsx`, `PreencherPorTexto.spec.tsx`, `CadastroDoImovel.spec.tsx`, `menuRecolhidoEm.spec.ts`, `permissionRoutes.source.spec.ts` e `ImovelPublicPage.spec.tsx` (nome no site).
+
 ## Imóveis: tipo de cadastro Leilão (desde 2026-10-13)
 
 Pedido do dono (imóvel retomado / pós-leilão). Spec: `LM FLOW/specs/2026-10-13-importar-lista-externa-design.md` (Parte 1). Servidor: lm-flow#481.

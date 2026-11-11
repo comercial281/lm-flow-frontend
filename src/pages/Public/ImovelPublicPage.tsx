@@ -59,6 +59,8 @@ interface PropertyDTO extends CamposDaFicha {
   features?: string[] | null; condo_features?: string[] | null;
   typologies?: PropertyTypology[] | null;
   responsible_name?: string;
+  /** Só vem quando a unidade está plugada num condomínio. */
+  condominium_name?: string | null;
   /** CRECI de quem atende, já no formato "12345-F/SP" (servidor antigo não manda). */
   responsible_creci?: string | null;
   photos?: Photo[];
@@ -463,6 +465,7 @@ export default function ImovelPublicPage() {
             <h1 className="mt-1.5 font-[var(--display)] text-3xl font-semibold leading-tight sm:text-4xl">{prop.title}</h1>
             <SelosDoImovel selos={selos} />
             {regionText && <p className="mt-2 flex items-center gap-1.5 text-[15px] text-neutral-500"><Ic d={I.pin} s={16} /> {regionText}</p>}
+            {prop.condominium_name && <p className="mt-1 text-[15px] text-neutral-500">Condomínio {prop.condominium_name}</p>}
 
             {specs.length > 0 && (
               <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
