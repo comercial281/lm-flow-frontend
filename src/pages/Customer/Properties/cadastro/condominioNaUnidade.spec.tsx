@@ -6,7 +6,7 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import type { Condominium } from '@/services/condominiums/condominiumsService';
 
-const svc = vi.hoisted(() => ({ get: vi.fn(), create: vi.fn(), update: vi.fn(), uploadBook: vi.fn(), geocode: vi.fn(), cepLookup: vi.fn() }));
+const svc = vi.hoisted(() => ({ get: vi.fn(), create: vi.fn(), update: vi.fn(), uploadBook: vi.fn(), geocode: vi.fn(), cepLookup: vi.fn(), parseText: vi.fn() }));
 vi.mock('@/services/properties/propertiesService', async importOriginal => {
   const real = await importOriginal<typeof import('@/services/properties/propertiesService')>();
   return { ...real, propertiesService: { ...real.propertiesService, ...svc } };
@@ -219,6 +219,25 @@ describe('Condomínio na unidade', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Salvar rascunho' }));
     await waitFor(() => expect(svc.create).toHaveBeenCalledWith(expect.objectContaining({
       condominium_id: 'c1', address_street: 'Rua Cardoso de Almeida', condo_features: ['portaria_24h'],
+    })));
+  });
+
+  it('Preencher a partir de um texto depois de plugar não mexe no que vem do condomínio', async () => {
+    svc.parseText.mockResolvedValue({ address_neighborhood: 'Moema', bedrooms: 2, condo_features: ['brinquedoteca'] });
+    svc.create.mockResolvedValue({ id: 'n2', listing_kind: 'resale' });
+    abrir('/properties/new?tipo=revenda');
+    await userEvent.type(await screen.findByLabelText(/^Título/), 'Apê 52');
+    await escolher('Cyrela Arti Perdizes');
+    await screen.findByRole('button', { name: 'Tirar do condomínio' });
+    await userEvent.click(screen.getByText('Preencher a partir de um texto'));
+    await userEvent.type(screen.getByPlaceholderText(/Cole aqui as informações do imóvel/), 'Apê com brinquedoteca em Moema, 2 quartos');
+    await userEvent.click(screen.getByRole('button', { name: /^Preencher$/ }));
+    await waitFor(() => expect(screen.getByLabelText('Quartos')).toHaveValue(2));
+    expect(screen.getByLabelText('Bairro')).toHaveValue('Perdizes');
+    expect(screen.getByRole('button', { name: 'Brinquedoteca' })).toHaveAttribute('aria-pressed', 'false');
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar rascunho' }));
+    await waitFor(() => expect(svc.create).toHaveBeenCalledWith(expect.objectContaining({
+      condo_features: ['portaria_24h'], address_neighborhood: 'Perdizes',
     })));
   });
 
