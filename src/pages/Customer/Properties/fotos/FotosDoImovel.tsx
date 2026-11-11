@@ -1,5 +1,8 @@
 // Página de fotos e vídeos do imóvel (12/10/2026; era a janela da lista e do
 // cadastro). Spec: LM FLOW/specs/2026-10-12-pagina-de-fotos-design.md.
+// A mesma página serve às fotos das áreas comuns do condomínio (alvo="condominio",
+// /properties/condominios/:id/fotos): outro serviço, e tudo que muda pede
+// condominiums.manage.
 import { useEffect, useRef, useState, type DragEvent } from 'react';
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, CheckSquare, Eye, EyeOff, Link as LinkIcon, Plus, Trash2, Upload } from 'lucide-react';
@@ -8,15 +11,17 @@ import Abas from '@/components/base/Abas';
 import { Aviso, BaseHeader, Carregando, EmptyState, Pagina } from '@/components/base';
 import NoAccessState from '@/components/permissions/NoAccessState';
 import { useNomeDaAba } from '@/components/layout/nomeDaAba';
+import { useCan } from '@/hooks/useCan';
 import { useConfirmacao } from '@/hooks/useConfirmacao';
 import { cn } from '@/lib/utils';
 import { plural } from '@/lib/formato';
 import { ACCEPTED_MIME_TYPES } from '@/services/propertyPhotos/propertyPhotosService';
 import { isForbiddenError } from '@/services/core/forbidden';
 import { propertiesService, type Property } from '@/services/properties/propertiesService';
+import { condominiumsService, type Condominium } from '@/services/condominiums/condominiumsService';
 import { tipoDoImovel } from '@/features/properties/listingKind';
 import { useFotosDoImovel } from '@/features/properties/fotos/useFotosDoImovel';
-import { usePermissoesDasFotos } from '@/features/properties/fotos/usePermissoesDasFotos';
+import { usePermissoesDasFotos, type Permissoes } from '@/features/properties/fotos/usePermissoesDasFotos';
 import {
   contagens, daAba, destinoDaVolta, separar, type AbaDasFotos,
 } from '@/features/properties/fotos/regrasDasFotos';
@@ -30,14 +35,27 @@ const ROTULO_DA_ABA: Record<AbaDasFotos, string> = {
   tudo: 'Tudo', fotos: 'Fotos', midias: 'Vídeos e áudios', ocultas: 'Ocultas',
 };
 
-export default function FotosDoImovel() {
+const TEXTOS = {
+  imovel: { titulo: 'Fotos e vídeos', soltar: 'Solte para adicionar ao imóvel', quemAdiciona: 'Quem cuida dos imóveis na sua imobiliária adiciona as fotos.' },
+  condominio: { titulo: 'Fotos das áreas comuns', soltar: 'Solte para adicionar ao condomínio', quemAdiciona: 'Quem cuida dos condomínios na sua imobiliária adiciona as fotos.' },
+} as const;
+
+export default function FotosDoImovel({ alvo = 'imovel' }: { alvo?: 'imovel' | 'condominio' }) {
   const { id = '' } = useParams();
   const [sp] = useSearchParams();
   const location = useLocation();
   const navigate = useNavigate();
-  const pode = usePermissoesDasFotos();
-  const dados = useFotosDoImovel(id);
+  const doCondominio = alvo === 'condominio';
+  const podeNoImovel = usePermissoesDasFotos();
+  // Condomínio: uma chave só para tudo que muda (criar, editar, excluir e as fotos dele).
+  const gestorDoCondominio = useCan()('condominiums', 'manage');
+  const pode: Permissoes = doCondominio
+    ? { subir: gestorDoCondominio, porEndereco: gestorDoCondominio, capa: gestorDoCondominio, ordem: gestorDoCondominio, ocultar: gestorDoCondominio, excluir: gestorDoCondominio }
+    : podeNoImovel;
+  const dados = useFotosDoImovel(id, doCondominio ? condominiumsService.fotos : undefined);
+  const textos = TEXTOS[alvo];
   const [imovel, setImovel] = useState<Property | null>(null);
+  const [condominio, setCondominio] = useState<Condominium | null>(null);
   const [semAcesso, setSemAcesso] = useState(false);
   const [aba, setAba] = useState<AbaDasFotos>('tudo');
   const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
@@ -111,19 +129,21 @@ export default function FotosDoImovel() {
     void dados.enviar(Array.from(e.dataTransfer.files));
   };
 
-  useNomeDaAba(imovel ? (imovel.code || imovel.title) : null);
+  useNomeDaAba(doCondominio ? (condominio?.name ?? null) : imovel ? (imovel.code || imovel.title) : null);
 
   useEffect(() => {
     let vivo = true;
-    propertiesService.get(id)
-      .then(p => { if (vivo) setImovel(p); })
+    const pedido: Promise<unknown> = doCondominio
+      ? condominiumsService.get(id).then(c => { if (vivo) setCondominio(c); })
+      : propertiesService.get(id).then(p => { if (vivo) setImovel(p); });
+    pedido
       .catch(e => {
         // 404: imóvel que não existe ou de outra imobiliária; o servidor responde assim em vez de 403.
         const status = (e as { response?: { status?: number } } | null)?.response?.status;
         if (vivo && (isForbiddenError(e) || status === 404)) setSemAcesso(true);
       });
     return () => { vivo = false; };
-  }, [id]);
+  }, [id, doCondominio]);
 
   // A foto ampliada que saiu da lista (ocultou/mostrou/excluiu/trocou de aba) não pode reabrir sozinha depois.
   useEffect(() => {
@@ -132,12 +152,14 @@ export default function FotosDoImovel() {
 
   if (semAcesso) return <NoAccessState />;
 
-  const volta = destinoDaVolta({
-    id,
-    de: sp.get('de'),
-    kind: imovel ? tipoDoImovel(imovel) : 'resale',
-    temHistorico: location.key !== 'default',
-  });
+  const volta = doCondominio
+    ? { para: `/properties/condominios/${id}`, rotulo: 'Voltar ao condomínio' }
+    : destinoDaVolta({
+      id,
+      de: sp.get('de'),
+      kind: imovel ? tipoDoImovel(imovel) : 'resale',
+      temHistorico: location.key !== 'default',
+    });
   const voltar = (
     <Link
       to={volta.para === -1 ? '/properties' : volta.para}
@@ -151,7 +173,9 @@ export default function FotosDoImovel() {
   const total = contagens(dados.fotos);
   const visiveis = daAba(separar(dados.fotos), aba);
   const capa = dados.fotos.find(p => p.id === dados.capaId) ?? null;
-  const subtitulo = imovel ? [imovel.code, imovel.title].filter(Boolean).join(' · ') : undefined;
+  const subtitulo = doCondominio
+    ? condominio?.name
+    : imovel ? [imovel.code, imovel.title].filter(Boolean).join(' · ') : undefined;
 
   return (
     <Pagina
@@ -159,7 +183,7 @@ export default function FotosDoImovel() {
       acima={voltar}
       cabecalho={
         <BaseHeader
-          title="Fotos e vídeos"
+          title={textos.titulo}
           subtitle={subtitulo}
           primaryAction={{
             label: 'Adicionar fotos e vídeos',
@@ -209,7 +233,7 @@ export default function FotosDoImovel() {
             onChange={e => { const fs = Array.from(e.target.files ?? []); e.target.value = ''; if (fs.length) void dados.enviar(fs); }}
           />
         )}
-        {soltando && <Aviso tom="info" icone={Upload} className="mb-4">Solte para adicionar ao imóvel</Aviso>}
+        {soltando && <Aviso tom="info" icone={Upload} className="mb-4">{textos.soltar}</Aviso>}
         {dados.enviando !== null && (
           <Aviso tom="info" icone={Upload} className="mb-4">
             {dados.enviando >= 100 ? 'Guardando os arquivos…' : `Enviando… ${dados.enviando}%`}
@@ -222,7 +246,7 @@ export default function FotosDoImovel() {
         ) : !dados.fotos.length ? (
           <EmptyState
             title="Nenhuma foto ainda"
-            description={pode.subir ? 'Arraste fotos e vídeos para esta página ou use "Adicionar fotos e vídeos".' : 'Quem cuida dos imóveis na sua imobiliária adiciona as fotos.'}
+            description={pode.subir ? 'Arraste fotos e vídeos para esta página ou use "Adicionar fotos e vídeos".' : textos.quemAdiciona}
           />
         ) : (
           <>

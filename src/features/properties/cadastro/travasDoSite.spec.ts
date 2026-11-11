@@ -1,7 +1,7 @@
 import { createElement, type ReactNode } from 'react';
 import { renderHook } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import { campoTravado, dicaSe, DICA_DO_CAMPO, DICA_DO_CONDOMINIO, CamposDoSiteContext, CamposDoCondominioContext, useDicaDoCampo, nomeNoFormulario } from './travasDoSite';
+import { campoTravado, dicaSe, DICA_DO_CAMPO, DICA_DO_CONDOMINIO, CamposDoSiteContext, CamposDoCondominioContext, CamposTravadosContext, useDicaDoCampo, nomeNoFormulario } from './travasDoSite';
 
 const LISTA_COMBINADA = ['title', 'description', 'sale_price', 'address_neighborhood', 'address_city', 'bedrooms', 'occupancy', 'accepts_financing'];
 
@@ -43,6 +43,11 @@ describe('dica por motivo da trava', () => {
     expect(renderHook(() => useDicaDoCampo('title')).result.current).toBeUndefined();
     const { result } = renderHook(() => useDicaDoCampo('title'), { wrapper: wrap(['bedrooms'], ['address_city']) });
     expect(result.current).toBeUndefined();
+  });
+  it('travado sem motivo informado (só a lista somada, como antes do condomínio): dica do site', () => {
+    const soTravados = ({ children }: { children: ReactNode }) => createElement(CamposTravadosContext.Provider, { value: ['address_cep'] }, children);
+    expect(renderHook(() => useDicaDoCampo('address_zip'), { wrapper: soTravados }).result.current).toBe(DICA_DO_CAMPO);
+    expect(renderHook(() => useDicaDoCampo('title'), { wrapper: soTravados }).result.current).toBeUndefined();
   });
   it('nomeNoFormulario inverte o mapeamento do CEP', () => {
     expect(nomeNoFormulario('address_cep')).toBe('address_zip');

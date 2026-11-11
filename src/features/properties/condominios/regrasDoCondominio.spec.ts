@@ -4,7 +4,7 @@ import type { Property, PropertyFormData } from '@/services/properties/propertie
 import {
   ABA_CONDOMINIOS, CONDOMINIO_VAZIO, camposHerdados, difereDoCondominio, errosDoCondominio,
   estaNaAbaDeCondominios, formularioDoCondominio, podePlugar, textoDasFotosDoCondominio,
-  textoDasUnidades, valoresHerdados,
+  textoDasUnidades, valoresHerdados, condominioNaTela, payloadDoCondominio, destinoDepoisDeCriar, caminhoDeVolta, pedidoDeExclusao, secaoDoErro,
 } from './regrasDoCondominio';
 
 const condo = {
@@ -95,5 +95,61 @@ describe('textos', () => {
     expect(textoDasFotosDoCondominio(0)).toBe('');
     expect(textoDasFotosDoCondominio(1)).toBe('Mais 1 foto do condomínio entra depois destas no site e nos portais.');
     expect(textoDasFotosDoCondominio(4)).toBe('Mais 4 fotos do condomínio entram depois destas no site e nos portais.');
+  });
+});
+
+describe('cadastro do condomínio na tela', () => {
+  it('CEP vira address_zip na tela e volta address_cep no payload; texto vazio vira nulo', () => {
+    const t = condominioNaTela(formularioDoCondominio(condo));
+    expect(t.address_zip).toBe('11000-000');
+    expect(t.address_complement).toBe('');
+    const p = payloadDoCondominio({ ...t, address_number: '  ', builder_name: '' });
+    expect(p.address_cep).toBe('11000-000');
+    expect(p).not.toHaveProperty('address_zip');
+    expect(p.address_number).toBeNull();
+    expect(p.builder_name).toBeNull();
+  });
+  it('contato em branco não vai; o resto vai aparado', () => {
+    const t = condominioNaTela({ ...CONDOMINIO_VAZIO, contacts: [
+      { name: ' Zé ', role: 'sindico', phone: '', email: '' },
+      { name: '', role: 'zelador', phone: ' ', email: '' },
+    ] });
+    expect(payloadDoCondominio(t).contacts).toEqual([{ name: 'Zé', role: 'sindico', phone: '', email: '' }]);
+  });
+  it('origem do ponto desconhecida vira nula', () => {
+    expect(condominioNaTela({ ...CONDOMINIO_VAZIO, location_source: 'feed' }).location_source).toBeNull();
+    expect(condominioNaTela({ ...CONDOMINIO_VAZIO, location_source: 'manual' }).location_source).toBe('manual');
+  });
+  it('erro de nome mora no Básico; o de endereço, na Localização', () => {
+    expect(secaoDoErro('Dê um nome ao condomínio.')).toBe('basico');
+    expect(secaoDoErro('Preencha rua, cidade e UF do condomínio.')).toBe('localizacao');
+  });
+});
+
+describe('depois de criar', () => {
+  it('volta para o caminho interno de Imóveis com o condomínio', () => {
+    expect(destinoDepoisDeCriar('/properties/p1/editar', 'c9')).toBe('/properties/p1/editar?condominio=c9');
+    expect(destinoDepoisDeCriar('/properties/new?tipo=revenda', 'c9')).toBe('/properties/new?tipo=revenda&condominio=c9');
+  });
+  it('caminhoDeVolta só aceita caminho interno de Imóveis', () => {
+    expect(caminhoDeVolta('/properties/p1/editar')).toBe('/properties/p1/editar');
+    expect(caminhoDeVolta('https://x')).toBeNull();
+    expect(caminhoDeVolta(null)).toBeNull();
+  });
+  it('sem voltar, ou com endereço de fora, abre o condomínio', () => {
+    for (const v of [null, '', 'https://x', '//x.com/properties/', '/settings', '/properties//evil.com']) {
+      expect(destinoDepoisDeCriar(v, 'c9')).toBe('/properties/condominios/c9');
+    }
+  });
+});
+
+describe('excluir', () => {
+  it('textos por quantidade de unidades', () => {
+    expect(pedidoDeExclusao('Sol', 6)).toEqual({
+      titulo: 'Excluir o condomínio Sol?',
+      descricao: 'As 6 unidades plugadas ficam com o endereço e as comodidades de hoje e passam a ser editadas nelas.',
+    });
+    expect(pedidoDeExclusao('Sol', 1).descricao).toBe('A unidade plugada fica com o endereço e as comodidades de hoje e passa a ser editada nela.');
+    expect(pedidoDeExclusao('Sol', 0).descricao).toBe('Não dá para desfazer.');
   });
 });

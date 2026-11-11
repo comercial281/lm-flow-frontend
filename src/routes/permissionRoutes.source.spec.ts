@@ -88,6 +88,10 @@ describe('toda rota do CRM confere o cargo', () => {
     ['/properties/map', 'properties', 'read'],
     ['/properties/new', 'properties', 'create'],
     ['/properties/:id/editar', 'properties', 'update'],
+    // Condomínios: ver é properties.read; salvar/excluir/foto pedem condominiums.manage na tela.
+    ['/properties/condominios/novo', 'properties', 'read'],
+    ['/properties/condominios/:id', 'properties', 'read'],
+    ['/properties/condominios/:id/fotos', 'properties', 'read'],
     ['/visits', 'visits', 'read'],
     ['/proposals', 'proposals', 'read'],
     ['/contracts', 'contracts', 'read'],

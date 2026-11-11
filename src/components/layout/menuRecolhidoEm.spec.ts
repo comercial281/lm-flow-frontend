@@ -39,6 +39,11 @@ describe('ROTA_RECOLHE_MENU', () => {
     for (const url of ['/properties', '/properties/map', '/property-owners']) expect(ROTA_RECOLHE_MENU.test(url)).toBe(false);
   });
 
+  it('cadastro do condomínio recolhe; a página de fotos dele não', () => {
+    for (const url of ['/properties/condominios/novo', '/properties/condominios/c1', '/properties/condominios/c1/']) expect(ROTA_RECOLHE_MENU.test(url)).toBe(true);
+    for (const url of ['/properties/condominios/c1/fotos', '/properties/condominios', '/properties/p1/fotos']) expect(ROTA_RECOLHE_MENU.test(url)).toBe(false);
+  });
+
   it('funil aberto recolhe; a lista de funis não', () => {
     for (const url of ['/pipelines/abc', '/pipelines/abc/card/42']) expect(ROTA_RECOLHE_MENU.test(url)).toBe(true);
     for (const url of ['/pipelines', '/pipelines/']) expect(ROTA_RECOLHE_MENU.test(url)).toBe(false);

@@ -1,6 +1,6 @@
 // Regras puras dos condomínios: aba, formulário, o que a unidade plugada herda e quando pode plugar.
 // A tela só desenha; nada de regra no JSX.
-import type { Condominium, CondominiumFormData, CondominiumKind } from '@/services/condominiums/condominiumsService';
+import type { Condominium, CondominiumContact, CondominiumFormData, CondominiumKind } from '@/services/condominiums/condominiumsService';
 import type { Property, PropertyFormData } from '@/services/properties/propertiesService';
 import type { ListingKind } from '../listingKind';
 import { nomeNoFormulario } from '../cadastro/travasDoSite';
@@ -127,4 +127,102 @@ export function textoDasFotosDoCondominio(n: number): string {
   return n === 1
     ? 'Mais 1 foto do condomínio entra depois destas no site e nos portais.'
     : `Mais ${n} fotos do condomínio entram depois destas no site e nos portais.`;
+}
+
+// ── Cadastro do condomínio na tela ──────────────────────────────────────────
+// A Localização é a mesma do imóvel: o CEP se chama `address_zip` na tela e
+// `address_cep` no servidor, e os campos de texto ficam '' (nunca nulo) no campo.
+
+type TextosDoEndereco = 'address_street' | 'address_number' | 'address_complement' | 'address_neighborhood' | 'address_city' | 'address_state';
+
+export type CondominioNaTela = Omit<CondominiumFormData, 'address_cep' | 'location_source' | TextosDoEndereco> & {
+  address_zip: string;
+  address_street: string;
+  address_number: string;
+  address_complement: string;
+  address_neighborhood: string;
+  address_city: string;
+  address_state: string;
+  location_source: 'auto' | 'manual' | '' | null;
+};
+
+const ORIGENS = ['auto', 'manual'] as const;
+
+export function condominioNaTela(f: CondominiumFormData): CondominioNaTela {
+  const { address_cep, location_source, ...resto } = f;
+  return {
+    ...resto,
+    address_zip: address_cep ?? '',
+    address_street: f.address_street ?? '',
+    address_number: f.address_number ?? '',
+    address_complement: f.address_complement ?? '',
+    address_neighborhood: f.address_neighborhood ?? '',
+    address_city: f.address_city ?? '',
+    address_state: f.address_state ?? '',
+    location_source: (ORIGENS as readonly string[]).includes(location_source ?? '') ? (location_source as 'auto' | 'manual') : null,
+  };
+}
+
+const textoOuNulo = (v: string | null | undefined) => v?.trim() || null;
+const contatoVazio = (c: CondominiumContact) => !c.name.trim() && !c.phone.trim() && !c.email.trim();
+
+/** O que vai para o servidor: CEP com o nome dele, texto vazio vira nulo, contato em branco sai. */
+export function payloadDoCondominio(t: CondominioNaTela): CondominiumFormData {
+  const { address_zip, ...resto } = t;
+  return {
+    ...resto,
+    name: t.name.trim(),
+    address_cep: textoOuNulo(address_zip),
+    address_street: textoOuNulo(t.address_street),
+    address_number: textoOuNulo(t.address_number),
+    address_complement: textoOuNulo(t.address_complement),
+    address_neighborhood: textoOuNulo(t.address_neighborhood),
+    address_city: textoOuNulo(t.address_city),
+    address_state: textoOuNulo(t.address_state),
+    location_source: t.location_source || null,
+    builder_name: textoOuNulo(t.builder_name),
+    developer_name: textoOuNulo(t.developer_name),
+    administrator_name: textoOuNulo(t.administrator_name),
+    internal_note: textoOuNulo(t.internal_note),
+    contacts: (t.contacts ?? [])
+      .filter(c => !contatoVazio(c))
+      .map(c => ({ name: c.name.trim(), role: c.role, phone: c.phone.trim(), email: c.email.trim() })),
+  };
+}
+
+/** Seção do cadastro onde o erro de `errosDoCondominio` mora. */
+export const secaoDoErro = (mensagem: string): 'basico' | 'localizacao' =>
+  mensagem === 'Dê um nome ao condomínio.' ? 'basico' : 'localizacao';
+
+export const ROTULO_DO_CARGO: Record<CondominiumContact['role'], string> = {
+  zelador: 'Zelador', porteiro: 'Porteiro', sindico: 'Síndico', administradora: 'Administradora', outro: 'Outro',
+};
+
+export const CONTATO_VAZIO: CondominiumContact = { name: '', role: 'zelador', phone: '', email: '' };
+
+/**
+ * Depois de criar: com `?voltar=` (só caminho interno de Imóveis, ex.: o cadastro da
+ * unidade que pediu o condomínio novo) volta para lá com `condominio=<id>`; senão
+ * abre o cadastro do condomínio criado.
+ */
+export function destinoDepoisDeCriar(voltar: string | null, id: string): string {
+  const volta = caminhoDeVolta(voltar);
+  if (!volta) return `/properties/condominios/${id}`;
+  return `${volta}${volta.includes('?') ? '&' : '?'}condominio=${encodeURIComponent(id)}`;
+}
+
+/** O `?voltar=` só vale como caminho interno de Imóveis; qualquer outro vira nulo. */
+export function caminhoDeVolta(voltar: string | null): string | null {
+  const interno = !!voltar && voltar.startsWith('/properties/') && !voltar.includes('//') && !voltar.includes('\\');
+  return interno ? voltar : null;
+}
+
+/** Textos da confirmação de excluir (Global Constraints). */
+export function pedidoDeExclusao(nome: string, unidades: number): { titulo: string; descricao: string } {
+  const titulo = `Excluir o condomínio ${nome}?`;
+  if (unidades <= 0) return { titulo, descricao: 'Não dá para desfazer.' };
+  if (unidades === 1) {
+    return { titulo, descricao: 'A unidade plugada fica com o endereço e as comodidades de hoje e passa a ser editada nela.' };
+  }
+  return { titulo, descricao: `As ${unidades} unidades plugadas ficam com o endereço e as comodidades de hoje e passam a ser editadas nelas.` };
 }
