@@ -8,13 +8,20 @@ import { CabecalhoDaTabela, Celula, LinhaDaTabela, Tabela } from '../../Campanha
 
 const GRADE = 'xl:grid-cols-[minmax(0,2.2fr)_minmax(0,1.8fr)_minmax(0,2fr)_5.5rem_minmax(0,1.6fr)_6.25rem]';
 
-/** Nomes que a tela já carregou (funis, etapas, roletas, equipe). */
+/** Resultado de procurar um nome numa lista que a tela carrega à parte. "faltou" só vale com a lista carregada de verdade. */
+export type Busca<T> = { tipo: 'achou'; valor: T } | { tipo: 'carregando' } | { tipo: 'falhou' } | { tipo: 'faltou' };
+
 export interface NomesDasPaginas {
-  funil: (id: string | null) => string | null;
-  etapa: (funilId: string | null, etapaId: string | null) => string | null;
-  roleta: (id: string | null) => { nome: string; naFila: number | null } | null;
-  corretor: (id: string | null) => string | null;
+  funil: (id: string) => Busca<string>;
+  etapa: (funilId: string, etapaId: string) => Busca<string>;
+  roleta: (id: string) => Busca<{ nome: string; naFila: number | null }>;
+  corretor: (id: string) => Busca<string>;
 }
+
+const TextoNeutro = ({ b }: { b: Busca<unknown> }) =>
+  b.tipo === 'faltou'
+    ? <span className="text-muted-foreground">Não encontrado</span>
+    : <span className="text-muted-foreground" aria-label={b.tipo === 'carregando' ? 'Carregando' : undefined}>{b.tipo === 'carregando' ? '…' : '—'}</span>;
 
 export interface TabelaDePaginasProps {
   paginas: PaginaDeSite[];
@@ -38,31 +45,40 @@ export function seloDoUltimoEnvio(p: PaginaDeSite): { texto: string; tom: Tom } 
 }
 
 function QuemAssume({ p, nomes }: { p: PaginaDeSite; nomes: NomesDasPaginas }) {
-  const roleta = nomes.roleta(p.roleta_config_id);
-  if (p.roleta_config_id && roleta) {
+  if (p.roleta_config_id) {
+    const r = nomes.roleta(p.roleta_config_id);
+    if (r.tipo !== 'achou') return <TextoNeutro b={r} />;
     return (
       <div className="min-w-0">
-        <p className="break-words font-medium">{roleta.nome}</p>
-        {roleta.naFila != null && <p className="text-xs text-muted-foreground">{plural(roleta.naFila, 'corretor na fila', 'corretores na fila')}</p>}
+        <p className="break-words font-medium">{r.valor.nome}</p>
+        {r.valor.naFila != null && <p className="text-xs text-muted-foreground">{plural(r.valor.naFila, 'corretor na fila', 'corretores na fila')}</p>}
       </div>
     );
   }
-  const corretor = nomes.corretor(p.default_assignee_id);
-  if (p.default_assignee_id && corretor) {
+  if (p.default_assignee_id) {
+    const c = nomes.corretor(p.default_assignee_id);
+    if (c.tipo !== 'achou') return <TextoNeutro b={c} />;
     return (
       <div className="min-w-0">
-        <p className="break-words font-medium">{corretor}</p>
+        <p className="break-words font-medium">{c.valor}</p>
         <p className="text-xs text-muted-foreground">Corretor fixo</p>
       </div>
     );
   }
-  if (p.roleta_config_id || p.default_assignee_id) return <span className="text-muted-foreground">Não encontrado</span>;
   return (
     <div className="min-w-0">
       <p className="font-medium">Ninguém</p>
       <p className="text-xs text-muted-foreground">Entra sem responsável</p>
     </div>
   );
+}
+
+function ParaOndeVai({ p, nomes }: { p: PaginaDeSite; nomes: NomesDasPaginas }) {
+  if (!p.pipeline_id) return <span className="text-muted-foreground">—</span>;
+  const f = nomes.funil(p.pipeline_id);
+  if (f.tipo !== 'achou') return <TextoNeutro b={f} />;
+  const e = p.stage_id ? nomes.etapa(p.pipeline_id, p.stage_id) : null;
+  return <span className="min-w-0 break-words">{e?.tipo === 'achou' ? `${f.valor} › ${e.valor}` : f.valor}</span>;
 }
 
 export default function TabelaDePaginas({ paginas, nomes, aoAbrir, aoLigar }: TabelaDePaginasProps) {
@@ -72,8 +88,6 @@ export default function TabelaDePaginas({ paginas, nomes, aoAbrir, aoLigar }: Ta
       <div className="space-y-3">
         {paginas.map((p) => {
           const selo = seloDoUltimoEnvio(p);
-          const funil = nomes.funil(p.pipeline_id);
-          const etapa = nomes.etapa(p.pipeline_id, p.stage_id);
           return (
             <LinhaDaTabela key={p.id} grade={GRADE} testId="linha-da-pagina" aoAbrir={() => aoAbrir(p)}>
               <Celula rotulo="Página" className="sm:col-span-2 xl:col-span-1">
@@ -83,7 +97,7 @@ export default function TabelaDePaginas({ paginas, nomes, aoAbrir, aoLigar }: Ta
                 </div>
               </Celula>
               <Celula rotulo="Para onde vai">
-                {funil ? <span className="min-w-0 break-words">{etapa ? `${funil} › ${etapa}` : funil}</span> : <span className="text-muted-foreground">—</span>}
+                <ParaOndeVai p={p} nomes={nomes} />
               </Celula>
               <Celula rotulo="Quem assume"><QuemAssume p={p} nomes={nomes} /></Celula>
               <Celula rotulo="Leads em 30 dias">{p.leads_30d}</Celula>

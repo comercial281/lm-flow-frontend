@@ -5,10 +5,11 @@ import { Plus } from 'lucide-react';
 import { BaseHeader, Pagina } from '@/components/base';
 import EmptyState from '@/components/base/EmptyState';
 import Carregando from '@/components/base/Carregando';
-import { useAutomationResources } from '@/features/flowAutomations/editores/LeadAutomationsEditors';
-import { roletaLabel } from '@/services/roletaConfig/roletaConfigService';
+import { pipelinesService } from '@/services/pipelines/pipelinesService';
+import usersService from '@/services/users/usersService';
+import { roletaConfigService, roletaLabel, type RoletaConfig } from '@/services/roletaConfig/roletaConfigService';
 import { externalLeadPagesService, type PaginaDeSite } from '@/services/externalLeadPages/externalLeadPagesService';
-import TabelaDePaginas, { type NomesDasPaginas } from './TabelaDePaginas';
+import TabelaDePaginas, { type Busca, type NomesDasPaginas } from './TabelaDePaginas';
 
 const SUBTITULO = 'Cada página ganha um endereço próprio. Quem preencher o formulário entra no funil e com o corretor que você escolher.';
 
@@ -17,10 +18,63 @@ export interface SitesELandingPagesProps {
   aoAbrir?: (pagina: PaginaDeSite | null) => void;
 }
 
+type Estado = 'carregando' | 'ok' | 'falhou';
+interface Lista<T> { estado: Estado; itens: T }
+
+/** Só as listas que esta tela usa, cada uma com a sua situação: lista que falhou não vira "Não encontrado". */
+function useListas() {
+  const [funis, setFunis] = useState<Lista<{ id: string; name: string }[]>>({ estado: 'carregando', itens: [] });
+  const [etapas, setEtapas] = useState<Record<string, { id: string; name: string }[]>>({});
+  const [equipe, setEquipe] = useState<Lista<{ id: string; name: string }[]>>({ estado: 'carregando', itens: [] });
+  const [roletas, setRoletas] = useState<Lista<RoletaConfig[]>>({ estado: 'carregando', itens: [] });
+
+  useEffect(() => {
+    let vivo = true;
+    pipelinesService.getPipelines({ include_items: false })
+      .then(async (r) => {
+        const lista = r.data ?? [];
+        if (!vivo) return;
+        setFunis({ estado: 'ok', itens: lista.map((p) => ({ id: String(p.id), name: p.name })) });
+        const res = await Promise.allSettled(lista.map((p) => pipelinesService.getPipelineStages(p.id)));
+        if (!vivo) return;
+        const mapa: Record<string, { id: string; name: string }[]> = {};
+        res.forEach((x, i) => { if (x.status === 'fulfilled') mapa[String(lista[i].id)] = (x.value.data ?? []).map((e) => ({ id: String(e.id), name: e.name })); });
+        setEtapas(mapa);
+      })
+      .catch(() => { if (vivo) setFunis({ estado: 'falhou', itens: [] }); });
+    usersService.getUsers()
+      .then((r) => { if (vivo) setEquipe({ estado: 'ok', itens: (r.data ?? []).map((u) => ({ id: String(u.id), name: u.name })) }); })
+      .catch(() => { if (vivo) setEquipe({ estado: 'falhou', itens: [] }); });
+    roletaConfigService.getAll()
+      .then((r) => { if (vivo) setRoletas({ estado: 'ok', itens: r ?? [] }); })
+      .catch(() => { if (vivo) setRoletas({ estado: 'falhou', itens: [] }); });
+    return () => { vivo = false; };
+  }, []);
+
+  return useMemo<NomesDasPaginas>(() => {
+    const procurar = <T,>(l: Lista<unknown[]>, achar: () => T | undefined): Busca<T> => {
+      if (l.estado === 'carregando') return { tipo: 'carregando' };
+      if (l.estado === 'falhou') return { tipo: 'falhou' };
+      const v = achar();
+      return v === undefined ? { tipo: 'faltou' } : { tipo: 'achou', valor: v };
+    };
+    return {
+      funil: (id) => procurar(funis, () => funis.itens.find((f) => f.id === id)?.name),
+      // Etapa que não veio só deixa o nome do funil sozinho (não é erro pra mostrar).
+      etapa: (funilId, etapaId) => procurar(funis, () => etapas[funilId]?.find((e) => e.id === etapaId)?.name),
+      roleta: (id) => procurar(roletas, () => {
+        const r = roletas.itens.find((x) => x.id === id);
+        return r ? { nome: roletaLabel(r), naFila: Array.isArray(r.members) ? r.members.filter((m) => m.is_active).length : null } : undefined;
+      }),
+      corretor: (id) => procurar(equipe, () => equipe.itens.find((u) => u.id === id)?.name),
+    };
+  }, [funis, etapas, equipe, roletas]);
+}
+
 export default function SitesELandingPages({ aoAbrir }: SitesELandingPagesProps) {
   const [paginas, setPaginas] = useState<PaginaDeSite[] | null>(null);
   const [erro, setErro] = useState(false);
-  const recursos = useAutomationResources(true);
+  const nomes = useListas();
 
   const carregar = useCallback(async () => {
     setErro(false);
@@ -32,16 +86,6 @@ export default function SitesELandingPages({ aoAbrir }: SitesELandingPagesProps)
     }
   }, []);
   useEffect(() => { void carregar(); }, [carregar]);
-
-  const nomes = useMemo<NomesDasPaginas>(() => ({
-    funil: (id) => (id ? recursos.pipelines.find((f) => String(f.id) === id)?.name ?? null : null),
-    etapa: (funilId, etapaId) => (funilId && etapaId ? (recursos.stagesByPipeline[funilId] ?? []).find((e) => String(e.id) === etapaId)?.name ?? null : null),
-    roleta: (id) => {
-      const r = id ? (recursos.roletas ?? []).find((x) => x.id === id) : undefined;
-      return r ? { nome: roletaLabel(r), naFila: Array.isArray(r.members) ? r.members.filter((m) => m.is_active).length : null } : null;
-    },
-    corretor: (id) => (id ? recursos.users.find((u) => String(u.id) === id)?.name ?? null : null),
-  }), [recursos.pipelines, recursos.stagesByPipeline, recursos.roletas, recursos.users]);
 
   // Grava na hora; se falhar a Chave volta sozinha (o erro sobe pra ela).
   const ligar = useCallback(async (p: PaginaDeSite, active: boolean) => {
