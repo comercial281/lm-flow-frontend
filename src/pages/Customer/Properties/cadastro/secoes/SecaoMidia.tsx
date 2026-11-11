@@ -140,6 +140,8 @@ function Arquivos({ editando, arquivos, aoMudarArquivos, enviando, aoGerenciarFo
 // Links de vídeo, tour virtual e o link pro lead, mais o envio de fotos e vídeos.
 export default function SecaoMidia(props: Props) {
   const { form: f, setF, fotosDoCondominio } = props;
+  // Na criação, "foto própria" são as mídias escolhidas (sobem depois de criar).
+  const temFotoPropria = props.editando ? (props.editando.photos_count ?? 0) > 0 : props.arquivos.length > 0;
   // Do site só trava o link do vídeo; tour, fotos e book seguem livres.
   const videoTravado = useCampoTravado('video_url');
   return (
@@ -159,7 +161,7 @@ export default function SecaoMidia(props: Props) {
         </div>
       </div>
       <Arquivos {...props} />
-      {fotosDoCondominio ? <Aviso tom="neutro" className="mt-3">{textoDasFotosDoCondominio(fotosDoCondominio)}</Aviso> : null}
+      {fotosDoCondominio ? <Aviso tom="neutro" className="mt-3">{textoDasFotosDoCondominio(fotosDoCondominio, temFotoPropria)}</Aviso> : null}
       <BlocoDoBook
         kind={f.listing_kind ?? 'resale'}
         editando={props.editando}
