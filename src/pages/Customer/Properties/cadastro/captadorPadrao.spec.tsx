@@ -24,7 +24,16 @@ import CadastroDoImovel from './CadastroDoImovel';
 import { PermissionsContext } from '@/contexts/PermissionsContext';
 import { useAuthStore } from '@/store/authStore';
 
-type Permissoes = { isReady: boolean; temTime: boolean; falhou?: boolean };
+// leEquipe (users.read) vale true quando não vem: os casos antigos não dependem dela.
+type Permissoes = { isReady: boolean; temTime: boolean; falhou?: boolean; leEquipe?: boolean; recebeOsProprios?: boolean };
+
+function can(v: Permissoes, r: string, a: string) {
+  const chave = `${r}.${a}`;
+  if (chave === 'dashboard.team') return v.temTime;
+  if (chave === 'users.read') return v.leEquipe ?? true;
+  if (chave === 'properties.own_leads') return v.recebeOsProprios ?? false;
+  return true;
+}
 
 function abrir(url: string, p: Permissoes) {
   const tela = (v: Permissoes) => (
@@ -32,7 +41,7 @@ function abrir(url: string, p: Permissoes) {
       value={{
         isReady: v.isReady,
         loadFailure: v.falhou ? 'network' : null,
-        can: (r: string, a: string) => (`${r}.${a}` === 'dashboard.team' ? v.temTime : true),
+        can: (r: string, a: string) => can(v, r, a),
       } as never}
     >
       <MemoryRouter initialEntries={[url]}>
@@ -171,8 +180,60 @@ describe('Captador no cadastro de imóvel', () => {
   });
 
   it('o corretor não se oferece como Corretor responsável (a chave manda lead direto pra ele)', async () => {
-    abrir('/properties/new', { isReady: true, temTime: false });
+    abrir('/properties/new', { isReady: true, temTime: false, leEquipe: false });
     const r = await seletor('Corretor responsável');
+    expect(nomes(r)).toEqual(['Nenhum']);
+    expect(r.disabled).toBe(true);
+    expect(screen.getByText('Só a gestão muda o corretor responsável e para onde vão os leads deste imóvel.')).toBeTruthy();
+  });
+});
+
+describe('Receber os leads dos próprios imóveis (11/11/2026)', () => {
+  const corretorComChave = { isReady: true, temTime: false, leEquipe: false, recebeOsProprios: true };
+  const chaveDeLeads = () => screen.getByRole('checkbox', { name: /Leads deste imóvel vão direto/ });
+
+  it('em imóvel novo nasce Corretor responsável, com a chave de leads desligada, e liga se quiser', async () => {
+    svc.create.mockResolvedValue({ id: 'n9', listing_kind: 'resale' });
+    abrir('/properties/new', corretorComChave);
+    const r = await seletor('Corretor responsável');
+    await waitFor(() => expect(r.value).toBe('ana'));
+    expect(r.disabled).toBe(false);
+    expect(chaveDeLeads().getAttribute('aria-checked')).toBe('false');
+    await userEvent.click(chaveDeLeads());
+    await userEvent.type(screen.getByLabelText(/^Título/), 'Apartamento');
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar rascunho' }));
+    await waitFor(() => expect(svc.create).toHaveBeenCalled());
+    expect(svc.create.mock.calls[0][0]).toMatchObject({ responsible_id: 'ana', lead_goes_to_responsible: true });
+  });
+
+  it('editando imóvel livre que ele captou, se oferece como responsável', async () => {
+    svc.get.mockResolvedValue({ id: 'i5', title: 'Apto', listing_kind: 'resale', captor_id: 'ana',
+      captor: { id: 'ana', name: 'Ana Souza' }, responsible_id: null });
+    abrir('/properties/i5/editar', corretorComChave);
+    const r = await seletor('Corretor responsável');
+    await waitFor(() => expect(nomes(r)).toEqual(['Nenhum', 'Ana Souza']));
+    expect(chaveDeLeads().hasAttribute('disabled')).toBe(true);
+    await userEvent.selectOptions(r, 'ana');
+    expect(chaveDeLeads().hasAttribute('disabled')).toBe(false);
+  });
+
+  it('imóvel de outro responsável fica travado, com o motivo', async () => {
+    svc.get.mockResolvedValue({ id: 'i6', title: 'Apto', listing_kind: 'resale',
+      responsible_id: 'b', responsible: { id: 'b', name: 'Davi' } });
+    abrir('/properties/i6/editar', corretorComChave);
+    const r = await seletor('Corretor responsável');
+    await waitFor(() => expect(r.value).toBe('b'));
+    expect(r.disabled).toBe(true);
+    expect(chaveDeLeads().hasAttribute('disabled')).toBe(true);
+    expect(screen.getByText('Este imóvel já tem outro corretor responsável. Fale com a gestão.')).toBeTruthy();
+  });
+
+  it('imóvel sem responsável mas captado por colega: não se oferece', async () => {
+    svc.get.mockResolvedValue({ id: 'i7', title: 'Apto', listing_kind: 'resale', captor_id: 'w',
+      captor: { id: 'w', name: 'Carla' }, responsible_id: null });
+    abrir('/properties/i7/editar', corretorComChave);
+    const r = await seletor('Corretor responsável');
+    await waitFor(() => expect(screen.getByText('Este imóvel é captação de outro corretor. Fale com a gestão.')).toBeTruthy());
     expect(nomes(r)).toEqual(['Nenhum']);
   });
 });
