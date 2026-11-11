@@ -1,11 +1,10 @@
-import type { Secao, SecaoId } from '@/features/properties/cadastro/secoesDoCadastro';
-
 // Índice das seções. No computador é uma coluna que acompanha a rolagem; no
 // celular vira uma faixa de atalhos no topo, que rola na horizontal.
-export default function IndiceDoCadastro({ secoes, ativa, aoEscolher }: {
-  secoes: Secao[];
-  ativa: SecaoId | null;
-  aoEscolher: (id: SecaoId) => void;
+// Serve ao cadastro do imóvel e ao do condomínio (cada um com as suas seções).
+export default function IndiceDoCadastro<Id extends string>({ secoes, ativa, aoEscolher }: {
+  secoes: { id: Id; titulo: string }[];
+  ativa: Id | null;
+  aoEscolher: (id: Id) => void;
 }) {
   return (
     <nav

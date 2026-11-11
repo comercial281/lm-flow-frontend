@@ -21,6 +21,16 @@ vi.mock('@/services/properties/propertiesService', async importOriginal => {
   const real = await importOriginal<typeof import('@/services/properties/propertiesService')>();
   return { ...real, propertiesService: { ...real.propertiesService, ...svc } };
 });
+const condo = vi.hoisted(() => ({ list: vi.fn() }));
+vi.mock('@/services/condominiums/condominiumsService', async importOriginal => {
+  const real = await importOriginal<typeof import('@/services/condominiums/condominiumsService')>();
+  return { ...real, condominiumsService: { ...real.condominiumsService, ...condo } };
+});
+const podeCondo = vi.hoisted(() => ({ valor: true }));
+vi.mock('@/hooks/useCan', async importOriginal => {
+  const real = await importOriginal<typeof import('@/hooks/useCan')>();
+  return { ...real, useCan: () => (r: string, a: string) => (r === 'condominiums' && a === 'manage' ? podeCondo.valor : true) };
+});
 vi.mock('@/contexts/TenantFeaturesContext', () => ({ useFeature: () => true }));
 vi.mock('@/services/contacts/labelsService', () => ({
   labelsService: { getLabels: () => Promise.resolve({ data: [] }) },
@@ -66,6 +76,8 @@ function abrir(endereco = '/properties') {
 beforeEach(() => {
   vi.clearAllMocks();
   localStorage.clear();
+  podeCondo.valor = true;
+  condo.list.mockResolvedValue({ data: [], meta: { total: 4, page: 1, per_page: 50, cities: [] } });
   svc.facets.mockResolvedValue({ neighborhoods: [], property_types: [], captors: [] });
   svc.list.mockImplementation(async (p: { listing_kind: string }) =>
     (p.listing_kind === 'resale'
@@ -438,5 +450,56 @@ describe('Tela de Imóveis', () => {
     fireEvent.click(screen.getAllByRole('button', { name: 'Está em dia' })[0]);
     expect(await screen.findByText('Mostrando 1 de 1')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Mostrar mais' })).toBeNull();
+  });
+
+  describe('aba Condomínios', () => {
+    it('abre por ?aba=condominios sem carregar imóveis', async () => {
+      svc.contarPorTipo.mockResolvedValue({ development: 12, resale: 38 });
+      abrir('/properties?aba=condominios');
+      expect(await screen.findByRole('tab', { name: 'Condomínios (4)' })).toHaveAttribute('aria-selected', 'true');
+      expect(await screen.findByText('Nenhum condomínio ainda')).toBeInTheDocument();
+      expect(svc.list).not.toHaveBeenCalled();
+      expect(screen.getByRole('button', { name: 'Novo condomínio' })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /Gerar descrições com IA/ })).not.toBeInTheDocument();
+    });
+
+    it('o subtítulo do topo fala do condomínio, não da contagem de imóveis', async () => {
+      svc.contarPorTipo.mockResolvedValue({ development: 12, resale: 38 });
+      abrir('/properties?aba=condominios');
+      expect(await screen.findByText('Cadastre o prédio uma vez e plugue os apartamentos nele.')).toBeInTheDocument();
+      expect(screen.queryByText(/· 50 cadastros/)).toBeNull();
+      expect(screen.queryByText(/Empreendimentos e imóveis de revenda da imobiliária/)).toBeNull();
+      await userEvent.click(screen.getByRole('tab', { name: 'Revenda (38)' }));
+      expect(await screen.findByText(/· 50 cadastros/)).toBeInTheDocument();
+      expect(screen.queryByText('Cadastre o prédio uma vez e plugue os apartamentos nele.')).toBeNull();
+    });
+
+    it('ignora ?visao=mapa na aba', async () => {
+      svc.contarPorTipo.mockResolvedValue({ development: 12, resale: 38 });
+      abrir('/properties?aba=condominios&visao=mapa');
+      await screen.findByText('Nenhum condomínio ainda');
+      expect(screen.queryByTestId('mapa')).not.toBeInTheDocument();
+    });
+
+    it('Revenda → Condomínios → Revenda volta a lista de imóveis', async () => {
+      svc.contarPorTipo.mockResolvedValue({ development: 12, resale: 38 });
+      abrir('/properties?aba=revenda');
+      await screen.findByText('38 imóveis de revenda');
+      await userEvent.click(await screen.findByRole('tab', { name: 'Condomínios (4)' }));
+      expect(await screen.findByText('Nenhum condomínio ainda')).toBeInTheDocument();
+      expect(screen.getByTestId('onde')).toHaveTextContent('aba=condominios');
+      await userEvent.click(screen.getByRole('tab', { name: 'Revenda (38)' }));
+      expect(await screen.findByText('38 imóveis de revenda')).toBeInTheDocument();
+      expect(screen.queryByText('Nenhum condomínio ainda')).not.toBeInTheDocument();
+      expect(screen.getByTestId('onde')).not.toHaveTextContent('condominios');
+    });
+
+    it('sem a permissão some o Novo condomínio', async () => {
+      podeCondo.valor = false;
+      svc.contarPorTipo.mockResolvedValue({ development: 12, resale: 38 });
+      abrir('/properties?aba=condominios');
+      await screen.findByText('Nenhum condomínio ainda');
+      expect(screen.queryByRole('button', { name: /Novo condomínio/ })).not.toBeInTheDocument();
+    });
   });
 });

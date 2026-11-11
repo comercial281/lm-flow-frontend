@@ -5,8 +5,8 @@
 //   /properties/:id/editar[?de=lote]               editar (do lote, volta para ele)
 // Quais seções cada tipo tem mora em `secoesDoCadastro`; a validação e o que
 // vai para o servidor, em `formularioDoCadastro`.
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { propertiesService, type Property, type PropertyFormData } from '@/services/properties/propertiesService';
 import { propertyPhotosService } from '@/services/propertyPhotos/propertyPhotosService';
@@ -21,7 +21,21 @@ import { plural } from '@/lib/formato';
 import { ABA_NA_URL, tipoDoImovel, type ListingKind } from '@/features/properties/listingKind';
 import { linkDasFotos } from '@/features/properties/fotos/regrasDasFotos';
 import { formularioNovo } from '@/features/properties/formularioPorTipo';
-import { AVISO_DO_SITE, CamposTravadosContext, campoTravado } from '@/features/properties/cadastro/travasDoSite';
+import {
+  AVISO_DO_SITE,
+  CamposDoCondominioContext,
+  CamposDoSiteContext,
+  CamposTravadosContext,
+  campoTravado,
+} from '@/features/properties/cadastro/travasDoSite';
+import { condominiumsService, type Condominium } from '@/services/condominiums/condominiumsService';
+import {
+  camposHerdados,
+  difereDoCondominio,
+  podePlugar,
+  valoresHerdados,
+  linkParaEditarCondominio,
+} from '@/features/properties/condominios/regrasDoCondominio';
 import { cleanTypologies } from '@/features/properties/typologies';
 import { secoesDoCadastro, tipoDaUrl, type SecaoId } from '@/features/properties/cadastro/secoesDoCadastro';
 import {
@@ -39,6 +53,7 @@ import type { MudancaDoFormulario } from './secoes/tipos';
 import { useSecaoVisivel } from './useSecaoVisivel';
 import SecaoBasico from './secoes/SecaoBasico';
 import SecaoLocalizacao from './secoes/SecaoLocalizacao';
+import CampoDoCondominio from './secoes/CampoDoCondominio';
 import SecaoObra from './secoes/SecaoObra';
 import SecaoTipologias from './secoes/SecaoTipologias';
 import SecaoValores from './secoes/SecaoValores';
@@ -85,11 +100,13 @@ export default function CadastroDoImovel() {
 
 function Cadastro() {
   const { id } = useParams();
-  const [sp] = useSearchParams();
+  const [sp, setSp] = useSearchParams();
   const navigate = useNavigate();
   const canAiDesc = useFeature('properties_ai_description');
+  const pode = useCan();
   // Cadastrar segue a mesma trava do botão "Novo" da lista: função ligada no cliente e cargo.
-  const podeCriar = propertiesActionGates(useFeature('properties_create'), useCan()).create;
+  const podeCriar = propertiesActionGates(useFeature('properties_create'), pode).create;
+  const podeGerirCondominios = pode('condominiums', 'manage');
   const { confirmar, dialogoDeConfirmacao } = useConfirmacao();
 
   const editandoId = id ?? null;
@@ -128,6 +145,11 @@ function Cadastro() {
   }, [editandoId, responsavelPadrao]);
   const setF = (patch: MudancaDoFormulario) =>
     setForm(prev => ({ ...prev, ...(typeof patch === 'function' ? patch(prev) : patch) }));
+  // O formulário mais recente, para quem volta de um await (pergunta de plugar, ?condominio=).
+  const formRef = useRef(form);
+  formRef.current = form;
+  // Condomínio plugado (só Revenda e Leilão). Servidor antigo sem `condominium` = nenhum.
+  const [condominio, setCondominio] = useState<Property['condominium']>(null);
 
   // Mídias escolhidas na criação: sobem logo depois de criar o imóvel.
   const [arquivos, setArquivos] = useState<File[]>([]);
@@ -143,6 +165,16 @@ function Cadastro() {
   // Imóvel do site com a fonte ligada: o que vem de lá fica travado, campo por campo.
   // Fonte desligada = lista vazia = tudo livre (o selo "Vem do site" da lista continua).
   const travados = imovel?.feed?.locked_fields ?? SEM_TRAVAS;
+  // Unidade plugada: o que vem do condomínio também trava (o site vence campo a campo:
+  // a dica do campo é a dele, e o servidor mantém o valor do site).
+  const camposDoCondominio = useMemo(() => (condominio ? camposHerdados(condominio) : SEM_TRAVAS), [condominio]);
+  const travadosNaTela = useMemo(
+    () => (camposDoCondominio.length ? [...travados, ...camposDoCondominio] : travados),
+    [travados, camposDoCondominio],
+  );
+  const plugar = podePlugar(imovel, kind);
+  // Empreendimento não pluga nem mostra o campo; imóvel do site mostra parado, com o motivo.
+  const mostraCampoDoCondominio = plugar.pode || !!plugar.motivo || !!condominio;
   const secoes = secoesDoCadastro(kind, { editando: !!editandoId });
   const [secaoComErro, setSecaoComErro] = useState<SecaoId | null>(null);
   const visivel = useSecaoVisivel(pronto ? secoes.map(s => s.id) : []);
@@ -159,10 +191,54 @@ function Cadastro() {
     if (!editandoId) return;
     setErroDeCarga(false);
     propertiesService.get(editandoId)
-      .then(p => { setImovel(p); const f = formularioDoImovel(p); setForm(f); setInicial(f); })
+      .then(p => { setImovel(p); setCondominio(p.condominium ?? null); const f = formularioDoImovel(p); setForm(f); setInicial(f); })
       .catch(e => { if (isForbiddenError(e)) setRecusado(true); else setErroDeCarga(true); });
   }, [editandoId]);
   useEffect(() => { carregar(); }, [carregar]);
+
+  // Plugar: o endereço e as comodidades do condomínio entram no formulário. Se a
+  // unidade já tinha algo diferente nesses campos, pergunta antes.
+  const aoEscolherCondominio = async (c: Condominium) => {
+    if (difereDoCondominio(formRef.current, c) && !(await confirmar({
+      titulo: `Plugar em ${c.name}?`,
+      descricao: 'O endereço e as comodidades do condomínio substituem os que estão nesta unidade.',
+      rotuloDaAcao: 'Plugar',
+      rotuloDeCancelar: 'Cancelar',
+    }))) return;
+    setF(prev => ({ condominium_id: c.id, ...valoresHerdados(c, c.kind, prev) }));
+    setCondominio({ id: c.id, name: c.name, kind: c.kind, locked_fields: c.locked_fields ?? [], photos_count: c.photos_count ?? 0 });
+  };
+
+  // Tirar: a unidade fica com a cópia do que veio do condomínio, destravada.
+  const aoTirarDoCondominio = () => {
+    setF({ condominium_id: null });
+    setCondominio(null);
+  };
+
+  // Volta do "+ Cadastrar condomínio" (?condominio=<id>): pluga o recém-criado e tira
+  // o parâmetro do endereço (sem entrada nova no histórico). Uma vez por id.
+  const condominioDaUrl = sp.get('condominio');
+  const lidoDaUrl = useRef<string | null>(null);
+  useEffect(() => {
+    if (!pronto || !condominioDaUrl || lidoDaUrl.current === condominioDaUrl) return;
+    lidoDaUrl.current = condominioDaUrl;
+    setSp(prev => { const n = new URLSearchParams(prev); n.delete('condominio'); return n; }, { replace: true });
+    if (!plugar.pode) return;
+    condominiumsService.get(condominioDaUrl)
+      .then(c => { void aoEscolherCondominio(c); })
+      .catch(() => toast.error('Não deu pra abrir o condomínio cadastrado. Escolha ele de novo em Localização.'));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- roda ao ficar pronto ou chegar um id novo
+  }, [pronto, condominioDaUrl]);
+
+  // "Editar no condomínio" leva a volta para esta unidade: salvar ou cancelar lá volta pra cá.
+  const location = useLocation();
+  const linkDoCondominio = condominio ? linkParaEditarCondominio(condominio.id, location.pathname, location.search) : '';
+
+  // Sair pra editar o condomínio: com alteração não salva, pergunta antes.
+  const sairPara = async (destino: string) => {
+    if (temAlteracao && !(await confirmar({ ...PEDIDO_SAIR_SEM_SALVAR, rotuloDaAcao: 'Sair' }))) return;
+    navigate(destino);
+  };
 
   // Fotos moram numa página própria (12/10/2026). Com alteração não salva, pergunta antes.
   const gerenciarFotos = async () => {
@@ -202,7 +278,10 @@ function Cadastro() {
     if (erros.length) { irParaErro(erros[0]); return; }
     setSalvando(true);
     try {
-      const criado = await propertiesService.create(payloadDoCadastro(formLimpo(), { rascunho }));
+      const payload = payloadDoCadastro(formLimpo(), { rascunho });
+      // Sem condomínio, a chave nem vai (ausente = o servidor não mexe).
+      if (!payload.condominium_id) delete payload.condominium_id;
+      const criado = await propertiesService.create(payload);
       if (arquivos.length) {
         setEnviandoMidia(true);
         try {
@@ -252,6 +331,9 @@ function Cadastro() {
       delete semTipo.featured;
       delete semTipo.published_on_site;
       delete semTipo.ai_enabled;
+      // Condomínio só vai se mudou nesta página: ausente = o servidor mantém, null = tira.
+      // Assim um plugar feito em outra aba (ou pela migração) não é desfeito sem aviso.
+      if ((semTipo.condominium_id ?? null) === (inicial.condominium_id ?? null)) delete semTipo.condominium_id;
       await propertiesService.update(imovel.id, semTipo);
       toast.success('Imóvel atualizado');
       voltarParaLista();
@@ -292,17 +374,53 @@ function Cadastro() {
   const conteudoDa = (secao: SecaoId): ReactNode => {
     switch (secao) {
       case 'basico': return <SecaoBasico {...props} />;
-      case 'localizacao': return <SecaoLocalizacao {...props} />;
+      case 'localizacao':
+        return (
+          <>
+            {mostraCampoDoCondominio && (
+              <div className="mt-4 space-y-3">
+                <CampoDoCondominio
+                  escolhido={condominio}
+                  aoEscolher={c => void aoEscolherCondominio(c)}
+                  aoTirar={aoTirarDoCondominio}
+                  desligado={!plugar.pode}
+                  motivo={plugar.motivo}
+                  podeCadastrar={podeGerirCondominios}
+                />
+                {condominio && (
+                  <Aviso tom="info">
+                    <p>
+                      Vem do condomínio {condominio.name}.
+                      {podeGerirCondominios && (
+                        <>
+                          {' '}
+                          <Link
+                            to={linkDoCondominio}
+                            onClick={e => { if (temAlteracao) { e.preventDefault(); void sairPara(linkDoCondominio); } }}
+                            className="text-primary underline"
+                          >
+                            Editar no condomínio
+                          </Link>
+                        </>
+                      )}
+                    </p>
+                  </Aviso>
+                )}
+              </div>
+            )}
+            <SecaoLocalizacao {...props} />
+          </>
+        );
       case 'obra': return <SecaoObra {...props} />;
       case 'tipologias': return <SecaoTipologias {...props} />;
       case 'valores': return <SecaoValores {...props} />;
       case 'composicao': return <SecaoComposicao {...props} />;
       case 'detalhesVenda': return <SecaoDetalhesDaVenda {...props} />;
       case 'condicoes': return <SecaoCondicoes {...props} />;
-      case 'caracteristicas': return <SecaoCaracteristicas {...props} />;
+      case 'caracteristicas': return <SecaoCaracteristicas {...props} nomeDoCondominio={condominio?.name} />;
       case 'midia':
         return <SecaoMidia {...props} arquivos={arquivos} aoMudarArquivos={setArquivos} enviando={enviandoMidia || salvando} aoGerenciarFotos={() => void gerenciarFotos()}
-          book={book} aoMudarBook={setBook} aoMudarImovel={aoMudarImovel} />;
+          book={book} aoMudarBook={setBook} aoMudarImovel={aoMudarImovel} fotosDoCondominio={condominio?.photos_count} />;
       case 'descricao':
         return <SecaoDescricao {...props} podeGerar={canAiDesc} gerando={gerandoDescricao} aoGerar={gerarDescricao} />;
       case 'equipe': return <SecaoEquipe {...props} />;
@@ -345,7 +463,9 @@ function Cadastro() {
             <OndeDivulgar imovel={imovel} modo="passo" aoMudarImovel={aoMudarImovelDivulgado} />
           </div>
         ) : (
-          <CamposTravadosContext.Provider value={travados}>
+          <CamposTravadosContext.Provider value={travadosNaTela}>
+          <CamposDoSiteContext.Provider value={travados}>
+          <CamposDoCondominioContext.Provider value={camposDoCondominio}>
           <div className="max-w-6xl">
             <div className="lg:grid lg:grid-cols-[13rem_minmax(0,1fr)] lg:gap-8">
               <IndiceDoCadastro
@@ -370,6 +490,8 @@ function Cadastro() {
               </div>
             </div>
           </div>
+          </CamposDoCondominioContext.Provider>
+          </CamposDoSiteContext.Provider>
           </CamposTravadosContext.Provider>
         )}
       </Pagina>

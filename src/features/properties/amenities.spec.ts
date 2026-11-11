@@ -9,7 +9,10 @@ describe('catálogo de características', () => {
   it('piscina e sauna do imóvel viram privativas; as do condomínio não', () => {
     expect(labelsFor(['piscina', 'sauna', 'piscina_condominio'])).toEqual(['Piscina privativa', 'Sauna privativa', 'Piscina']);
   });
-  it('19 do imóvel e 17 do condomínio', () => {
-    expect([PROPERTY_FEATURES.length, CONDO_FEATURES.length]).toEqual([19, 17]);
+  it('as comodidades novas do condomínio têm rótulo', () => {
+    expect(labelsFor(['cinema'])).toEqual(['Sala de cinema']);
+  });
+  it('19 do imóvel e 29 do condomínio', () => {
+    expect([PROPERTY_FEATURES.length, CONDO_FEATURES.length]).toEqual([19, 29]);
   });
 });

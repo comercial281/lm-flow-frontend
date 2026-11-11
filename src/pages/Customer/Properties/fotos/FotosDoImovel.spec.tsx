@@ -17,6 +17,15 @@ vi.mock('@/services/properties/propertiesService', async orig => ({
   ...(await orig<typeof import('@/services/properties/propertiesService')>()),
   propertiesService: props,
 }));
+const fotosDoCondominio = vi.hoisted(() => ({
+  list: vi.fn(), upload: vi.fn(), create: vi.fn(), update: vi.fn(),
+  delete: vi.fn(), setAsCover: vi.fn(), reorder: vi.fn(),
+}));
+const condos = vi.hoisted(() => ({ get: vi.fn() }));
+vi.mock('@/services/condominiums/condominiumsService', async orig => ({
+  ...(await orig<typeof import('@/services/condominiums/condominiumsService')>()),
+  condominiumsService: { get: condos.get, fotos: fotosDoCondominio },
+}));
 const permitido = vi.hoisted(() => ({ fn: (_r: string, _a: string) => true }));
 vi.mock('@/hooks/useCan', () => ({ useCan: () => (r: string, a: string) => permitido.fn(r, a) }));
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn(), info: vi.fn() } }));
@@ -44,8 +53,23 @@ function abrir(lista: PropertyPhoto[], endereco = '/properties/p1/fotos') {
   );
 }
 
+function abrirCondominio(lista: PropertyPhoto[]) {
+  fotosDoCondominio.list.mockResolvedValue(lista);
+  condos.get.mockResolvedValue({ id: 'c1', name: 'Edifício Sol' });
+  return render(
+    <MemoryRouter initialEntries={['/properties/condominios/c1/fotos']}>
+      <Routes>
+        <Route path="/properties/condominios/:id/fotos" element={<FotosDoImovel alvo="condominio" />} />
+        <Route path="/properties/condominios/:id" element={<p>condomínio aberto</p>} />
+      </Routes>
+    </MemoryRouter>,
+  );
+}
+
 beforeEach(() => {
   Object.values(svc).forEach(f => f.mockReset());
+  Object.values(fotosDoCondominio).forEach(f => f.mockReset());
+  condos.get.mockReset();
   props.get.mockReset();
   permitido.fn = () => true;
 });
@@ -252,6 +276,32 @@ describe('FotosDoImovel', () => {
     abrir([foto('a'), foto('b')]);
     await screen.findByRole('region', { name: 'Capa' });
     expect(screen.queryByText(/Para trocar, arraste/)).not.toBeInTheDocument();
+  });
+
+  it('condomínio: usa as fotos do condomínio, título próprio e volta pro cadastro dele', async () => {
+    fotosDoCondominio.delete.mockResolvedValue(undefined);
+    abrirCondominio([foto('a'), foto('b')]);
+    expect(await screen.findByText('Edifício Sol')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Fotos das áreas comuns/ })).toBeInTheDocument();
+    expect(fotosDoCondominio.list).toHaveBeenCalledWith('c1');
+    expect(svc.list).not.toHaveBeenCalled();
+    expect(props.get).not.toHaveBeenCalled();
+    await userEvent.click((await screen.findAllByRole('button', { name: 'Excluir' }))[1]);
+    await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Excluir' }));
+    await waitFor(() => expect(fotosDoCondominio.delete).toHaveBeenCalledWith('c1', 'b'));
+    await userEvent.click(screen.getByRole('link', { name: /Voltar ao condomínio/ }));
+    expect(screen.getByText('condomínio aberto')).toBeInTheDocument();
+  });
+
+  it('condomínio sem condominiums.manage: só vê (mesmo com as chaves das fotos do imóvel)', async () => {
+    permitido.fn = (r, a) => !(r === 'condominiums' && a === 'manage');
+    abrirCondominio([foto('a'), foto('b')]);
+    await screen.findByRole('region', { name: 'Capa' });
+    expect(screen.queryByRole('button', { name: 'Excluir' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Ocultar' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Usar como capa' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Adicionar fotos e vídeos' })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Escolher fotos e vídeos')).not.toBeInTheDocument();
   });
 
   it('ocultar só a capa não diz "0 ocultas"', async () => {

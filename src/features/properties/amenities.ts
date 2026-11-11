@@ -56,6 +56,18 @@ export const CONDO_FEATURES: Amenity[] = [
   { slug: 'elevador', label: 'Elevador' },
   { slug: 'gerador', label: 'Gerador' },
   { slug: 'bicicletario', label: 'Bicicletário' },
+  { slug: 'portao_eletronico', label: 'Portão eletrônico' },
+  { slug: 'quadra_de_tenis', label: 'Quadra de tênis' },
+  { slug: 'brinquedoteca', label: 'Brinquedoteca' },
+  { slug: 'salao_de_jogos', label: 'Salão de jogos' },
+  { slug: 'espaco_pet', label: 'Espaço pet' },
+  { slug: 'coworking', label: 'Coworking' },
+  { slug: 'lavanderia_coletiva', label: 'Lavanderia coletiva' },
+  { slug: 'vaga_visitantes', label: 'Vaga para visitantes' },
+  { slug: 'churrasqueira_condominio', label: 'Churrasqueira' },
+  { slug: 'piscina_infantil', label: 'Piscina infantil' },
+  { slug: 'piscina_aquecida', label: 'Piscina aquecida' },
+  { slug: 'cinema', label: 'Sala de cinema' },
 ];
 
 /** Saíram das opções, mas imóvel antigo pode ter: o nome continua para leitura. */

@@ -9,11 +9,12 @@ vi.mock('@/services/properties/propertiesService', async importOriginal => {
   return { ...real, propertiesService: { ...real.propertiesService, ...svc } };
 });
 vi.mock('./MapaDoCadastro', () => ({
-  default: ({ lat, lng, zoom, aoArrastar }: { lat: number | null; lng: number | null; zoom: number; aoArrastar: (a: number, b: number) => void }) => (
-    <div data-testid="mapa" data-zoom={zoom}>{lat},{lng}<button onClick={() => aoArrastar(-1, -2)}>arrastar</button></div>
+  default: ({ lat, lng, zoom, aoArrastar, travado }: { lat: number | null; lng: number | null; zoom: number; aoArrastar: (a: number, b: number) => void; travado?: boolean }) => (
+    <div data-testid="mapa" data-zoom={zoom} data-travado={String(!!travado)}>{lat},{lng}<button onClick={() => aoArrastar(-1, -2)}>arrastar</button></div>
   ),
 }));
 import SecaoLocalizacao from './SecaoLocalizacao';
+import { CamposDoCondominioContext, CamposTravadosContext, DICA_DO_CONDOMINIO } from '@/features/properties/cadastro/travasDoSite';
 
 const base = {
   title: '', transaction_type: 'sale', category_type: 'residential', property_type: 'house', status: 'active', stage: 'ready',
@@ -284,6 +285,12 @@ describe('SecaoLocalizacao', () => {
     expect(screen.queryByLabelText(/Latitude/)).toBeNull();
   });
 
+  it('no condomínio, o convite fala do condomínio', () => {
+    render(<SecaoLocalizacao form={{ ...base } as never} setF={vi.fn()} editando={null} oQue="condomínio" />);
+    expect(screen.getByText('Preencha o endereço para marcar o condomínio no mapa.')).toBeInTheDocument();
+    expect(screen.queryByText(/marcar o imóvel/)).toBeNull();
+  });
+
   it('ponto já salvo: aviso pela origem, e nenhum aviso no ponto antigo sem origem', async () => {
     const m = montar({ address_city: 'Campinas', address_street: 'Rua A', latitude: -22.9, longitude: -47.06, location_source: 'auto' });
     expect(await screen.findByText('Achamos pelo endereço. Arraste o alfinete se precisar ajustar.')).toBeInTheDocument();
@@ -292,6 +299,32 @@ describe('SecaoLocalizacao', () => {
     m.mudar({ location_source: null });
     expect(screen.queryByText('Posição ajustada à mão.')).toBeNull();
     expect(screen.queryByText(/Achamos|Não achamos/)).toBeNull();
+  });
+
+  it('campo que vem do condomínio mostra a dica do condomínio, e o ponto também', async () => {
+    const campos = ['address_cep', 'address_city', 'latitude', 'longitude'];
+    render(
+      <CamposTravadosContext.Provider value={campos}>
+        <CamposDoCondominioContext.Provider value={campos}>
+          <SecaoLocalizacao form={{ ...base, ...ENDERECO, latitude: -22.9, longitude: -47.06 } as never} setF={vi.fn()} editando={null} />
+        </CamposDoCondominioContext.Provider>
+      </CamposTravadosContext.Provider>,
+    );
+    expect(screen.getByLabelText('Cidade')).toBeDisabled();
+    expect(screen.getByLabelText('Cidade').closest('[title]')).toHaveAttribute('title', DICA_DO_CONDOMINIO);
+    expect(screen.getByLabelText('CEP').closest('[title]')).toHaveAttribute('title', DICA_DO_CONDOMINIO);
+    expect(screen.getByLabelText('Rua').closest('[title]')).toBeNull();
+    expect(await screen.findByText(DICA_DO_CONDOMINIO, { selector: 'p' })).toBeInTheDocument();
+    expect(screen.queryByText('O ponto no mapa vem do site da imobiliária.')).toBeNull();
+  });
+
+  it('só leitura: tudo desligado e o alfinete não arrasta', async () => {
+    render(<SecaoLocalizacao form={{ ...base, ...ENDERECO, latitude: -22.9, longitude: -47.06 } as never} setF={vi.fn()} editando={null} somenteLeitura />);
+    for (const rotulo of ['CEP', 'Rua', 'Número', 'Complemento', 'Bairro', 'Cidade', 'Estado (UF)']) {
+      expect(screen.getByLabelText(rotulo)).toBeDisabled();
+    }
+    expect(screen.getByRole('button', { name: 'Buscar' })).toBeDisabled();
+    expect(await screen.findByTestId('mapa')).toHaveAttribute('data-travado', 'true');
   });
 
   it('rótulos ligados aos campos do endereço', () => {

@@ -399,7 +399,7 @@ describe('CadastroDoImovel: índice e erros', () => {
       property_type: 'apartment', status: 'active', stage: 'ready', listing_kind: 'resale', sale_price: 1, created_at: '', updated_at: '',
       feed: { source_id: 's1', external_url: 'https://exemplo.com.br/imovel/1', locked_fields: ['title', 'description', 'sale_price'] } });
     abrir('/properties/f1/editar');
-    expect(await screen.findByText(/vem do site da imobiliária/)).toBeInTheDocument();
+    expect(await screen.findByText(/vem do site da imobiliária\. O que vem de lá/)).toBeInTheDocument();
     const link = screen.getByRole('link', { name: 'Ver no site' });
     expect(link).toHaveAttribute('href', 'https://exemplo.com.br/imovel/1');
     expect(link).toHaveAttribute('target', '_blank');
@@ -423,7 +423,7 @@ describe('CadastroDoImovel: índice e erros', () => {
       feed: { source_id: 's1', external_url: null, locked_fields: ['title'] } });
     svc.update.mockResolvedValue({ id: 'f3' });
     abrir('/properties/f3/editar');
-    await screen.findByText(/vem do site da imobiliária/);
+    await screen.findByText(/vem do site da imobiliária\. O que vem de lá/);
     await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
     await waitFor(() => expect(svc.update).toHaveBeenCalled());
     expect(toast.error).not.toHaveBeenCalledWith('Título é obrigatório');

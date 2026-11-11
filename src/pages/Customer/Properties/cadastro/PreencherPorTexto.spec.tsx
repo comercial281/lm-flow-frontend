@@ -14,6 +14,7 @@ vi.mock('@/services/properties/propertiesService', async importOriginal => {
   return { ...real, propertiesService: { ...real.propertiesService, ...servico } };
 });
 import PreencherPorTexto, { campoVazio } from './PreencherPorTexto';
+import { CamposTravadosContext } from '@/features/properties/cadastro/travasDoSite';
 import { FORMULARIO_VAZIO } from '@/features/properties/cadastro/formularioDoCadastro';
 import { formularioNovo } from '@/features/properties/formularioPorTipo';
 
@@ -240,5 +241,33 @@ describe('arquivos que não viram book', () => {
     await waitFor(() => expect(leitura.extractPdfText).toHaveBeenCalled());
     expect(avisos.error).toHaveBeenCalledWith('O book passa de 200 MB');
     expect(p.aoEscolherBook).not.toHaveBeenCalled();
+  });
+});
+
+describe('Preencher pelo texto não escreve em campo travado', () => {
+  it('campo do condomínio (ou do site) fica como está; o resto entra', async () => {
+    servico.parseText.mockResolvedValue({ address_neighborhood: 'Moema', address_city: 'Outra', bedrooms: 2,
+      features: ['varanda'], condo_features: ['brinquedoteca'] });
+    const props = { setF: vi.fn(), aoMudarTexto: vi.fn(), aoEscolherBook: vi.fn(), temBook: false, texto: 'texto colado' };
+    render(<CamposTravadosContext.Provider value={['address_zip', 'address_neighborhood', 'address_city', 'condo_features']}>
+      <PreencherPorTexto form={novo('resale', { address_neighborhood: '', address_city: '', condo_features: ['portaria_24h'] })} {...props} />
+    </CamposTravadosContext.Provider>);
+    await abrirEPreencher();
+    await userEvent.click(screen.getByRole('button', { name: /^Preencher$/ }));
+    await waitFor(() => expect(props.setF).toHaveBeenCalled());
+    const patch = props.setF.mock.calls[0][0];
+    expect(patch).toEqual({ bedrooms: 2, features: ['varanda'] });
+  });
+
+  it('tudo o que veio está travado: nada é trocado', async () => {
+    servico.parseText.mockResolvedValue({ address_city: 'Outra', condo_features: ['brinquedoteca'] });
+    const props = { setF: vi.fn(), aoMudarTexto: vi.fn(), aoEscolherBook: vi.fn(), temBook: false, texto: 'texto colado' };
+    render(<CamposTravadosContext.Provider value={['address_city', 'condo_features']}>
+      <PreencherPorTexto form={novo('resale')} {...props} />
+    </CamposTravadosContext.Provider>);
+    await abrirEPreencher();
+    await userEvent.click(screen.getByRole('button', { name: /^Preencher$/ }));
+    await waitFor(() => expect(avisos.info).toHaveBeenCalledWith('Os campos já estavam preenchidos; nada foi trocado.'));
+    expect(props.setF).not.toHaveBeenCalled();
   });
 });

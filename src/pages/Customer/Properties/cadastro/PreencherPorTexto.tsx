@@ -1,7 +1,7 @@
 // "Preencher a partir de um texto": cola o texto (ou sobe .txt, book em PDF,
 // Word ou foto) e os campos do cadastro se preenchem LOCALMENTE, sem IA. Só na
 // criação. O texto fica na página porque o "Gerar com IA" da descrição também o usa.
-import { useRef, useState, type Dispatch, type SetStateAction } from 'react';
+import { useContext, useRef, useState, type Dispatch, type SetStateAction } from 'react';
 import { toast } from 'sonner';
 import { Loader2, Upload, Wand2 } from 'lucide-react';
 import { Button, Textarea } from '@/components/ui/ds';
@@ -11,6 +11,7 @@ import { cleanTypologies } from '@/features/properties/typologies';
 import { plural } from '@/lib/formato';
 import { FORMULARIO_VAZIO } from '@/features/properties/cadastro/formularioDoCadastro';
 import { formularioNovo } from '@/features/properties/formularioPorTipo';
+import { CamposTravadosContext, campoTravado } from '@/features/properties/cadastro/travasDoSite';
 import { validarBook } from './secoes/BlocoDoBook';
 import { extractPdfText, extractDocxText, ocrImage, ocrPdfScanned } from './leituraDeArquivo';
 
@@ -43,6 +44,11 @@ export default function PreencherPorTexto({ form, setF, texto, aoMudarTexto, tem
   // olha o formulário de DEPOIS da leitura, não o de quando ela começou.
   const formRef = useRef(form);
   formRef.current = form;
+  // Campo travado (vem do site ou do condomínio plugado) não recebe nada do texto.
+  // Também pelo ref: plugar durante a leitura vale para o que ela devolver.
+  const travadosNaTela = useContext(CamposTravadosContext);
+  const travadosRef = useRef(travadosNaTela);
+  travadosRef.current = travadosNaTela;
 
   // Preenche o formulário a partir de um texto/TXT — 100% LOCAL (sem IA/API).
   // A descrição NÃO é preenchida aqui: é opcional, por botão (handleGenerateDescription).
@@ -52,13 +58,15 @@ export default function PreencherPorTexto({ form, setF, texto, aoMudarTexto, tem
     try {
       const r = await propertiesService.parseText(text);
       const atual = formRef.current;
+      const travados = travadosRef.current;
+      const livre = (k: keyof PropertyFormData) => !campoTravado(k, travados);
       const patch: Partial<PropertyFormData> = {};
       let achou = 0;
       // Só preenche campo vazio: o que o corretor já digitou não muda.
       const put = <K extends keyof PropertyFormData>(k: K, v: PropertyFormData[K] | null | undefined) => {
         if (v === null || v === undefined || v === '') return;
         achou++;
-        if (campoVazio(atual, k)) patch[k] = v;
+        if (livre(k) && campoVazio(atual, k)) patch[k] = v;
       };
       // Só a revenda aceita a finalidade do texto: empreendimento e Leilão são sempre venda.
       if (atual.listing_kind === 'resale') put('transaction_type', r.transaction_type);
@@ -96,8 +104,8 @@ export default function PreencherPorTexto({ form, setF, texto, aoMudarTexto, tem
       if (condos.length) achou++;
       const featsFinal = somar(atual.features, feats);
       const condosFinal = somar(atual.condo_features, condos);
-      if (featsFinal) patch.features = featsFinal;
-      if (condosFinal) patch.condo_features = condosFinal;
+      if (featsFinal && livre('features')) patch.features = featsFinal;
+      if (condosFinal && livre('condo_features')) patch.condo_features = condosFinal;
       // Tipologias achadas no book: só aplica quando veio alguma (não apaga as
       // que o corretor já digitou) e mantém as dele na frente.
       const found = cleanTypologies(r.typologies);

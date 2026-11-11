@@ -13,6 +13,12 @@ export const DICA_DO_CAMPO = 'Vem do site da imobiliária: mude no site.';
 // Nome no formulário → nome da coluna no servidor, quando são diferentes.
 const NOME_NO_SERVIDOR: Record<string, string> = { address_zip: 'address_cep' };
 
+/** Nome do campo no formulário a partir do nome do servidor (address_cep → address_zip). */
+export function nomeNoFormulario(campoDoServidor: string): string {
+  const par = Object.entries(NOME_NO_SERVIDOR).find(([, srv]) => srv === campoDoServidor);
+  return par ? par[0] : campoDoServidor;
+}
+
 export function campoTravado(campo: string, travados: readonly string[]): boolean {
   if (!travados.length) return false;
   return travados.includes(campo) || travados.includes(NOME_NO_SERVIDOR[campo] ?? campo);
@@ -28,3 +34,26 @@ export function useCampoTravado(campo: string): boolean {
 
 /** `title` do campo travado; nada quando está livre. */
 export const dicaSe = (travado: boolean): string | undefined => (travado ? DICA_DO_CAMPO : undefined);
+
+export const DICA_DO_CONDOMINIO = 'Vem do condomínio: mude no cadastro do condomínio.';
+
+/** Campos que o condomínio plugado controla (nomes do formulário ou do servidor). */
+export const CamposDoCondominioContext = createContext<readonly string[]>([]);
+
+/** Só os campos travados pelo site (o site vence o condomínio). A página fornece. */
+export const CamposDoSiteContext = createContext<readonly string[]>([]);
+
+/**
+ * Dica do campo: a do site se o site trava, senão a do condomínio, senão nada.
+ * Travado só na lista somada (`CamposTravadosContext`), sem motivo informado: é do
+ * site, como era antes do condomínio (página que ainda não fornece os motivos).
+ */
+export function useDicaDoCampo(campo: string): string | undefined {
+  const doSite = useContext(CamposDoSiteContext);
+  const doCondominio = useContext(CamposDoCondominioContext);
+  const travados = useContext(CamposTravadosContext);
+  if (campoTravado(campo, doSite)) return DICA_DO_CAMPO;
+  if (campoTravado(campo, doCondominio)) return DICA_DO_CONDOMINIO;
+  if (campoTravado(campo, travados)) return DICA_DO_CAMPO;
+  return undefined;
+}

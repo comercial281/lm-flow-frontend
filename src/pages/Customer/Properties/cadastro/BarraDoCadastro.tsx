@@ -4,13 +4,15 @@ import { Button } from '@/components/ui/ds';
 // A barra fixa no pé do cadastro. Fica fora da área que rola (último item da
 // coluna da página), então nunca cobre a última seção e respeita a largura do
 // menu, como a BarraSalvar.
-export default function BarraDoCadastro({ editando, salvando, aoCancelar, aoSalvarRascunho, aoCriar, aoSalvar }: {
+// Sem `aoSalvarRascunho` (o condomínio não tem rascunho), o botão não aparece.
+export default function BarraDoCadastro({ editando, salvando, aoCancelar, aoSalvarRascunho, aoCriar, aoSalvar, rotuloDoCriar = 'Criar e escolher onde divulgar →' }: {
   editando: boolean;
   salvando: boolean;
   aoCancelar: () => void;
-  aoSalvarRascunho: () => void;
+  aoSalvarRascunho?: () => void;
   aoCriar: () => void;
   aoSalvar: () => void;
+  rotuloDoCriar?: string;
 }) {
   return (
     <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 border-t bg-background/95 px-4 py-3 backdrop-blur sm:px-6">
@@ -20,8 +22,8 @@ export default function BarraDoCadastro({ editando, salvando, aoCancelar, aoSalv
         <Button type="button" onClick={aoSalvar} disabled={salvando}>Salvar</Button>
       ) : (
         <>
-          <Button type="button" variant="outline" onClick={aoSalvarRascunho} disabled={salvando}>Salvar rascunho</Button>
-          <Button type="button" onClick={aoCriar} disabled={salvando}>Criar e escolher onde divulgar →</Button>
+          {aoSalvarRascunho && <Button type="button" variant="outline" onClick={aoSalvarRascunho} disabled={salvando}>Salvar rascunho</Button>}
+          <Button type="button" onClick={aoCriar} disabled={salvando}>{rotuloDoCriar}</Button>
         </>
       )}
     </div>

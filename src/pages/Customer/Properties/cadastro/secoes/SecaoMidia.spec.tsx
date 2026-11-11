@@ -76,3 +76,34 @@ describe('SecaoMidia: Link pro lead', () => {
     expect(screen.queryByText(/precisa começar com https:\/\//)).not.toBeInTheDocument();
   });
 });
+
+describe('SecaoMidia: fotos do condomínio', () => {
+  it('unidade plugada com foto própria: diz quantas fotos do condomínio entram depois das dela', async () => {
+    svc.list.mockResolvedValue([]);
+    const { rerender } = render(<SecaoMidia {...base} editando={{ id: 'p1', photos_count: 3 } as never} aoGerenciarFotos={vi.fn()} fotosDoCondominio={8} />);
+    expect(screen.getByText('Mais 8 fotos do condomínio entram depois destas no site e nos portais.')).toBeInTheDocument();
+    rerender(<SecaoMidia {...base} editando={{ id: 'p1', photos_count: 3 } as never} aoGerenciarFotos={vi.fn()} fotosDoCondominio={1} />);
+    expect(screen.getByText('Mais 1 foto do condomínio entra depois destas no site e nos portais.')).toBeInTheDocument();
+    rerender(<SecaoMidia {...base} editando={{ id: 'p1', photos_count: 3 } as never} aoGerenciarFotos={vi.fn()} />);
+    expect(screen.queryByText(/do condomínio entra/)).not.toBeInTheDocument();
+  });
+
+  it('unidade plugada sem foto própria: as do condomínio entram e a primeira vira a capa', async () => {
+    svc.list.mockResolvedValue([]);
+    const { rerender } = render(<SecaoMidia {...base} editando={{ id: 'p1', photos_count: 0 } as never} aoGerenciarFotos={vi.fn()} fotosDoCondominio={8} />);
+    expect(screen.getByText('As 8 fotos do condomínio entram no site e nos portais; a primeira vira a capa.')).toBeInTheDocument();
+    rerender(<SecaoMidia {...base} editando={{ id: 'p1', photos_count: 0 } as never} aoGerenciarFotos={vi.fn()} fotosDoCondominio={1} />);
+    expect(screen.getByText('A foto do condomínio entra no site e nos portais e vira a capa.')).toBeInTheDocument();
+  });
+
+  it('cadastro novo sem mídia escolhida conta como sem foto própria', () => {
+    render(<SecaoMidia {...base} editando={null as never} aoGerenciarFotos={vi.fn()} fotosDoCondominio={4} />);
+    expect(screen.getByText('As 4 fotos do condomínio entram no site e nos portais; a primeira vira a capa.')).toBeInTheDocument();
+  });
+
+  it('cadastro novo com mídia escolhida: as do condomínio entram depois destas', () => {
+    const arquivo = new File(['x'], 'sala.jpg', { type: 'image/jpeg' });
+    render(<SecaoMidia {...base} arquivos={[arquivo]} editando={null as never} aoGerenciarFotos={vi.fn()} fotosDoCondominio={4} />);
+    expect(screen.getByText('Mais 4 fotos do condomínio entram depois destas no site e nos portais.')).toBeInTheDocument();
+  });
+});

@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { ChevronRight, Film, Image, Loader2, Megaphone, Upload, X } from 'lucide-react';
 import { Button } from '@/components/ui/ds';
+import { Aviso } from '@/components/base';
 import { ACCEPTED_MIME_TYPES, propertyPhotosService, type PropertyPhoto } from '@/services/propertyPhotos/propertyPhotosService';
 import { separar } from '@/features/properties/fotos/regrasDasFotos';
 import { numero, plural } from '@/lib/formato';
 import { useCampoTravado } from '@/features/properties/cadastro/travasDoSite';
 import { AVISO_LINK_PRO_LEAD, linkProLeadValido } from '@/features/properties/cadastro/formularioDoCadastro';
+import { textoDasFotosDoCondominio } from '@/features/properties/condominios/regrasDoCondominio';
 import { CampoTexto } from './campos';
 import type { Property } from '@/services/properties/propertiesService';
 import BlocoDoBook from './BlocoDoBook';
@@ -23,6 +25,8 @@ interface Props extends PropsDaSecao {
   aoMudarBook: (f: File | null) => void;
   /** Edição: o servidor devolveu o imóvel depois de subir/remover o book. */
   aoMudarImovel: (p: Property) => void;
+  /** Unidade plugada num condomínio: quantas fotos dele entram depois das dela no site e nos portais. */
+  fotosDoCondominio?: number;
 }
 
 const NA_FAIXA = 6;
@@ -135,7 +139,9 @@ function Arquivos({ editando, arquivos, aoMudarArquivos, enviando, aoGerenciarFo
 
 // Links de vídeo, tour virtual e o link pro lead, mais o envio de fotos e vídeos.
 export default function SecaoMidia(props: Props) {
-  const { form: f, setF } = props;
+  const { form: f, setF, fotosDoCondominio } = props;
+  // Na criação, "foto própria" são as mídias escolhidas (sobem depois de criar).
+  const temFotoPropria = props.editando ? (props.editando.photos_count ?? 0) > 0 : props.arquivos.length > 0;
   // Do site só trava o link do vídeo; tour, fotos e book seguem livres.
   const videoTravado = useCampoTravado('video_url');
   return (
@@ -155,6 +161,7 @@ export default function SecaoMidia(props: Props) {
         </div>
       </div>
       <Arquivos {...props} />
+      {fotosDoCondominio ? <Aviso tom="neutro" className="mt-3">{textoDasFotosDoCondominio(fotosDoCondominio, temFotoPropria)}</Aviso> : null}
       <BlocoDoBook
         kind={f.listing_kind ?? 'resale'}
         editando={props.editando}

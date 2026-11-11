@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import { propertyPhotosService, type PropertyPhoto } from '@/services/propertyPhotos/propertyPhotosService';
+import { criarServicoDeFotos, propertyPhotosService, type PropertyPhoto } from '@/services/propertyPhotos/propertyPhotosService';
 import {
   idDaCapa, juntar, moverNoGrupo, moverParaCapa, posicoes, separar, separarCapaDoLote, tipoPeloEndereco, validarArquivos,
 } from './regrasDasFotos';
@@ -13,7 +13,11 @@ const jaEstaArrumada = (fotos: PropertyPhoto[]) => {
   return juntar(imagens, midias).every((p, i) => p.id === fotos[i]?.id);
 };
 
-export function useFotosDoImovel(propertyId: string) {
+/** As mesmas ações para as fotos do imóvel e as das áreas comuns do condomínio. */
+export type ServicoDeFotos = ReturnType<typeof criarServicoDeFotos>;
+
+// `servico` precisa ser estável (constante de módulo): ele entra nas dependências.
+export function useFotosDoImovel(propertyId: string, servico: ServicoDeFotos = propertyPhotosService) {
   const [fotos, setFotosEstado] = useState<PropertyPhoto[]>([]);
   // Cópia sempre atual da lista: o fim de um envio lento parte da lista de AGORA,
   // não da que existia quando o envio começou.
@@ -34,7 +38,7 @@ export function useFotosDoImovel(propertyId: string) {
     const meu = ++pedido.current;
     setCarregando(true);
     try {
-      const lista = await propertyPhotosService.list(propertyId);
+      const lista = await servico.list(propertyId);
       if (meu !== pedido.current) return;
       setFotos(lista);
       setErro(false);
@@ -43,7 +47,7 @@ export function useFotosDoImovel(propertyId: string) {
     } finally {
       if (meu === pedido.current) setCarregando(false);
     }
-  }, [propertyId, setFotos]);
+  }, [propertyId, servico, setFotos]);
 
   useEffect(() => { void carregar(); }, [carregar]);
 
@@ -51,14 +55,14 @@ export function useFotosDoImovel(propertyId: string) {
     setFotos(nova);
     setSalvandoOrdem(true);
     try {
-      setFotos(await propertyPhotosService.reorder(propertyId, posicoes(nova)));
+      setFotos(await servico.reorder(propertyId, posicoes(nova)));
     } catch {
       toast.error('Não deu pra salvar a ordem. Tente de novo.');
       await carregar();
     } finally {
       setSalvandoOrdem(false);
     }
-  }, [propertyId, carregar, setFotos]);
+  }, [propertyId, servico, carregar, setFotos]);
 
   const mover = useCallback(async (grupo: 'imagens' | 'midias', deId: string, paraId: string) => {
     const sep = separar(fotosRef.current);
@@ -83,7 +87,7 @@ export function useFotosDoImovel(propertyId: string) {
     setEnviando(0);
     try {
       // Sem tipo: no envio de arquivo o servidor descobre vídeo e áudio (inferred_photo_type).
-      const criadas = await propertyPhotosService.upload(propertyId, ok, { published: true, onProgress: setEnviando });
+      const criadas = await servico.upload(propertyId, ok, { published: true, onProgress: setEnviando });
       toast.success(criadas.length === 1 ? '1 arquivo enviado' : `${criadas.length} arquivos enviados`);
       await acrescentar(criadas);
     } catch {
@@ -92,13 +96,13 @@ export function useFotosDoImovel(propertyId: string) {
       enviandoRef.current = false;
       setEnviando(null);
     }
-  }, [propertyId, acrescentar]);
+  }, [propertyId, servico, acrescentar]);
 
   const adicionarPorEndereco = useCallback(async (url: string) => {
     try {
       // O servidor só descobre vídeo e áudio no envio de arquivo; por endereço o tipo sai da extensão.
       const tipo = tipoPeloEndereco(url);
-      const nova = await propertyPhotosService.create(propertyId, {
+      const nova = await servico.create(propertyId, {
         file_url: url.trim(), ...(tipo ? { photo_type: tipo } : {}), published: true,
       });
       await acrescentar([nova]);
@@ -108,39 +112,39 @@ export function useFotosDoImovel(propertyId: string) {
       toast.error('Não deu pra adicionar. Confira o endereço.');
       return false;
     }
-  }, [propertyId, acrescentar]);
+  }, [propertyId, servico, acrescentar]);
 
   const usarComoCapa = useCallback(async (id: string) => {
     try {
-      await propertyPhotosService.setAsCover(propertyId, id);
+      await servico.setAsCover(propertyId, id);
       setFotos(prev => moverParaCapa(prev, id));
       toast.success('Capa atualizada');
     } catch {
       toast.error('Não deu pra trocar a capa.');
     }
-  }, [propertyId, setFotos]);
+  }, [propertyId, servico, setFotos]);
 
   const alternarVisivel = useCallback(async (id: string) => {
     const atual = fotosRef.current.find(p => p.id === id);
     if (!atual) return;
     try {
-      const nova = await propertyPhotosService.update(propertyId, id, { published: !atual.published });
+      const nova = await servico.update(propertyId, id, { published: !atual.published });
       setFotos(prev => prev.map(p => (p.id === id ? { ...p, published: nova.published } : p)));
       toast.success(nova.published ? 'Voltou a aparecer' : 'Oculta do site, dos portais e da IA');
     } catch {
       toast.error('Não deu pra mudar. Tente de novo.');
     }
-  }, [propertyId, setFotos]);
+  }, [propertyId, servico, setFotos]);
 
   const excluir = useCallback(async (id: string) => {
     try {
-      await propertyPhotosService.delete(propertyId, id);
+      await servico.delete(propertyId, id);
       setFotos(prev => prev.filter(p => p.id !== id));
       toast.success('Excluída');
     } catch {
       toast.error('Não deu pra excluir. Tente de novo.');
     }
-  }, [propertyId, setFotos]);
+  }, [propertyId, servico, setFotos]);
 
   const emLote = useCallback(async (ids: string[], acao: Lote) => {
     const capaId = idDaCapa(fotosRef.current);
@@ -151,8 +155,8 @@ export function useFotosDoImovel(propertyId: string) {
     // derrubaria todas juntas.
     for (const id of alvo.ids) {
       try {
-        if (acao === 'excluir') await propertyPhotosService.delete(propertyId, id);
-        else await propertyPhotosService.update(propertyId, id, { published: acao === 'mostrar' });
+        if (acao === 'excluir') await servico.delete(propertyId, id);
+        else await servico.update(propertyId, id, { published: acao === 'mostrar' });
         feitos++;
       } catch {
         falhas++;
@@ -160,7 +164,7 @@ export function useFotosDoImovel(propertyId: string) {
     }
     await carregar();
     return { feitos, falhas, pulouCapa: alvo.pulouCapa };
-  }, [propertyId, carregar]);
+  }, [propertyId, servico, carregar]);
 
   return {
     fotos, carregando, erro, enviando, salvandoOrdem,

@@ -64,6 +64,9 @@ import {
 } from '@/features/properties/listingKind';
 import PainelDeFiltros, { type Facetas } from './lista/PainelDeFiltros';
 import EtiquetasDosFiltros from './lista/EtiquetasDosFiltros';
+import ListaDeCondominios from './lista/ListaDeCondominios';
+import { ABA_CONDOMINIOS, SUBTITULO_DOS_CONDOMINIOS, estaNaAbaDeCondominios } from '@/features/properties/condominios/regrasDoCondominio';
+import { condominiumsService } from '@/services/condominiums/condominiumsService';
 import { podeMarcarEmDia, vencido } from '@/features/properties/emDia';
 import LinhaRevenda from './lista/LinhaRevenda';
 import LinhaEmpreendimento from './lista/LinhaEmpreendimento';
@@ -124,6 +127,9 @@ export default function Properties() {
   // `kind` nulo = ainda não sabemos a aba (a padrão é a com mais cadastros).
   const [kind, setKind]               = useState<ListingKind | null>(() => lerAba(searchParams));
   const [contagem, setContagem]       = useState<Contagem | null>(null);
+  // Aba Condomínios (irmã das outras, ?aba=condominios): quando ligada, a lista de imóveis não carrega nem aparece.
+  const [emCondominios, setEmCondominios] = useState(() => estaNaAbaDeCondominios(searchParams));
+  const [totalCondominios, setTotalCondominios] = useState<number | null>(null);
   const [filtros, setFiltros]         = useState<Record<ListingKind, Filtros>>(FILTROS_VAZIOS);
   const [painelAberto, setPainelAberto] = useState(false);
   const [ordem, setOrdem]             = useState<Ordem>('recent');
@@ -163,7 +169,7 @@ export default function Properties() {
 
   const load = useCallback(async (pag = 1) => {
     // Na visão Mapa a lista não aparece: nada de recarregar atrás do mapa.
-    if (!kind || !filtrosDaAba || visao === 'mapa') return;
+    if (!kind || !filtrosDaAba || visao === 'mapa' || emCondominios) return;
     const pedido = ++ultimoPedido.current;
     if (pag > 1) setCarregandoMais(true); else setLoading(true);
     setRecusado(false);
@@ -186,7 +192,7 @@ export default function Properties() {
     } finally {
       if (pedido === ultimoPedido.current) { setLoading(false); setCarregandoMais(false); }
     }
-  }, [kind, filtrosDaAba, buscaAtiva, ordem, recorteAtivo, visao]);
+  }, [kind, filtrosDaAba, buscaAtiva, ordem, recorteAtivo, visao, emCondominios]);
 
   // Recarrega da página 1 sempre que muda a aba, os filtros dela, a ordem, o
   // recorte da Dashboard, a busca (já com o atraso de 400 ms) ou quando volta do mapa.
@@ -218,6 +224,14 @@ export default function Properties() {
     // Sair da tela invalida a resposta que ainda estiver no ar.
     return () => { ultimaContagem.current++; };
   }, [recontar]);
+
+  useEffect(() => {
+    let vivo = true;
+    condominiumsService.list({ per_page: 1 })
+      .then(r => { if (vivo) setTotalCondominios(r.meta?.total ?? 0); })
+      .catch(() => { /* a aba segue com "…" */ });
+    return () => { vivo = false; };
+  }, []);
 
   // Bairros, tipos e captadores da aba, para os seletores do painel. Leitura de
   // fundo: falha deixa os seletores só com "Todos", sem aviso.
@@ -256,6 +270,7 @@ export default function Properties() {
     ultimoQ.current = qDoEndereco;
     if (qDoEndereco == null) return;
     setSoOsMeusEscolhido(false);
+    setEmCondominios(estaNaAbaDeCondominios(searchParams));
     if (searchTimeout.current) clearTimeout(searchTimeout.current);
     setSearch(qDoEndereco);
     setBuscaAtiva(qDoEndereco);
@@ -283,7 +298,17 @@ export default function Properties() {
     }, { replace: true });
   };
 
+  const entrarEmCondominios = () => {
+    setEmCondominios(true);
+    gravarNoEndereco('aba', ABA_CONDOMINIOS);
+  };
+
   const trocarAba = (k: ListingKind) => {
+    // Voltando da aba Condomínios, mesmo pra aba em que estava: a lista de imóveis volta.
+    if (emCondominios) {
+      setEmCondominios(false);
+      gravarNoEndereco('aba', ABA_NA_URL[k]);
+    }
     if (k === kind) return;
     setKind(k);
     // A lista da outra aba sai na hora; o esqueleto fica até a nova chegar.
@@ -571,16 +596,21 @@ export default function Properties() {
         <BaseHeader
           title="Meus imóveis"
           // Com link ou "Só os meus" a soma seria do recorte, não da imobiliária. No Mapa ela é a inteira.
-          subtitle={contagem && (visao === 'mapa' || !recorteAtivo)
-            ? `${subtituloDosImoveis(contagem)} · ${plural(totalDeCadastros(contagem), 'cadastro', 'cadastros')}`
-            : subtituloDosImoveis(contagem)}
-          aDireita={kind && canAiBatch && !ehCelular && (
+          // Na aba Condomínios a contagem de imóveis não diz nada: o topo fala do condomínio.
+          subtitle={emCondominios
+            ? SUBTITULO_DOS_CONDOMINIOS
+            : contagem && (visao === 'mapa' || !recorteAtivo)
+              ? `${subtituloDosImoveis(contagem)} · ${plural(totalDeCadastros(contagem), 'cadastro', 'cadastros')}`
+              : subtituloDosImoveis(contagem)}
+          aDireita={kind && !emCondominios && canAiBatch && !ehCelular && (
             <Button variant="outline" onClick={() => { setBatchSelected(new Set()); setBatchResults(null); setBatchModalOpen(true); }}>
               <Wand2 className="h-4 w-4 mr-2" />
               Gerar descrições com IA
             </Button>
           )}
-          primaryAction={kind && canCreate
+          primaryAction={kind && emCondominios
+            ? { label: 'Novo condomínio', icon: <Plus className="h-4 w-4" />, onClick: () => navigate('/properties/condominios/novo'), show: pode('condominiums', 'manage') }
+            : kind && canCreate
             ? { label: kind === 'development' ? 'Novo empreendimento' : kind === 'auction' ? 'Novo imóvel de leilão' : 'Novo imóvel', icon: <Plus className="h-4 w-4" />,
               // A leitura com IA não faz parte do Leilão: vai direto para o cadastro.
               onClick: () => (kind === 'auction' ? openCreate('auction') : setImportOpen(true)) }
@@ -593,13 +623,21 @@ export default function Properties() {
           <>
             <Abas
               rotulo="Tipo de cadastro"
-              ativa={kind}
-              aoTrocar={k => trocarAba(k as ListingKind)}
-              abas={abasVisiveis(contagem, kind).map(k => ({
-                chave: k,
-                rotulo: `${ROTULO_DA_ABA[k]} (${contagem ? numero(contagem[k]) : '…'})`,
-              }))}
+              ativa={emCondominios ? ABA_CONDOMINIOS : kind}
+              aoTrocar={k => (k === ABA_CONDOMINIOS ? entrarEmCondominios() : trocarAba(k as ListingKind))}
+              abas={[
+                ...abasVisiveis(contagem, kind).map(k => ({
+                  chave: k as string,
+                  rotulo: `${ROTULO_DA_ABA[k]} (${contagem ? numero(contagem[k]) : '…'})`,
+                })),
+                { chave: ABA_CONDOMINIOS, rotulo: `Condomínios (${totalCondominios != null ? numero(totalCondominios) : '…'})` },
+              ]}
             />
+
+            {emCondominios ? (
+              <div className="mt-4"><ListaDeCondominios podeEditar={pode('condominiums', 'manage')} /></div>
+            ) : (
+              <>
 
             {/* Barra: busca, filtros, ordem e visão. O mapa mostra a aba inteira (não
                 usa busca, filtro, ordem nem o link da Dashboard): lá fica só a visão. */}
@@ -669,6 +707,8 @@ export default function Properties() {
             )}
 
             <div className="mt-3">{conteudo}</div>
+              </>
+            )}
           </>
         )}
 

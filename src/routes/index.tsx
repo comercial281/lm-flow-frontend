@@ -30,6 +30,7 @@ import {
   Properties,
   CadastroDoImovel,
   FotosDoImovel,
+  CadastroDoCondominio,
   GestaoDeProprietarios,
   MinhaFichaDaIa,
   FichaDoProprietario,
@@ -1259,6 +1260,36 @@ const AppRouter = () => {
               element={
                 <PermissionRoute resource="property_photos" action="read">
                   <FotosDoImovel />
+                </PermissionRoute>
+              }
+            />
+
+            {/* Condomínios (aba de Imóveis): ver é properties.read; criar, salvar,
+                excluir e as fotos pedem condominiums.manage na própria tela. O cadastro
+                recolhe o menu (ROTA_RECOLHE_MENU), a página de fotos não. */}
+            <Route
+              path="/properties/condominios/novo"
+              element={
+                <PermissionRoute resource="properties" action="read">
+                  <CadastroDoCondominio />
+                </PermissionRoute>
+              }
+            />
+
+            <Route
+              path="/properties/condominios/:id"
+              element={
+                <PermissionRoute resource="properties" action="read">
+                  <CadastroDoCondominio />
+                </PermissionRoute>
+              }
+            />
+
+            <Route
+              path="/properties/condominios/:id/fotos"
+              element={
+                <PermissionRoute resource="properties" action="read">
+                  <FotosDoImovel alvo="condominio" />
                 </PermissionRoute>
               }
             />
