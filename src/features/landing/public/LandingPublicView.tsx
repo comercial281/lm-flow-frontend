@@ -15,6 +15,7 @@ import { sendSiteVisit } from '@/features/siteBuilder/public/siteVisits';
 import { caminhoDoSite } from '@/features/siteBuilder/public/dominioDoSite';
 import { lerLimiteDeEnvios } from '@/features/siteBuilder/public/limiteDeEnvios';
 import { FONTES_DO_SITE, fonteDoSite } from '@/features/siteBuilder/public/aparenciaConfig';
+import { linkDoWhatsappDaLanding } from './whatsappDaLanding';
 
 /**
  * A landing de anúncio pública, já com tenant e slug resolvidos. Quem resolve
@@ -135,7 +136,7 @@ export function LandingPublicView({ tenant, slug, noDominio = false }: LandingPu
     const wa = el.getAttribute('data-whatsapp-phone');
     if (action === 'whatsapp' && wa) {
       e.preventDefault();
-      window.open(`https://wa.me/${wa.replace(/\D/g, '')}`, '_blank');
+      window.open(linkDoWhatsappDaLanding(wa, slug), '_blank');
       return;
     }
     if (action === 'open_form') {

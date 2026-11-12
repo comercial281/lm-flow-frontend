@@ -150,7 +150,7 @@ export type SalesAgentTriggerMatchMode = 'any' | 'all';
 export interface SalesAgentTrigger {
   type: SalesAgentTriggerType;
   value?: string;        // keyword: a palavra ; tag: nome da etiqueta
-  mode?: string;         // origin: 'all' | 'ads' ; property: 'any' | 'code'
+  mode?: string;         // origin: 'all' | 'ads' | 'site' ; property: 'any' | 'code'
   code?: string;         // property: código do imóvel
   pipeline_id?: string;  // pipeline_stage
   stage_id?: string;     // pipeline_stage

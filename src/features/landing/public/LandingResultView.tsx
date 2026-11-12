@@ -8,6 +8,7 @@ import {
 } from '@/features/landing/blocks';
 import { loadLanding } from './landingLoader';
 import { installPixel } from './metaPixel';
+import { linkDoWhatsappDaLanding } from './whatsappDaLanding';
 
 interface LeadFormCfg {
   specialistName?: string;
@@ -125,7 +126,7 @@ export function LandingResultView({ tenant, slug, result }: LandingResultViewPro
         <p className="mx-auto mt-2 max-w-xs text-sm opacity-70">{message}</p>
         {!disqualified && whatsapp && (
           <a
-            href={`https://wa.me/${whatsapp}`}
+            href={linkDoWhatsappDaLanding(whatsapp, slug)}
             target="_blank"
             rel="noreferrer"
             className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-full px-5 py-3 font-semibold text-white"

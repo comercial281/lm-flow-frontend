@@ -139,7 +139,8 @@ function descricao(t: SalesAgentTrigger): string {
     case 'keyword':
       return t.match_type === 'equals' ? `quem escrever só "${(t.value ?? '').trim()}"` : `quem escrever "${(t.value ?? '').trim()}"`;
     case 'origin':
-      return 'lead de anúncio';
+      if (t.mode === 'site') return 'lead do site, LP ou portal';
+      return t.mode === 'all' ? 'todo lead' : 'lead de anúncio';
     case 'form':
       return (t.form_ids ?? []).length === 1 ? 'lead do formulário escolhido' : 'lead dos formulários escolhidos';
     case 'campaign':
