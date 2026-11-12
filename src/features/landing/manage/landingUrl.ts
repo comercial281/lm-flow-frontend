@@ -5,6 +5,7 @@
  * editor, a lista e o assistente precisam mostrar exatamente o mesmo resultado.
  * Duas cópias divergindo aqui significam o cliente copiar um link que não abre.
  */
+import { enderecoDaLanding } from '@/features/landing/public/enderecoDaLanding';
 
 /**
  * Nome digitado -> pedaço final do endereço.
@@ -24,7 +25,20 @@ export function slugifyLandingName(name: string): string {
     .slice(0, 60);
 }
 
-/** Endereço público hospedado pela Leal Mídia (não depende de domínio do cliente). */
-export function landingPublicUrl(tenant: string, slug: string): string {
-  return `${window.location.origin}/lp/${tenant}/${slug}`;
+/**
+ * Endereço público hospedado pela Leal Mídia (não depende de domínio do cliente).
+ *
+ * Sempre no endereço do próprio cliente (`<cliente>.lmflow.com.br`), que é onde
+ * a landing abre (ver `enderecoDaLanding.ts`). Aberto no endereço do cliente,
+ * sai igual a antes; aberto em outro endereço lmflow, sai o do cliente direto,
+ * sem passar pelo redirecionamento.
+ */
+export function landingPublicUrl(
+  tenant: string,
+  slug: string,
+  local: Pick<Location, 'hostname' | 'origin'> = window.location,
+): string {
+  const caminho = `/lp/${tenant}/${slug}`;
+  const endereco = enderecoDaLanding({ hostname: local.hostname, pathname: caminho }, tenant);
+  return endereco.tipo === 'redirecionar' ? endereco.url : `${local.origin}${caminho}`;
 }

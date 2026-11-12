@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { BlockRenderer } from './BlockRenderer';
 import { createBlock, defaultLandingBlocks } from './registry';
@@ -571,5 +571,86 @@ describe('Formulário dentro da capa', () => {
     rerender(<BlockRenderer blocks={[hero, band, form]} property={property} />);
     expect(bandBox().style.maxWidth).toBe('');
     expect(heroBox().innerHTML).not.toContain('lg:grid-cols-[1.25fr_1fr]');
+  });
+});
+
+/* ---- texto com formatação: um caminho só (htmlSeguro) ---- */
+
+describe('texto das seções Descrição e Texto', () => {
+  // O que não é formatação nunca sai na página.
+  const FORA = '<p>Olá</p><img src="x" onerror="window.__marca=1"><script>window.__marca=1</script>'
+    + '<a href="javascript:window.__marca=1">link</a><iframe src="https://exemplo.com"></iframe>'
+    + '<p onclick="window.__marca=1" class="x" id="y">fim</p><form><input></form><style>body{display:none}</style>';
+
+  function semNadaFora(container: HTMLElement) {
+    expect(container.querySelector('script, iframe, form, input')).toBeNull();
+    // Dentro do texto, nenhum <style> (o da seção de Texto fica fora da caixa).
+    expect(container.querySelector('.lp-rich-text style, .leading-relaxed style')).toBeNull();
+    for (const el of Array.from(container.querySelectorAll('.lp-rich-text *, .leading-relaxed *'))) {
+      for (const attr of Array.from(el.attributes)) {
+        expect(attr.name.startsWith('on')).toBe(false);
+        expect(['class', 'id']).not.toContain(attr.name);
+      }
+    }
+    expect(container.innerHTML.toLowerCase()).not.toContain('javascript:');
+  }
+
+  afterEach(() => {
+    delete (window as unknown as Record<string, unknown>).__marca;
+  });
+
+  it.each([
+    ['Descrição (texto da seção)', { id: 'd', type: 'description', config: { title: 'Sobre', html: FORA } }, undefined],
+    ['Descrição (descrição do imóvel)', { id: 'd', type: 'description', config: { title: 'Sobre' } }, FORA],
+    ['Texto', { id: 't', type: 'rich_text', config: { title: 'Texto', html: FORA } }, undefined],
+  ])('%s: tira o que não é formatação e mantém o texto', async (_nome, bloco, descricao) => {
+    const blocks = parsePageBlocks([bloco]);
+    const { container } = render(<BlockRenderer blocks={blocks} property={{ ...property, description: descricao }} />);
+    expect(screen.getByText('Olá')).toBeInTheDocument();
+    expect(screen.getByText('fim')).toBeInTheDocument();
+    semNadaFora(container);
+    // O <style> da própria seção de Texto (marcador de lista) continua; nenhum outro.
+    expect(container.querySelectorAll('style').length).toBeLessThanOrEqual(1);
+    await new Promise((r) => setTimeout(r, 20));
+    expect((window as unknown as Record<string, unknown>).__marca).toBeUndefined();
+  });
+
+  it('a formatação do editor fica (negrito, itálico, listas, link, alinhamento)', () => {
+    const html = '<p style="text-align: center"><strong>Negrito</strong> <em>itálico</em> <u>sub</u> <s>riscado</s></p>'
+      + '<ul><li><p>um</p></li></ul><ol><li><p>dois</p></li></ol><h2>Título</h2>'
+      + '<p>linha<br>outra <a href="https://wa.me/5511999999999">fale conosco</a></p>';
+    const { container } = render(
+      <BlockRenderer blocks={parsePageBlocks([{ id: 't', type: 'rich_text', config: { html } }])} />,
+    );
+    const caixa = container.querySelector('.lp-rich-text') as HTMLElement;
+    expect(caixa.querySelector('strong')?.textContent).toBe('Negrito');
+    expect(caixa.querySelector('em')).not.toBeNull();
+    expect(caixa.querySelector('u')).not.toBeNull();
+    expect(caixa.querySelector('s')).not.toBeNull();
+    expect(caixa.querySelectorAll('ul li, ol li')).toHaveLength(2);
+    expect(caixa.querySelector('h2')?.textContent).toBe('Título');
+    expect(caixa.querySelector('br')).not.toBeNull();
+    expect((caixa.querySelector('p') as HTMLElement).style.textAlign).toBe('center');
+    const a = caixa.querySelector('a') as HTMLAnchorElement;
+    expect(a.getAttribute('href')).toBe('https://wa.me/5511999999999');
+    expect(a.getAttribute('target')).toBe('_blank');
+    expect(a.getAttribute('rel')).toBe('noopener noreferrer');
+  });
+
+  it('descrição de imóvel em texto puro sai igual', () => {
+    render(
+      <BlockRenderer
+        blocks={parsePageBlocks([{ id: 'd', type: 'description', config: { title: 'Sobre' } }])}
+        property={{ ...property, description: 'Apartamento 3 dorms & 2 vagas' }}
+      />,
+    );
+    expect(screen.getByText('Apartamento 3 dorms & 2 vagas')).toBeInTheDocument();
+  });
+
+  it('seção que só tinha o que sai fica escondida, como seção vazia', () => {
+    const { container } = render(
+      <BlockRenderer blocks={parsePageBlocks([{ id: 'd', type: 'description', config: { title: 'Sobre', html: '<script>x()</script>' } }])} />,
+    );
+    expect(container.textContent).not.toContain('Sobre');
   });
 });

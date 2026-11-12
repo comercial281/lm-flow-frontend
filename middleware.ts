@@ -8,7 +8,8 @@
  * capa pré-carregada — ver `src/features/landing/public/landingHtml.ts`. Para
  * o visitante, a página chega pronta: nenhuma ida à API antes da primeira
  * tela, e a capa (o LCP) começa a baixar junto com o código.
- * - endereço lmflow: `/lp/<cliente>/<slug>(/<resultado>)`;
+ * - endereço lmflow: `/lp/<cliente>/<slug>(/<resultado>)`, só no endereço do
+ *   cliente (`<cliente>.lmflow.com.br`); nos outros, 302 para o dele;
  * - domínio do cliente: `/lp/<slug>(/obrigado|/desqualificado)`. O cliente vem
  *   do `resolve` do domínio, e o HTML leva também o `window.__LMF_SITE__`.
  *
@@ -51,6 +52,7 @@
  */
 import { injectLandingIntoHtml, LANDING_DATA_MARKER } from './src/features/landing/public/landingHtml';
 import { landingEndpoint, parseLandingPath, type PublicLandingDTO } from './src/features/landing/public/landingLoader';
+import { enderecoDaLanding } from './src/features/landing/public/enderecoDaLanding';
 import { ehEnderecoDoSistema, limparHost, rotaDaLandingNoDominio } from './src/features/siteBuilder/public/dominioDoSite';
 import {
   CACHE_DA_BORDA,
@@ -155,11 +157,26 @@ function respostaDaLanding(html: string, tenant: string, slug: string, dto: Publ
   });
 }
 
-/** `/lp/<cliente>/<slug>(/<resultado>)` no endereço lmflow. */
+/**
+ * `/lp/<cliente>/<slug>(/<resultado>)` no endereço lmflow. Só no endereço do
+ * próprio cliente (`<cliente>.lmflow.com.br`): nos outros (`app`, o puro,
+ * outro cliente) sai um 302 para o dele, com a busca; a âncora o navegador
+ * mantém sozinho. Regra em `enderecoDaLanding.ts`, a mesma da página.
+ */
 async function landingNoLmflow(url: URL): Promise<Response> {
   const route = parseLandingPath(url.pathname);
+  if (!route) return passThrough();
+  const endereco = enderecoDaLanding(url, route.tenant);
+  if (endereco.tipo === 'redirecionar') {
+    return new Response(null, {
+      status: 302,
+      headers: { location: endereco.url, 'cache-control': 'no-store', 'x-lm-landing': 'endereco' },
+    });
+  }
+  // Sem endereço possível: a página diz "não disponível", sem buscar nada aqui.
+  if (endereco.tipo === 'indisponivel') return passThrough();
   const base = apiBase();
-  if (!route || !base) return passThrough();
+  if (!base) return passThrough();
   try {
     return await comPrazo(async signal => {
       const [htmlRes, apiRes] = await Promise.all([

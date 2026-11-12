@@ -1,5 +1,6 @@
 import { useParams } from 'react-router-dom';
 import { LandingResultView } from '@/features/landing/public/LandingResultView';
+import { NoEnderecoDoCliente } from '@/features/landing/public/NoEnderecoDoCliente';
 
 /**
  * Rota antiga da página de resultado da landing dentro do app do CRM
@@ -9,5 +10,9 @@ import { LandingResultView } from '@/features/landing/public/LandingResultView';
  */
 export default function LandingResultPage() {
   const { tenant = '', slug = '', result } = useParams<{ tenant: string; slug: string; result: string }>();
-  return <LandingResultView tenant={tenant} slug={slug} result={result} />;
+  return (
+    <NoEnderecoDoCliente tenant={tenant}>
+      <LandingResultView tenant={tenant} slug={slug} result={result} />
+    </NoEnderecoDoCliente>
+  );
 }
