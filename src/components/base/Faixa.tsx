@@ -4,9 +4,6 @@
 // família da caixa de aviso (`Aviso`), em faixa com linha embaixo. Fica no topo
 // da tela, da conversa ou do editor. A ação, quando tem, é botão de contorno
 // pequeno à direita. Mesmos tons do Aviso.
-//
-// Fora daqui, só a faixa vermelha de acesso como administrador (`ImpersonationBar`):
-// só a equipe vê.
 import type { ReactNode } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';

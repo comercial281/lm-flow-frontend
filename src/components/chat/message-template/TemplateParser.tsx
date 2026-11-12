@@ -4,6 +4,7 @@ import { Button, DialogFooter } from '@/components/ui/ds';
 import { Input } from '@evoapi/design-system/input';
 import type { MessageTemplate } from '@/types/channels/inbox';
 import { useLanguage } from '@/hooks/useLanguage';
+import { textoDoHtml } from '@/lib/htmlSeguro';
 
 interface TemplateParserProps {
   template: MessageTemplate;
@@ -59,9 +60,7 @@ const TemplateParser: React.FC<TemplateParserProps> = ({ template, channelType, 
     if (isEmailTemplate) {
       // For email, extract text from HTML for variable detection
       if (getEmailHtmlContent) {
-        const tempDiv = document.createElement('div');
-        tempDiv.innerHTML = getEmailHtmlContent;
-        return tempDiv.textContent || tempDiv.innerText || '';
+        return textoDoHtml(getEmailHtmlContent);
       }
       return '';
     }
