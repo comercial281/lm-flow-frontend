@@ -74,6 +74,10 @@ describe('situacaoDaIa', () => {
 });
 
 describe('restricaoDosGatilhos (espelho do TriggerGate)', () => {
+  it('origem "Veio do site, LP ou portal" vira a frase do site', () => {
+    expect(restricaoDosGatilhos(ia({ triggers: [{ type: 'origin', mode: 'site' }] }))?.frase).toBe('só lead do site, LP ou portal');
+  });
+
   it('lista com gatilho de palavra ignora a palavra-chave antiga, como o servidor', () => {
     const r = restricaoDosGatilhos(ia({ trigger_keyword: 'velha', triggers: [{ type: 'keyword', value: 'nova' }] }));
     expect(r?.frase).toBe('só quem escrever "nova"');
