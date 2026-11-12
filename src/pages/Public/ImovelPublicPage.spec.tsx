@@ -33,8 +33,15 @@ const EMPREENDIMENTO = {
   typologies: [{ name: 'Planta A', bedrooms: 2, useful_area_m2: 60, sale_price: 400000 }],
 };
 
-async function abrirFicha(site: SiteInfo, imovel: Record<string, unknown> = {}, base: Record<string, unknown> = REVENDA) {
+// `parecidos`: o que GET /site/properties/C1/similar devolve; 'servidor velho' = rota não existe (404).
+async function abrirFicha(
+  site: SiteInfo, imovel: Record<string, unknown> = {}, base: Record<string, unknown> = REVENDA,
+  parecidos: unknown[] | 'servidor velho' = [PARECIDO],
+) {
   const fetchMock = vi.fn(async (url: string) => {
+    if (url.includes('/similar')) {
+      return parecidos === 'servidor velho' ? { ok: false, status: 404, json: async () => ({}) } : resposta({ data: parecidos });
+    }
     if (url.includes('/site/properties/C1')) return resposta({ data: { ...base, ...imovel } });
     if (url.includes('/site/properties')) return resposta({ data: [PARECIDO], meta: { total: 1 } });
     if (url.includes('/site/articles')) return resposta({ data: [], meta: { total: 0 } });
@@ -51,7 +58,7 @@ async function abrirFicha(site: SiteInfo, imovel: Record<string, unknown> = {}, 
   return fetchMock;
 }
 
-const pediuParecidos = (f: ReturnType<typeof vi.fn>) => f.mock.calls.some(([u]) => /\/site\/properties\?/.test(String(u)));
+const pediuParecidos = (f: ReturnType<typeof vi.fn>) => f.mock.calls.some(([u]) => /\/site\/properties(\?|\/[^/]+\/similar)/.test(String(u)));
 
 afterEach(() => { vi.unstubAllGlobals(); });
 
@@ -456,6 +463,7 @@ describe('ImovelPublicPage', () => {
     const scrollTo = vi.fn();
     vi.stubGlobal('scrollTo', scrollTo);
     const fetchMock = vi.fn(async (url: string) => {
+      if (url.includes('/similar')) return resposta({ data: [PARECIDO] });
       if (url.includes('/site/properties/C2')) return resposta({ data: { ...REVENDA, code: 'C2', title: 'Apartamento parecido' } });
       if (url.includes('/site/properties/C1')) return resposta({ data: REVENDA });
       if (url.includes('/site/properties')) return resposta({ data: [PARECIDO], meta: { total: 1 } });
@@ -477,5 +485,24 @@ describe('ImovelPublicPage', () => {
     expect(await screen.findByRole('heading', { level: 1, name: 'Apartamento parecido' })).toBeInTheDocument();
     expect(scrollTo).toHaveBeenLastCalledWith(0, 0);
     for (const campo of screen.getAllByPlaceholderText('Seu nome')) expect(campo).toHaveValue('');
+  });
+
+  describe('Você também pode gostar: parecidos pelo servidor', () => {
+    const secaoParecidos = async () => (await screen.findByRole('heading', { name: 'Você também pode gostar' })).closest('section')!;
+
+    it('pede os parecidos ao servidor e mostra o que ele devolveu', async () => {
+      const f = await abrirFicha({}, {}, REVENDA, [{ ...PARECIDO, id: 'p9', code: 'C9', title: 'Sugerido pelo servidor' }]);
+
+      expect(await within(await secaoParecidos()).findByRole('link', { name: 'Sugerido pelo servidor' })).toBeInTheDocument();
+      expect(f.mock.calls.some(([u]) => String(u).includes('/site/properties/C1/similar?limit=3'))).toBe(true);
+      expect(f.mock.calls.some(([u]) => /\/site\/properties\?.*city=/.test(String(u)))).toBe(false);
+    });
+
+    it('servidor velho (sem /similar) cai na regra da cidade', async () => {
+      const f = await abrirFicha({}, {}, REVENDA, 'servidor velho');
+
+      expect(await within(await secaoParecidos()).findByRole('link', { name: 'Apartamento parecido' })).toBeInTheDocument();
+      expect(f.mock.calls.some(([u]) => /\/site\/properties\?.*city=Campinas/.test(String(u)))).toBe(true);
+    });
   });
 });

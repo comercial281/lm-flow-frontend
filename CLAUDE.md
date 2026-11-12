@@ -11203,3 +11203,11 @@ Relato da Moeda Forte: clicar num imóvel de "Você também pode gostar" "não r
 - **Regra:** cada imóvel abre numa ficha nova (`<FichaDoImovel key={code} />`) e no topo (`scrollTo(0, 0)` quando o código muda). Vale também pro voltar do navegador entre duas fichas.
 - Vindo da busca ou da home isso nunca aconteceu porque a tela passava por "carregando" e o navegador subia sozinho.
 - Spec: `ImovelPublicPage.spec.tsx` › "clicar num imóvel de "Você também pode gostar" abre a ficha dele no topo e limpa".
+
+## Site: "Você também pode gostar" com imóveis parecidos (12/11/2026)
+
+Relato da Moeda Forte: a seção mostrava sempre os mesmos 3 imóveis, sem relação com o que a pessoa via. Era a regra antiga: os 3 mais recentes da mesma cidade.
+
+- **Regra (servidor, `GET /site/properties/:code/similar`, backend #610):** filtro de finalidade (ficha de aluguel nunca sugere imóvel só de venda; Venda + Locação serve pros dois). Pontos: mesmo tipo +4, mesmo bairro +3, mesma cidade +2, preço até 30% de distância +3 (até 60% +1), quartos iguais +2 (1 de diferença +1), empreendimento com empreendimento / revenda com revenda +2. Empate: fixo por ficha (fichas diferentes, listas diferentes; a mesma ficha, sempre a mesma). Pesos validados pelo Tony em 12/11.
+- **Tela:** pede `/similar?limit=3`; servidor velho (sem a rota) ou erro → a regra antiga da cidade, sem quebrar. Manutenção e caixinha desligada continuam sem pedir nada.
+- Frase no Personalizar › Página do imóvel: "Até 3 imóveis parecidos com este no fim da página: mesma finalidade, de preferência mesmo tipo, bairro e faixa de preço."
