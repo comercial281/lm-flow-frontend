@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { Link, useLocation, useParams, useSearchParams } from 'react-router-dom';
 import { useCtxDoSite, useTenantDoSite } from '@/features/siteBuilder/public/useTenantDoSite';
 import { caminhoDoSite } from '@/features/siteBuilder/public/dominioDoSite';
@@ -108,7 +108,20 @@ function Ic({ d, s = 18, cls = '' }: { d: string; s?: number; cls?: string }) {
   return <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" className={cls}><path d={d} /></svg>;
 }
 
+/**
+ * Trocar de imóvel sem sair da ficha (clique em "Você também pode gostar", ou
+ * voltar do navegador entre duas fichas) mantinha a mesma tela montada: a página
+ * ficava parada lá embaixo, parecendo que o clique não fez nada, e o formulário,
+ * a foto aberta e o "contato enviado" passavam pro imóvel seguinte. A ficha
+ * agora recomeça do zero (key = código) e no topo a cada imóvel.
+ */
 export default function ImovelPublicPage() {
+  const { code } = useParams<{ code: string }>();
+  useLayoutEffect(() => { window.scrollTo(0, 0); }, [code]);
+  return <FichaDoImovel key={code} />;
+}
+
+function FichaDoImovel() {
   const { code } = useParams<{ code: string }>();
   const tenant = useTenantDoSite();
   const ctx = useCtxDoSite(tenant ?? '');
