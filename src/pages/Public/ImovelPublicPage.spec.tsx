@@ -451,4 +451,31 @@ describe('ImovelPublicPage', () => {
       expect(screen.getAllByText('Digite um telefone válido com DDD.').length).toBeGreaterThan(0);
     });
   });
+
+  it('clicar num imóvel de "Você também pode gostar" abre a ficha dele no topo e limpa', async () => {
+    const scrollTo = vi.fn();
+    vi.stubGlobal('scrollTo', scrollTo);
+    const fetchMock = vi.fn(async (url: string) => {
+      if (url.includes('/site/properties/C2')) return resposta({ data: { ...REVENDA, code: 'C2', title: 'Apartamento parecido' } });
+      if (url.includes('/site/properties/C1')) return resposta({ data: REVENDA });
+      if (url.includes('/site/properties')) return resposta({ data: [PARECIDO], meta: { total: 1 } });
+      if (/\/site(\?|$)/.test(url)) return resposta({ data: { name: 'Imob Teste' } });
+      return resposta({});
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    render(
+      <MemoryRouter initialEntries={['/imovel/imob/C1']}>
+        <Routes><Route path="/imovel/:tenant/:code" element={<ImovelPublicPage />} /></Routes>
+      </MemoryRouter>,
+    );
+    await screen.findByRole('heading', { level: 1, name: 'Casa no Cambuí' });
+    await userEvent.type(screen.getAllByPlaceholderText('Seu nome')[0], 'Maria');
+
+    const secao = (await screen.findByRole('heading', { name: 'Você também pode gostar' })).closest('section')!;
+    await userEvent.click(within(secao).getByRole('link', { name: 'Apartamento parecido' }));
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Apartamento parecido' })).toBeInTheDocument();
+    expect(scrollTo).toHaveBeenLastCalledWith(0, 0);
+    for (const campo of screen.getAllByPlaceholderText('Seu nome')) expect(campo).toHaveValue('');
+  });
 });

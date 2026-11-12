@@ -11195,3 +11195,11 @@ Armadilhas:
    lá, muda aqui.
 2. **Não voltar a passar texto cru para `dangerouslySetInnerHTML` nos blocos.**
    Precisou de formatação que a lista tira: muda a lista e o spec de `htmlSeguro`.
+
+## Site: ficha do imóvel recomeça do topo ao abrir outro imóvel (12/11/2026)
+
+Relato da Moeda Forte: clicar num imóvel de "Você também pode gostar" "não redirecionava". O endereço trocava e o imóvel novo carregava, mas a ficha era a mesma tela montada: a página ficava parada lá embaixo (a pessoa via de novo a mesma seção) e o nome/WhatsApp digitados, a foto aberta, a finalidade escolhida e o "contato enviado" passavam pro imóvel seguinte.
+
+- **Regra:** cada imóvel abre numa ficha nova (`<FichaDoImovel key={code} />`) e no topo (`scrollTo(0, 0)` quando o código muda). Vale também pro voltar do navegador entre duas fichas.
+- Vindo da busca ou da home isso nunca aconteceu porque a tela passava por "carregando" e o navegador subia sozinho.
+- Spec: `ImovelPublicPage.spec.tsx` › "clicar num imóvel de "Você também pode gostar" abre a ficha dele no topo e limpa".
