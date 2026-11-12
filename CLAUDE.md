@@ -11170,3 +11170,28 @@ Armadilhas:
 - Saíram, sem uso: a entrada antiga de acesso pelo `#` do endereço (com a faixa
   vermelha "Voltar ao painel master", que só existia pra ela) e as telas de OAuth
   que não tinham rota. O acesso da equipe ao CRM do cliente segue pelo `/sso`.
+
+## Landing de anúncio: endereço do cliente e texto por um caminho só (12/11/2026)
+
+- **No endereço lmflow, a landing só abre no endereço do próprio cliente**
+  (`<cliente>.lmflow.com.br/lp/<cliente>/<slug>`, que é o link que o CRM sempre
+  copiou). Aberta em `app`, no `lmflow.com.br` puro ou no endereço de outro
+  cliente, vai para o do cliente: 302 na borda (`middleware.ts`) e, de rede,
+  `location.replace` na página (`NoEnderecoDoCliente`). A busca (UTMs, fbclid) e
+  a âncora vão junto. Regra única em `src/features/landing/public/enderecoDaLanding.ts`.
+  Domínio próprio, localhost, IP e `*.vercel.app` ficam como estavam.
+- **O botão de copiar o link** (`landingUrl.ts`) já sai no endereço do cliente
+  mesmo quando o CRM está aberto em outro endereço lmflow.
+- **O texto das seções Descrição e Texto** (e a descrição do imóvel usada nelas)
+  passa por `htmlSeguro()`, como o resto do HTML de fora. Fica a formatação
+  (negrito, itálico, listas, títulos, alinhamento, link); o link abre em outra aba.
+
+Armadilhas:
+
+1. **Nome de cliente que não vira endereço** (`app`, `www`, `api`, `admin`,
+   `staging`, `production`, `localhost`, `lmflow`, ou com caractere fora de
+   `a-z0-9-`) mostra "não disponível" no lmflow, sem redirecionar: redirecionar
+   para eles daria laço. A lista repete a de `src/services/core/tenant.ts`; mudou
+   lá, muda aqui.
+2. **Não voltar a passar texto cru para `dangerouslySetInnerHTML` nos blocos.**
+   Precisou de formatação que a lista tira: muda a lista e o spec de `htmlSeguro`.

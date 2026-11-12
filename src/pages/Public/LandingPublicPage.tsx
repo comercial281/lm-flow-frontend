@@ -1,5 +1,6 @@
 import { useParams } from 'react-router-dom';
 import { LandingPublicView } from '@/features/landing/public/LandingPublicView';
+import { NoEnderecoDoCliente } from '@/features/landing/public/NoEnderecoDoCliente';
 
 /**
  * Rota antiga da landing dentro do app do CRM (/lp/:tenant/:slug).
@@ -10,5 +11,9 @@ import { LandingPublicView } from '@/features/landing/public/LandingPublicView';
  */
 export default function LandingPublicPage() {
   const { tenant = '', slug = '' } = useParams<{ tenant: string; slug: string }>();
-  return <LandingPublicView tenant={tenant} slug={slug} />;
+  return (
+    <NoEnderecoDoCliente tenant={tenant}>
+      <LandingPublicView tenant={tenant} slug={slug} />
+    </NoEnderecoDoCliente>
+  );
 }

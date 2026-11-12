@@ -909,14 +909,47 @@ describe('middleware: landing (/lp/*)', () => {
     expect(chamadas.some(c => c.url.includes('/landing/'))).toBe(false);
   });
 
-  it('endereço lmflow: /lp/<cliente>/<slug> continua como antes', async () => {
+  it('endereço do cliente: /lp/<cliente>/<slug> continua como antes', async () => {
     servidor(url => (url.startsWith(`${API}/api/public/v1/landing/`) ? json(LANDING) : undefined));
-    const res = await pedir(`https://${LMFLOW}/lp/imob/oferta`);
+    const res = await pedir('https://imob.lmflow.com.br/lp/imob/oferta');
     expect(res.status).toBe(200);
     expect(chamadas.some(c => c.url.includes('/resolve'))).toBe(false);
     const landing = chamadas.find(c => c.url.includes('/landing/'))!;
     expect(landing.url).toBe(`${API}/api/public/v1/landing/oferta`);
     expect((landing.init?.headers as Record<string, string>)['X-Tenant']).toBe('imob');
     expect(await res.text()).not.toContain('__LMF_SITE__');
+  });
+
+  // A landing de um cliente só abre no endereço dele: nos outros endereços
+  // lmflow, 302 para o dele, com a busca (UTMs, fbclid), sem buscar nada.
+  it.each([
+    [LMFLOW],
+    ['lmflow.com.br'],
+    ['www.lmflow.com.br'],
+    ['outro.lmflow.com.br'],
+  ])('%s/lp/016-imoveis/...: 302 para o endereço do cliente', async (host) => {
+    servidor(() => json(LANDING));
+    const busca = '?utm_source=fb&utm_campaign=x&fbclid=IwAR0abc';
+    const res = await pedir(`https://${host}/lp/016-imoveis/oferta/obrigado${busca}`);
+    expect(res.status).toBe(302);
+    expect(res.headers.get('location')).toBe(`https://016-imoveis.lmflow.com.br/lp/016-imoveis/oferta/obrigado${busca}`);
+    expect(res.headers.get('cache-control')).toBe('no-store');
+    expect(chamadas).toHaveLength(0);
+  });
+
+  it('cliente sem endereço possível (app): segue para a página, sem buscar nem redirecionar', async () => {
+    servidor(() => json(LANDING));
+    seguiuDireto(await pedir(`https://${LMFLOW}/lp/app/oferta`));
+    expect(chamadas).toHaveLength(0);
+  });
+
+  it.each([
+    ['lm-flow-frontend-git-x.vercel.app'],
+    ['localhost'],
+  ])('prévia e local (%s): monta como antes, sem redirecionar', async (host) => {
+    servidor(url => (url.startsWith(`${API}/api/public/v1/landing/`) ? json(LANDING) : undefined));
+    const res = await pedir(`https://${host}/lp/imob/oferta`);
+    expect(res.status).toBe(200);
+    expect((chamadas.find(c => c.url.includes('/landing/'))!.init?.headers as Record<string, string>)['X-Tenant']).toBe('imob');
   });
 });

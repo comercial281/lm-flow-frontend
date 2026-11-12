@@ -18,6 +18,7 @@ import {
 // landing sem a landing usar.
 import { BrPhoneInput } from '@/components/shared/BrPhoneInput';
 import { isValidBrPhone } from '@/lib/brPhone';
+import { htmlSeguro } from '@/lib/htmlSeguro';
 import type { BlockConfig, BlockType } from './contract';
 import {
   type BlockComponentProps,
@@ -281,30 +282,34 @@ function TechSheetBlock({ config, property }: BlockComponentProps<'tech_sheet'>)
   );
 }
 
+/** Descrição: o texto da seção ou, vazio, a descrição do imóvel (que pode vir
+ *  de importação). Os dois passam por `htmlSeguro`, como todo HTML de texto da
+ *  landing: fica a formatação, sai o resto. */
 function DescriptionBlock({ config, property }: BlockComponentProps<'description'>) {
-  const html = config.html ?? property?.description;
-  if (empty(html)) return null;
+  const bruto = config.html ?? property?.description;
+  if (empty(bruto)) return null;
+  const html = htmlSeguro(bruto);
+  if (!html.trim()) return null;
   return (
     <Section>
       <SectionTitle>{config.title}</SectionTitle>
       <div
         className="text-sm leading-relaxed opacity-90"
-        // content is authored by the client/team, rendered as rich text
-        dangerouslySetInnerHTML={{ __html: html as string }}
+        dangerouslySetInnerHTML={{ __html: html }}
       />
     </Section>
   );
 }
 
 /** Texto livre escrito pela equipe da imobiliária. Publica o HTML pelo mesmo
- *  caminho da seção de Descrição, que já faz isso desde a estreia: o conteúdo é
- *  escrito por quem administra a conta, nunca pelo visitante da landing.
+ *  caminho da seção de Descrição (`htmlSeguro`): fica a formatação do editor
+ *  (negrito, itálico, listas, link), sai o resto.
  *
  *  A regra de lista vai inline porque o reset do Tailwind tira marcador e recuo
  *  de `ul`/`ol`: sem isto a lista que a pessoa monta no editor sai como um
  *  bloco de linhas soltas na página publicada. */
 function RichTextBlock({ config }: BlockComponentProps<'rich_text'>) {
-  const html = config.html?.trim();
+  const html = htmlSeguro(config.html).trim();
   if (!config.title && !html) return null;
   return (
     <Section>

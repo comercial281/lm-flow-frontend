@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { parseLandingPath, type LandingRoute } from '@/features/landing/public/landingLoader';
 import { LandingPublicView } from '@/features/landing/public/LandingPublicView';
 import { LandingResultView } from '@/features/landing/public/LandingResultView';
+import { LandingIndisponivel as Indisponivel, NoEnderecoDoCliente } from '@/features/landing/public/NoEnderecoDoCliente';
 import { dominioDoSite, ehEnderecoDoSistema, rotaDaLandingNoDominio } from '@/features/siteBuilder/public/dominioDoSite';
 
 /**
@@ -22,14 +23,6 @@ function IndisponivelAgora() {
       >
         Tentar de novo
       </button>
-    </div>
-  );
-}
-
-function Indisponivel() {
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-[#0F0520] px-6 text-center text-neutral-400">
-      Esta página não está disponível.
     </div>
   );
 }
@@ -72,5 +65,10 @@ export function LandingApp() {
   if (!ehEnderecoDoSistema(window.location.hostname)) return <LandingNoDominio />;
   const route = parseLandingPath(window.location.pathname);
   if (!route) return <Indisponivel />;
-  return <Landing route={route} />;
+  // Endereço lmflow: só no do próprio cliente (os outros vão para lá).
+  return (
+    <NoEnderecoDoCliente tenant={route.tenant}>
+      <Landing route={route} />
+    </NoEnderecoDoCliente>
+  );
 }
