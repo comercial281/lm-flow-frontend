@@ -11155,3 +11155,18 @@ Armadilhas:
    corretor aceita pelo celular. Sem oferta, volta a só checar com a aba visível.
 6. **Push sem `event` segue o caminho de sempre** (mensagem, push manual da
    Central, servidor antigo): sem perguntar às abas, sem `requireInteraction`.
+
+## Conversas: texto e HTML das mensagens por um caminho só (11/11/2026)
+
+- **Todo HTML que vem de fora e aparece formatado** (balão da conversa, e-mail
+  recebido, nota interna, widget) passa por `htmlSeguro()` (`src/lib/htmlSeguro.ts`),
+  com lista fechada de tags e atributos. Precisou mostrar algo que a lista tira:
+  muda a lista e o spec, nunca `dangerouslySetInnerHTML` com o texto cru.
+- **Quando só interessa o texto** (prévia na lista de Conversas, aviso de mensagem
+  nova, prévia de modelo de e-mail), usa `textoDoHtml()`, que lê num documento à
+  parte. Nunca `innerHTML` numa div pra "só pegar o texto".
+- No HTML de fora, **link abre sempre em outra aba**, e `class`/`id` caem (não
+  pegam estilo nem nome do app).
+- Saíram, sem uso: a entrada antiga de acesso pelo `#` do endereço (com a faixa
+  vermelha "Voltar ao painel master", que só existia pra ela) e as telas de OAuth
+  que não tinham rota. O acesso da equipe ao CRM do cliente segue pelo `/sso`.

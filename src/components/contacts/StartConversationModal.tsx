@@ -31,6 +31,7 @@ import { apiErrorMessage } from '@/utils/apiHelpers';
 import Aviso from '@/components/base/Aviso';
 import CampoDaJanela from '@/components/base/janela/CampoDaJanela';
 import { Checkbox } from '@/components/ui/ds';
+import { textoDoHtml } from '@/lib/htmlSeguro';
 
 interface StartConversationModalProps {
   open: boolean;
@@ -518,12 +519,8 @@ export default function StartConversationModal({
                               typeof metadata.html_content === 'string'
                             ) {
                               // Extract text from HTML for preview
-                              const tempDiv = document.createElement('div');
-                              tempDiv.innerHTML = metadata.html_content;
                               previewText =
-                                tempDiv.textContent ||
-                                tempDiv.innerText ||
-                                'Modelo de e-mail visual';
+                                textoDoHtml(metadata.html_content) || 'Modelo de e-mail visual';
                             } else if (template.content) {
                               const content = template.content.trim();
                               if (
@@ -531,10 +528,7 @@ export default function StartConversationModal({
                                 content.startsWith('<html') ||
                                 content.startsWith('<!doctype')
                               ) {
-                                const tempDiv = document.createElement('div');
-                                tempDiv.innerHTML = content;
-                                previewText =
-                                  tempDiv.textContent || tempDiv.innerText || 'Modelo de e-mail';
+                                previewText = textoDoHtml(content) || 'Modelo de e-mail';
                               } else {
                                 previewText = 'Modelo de e-mail visual';
                               }

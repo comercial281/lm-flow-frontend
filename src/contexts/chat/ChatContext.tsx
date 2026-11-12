@@ -24,6 +24,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { avisarSeEventoDaIa } from '@/features/conversas/atalhosDoLead';
 import { playNotificationSound, getAudioSettings } from '@/utils/audioNotificationUtils';
 import { normalizeToUnixSeconds } from '@/utils/time/timeHelpers';
+import { textoDoHtml } from '@/lib/htmlSeguro';
 
 function doesConversationMatchFilters(
   conversation: Conversation,
@@ -348,15 +349,9 @@ function useChatIntegration() {
 
           // Toast e som apenas se a conversa NÃO está aberta e é mensagem recebida
           if (!isConversationOpen && isIncomingMessage) {
-            // 🧹 LIMPAR HTML do content para toast
-            const stripHtml = (html: string): string => {
-              const tempDiv = document.createElement('div');
-              tempDiv.innerHTML = html;
-              return tempDiv.textContent || tempDiv.innerText || '';
-            };
-
+            // Só o texto da mensagem no aviso (lido fora da página).
             const cleanContent = message.content
-              ? stripHtml(message.content).substring(0, 100)
+              ? textoDoHtml(message.content).substring(0, 100)
               : 'Mensagem recebida';
 
             toast.info(`Nova mensagem de ${message.sender?.name || 'Contato'}`, {

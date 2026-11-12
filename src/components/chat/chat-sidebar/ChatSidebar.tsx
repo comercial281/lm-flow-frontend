@@ -73,6 +73,7 @@ import type {
 import { telefone } from '@/lib/formato';
 import { esperaDoLead, horaDoItem } from '@/features/conversas/itemDaLista';
 import SegmentadoDeLista from '@/components/base/SegmentadoDeLista';
+import { textoDoHtml } from '@/lib/htmlSeguro';
 import '../conversas.css';
 
 interface ChatSidebarProps {
@@ -428,16 +429,9 @@ const ChatSidebar = ({
       ? numerosParaReconectar({ numeros, gestor, meuId })
       : [];
 
-  const stripHtml = (html: string): string => {
-    if (!html) return '';
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = html;
-    return (tempDiv.textContent || tempDiv.innerText || '').trim();
-  };
-
   const getLastMessage = (conversation: Conversation) => {
     const msg = conversation.last_non_activity_message;
-    const cleanContent = stripHtml(msg?.processed_message_content || msg?.content || '');
+    const cleanContent = textoDoHtml(msg?.processed_message_content || msg?.content || '').trim();
     return cleanContent.length > 60 ? cleanContent.substring(0, 60) + '...' : cleanContent;
   };
 

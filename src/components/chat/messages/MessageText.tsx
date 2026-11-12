@@ -1,5 +1,6 @@
 import React from 'react';
 import { ExternalLink } from 'lucide-react';
+import { htmlSeguro } from '@/lib/htmlSeguro';
 
 const URL_REGEX = /https?:\/\/[^\s<>"')\]]+/gi;
 
@@ -63,26 +64,12 @@ const MessageText: React.FC<MessageTextProps> = ({
   // 🔒 PROTEÇÃO: Garantir que content seja sempre string válida
   const safeContent = String(content || '');
 
-  // Helper function to sanitize HTML and remove potentially dangerous tags
-  const sanitizeEmailHTML = (html: string): string => {
-    if (!html) return '';
-
-    // Remove <script> tags and their content
-    let sanitized = html.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
-
-    // Remove <style> tags and their content (to prevent CSS contamination)
-    sanitized = sanitized.replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '');
-
-    // Remove inline event handlers (onclick, onload, etc.)
-    sanitized = sanitized.replace(/\s*on\w+\s*=\s*["'][^"']*["']/gi, '');
-    sanitized = sanitized.replace(/\s*on\w+\s*=\s*[^\s>]*/gi, '');
-
-    return sanitized;
-  };
+  // Todo HTML desta tela (e-mail recebido, mensagem com HTML, nota interna) passa
+  // pelo `htmlSeguro`: lista fechada de formatação, nada além.
 
   // Render HTML for incoming email messages
   if (contentType === 'incoming_email' && contentAttributes?.email?.html_content?.full) {
-    const sanitizedHTML = sanitizeEmailHTML(contentAttributes.email.html_content.full);
+    const sanitizedHTML = htmlSeguro(contentAttributes.email.html_content.full);
 
     return (
       <div
@@ -123,7 +110,7 @@ const MessageText: React.FC<MessageTextProps> = ({
                         (safeContent.includes('<') && safeContent.includes('</') && safeContent.length > 50);
 
   if (isHtmlContent && !isPrivateNote) {
-    const sanitizedHTML = sanitizeEmailHTML(safeContent);
+    const sanitizedHTML = htmlSeguro(safeContent);
     return (
       <div
         className="email-html-content-wrapper"
@@ -157,10 +144,8 @@ const MessageText: React.FC<MessageTextProps> = ({
   // Para mensagens com conteúdo HTML (notas privadas, mensagens de agente, etc.)
   // Renderizar HTML sanitizado para exibir corretamente tags como <p>, <b>, etc.
   if (safeContent.includes('<') && safeContent.includes('</')) {
-    let sanitizedHTML = isPrivateNote ? safeContent : sanitizeEmailHTML(safeContent);
-    if (isPrivateNote) {
-      sanitizedHTML = sanitizedHTML.replace(/color\s*:[^;"']*;?/gi, '');
-    }
+    // Nota interna: sem as cores do estilo, o texto segue a cor do balão.
+    const sanitizedHTML = htmlSeguro(safeContent, { semCor: isPrivateNote });
     return (
       <div
         className="whitespace-pre-wrap break-words rich-content"

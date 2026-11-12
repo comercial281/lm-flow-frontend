@@ -2,7 +2,6 @@ import AppRouter from './routes';
 import { AuthProvider } from './contexts/AuthContext';
 import { DarkModeProvider } from './contexts/ThemeContext';
 import { DemoModeProvider } from './contexts/DemoModeContext';
-import ImpersonationBar from './components/ImpersonationBar';
 import AppInitializer from './components/AppInitializer';
 import { GlobalConfigProvider } from './contexts/GlobalConfigContext';
 import { NotificationsProvider } from './contexts/NotificationsContext';
@@ -42,7 +41,6 @@ function App() {
               <TenantFeaturesProvider>
                 <NotificationsProvider>
                   <AppInitializer>
-                    <ImpersonationBar />
                     <AppRouter />
                     <ThemedToaster />
                   </AppInitializer>

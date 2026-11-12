@@ -15,6 +15,7 @@ import {
 import { ReplyToMessage } from './ReplyToMessage';
 import { EmailCollectInput } from './EmailCollectInput';
 import { openAttachmentInNewTab } from '@/components/chat/messages/utils/openAttachmentInNewTab';
+import { htmlSeguro } from '@/lib/htmlSeguro';
 
 export interface MessageItem {
   id: string;
@@ -81,16 +82,6 @@ const MessageList: React.FC<MessageListProps> = ({
   const { t } = useLanguage('widget');
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const shouldScrollToBottom = useRef(true);
-
-  const sanitizeMessageHTML = (html: string): string => {
-    if (!html) return '';
-
-    let sanitized = html.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
-    sanitized = sanitized.replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '');
-    sanitized = sanitized.replace(/\s*on\w+\s*=\s*["'][^"']*["']/gi, '');
-    sanitized = sanitized.replace(/\s*on\w+\s*=\s*[^\s>]*/gi, '');
-    return sanitized;
-  };
 
   const hasHtmlTags = (text: string): boolean => /<\/?[a-z][\s\S]*>/i.test(text);
 
@@ -295,7 +286,7 @@ const MessageList: React.FC<MessageListProps> = ({
                       <div
                         className="email-html-content"
                         dangerouslySetInnerHTML={{
-                          __html: m.contentAttributes.email.html_content.full,
+                          __html: htmlSeguro(m.contentAttributes.email.html_content.full),
                         }}
                         style={{
                           maxWidth: '100%',
@@ -310,7 +301,7 @@ const MessageList: React.FC<MessageListProps> = ({
                       hasHtmlTags(m.text) ? (
                         <div
                           className="whitespace-pre-wrap break-words rich-content"
-                          dangerouslySetInnerHTML={{ __html: sanitizeMessageHTML(m.text) }}
+                          dangerouslySetInnerHTML={{ __html: htmlSeguro(m.text) }}
                         />
                       ) : (
                         <div className="whitespace-pre-wrap break-words">{m.text}</div>
