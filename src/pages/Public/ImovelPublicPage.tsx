@@ -211,9 +211,10 @@ function FichaDoImovel() {
     };
   }, [lightbox, prop]);
 
-  // Imóveis recomendados (fim da página): outros publicados da MESMA cidade,
-  // excluindo o atual. Sem endpoint novo — usa a listagem pública do portal.
-  // Desligado na "Página do imóvel": a lista nem é pedida.
+  // Imóveis recomendados (fim da página): o servidor escolhe os mais parecidos
+  // com este (mesma finalidade; tipo, bairro, preço e quartos contam pontos).
+  // Servidor velho, sem a rota /similar: a regra antiga, outros publicados da
+  // MESMA cidade pela listagem pública. Desligado na "Página do imóvel": nada é pedido.
   useEffect(() => {
     if (!tenant || !code || !prop) return;
     if (manutencao || !parecidosLigados) { setSuggestions([]); return; }
@@ -227,7 +228,17 @@ function FichaDoImovel() {
         return ((await res.json()).data as PortalProperty[]).filter(p => p.code !== code);
       } catch { return []; }
     };
+    const fetchSimilar = async (): Promise<PortalProperty[] | null> => {
+      try {
+        const res = await fetch(`${API}/api/public/v1/site/properties/${encodeURIComponent(code)}/similar?limit=3`, { headers: cabecalhosDoSite(tenant) });
+        if (!res.ok) return null;
+        const data = (await res.json()).data;
+        return Array.isArray(data) ? (data as PortalProperty[]).filter(p => p.code !== code) : null;
+      } catch { return null; }
+    };
     (async () => {
+      const similar = await fetchSimilar();
+      if (similar) { if (alive) setSuggestions(similar.slice(0, 3)); return; }
       let list = await fetchList(prop.address_city);
       // Fallback: se a cidade tiver poucos imóveis, completa com outros quaisquer.
       if (list.length < 3) {

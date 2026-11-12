@@ -34,7 +34,7 @@ const OPCOES_REVENDA: Record<ChaveRevenda, Opcao> = {
     frase: 'Aparece abaixo do título quando a página do imóvel teve mais de 30 visitas nos últimos 30 dias.',
   },
   values: { rotulo: 'Condomínio, IPTU e valor do m²', frase: 'Aparecem junto do preço, quando estão no cadastro.' },
-  similar: { rotulo: 'Você também pode gostar', frase: 'Até 3 outros imóveis do site no fim da página, de preferência da mesma cidade.' },
+  similar: { rotulo: 'Você também pode gostar', frase: 'Até 3 imóveis parecidos com este no fim da página: mesma finalidade, de preferência mesmo tipo, bairro e faixa de preço.' },
 };
 
 const OPCOES_EMPREENDIMENTO: Record<ChaveEmpreendimento, Opcao> = {
