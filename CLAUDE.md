@@ -11269,3 +11269,12 @@ Armadilhas:
    o servidor antigo a escolha aparece, salva e volta pro topo no recarregar.
 6. **Não é `featureKey` nem `clientToggleKey`** — é configuração do site. Os
    scanners do catálogo de funcionalidades não entram nesta história.
+
+## Lead do botão de WhatsApp do site e da landing (12/11/2026)
+
+Relato da Moeda Forte: quem clicava no WhatsApp da ficha do imóvel no site chegava como conversa comum, sumia no "Só campanha" (o corretor não via) e a IA não pegava. O servidor (lm-flow, `Whatsapp::SiteReferral`) passou a reconhecer a frase pronta do botão e a tratar a conversa como lead do site: card no funil do site, origem "Site", aparece no "Só campanha". Só vale com código de imóvel que existe no cliente (trava contra conversa pessoal).
+
+- **IA Vendedora → Gatilhos → Origem do lead** ganhou **"Veio do site, LP ou portal"** (`mode: 'site'`): botão de WhatsApp do site/LP, formulário do site, página externa, landing e portais. Resumo da situação da IA: "lead do site, LP ou portal" (e "todo lead" no modo Todos, que antes saía "lead de anúncio").
+- **Landing de anúncio:** o botão de WhatsApp passa a abrir com "Olá! Vim pela página <título> e quero saber mais." (`whatsappDaLanding.ts`). Era o único botão sem frase. Mudou a frase aqui, muda o `LANDING_RE` do servidor junto.
+- A frase da ficha do imóvel ("Olá! Tenho interesse no imóvel <código> — <título>.", `ImovelPublicPage.tsx`) **não pode mudar** sem mudar o `SITE_RE` do servidor: é por ela que o lead do site aparece.
+- Voltar só a tela é seguro (a opção some; IA com `mode: 'site'` gravado mostra o seletor vazio e segue valendo no servidor; a LP volta a abrir sem frase). Entra depois do backend #616.

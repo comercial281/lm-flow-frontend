@@ -318,6 +318,7 @@ export function TriggersSection({ agent, onSave, escolheuTodos, nome, semModo, u
               <Seletor aria-label="Quais leads" value={t.mode ?? 'ads'} onChange={(e) => update(i, { mode: e.target.value })}
                 className={cn(CLASSE_DO_CAMPO, 'w-full sm:max-w-sm')}>
                 <option value="ads">Só anúncios (FB/IG/Google)</option>
+                <option value="site">Veio do site, LP ou portal</option>
                 <option value="all">Todos os leads</option>
               </Seletor>
             )}

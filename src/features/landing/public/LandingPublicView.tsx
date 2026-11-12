@@ -15,6 +15,7 @@ import { sendSiteVisit } from '@/features/siteBuilder/public/siteVisits';
 import { caminhoDoSite } from '@/features/siteBuilder/public/dominioDoSite';
 import { lerLimiteDeEnvios } from '@/features/siteBuilder/public/limiteDeEnvios';
 import { FONTES_DO_SITE, fonteDoSite } from '@/features/siteBuilder/public/aparenciaConfig';
+import { linkDoWhatsappDaLanding } from './whatsappDaLanding';
 
 /**
  * A landing de anúncio pública, já com tenant e slug resolvidos. Quem resolve
@@ -97,6 +98,8 @@ export function LandingPublicView({ tenant, slug, noDominio = false }: LandingPu
   const [pixel, setPixel] = useState<LandingPixel | null>(null);
   // "Imob Silva · CRECI J-12345" no fim da página (null = não aparece).
   const [linhaDaImobiliaria, setLinhaDaImobiliaria] = useState<string | null>(null);
+  // Título da página: vai na frase do botão de WhatsApp (ver whatsappDaLanding).
+  const [tituloDaPagina, setTituloDaPagina] = useState('');
 
   // Eventos padrão da Meta vão em `track`; o resto é evento personalizado e vai
   // em `trackCustom` — mandar um pelo caminho do outro faz a Meta descartar.
@@ -135,7 +138,7 @@ export function LandingPublicView({ tenant, slug, noDominio = false }: LandingPu
     const wa = el.getAttribute('data-whatsapp-phone');
     if (action === 'whatsapp' && wa) {
       e.preventDefault();
-      window.open(`https://wa.me/${wa.replace(/\D/g, '')}`, '_blank');
+      window.open(linkDoWhatsappDaLanding(wa, tituloDaPagina), '_blank');
       return;
     }
     if (action === 'open_form') {
@@ -255,6 +258,7 @@ export function LandingPublicView({ tenant, slug, noDominio = false }: LandingPu
       setProperty(toProperty(dto.property));
       setPixel(dto.pixel ?? null);
       setLinhaDaImobiliaria(linhaDaLanding(dto.agency));
+      setTituloDaPagina(dto.title ?? '');
       document.title = dto.title || 'Landing';
       setState('ok');
     })();
