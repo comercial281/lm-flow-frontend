@@ -3,7 +3,7 @@ import { siteBuilderService } from '@/services/siteBuilder/siteBuilderService';
 import {
   CORES_DO_FUNDO, FILTRO_FABRICA, FILTRO_MAXIMO, TETO_TEXTO_RODAPE, TEXTO_RODAPE_FABRICA, contarCaracteres, cortarCaracteres,
   filtroDaCapa, textoSobre,
-  type Aparencia, type AlturaDaCapa, type EstiloDoTopo, type FaixaDeCima, type Fundo, type LayoutDoRodape,
+  type Aparencia, type AlturaDaCapa, type EstiloDoTopo, type FaixaDeCima, type Fundo, type LayoutDoRodape, type PosicaoDoLogo,
 } from '@/features/siteBuilder/public/aparenciaConfig';
 import { cn } from '@/lib/utils';
 import { Secao } from '@/components/base/Secao';
@@ -155,6 +155,58 @@ export function BlocoTopo({ ap, mudar, corPrincipal }: PropsDoBloco & { corPrinc
           }}
         />
       </div>
+    </Secao>
+  );
+}
+
+/* ── Logo na página inicial ────────────────────────────────────────────── */
+
+export function BlocoLogoNaCapa({ ap, mudar, temLogo }: PropsDoBloco & { temLogo: boolean }) {
+  const branco = 'rgba(255,255,255,0.85)';
+  const marca = (tamanho: string) => (
+    <span className="block shrink-0 rounded-full border-2" style={{ width: tamanho, height: tamanho, borderColor: branco, background: 'rgba(255,255,255,0.25)' }} />
+  );
+  const desenho = (posicao: PosicaoDoLogo) => (
+    <span className="flex h-full w-full flex-col" style={{ background: FOTO }}>
+      <span className="flex items-center gap-2 px-2 py-1.5">
+        {posicao === 'header' ? marca('10px') : <span className="block w-2.5" />}
+        <span className="flex flex-1 justify-center gap-1">{linha(branco, '12%')}{linha(branco, '12%')}{linha(branco, '12%')}</span>
+        <span className="block h-2 w-4 rounded-full" style={{ background: '#25D366' }} />
+      </span>
+      <span className="flex flex-1 items-center gap-2 px-2">
+        <span className="flex flex-1 flex-col gap-1">{linha('#FFFFFF', '85%')}{linha('#FFFFFF', '60%')}</span>
+        {posicao === 'hero' && marca('30px')}
+      </span>
+    </span>
+  );
+  const dividida = ap.hero_layout === 'split';
+  return (
+    <Secao
+      titulo="Logo na página inicial"
+      descricao="Onde o logo aparece quando alguém abre a página inicial do site."
+    >
+      <Miniaturas rotulo="Logo na página inicial" valor={ap.logo_position} mudar={logo_position => mudar({ logo_position })} opcoes={[
+        { valor: 'header', nome: 'No topo', frase: 'No canto do topo, em todas as páginas. O de sempre.', desenho: desenho('header') },
+        { valor: 'hero', nome: 'Em destaque na capa', frase: 'Grande, ao lado do título, com o menu no meio do topo. Ao rolar, o logo sobe pro topo. Bom pra logo redondo ou com selo.', desenho: desenho('hero') },
+      ]} />
+      {ap.logo_position === 'hero' && (
+        <div className="space-y-2 text-sm text-muted-foreground">
+          <p>
+            No celular, o logo fica em cima do título. Nas outras páginas do site (a do imóvel, a busca), ele continua no topo, como sempre.
+            Sobre a foto vale a logo clara; sem ela, o logo fica branco, como no topo sobre a foto.
+          </p>
+          {dividida && (
+            <p className="text-amber-700 dark:text-amber-400">
+              Com a capa dividida (modelos Editorial e Popular), o lado direito da capa já é a foto: o logo continua no topo. Vale com o modelo Clássico.
+            </p>
+          )}
+          {!dividida && !temLogo && (
+            <p className="text-amber-700 dark:text-amber-400">
+              Envie o logo em Logotipos: sem ele, o topo mostra o nome da imobiliária, como sempre.
+            </p>
+          )}
+        </div>
+      )}
     </Secao>
   );
 }

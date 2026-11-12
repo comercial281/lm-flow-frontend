@@ -101,6 +101,7 @@ describe('TelaAparencia · visual do site (C3)', () => {
     ['Faixa de cima', 'Esconder', 'top_bar', { top_bar: 'hidden' }],
     ['Altura do banner', 'Tela cheia', 'hero_height', { hero_height: 'full' }],
     ['Jeito do rodapé', 'Compacto', 'footer_layout', { footer_layout: 'compact' }],
+    ['Logo na página inicial', 'Em destaque na capa', 'logo_position', { logo_position: 'hero' }],
   ];
 
   it.each(casos)('%s › %s troca o valor (com aria-pressed) e manda a aparência inteira', async (grupo, opcao, _chave, esperado) => {
@@ -113,7 +114,7 @@ describe('TelaAparencia · visual do site (C3)', () => {
     expect(enviado).toMatchObject(esperado);
     // O objeto inteiro: as outras chaves continuam na fábrica.
     expect(Object.keys(enviado).sort()).toEqual(['background', 'card_style', 'footer_layout', 'footer_text', 'header_style',
-      'heading_font', 'hero_height', 'hero_layout', 'hero_overlay', 'logo_light_url', 'menu_style', 'top_bar']);
+      'heading_font', 'hero_height', 'hero_layout', 'hero_overlay', 'logo_light_url', 'logo_position', 'menu_style', 'top_bar']);
     expect(botao.getAttribute('aria-pressed')).toBe('true');
   });
 
@@ -211,5 +212,34 @@ describe('TelaAparencia · visual do site (C3)', () => {
     const botao = within(screen.getByRole('group', { name: 'Estilo do topo' })).getByRole('button', { name: /^Na cor principal/ });
     const barra = [...botao.querySelectorAll('span')].find(el => (el as HTMLElement).style.background === 'rgb(250, 204, 21)')!;
     expect((barra.firstElementChild as HTMLElement).style.background).toBe('rgb(23, 20, 15)');
+  });
+});
+
+describe('TelaAparencia · logo na página inicial', () => {
+  const LOGO = 'https://cdn/logo.png';
+  const ap = (extra: Partial<typeof APARENCIA_FABRICA>) => ({ ...APARENCIA_FABRICA, ...extra });
+
+  it('no topo (fábrica) vem marcado, sem explicação nem aviso', () => {
+    render(<Montar espiao={vi.fn()} inicial={{ logo_url: LOGO }} />);
+    const grupo = screen.getByRole('group', { name: 'Logo na página inicial' });
+    expect(within(grupo).getByRole('button', { name: /^No topo/ }).getAttribute('aria-pressed')).toBe('true');
+    expect(screen.queryByText(/No celular, o logo fica em cima do título/)).toBeNull();
+  });
+
+  it('em destaque: explica o celular e as outras páginas', () => {
+    render(<Montar espiao={vi.fn()} inicial={{ logo_url: LOGO, appearance: ap({ logo_position: 'hero' }) }} />);
+    expect(screen.getByText(/No celular, o logo fica em cima do título/)).toBeTruthy();
+    expect(screen.queryByText(/Com a capa dividida/)).toBeNull();
+    expect(screen.queryByText(/Envie o logo em Logotipos/)).toBeNull();
+  });
+
+  it('em destaque com a capa dividida: avisa que o logo continua no topo', () => {
+    render(<Montar espiao={vi.fn()} inicial={{ logo_url: LOGO, appearance: ap({ logo_position: 'hero', hero_layout: 'split' }) }} />);
+    expect(screen.getByText(/Com a capa dividida \(modelos Editorial e Popular\)/)).toBeTruthy();
+  });
+
+  it('em destaque sem logo enviado: pede o logo', () => {
+    render(<Montar espiao={vi.fn()} inicial={{ appearance: ap({ logo_position: 'hero' }) }} />);
+    expect(screen.getByText(/Envie o logo em Logotipos/)).toBeTruthy();
   });
 });

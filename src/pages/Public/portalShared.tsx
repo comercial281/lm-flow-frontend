@@ -18,9 +18,10 @@ import { abasVisiveis } from '@/features/siteBuilder/public/vitrines';
 import { seloDaFase } from '@/features/properties/listingKind';
 import { ORDENS, ROTULO_ORDEM, ehOrdem, type Ordem } from '@/features/siteBuilder/public/listaConfig';
 import {
-  CORES_DO_FUNDO, TEXTO_RODAPE_FABRICA, clarearAte, fontesDoSite, logoNaSuperficie, resolverAparencia, textoSobre,
+  CORES_DO_FUNDO, TEXTO_RODAPE_FABRICA, clarearAte, fontesDoSite, logoNaCapa, logoNaSuperficie, resolverAparencia, textoSobre,
   type Aparencia, type Superficie,
 } from '@/features/siteBuilder/public/aparenciaConfig';
+import { ATRIBUTO_DO_TOPO, useLogoPousado } from '@/features/siteBuilder/public/logoPousado';
 
 // Tipos e filtro moram em filtros.ts (sem ciclo com vitrines.ts); reexportados aqui.
 export { filterProperties };
@@ -875,6 +876,16 @@ function TopoCompleto({ site, tenant, onHome = false, abas }: PropsDaMoldura) {
   // Sobre a capa, sem logo clara, a normal vira branca (o de sempre).
   const filtroDaLogo = floating && !logo.clara ? 'brightness-0 invert' : '';
 
+  // Logo em destaque na capa (Aparência): menu no meio do topo em todas as
+  // páginas e, na home, o logo do topo só aparece quando o da capa pousa nele.
+  // Sem a escolha, nenhuma classe nem atributo muda (o DOM de sempre).
+  const destaque = logoNaCapa(ap, site.branding?.logo_url);
+  const pousado = useLogoPousado(destaque && onHome);
+  const logoEsperando = destaque && onHome && !pousado;
+  const pousoCls = destaque
+    ? ` transition-[opacity,transform] duration-300 motion-reduce:transition-none${logoEsperando ? ' translate-y-3 opacity-0' : ''}`
+    : '';
+
   // Menu em maiúsculas (Aparência): caixa alta, espaçado e 13px no lugar dos 14px.
   const desktopCls = ap.menu_style === 'caps' ? roupa.link.replace('text-[14px]', 'text-[13px] uppercase tracking-[0.14em]') : roupa.link;
   const mobileCls = 'block py-2.5 text-[15px] font-medium text-neutral-700';
@@ -893,7 +904,7 @@ function TopoCompleto({ site, tenant, onHome = false, abas }: PropsDaMoldura) {
           continua flutuando ao rolar, só trocando de roupa. Trocando de fora do
           fluxo para dentro dele na primeira rolagem, a página inteira saltava
           para baixo a altura do cabeçalho. */}
-      <div className={onHome ? 'fixed inset-x-0 top-0 z-40' : 'sticky top-0 z-40'}>
+      <div className={onHome ? 'fixed inset-x-0 top-0 z-40' : 'sticky top-0 z-40'} {...(destaque && onHome ? { [ATRIBUTO_DO_TOPO]: '' } : {})}>
         <FaixaDePrevia site={site} />
         <header className={`border-b transition-colors duration-300 ${roupa.header}`}>
           {/* Logo maior a pedido do dono (2026-09-16): 56px de altura no
@@ -902,13 +913,16 @@ function TopoCompleto({ site, tenant, onHome = false, abas }: PropsDaMoldura) {
               ganho no padding do topo — o cabeçalho FLUTUA na home, então o
               título não desce sozinho. Logo horizontal bate primeiro no max-w,
               por isso a largura sobe na mesma proporção (190 → 260). */}
-          <div className="mx-auto flex h-[72px] max-w-6xl items-center justify-between gap-4 px-4 sm:h-[84px] sm:px-6">
-            <Link to={caminhoDoSite(ctx, '/')} className="flex items-center gap-2.5">
+          {/* Com o logo em destaque, o topo vira três colunas no computador
+              (logo | menu | botões) pra o menu ficar no meio de verdade. */}
+          <div className={`mx-auto flex h-[72px] max-w-6xl items-center justify-between gap-4 px-4 sm:h-[84px] sm:px-6${destaque ? ' lg:grid lg:grid-cols-[1fr_auto_1fr]' : ''}`}>
+            <Link to={caminhoDoSite(ctx, '/')} className={`flex items-center gap-2.5${destaque ? ' justify-self-start' : ''}`}
+              {...(logoEsperando ? { 'aria-hidden': true, tabIndex: -1 } : {})}>
               {logo.url ? (
                 <img
                   src={logo.url}
                   alt={site.name || 'Portal'}
-                  className={`h-12 w-auto max-w-[200px] object-contain sm:h-14 sm:max-w-[260px] ${filtroDaLogo}`}
+                  className={`h-12 w-auto max-w-[200px] object-contain sm:h-14 sm:max-w-[260px] ${filtroDaLogo}${pousoCls}`}
                 />
               ) : (
                 <span className={`font-[var(--display)] text-xl font-semibold tracking-tight ${roupa.nome}`}>
@@ -921,7 +935,7 @@ function TopoCompleto({ site, tenant, onHome = false, abas }: PropsDaMoldura) {
               {nav.map(l => <LinkDoMenuEl key={l.chave} l={l} cls={desktopCls} />)}
             </nav>
 
-            <div className="flex items-center gap-2">
+            <div className={`flex items-center gap-2${destaque ? ' lg:justify-self-end' : ''}`}>
               {site.translate?.enabled && <PortalTranslate languages={site.translate.languages ?? []} />}
               {waHref && (
                 <a
