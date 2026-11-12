@@ -15,6 +15,7 @@ export type LayoutDoRodape = 'columns' | 'compact';
 export type EstiloDoMenu = 'normal' | 'caps';
 export type LayoutDaCapa = 'photo' | 'split';
 export type EstiloDoCartao = 'standard' | 'large';
+export type PosicaoDoLogo = 'header' | 'hero';
 
 export const FUNDOS: Fundo[] = ['light', 'dark'];
 export const ESTILOS_DO_TOPO: EstiloDoTopo[] = ['transparent', 'brand', 'white'];
@@ -24,6 +25,7 @@ export const LAYOUTS_DO_RODAPE: LayoutDoRodape[] = ['columns', 'compact'];
 export const ESTILOS_DO_MENU: EstiloDoMenu[] = ['normal', 'caps'];
 export const LAYOUTS_DA_CAPA: LayoutDaCapa[] = ['photo', 'split'];
 export const ESTILOS_DO_CARTAO: EstiloDoCartao[] = ['standard', 'large'];
+export const POSICOES_DO_LOGO: PosicaoDoLogo[] = ['header', 'hero'];
 
 export interface Aparencia {
   background: Fundo;
@@ -45,6 +47,12 @@ export interface Aparencia {
   hero_layout: LayoutDaCapa;
   /** Cartões das vitrines: `large` = duas colunas, foto maior e título maior. */
   card_style: EstiloDoCartao;
+  /**
+   * Logo na home: `hero` = grande ao lado do título da capa, com o menu no
+   * meio do topo; ao rolar, ele pousa no topo. Só vale na capa sobre a foto
+   * (`logoNaCapa`). `header` = no topo, o de sempre.
+   */
+  logo_position: PosicaoDoLogo;
 }
 
 export const FILTRO_FABRICA = 45;
@@ -73,6 +81,7 @@ export const APARENCIA_FABRICA: Aparencia = {
   menu_style: 'normal',
   hero_layout: 'photo',
   card_style: 'standard',
+  logo_position: 'header',
 };
 
 const umDe = <T extends string>(lista: T[], v: unknown, padrao: T): T =>
@@ -99,7 +108,18 @@ export function resolverAparencia(raw: unknown): Aparencia {
     menu_style: umDe(ESTILOS_DO_MENU, r.menu_style, APARENCIA_FABRICA.menu_style),
     hero_layout: umDe(LAYOUTS_DA_CAPA, r.hero_layout, APARENCIA_FABRICA.hero_layout),
     card_style: umDe(ESTILOS_DO_CARTAO, r.card_style, APARENCIA_FABRICA.card_style),
+    logo_position: umDe(POSICOES_DO_LOGO, r.logo_position, APARENCIA_FABRICA.logo_position),
   };
+}
+
+/**
+ * O logo vai em destaque na capa? Só com a escolha `hero`, a capa sobre a foto
+ * (na dividida o lado direito já é a foto) e um logo enviado (sem logo o topo
+ * mostra o nome, como sempre). Topo e capa perguntam AQUI: duas regras fariam
+ * o logo sumir dos dois lugares ou aparecer nos dois.
+ */
+export function logoNaCapa(ap: Aparencia, logoUrl: string | null | undefined): boolean {
+  return ap.logo_position === 'hero' && ap.hero_layout !== 'split' && !!logoUrl;
 }
 
 /* ── Capa ──────────────────────────────────────────────────────────────────── */

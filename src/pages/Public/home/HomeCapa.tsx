@@ -7,7 +7,8 @@ import { faixasDePreco, precoDaFaixa } from '@/features/siteBuilder/public/faixa
 import { FASES_DO_PUBLICO } from '@/features/properties/listingKind';
 import { caminhoDoSite } from '@/features/siteBuilder/public/dominioDoSite';
 import { useCtxDoSite } from '@/features/siteBuilder/public/useTenantDoSite';
-import { filtroDaCapa, resolverAparencia } from '@/features/siteBuilder/public/aparenciaConfig';
+import { filtroDaCapa, logoNaCapa, logoNaSuperficie, resolverAparencia } from '@/features/siteBuilder/public/aparenciaConfig';
+import { ATRIBUTO_DO_LOGO_DA_CAPA, useLogoPousado } from '@/features/siteBuilder/public/logoPousado';
 
 /* ────────────────────────────────────────────────────────────────────────────
    Capa da página inicial: foto/vídeo, título, subtítulo e a busca rápida.
@@ -91,6 +92,17 @@ export default function HomeCapa({ site, home, items, tenant, abas, cities, hood
   // escuro sobe ou desce com `hero_overlay` (45 = o degradê de sempre).
   const ap = resolverAparencia(site.appearance);
   const telaCheia = ap.hero_height === 'full';
+
+  // Logo em destaque (Aparência › Logo na página inicial): grande ao lado do
+  // título no computador, em cima dele no celular. Vai sobre a foto, então
+  // segue a regra do topo sobre a capa: a logo clara, ou a normal em branco.
+  // Quando encosta no topo, some daqui e aparece lá (`useLogoPousado`).
+  const destaque = logoNaCapa(ap, site.branding?.logo_url);
+  const pousado = useLogoPousado(destaque);
+  const logoDaCapa = destaque ? logoNaSuperficie(site.branding?.logo_url, ap, 'foto') : null;
+  const logoCls = logoDaCapa
+    ? `object-contain transition-opacity duration-300 motion-reduce:transition-none${logoDaCapa.clara ? '' : ' brightness-0 invert'}${pousado ? ' opacity-0' : ''}`
+    : '';
 
   // Foto ou vídeo do banner e a busca: os mesmos nas duas capas.
   const midia = site.hero?.video_url ? (
@@ -183,10 +195,30 @@ export default function HomeCapa({ site, home, items, tenant, abas, cities, hood
       {/* pt maior: o cabeçalho FLUTUA sobre a capa (ele sai do fluxo), então o
           título precisa do espaço dele de volta. */}
       <div className={`relative mx-auto max-w-6xl px-4 pb-8 pt-32 sm:px-6 sm:pt-40 md:pb-16 md:pt-44${telaCheia ? ' w-full' : ''}`}>
-        <p className="text-[13px] font-semibold uppercase tracking-[0.2em] text-white/80">{site.name || 'Portal Imobiliário'}</p>
-        <h1 className="mt-3 max-w-2xl font-[var(--display)] text-4xl font-semibold leading-[1.05] text-white sm:text-5xl md:text-6xl">
-          {titulo}
-        </h1>
+        {logoDaCapa?.url ? (
+          <>
+            {/* O nome em cima do título sai: o logo já diz quem é. */}
+            <img {...{ [ATRIBUTO_DO_LOGO_DA_CAPA]: '' }} src={logoDaCapa.url} alt={site.name || 'Portal'}
+              className={`mb-6 h-20 w-auto max-w-[75%] object-left sm:h-24 lg:hidden ${logoCls}`} />
+            {/* Computador: o logo do lado direito, com a altura das duas linhas
+                do título (60px × 1,05 × 2 = 126px), centrado nele e encostado
+                na borda direita, a mesma da busca. Logo comprido para no max-w. */}
+            <div className="lg:flex lg:items-center lg:justify-between lg:gap-10">
+              <h1 className="max-w-2xl font-[var(--display)] text-4xl font-semibold leading-[1.05] text-white sm:text-5xl md:text-6xl">
+                {titulo}
+              </h1>
+              <img {...{ [ATRIBUTO_DO_LOGO_DA_CAPA]: '' }} src={logoDaCapa.url} alt={site.name || 'Portal'}
+                className={`hidden h-[126px] w-auto max-w-[420px] shrink-0 object-right lg:block ${logoCls}`} />
+            </div>
+          </>
+        ) : (
+          <>
+            <p className="text-[13px] font-semibold uppercase tracking-[0.2em] text-white/80">{site.name || 'Portal Imobiliário'}</p>
+            <h1 className="mt-3 max-w-2xl font-[var(--display)] text-4xl font-semibold leading-[1.05] text-white sm:text-5xl md:text-6xl">
+              {titulo}
+            </h1>
+          </>
+        )}
         <p className="mt-4 max-w-xl text-[15px] leading-relaxed text-white/85 sm:text-base">{subtitulo}</p>
 
         {busca}

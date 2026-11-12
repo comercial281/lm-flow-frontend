@@ -541,6 +541,84 @@ describe('capa dividida', () => {
   });
 });
 
+describe('logo em destaque na capa', () => {
+  const hero = (extra: Partial<Aparencia> = {}, site: Partial<SiteInfo> = {}) => comAp({ logo_position: 'hero', ...extra }, site);
+  // Um logo da capa de mentira, com a posição na tela que o teste quiser (o jsdom não desenha).
+  const logoDaCapaEm = (top: number) => {
+    const el = document.createElement('div');
+    el.setAttribute('data-logo-da-capa', '');
+    el.getBoundingClientRect = () => ({ top, bottom: top + 126, height: 126, left: 0, right: 0, width: 0, x: 0, y: top, toJSON: () => ({}) });
+    document.body.appendChild(el);
+    return el;
+  };
+  afterEach(() => { document.querySelectorAll('[data-logo-da-capa]').forEach(el => el.remove()); });
+
+  it('capa: o logo grande ao lado do título (computador) e em cima dele (celular), sem o nome em cima', async () => {
+    const s = (await capa(hero())).querySelector('section')!;
+    const logos = [...s.querySelectorAll<HTMLImageElement>('img[data-logo-da-capa]')];
+    expect(logos.map(l => l.getAttribute('src'))).toEqual([LOGO, LOGO]);
+    const [celular, computador] = logos;
+    expect(celular).toHaveClass('h-20', 'lg:hidden');
+    expect(computador).toHaveClass('hidden', 'lg:block', 'h-[126px]', 'max-w-[420px]', 'object-right');
+    // Lado a lado com o título, centrado nele, no computador.
+    const linha = computador.parentElement!;
+    expect(linha).toHaveClass('lg:flex', 'lg:items-center', 'lg:justify-between');
+    expect(within(linha).getByRole('heading', { level: 1 })).toHaveTextContent('O imóvel certo pra sua próxima fase.');
+    expect(within(s).queryByText('Imob Teste')).toBeNull();
+  });
+
+  it('capa: sobre a foto vale a logo clara; sem ela, a normal em branco (como o topo)', async () => {
+    const comClara = (await capa(hero({ logo_light_url: CLARA }))).querySelector('img[data-logo-da-capa]')!;
+    expect(comClara.getAttribute('src')).toBe(CLARA);
+    expect(comClara.className).not.toContain('invert');
+    cleanup();
+    expect((await capa(hero())).querySelector('img[data-logo-da-capa]')!.className).toContain('brightness-0 invert');
+  });
+
+  it('capa: sem logo enviado ou com a capa dividida, a capa de sempre', async () => {
+    expect(await html(capa(hero({}, { branding: { primary_color: '#0E7C5A' } }))))
+      .toBe(await html(capa(comAp({}, { branding: { primary_color: '#0E7C5A' } }))));
+    expect((await capa(hero({ hero_layout: 'split' }))).querySelector('[data-logo-da-capa]')).toBeNull();
+  });
+
+  it('topo: menu no meio (três colunas no computador) em todas as páginas', async () => {
+    const c = await topo(hero());
+    const linha = c.querySelector('header > div')!;
+    expect(linha).toHaveClass('lg:grid', 'lg:grid-cols-[1fr_auto_1fr]');
+    expect(c.querySelector('header img')!.className).not.toContain('opacity-0');
+    cleanup();
+    expect((await topo(comAp({}))).querySelector('header > div')!.className).not.toContain('lg:grid');
+  });
+
+  it('topo na home: esconde o logo enquanto o da capa está à vista e mostra quando ele pousa', async () => {
+    const logoDaCapa = logoDaCapaEm(300);
+    const c = await topo(hero(), true);
+    const img = c.querySelector('header img')!;
+    const link = img.closest('a')!;
+    expect(img).toHaveClass('opacity-0', 'translate-y-3');
+    expect(link.getAttribute('aria-hidden')).toBe('true');
+    expect(link.getAttribute('tabindex')).toBe('-1');
+
+    logoDaCapa.getBoundingClientRect = () => ({ top: 4, bottom: 130, height: 126, left: 0, right: 0, width: 0, x: 0, y: 4, toJSON: () => ({}) });
+    rolar(400);
+    expect(img).not.toHaveClass('opacity-0');
+    expect(link.getAttribute('aria-hidden')).toBeNull();
+  });
+
+  it('capa: o logo some quando pousa no topo', async () => {
+    const s = (await capa(hero())).querySelector('section')!;
+    // No jsdom os logos não têm tamanho: nenhum à vista conta como pousado.
+    expect(s.querySelector('img[data-logo-da-capa]')).toHaveClass('opacity-0');
+  });
+
+  it('com a capa dividida, o topo é o de sempre na home (o logo continua lá)', async () => {
+    logoDaCapaEm(300);
+    const c = await topo(hero({ hero_layout: 'split' }), true);
+    expect(c.querySelector('header img')!.className).not.toContain('opacity-0');
+    expect(c.querySelector('header > div')!.className).not.toContain('lg:grid');
+  });
+});
+
 describe('cartões grandes nas vitrines', () => {
   const imovel = (code: string, o: Partial<PortalProperty> = {}): PortalProperty => ({
     id: code, code, title: `Imóvel ${code}`, transaction_type: 'sale', property_type: 'apartment', listing_kind: 'resale',

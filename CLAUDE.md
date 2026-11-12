@@ -11212,3 +11212,60 @@ Relato da Moeda Forte: a seção mostrava sempre os mesmos 3 imóveis, sem rela�
 - **Candidatos:** mesmo bairro (até 100), mesmo tipo na cidade (até 100, pro galpão antigo não sumir no meio de centenas de apartamentos), resto da cidade (até 200); se faltar, qualquer cidade. A pontuação lê só as colunas que usa; completo e com fotos só os escolhidos.
 - **Tela:** pede `/similar?limit=3`; servidor velho (sem a rota) ou erro → a regra antiga da cidade, sem quebrar. Manutenção e caixinha desligada continuam sem pedir nada.
 - Frase no Personalizar › Página do imóvel: "Até 3 imóveis parecidos com este no fim da página: mesma finalidade, de preferência mesmo tipo, bairro e faixa de preço."
+
+## Site: logo em destaque na capa (12/11/2026)
+
+Pedido do dono do produto, olhando o site da Moeda Forte: o logo (selo redondo
+com o nome ao lado) ficava miúdo no topo, com 56px de altura, e o nome não se
+lia. Ele propôs tirar o logo do canto, centralizar o menu e pôr o logo grande à
+direita do título da capa — e, ao rolar, o logo subir pro topo.
+
+O que aparece na tela, em *Site Builder › Aparência*, no bloco novo **Logo na
+página inicial** (logo abaixo de *Topo do site*):
+
+- **No topo** (o de sempre) e **Em destaque na capa**.
+- Em destaque, no computador: o logo do lado direito do título, com a altura das
+  duas linhas dele, centrado nele e encostado na mesma borda da busca e do
+  WhatsApp. O nome pequeno acima do título sai (o logo já diz quem é). O menu do
+  topo vai pro meio, em todas as páginas.
+- No celular: o logo em cima do título, com 80px.
+- **Ao rolar, o logo pousa no topo**: sobe junto com a página e, quando encosta
+  na barra, some da capa e aparece no canto do topo (entrando de baixo pra
+  cima). Quem pede pra reduzir animação vê a troca sem animação.
+- Nas outras páginas (ficha do imóvel, busca) o logo fica no topo, como sempre.
+- Avisos no bloco: com a capa dividida (modelos Editorial e Popular) o logo
+  continua no topo; sem logo enviado, o topo mostra o nome.
+
+Decisões (não reabrir sem o dono pedir):
+
+- **O logo não "voa" da capa até o topo.** Testado na prévia: no caminho da
+  direita pra esquerda ele passa por cima do menu ou do título. A troca é no
+  ponto de contato (pouso), não um trajeto.
+- **Alinhamento é com o TÍTULO**, não com o bloco título + frase: o dono apontou
+  que o logo centrado no bloco ficava desalinhado do título.
+- **É escolha da Aparência, não um modelo.** Os modelos mexem em fonte, fundo e
+  capa; esta escolha mexe só no lugar do logo e convive com qualquer um. Nasce
+  em *No topo*: nenhum site muda sem o gestor escolher.
+- **Sobre a foto vale a regra do topo transparente**: a logo clara, ou a normal
+  em branco. Um logo redondo colorido sem logo clara vira silhueta branca — é a
+  mesma regra de sempre, e o bloco diz isso.
+
+Armadilhas:
+
+1. **Topo e capa perguntam no MESMO lugar** se o logo está em destaque
+   (`logoNaCapa`, em `aparenciaConfig.ts`) e se ele já pousou (`useLogoPousado`,
+   em `logoPousado.ts`). Duas regras fariam o logo sumir dos dois lugares ou
+   aparecer nos dois.
+2. **Sem a escolha, o DOM do topo e da capa é o de sempre**, classe por classe
+   (atributo de pouso, grade de três colunas e transição só existem com o
+   destaque). O `molduraAntesDoC3.spec` e o "fábrica explícita = nenhuma" do
+   `aparenciaNoSite.spec` seguram isso.
+3. **A altura de 126px do logo no computador é a de duas linhas do título**
+   (60px × 1,05 × 2). Mudou o tamanho do título da capa, muda a altura do logo.
+4. **Logo da capa fora da tela conta como pousado** (o topo mostra o logo): o
+   site nunca fica sem marca se a capa não montar.
+5. **A metade do backend vem PRIMEIRO** (`lm-flow`, `saas-multitenant`):
+   `logo_position` no `Sites::AppearanceConfig` e no permit da aparência. Contra
+   o servidor antigo a escolha aparece, salva e volta pro topo no recarregar.
+6. **Não é `featureKey` nem `clientToggleKey`** — é configuração do site. Os
+   scanners do catálogo de funcionalidades não entram nesta história.
