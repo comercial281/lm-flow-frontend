@@ -1,14 +1,14 @@
 import { Link } from 'react-router-dom';
 import {
   CreditoDoRodape, I, Ic, LinkDoMenuEl, MarcaDoSite, linkDoWhatsApp, linksDoRodapeDeAntes, linksDoRodapeDoMenu,
-  onlyDigits, socialEntries, usePublishedArticlesExist, type PropsDaMoldura,
+  ICONE_DA_REDE, onlyDigits, socialEntries, tokensDoSite, usePublishedArticlesExist, type PropsDaMoldura,
 } from '../portalShared';
 import { TituloComDestaque } from '../TituloComDestaque';
 import { DESTAQUE_SOBRE_A_COR } from './destaqueModerno';
 import { itensDoMenu, menuPersonalizado } from '@/features/siteBuilder/public/menuConfig';
 import { caminhoDoSite } from '@/features/siteBuilder/public/dominioDoSite';
 import { useCtxDoSite } from '@/features/siteBuilder/public/useTenantDoSite';
-import { logoNaSuperficie, resolverAparencia, TEXTO_RODAPE_FABRICA } from '@/features/siteBuilder/public/aparenciaConfig';
+import { logoNaSuperficie, resolverAparencia, textoSobre, TEXTO_RODAPE_FABRICA } from '@/features/siteBuilder/public/aparenciaConfig';
 
 /* ────────────────────────────────────────────────────────────────────────────
    Rodapé do Moderno (spec 7, "Rodapé"; protótipo `footer`, `.f-grid`, `.say`).
@@ -33,16 +33,18 @@ export default function RodapeModerno({ site, tenant, onHome = false, abas }: Pr
   const hasBlog = usePublishedArticlesExist(tenant);
   const ctx = useCtxDoSite(tenant);
   const ap = resolverAparencia(site.appearance);
-  const logo = logoNaSuperficie(site.branding?.logo_url, ap, 'marca');
+  const brand = tokensDoSite(site).brand;
+  const logo = logoNaSuperficie(site.branding?.logo_url, ap, 'marca', brand);
   const frase = ap.footer_text ?? TEXTO_RODAPE_FABRICA;
   const waHref = linkDoWhatsApp(site.contact?.whatsapp);
   const redes = socialEntries(site);
   const compacto = ap.footer_layout === 'compact';
   const personalizado = menuPersonalizado(site);
-  const { imoveis, institucional } = personalizado
+  const { imoveis, institucional, todos } = personalizado
     ? linksDoRodapeDoMenu(itensDoMenu(site, abas, hasBlog, { ctx, onHome }))
     : linksDoRodapeDeAntes(site, abas, hasBlog, ctx, onHome);
-  const filtroDaLogo = logo.clara ? '' : 'brightness-0 invert';
+  // Logo normal vira branca só sobre cor principal escura.
+  const filtroDaLogo = logo.clara || textoSobre(brand) !== '#FFFFFF' ? '' : 'brightness-0 invert';
 
   const marca = (
     <Link to={caminhoDoSite(ctx, '/')} className="inline-block">
@@ -61,9 +63,9 @@ export default function RodapeModerno({ site, tenant, onHome = false, abas }: Pr
   const redesEl = (redes.length > 0 || (compacto && waHref)) && (
     <div className="flex flex-wrap gap-2">
       {redes.map(sn => (
-        <a key={sn.key} href={sn.url} target="_blank" rel="noreferrer" aria-label={sn.label}
-          className="inline-flex h-9 items-center justify-center rounded-full border border-[rgba(255,255,255,0.28)] px-3 text-[12px] font-medium text-white transition-colors hover:bg-[rgba(255,255,255,0.14)]">
-          {sn.label}
+        <a key={sn.key} href={sn.url} target="_blank" rel="noreferrer" aria-label={sn.label} title={sn.label}
+          className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[rgba(255,255,255,0.28)] text-white transition-colors hover:bg-[rgba(255,255,255,0.14)]">
+          <Ic d={ICONE_DA_REDE[sn.key] ?? I.link} s={15} />
         </a>
       ))}
       {compacto && waHref && (
@@ -89,7 +91,9 @@ export default function RodapeModerno({ site, tenant, onHome = false, abas }: Pr
       {compacto ? (
         <div className="flex flex-wrap items-center justify-between gap-5">
           {marca}
-          {fraseEl}
+          <nav aria-label="Links do rodapé" className="flex flex-1 flex-wrap items-center gap-x-5 gap-y-2">
+            {todos.map(l => <LinkDoMenuEl key={l.chave} l={l} cls={LINK} />)}
+          </nav>
           {redesEl}
         </div>
       ) : (
@@ -129,7 +133,8 @@ export default function RodapeModerno({ site, tenant, onHome = false, abas }: Pr
         </div>
       )}
 
-      <div className={`flex flex-wrap justify-between gap-4 border-t border-[rgba(255,255,255,0.14)] pt-[18px] text-[12px] ${compacto ? 'mt-6' : 'mt-11'}`}>
+      {compacto && <div className="mt-5">{fraseEl}</div>}
+      <div className={`flex flex-wrap justify-between gap-4 border-t border-[rgba(255,255,255,0.14)] pt-[18px] text-[12px] ${compacto ? 'mt-4' : 'mt-11'}`}>
         <span><CreditoDoRodape nome={site.name} creci={site.creci} /></span>
       </div>
     </footer>

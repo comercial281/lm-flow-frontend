@@ -612,7 +612,7 @@ export function socialEntries(site: SiteInfo): { key: string; label: string; url
 }
 
 /** Ícone de cada rede na faixa de cima "só ícones"; rede sem ícone próprio usa o de link. */
-const ICONE_DA_REDE: Record<string, string> = {
+export const ICONE_DA_REDE: Record<string, string> = {
   instagram: I.instagram, facebook: I.facebook, youtube: I.youtube, linkedin: I.linkedin, tiktok: I.tiktok,
 };
 

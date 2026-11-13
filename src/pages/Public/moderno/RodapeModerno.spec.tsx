@@ -1,4 +1,4 @@
-import { cleanup, render } from '@testing-library/react';
+import { cleanup, render, within } from '@testing-library/react';
 import { act } from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -57,19 +57,34 @@ describe('RodapeModerno', () => {
     const c = await rodape(moderno({ logo_light_url: LOGO_CLARA }));
     expect(raiz(c)!.querySelector(`img[src="${LOGO_CLARA}"]`)).toBeTruthy();
     expect(raiz(c)!.querySelector('nav[aria-label="Links do rodapé"]')).toBeTruthy();
-    expect(raiz(c)!.querySelector('a[href="https://instagram.com/imob"]')).toBeTruthy();
+    const ig = within(raiz(c)!).getByRole('link', { name: 'Instagram' });
+    expect(ig.getAttribute('href')).toBe('https://instagram.com/imob');
+    expect(ig.getAttribute('title')).toBe('Instagram');
+    expect(ig.querySelector('svg')).toBeTruthy();
     expect(raiz(c)!.querySelector('a[href^="tel:"]')).toHaveTextContent('(11) 3333-4444');
     expect(raiz(c)!.querySelector('a[href^="mailto:"]')).toHaveTextContent('contato@imob.com.br');
     expect(raiz(c)!.textContent).toContain('J-34.512');
     expect(raiz(c)!.textContent).toContain('LM Flow');
   });
 
-  it('compacto: sem as colunas, com a frase e o crédito', async () => {
+  it('compacto: os links na mesma faixa, sem o layout de colunas, com a frase e o crédito', async () => {
     const c = await rodape(moderno({ footer_layout: 'compact' }));
-    expect(raiz(c)!.querySelector('nav[aria-label="Links do rodapé"]')).toBeNull();
-    expect(raiz(c)!.querySelector('a[href^="tel:"]')).toBeNull();
+    expect(raiz(c)!.getAttribute('data-rodape')).toBe('compact');
+    const nav = raiz(c)!.querySelector('nav[aria-label="Links do rodapé"]')!;
+    expect(nav.querySelectorAll('a').length).toBeGreaterThan(0);
+    expect(raiz(c)!.querySelector('.grid')).toBeNull();
+    expect(raiz(c)!.querySelector('h4')).toBeNull();
     expect(raiz(c)!.textContent).toContain('Seu portal de imóveis');
     expect(raiz(c)!.textContent).toContain('J-34.512');
+  });
+
+  it('logo pela cor principal: clara sobre cor escura, normal sobre cor clara', async () => {
+    const escura = await rodape(moderno({ logo_light_url: LOGO_CLARA }));
+    expect(raiz(escura)!.querySelector(`img[src="${LOGO_CLARA}"]`)).toBeTruthy();
+    cleanup();
+    const clara = await rodape(moderno({ logo_light_url: LOGO_CLARA }, { branding: { logo_url: LOGO, primary_color: '#FDE899', accent_color: '#F59E0B' } }));
+    expect(raiz(clara)!.querySelector(`img[src="${LOGO}"]`)).toBeTruthy();
+    expect(raiz(clara)!.querySelector(`img[src="${LOGO_CLARA}"]`)).toBeNull();
   });
 
   it('Clássico e manutenção: sem o rodapé do Moderno', async () => {
