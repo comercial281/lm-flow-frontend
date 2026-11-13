@@ -464,7 +464,7 @@ describe('fonte dos títulos', () => {
     expect(t.cssVars).toMatchObject({ '--display': 'Playfair Display, Georgia, serif', fontFamily: 'DM Sans, system-ui, sans-serif' });
     const paginas = readdirSync(__dirname).filter(n => /\.tsx$/.test(n) && !/\.spec\./.test(n) && !/^Landing/.test(n));
     const comFonte = paginas.filter(n => readFileSync(join(__dirname, n), 'utf8').includes('fontHrefs'));
-    expect(comFonte.sort()).toEqual(['ImovelPublicPage.tsx', 'PaginaManutencao.tsx', 'PortalAnunciePage.tsx', 'PortalArticlePage.tsx',
+    expect(comFonte.sort()).toEqual(['ImovelPublicPage.tsx', 'PaginaManutencao.tsx', 'PaginaNaoEncontrada.tsx', 'PortalAnunciePage.tsx', 'PortalArticlePage.tsx',
       'PortalBlogPage.tsx', 'PortalCustomPage.tsx', 'PortalFinanciamentoPage.tsx', 'PortalHomePage.tsx', 'PortalSearchPage.tsx', 'portalShared.tsx']);
     for (const n of paginas) expect(readFileSync(join(__dirname, n), 'utf8'), n).not.toMatch(/href=\{fontHref\}/);
   });
