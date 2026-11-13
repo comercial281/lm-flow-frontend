@@ -85,6 +85,9 @@ describe('RodapeModerno', () => {
     const clara = await rodape(moderno({ logo_light_url: LOGO_CLARA }, { branding: { logo_url: LOGO, primary_color: '#FDE899', accent_color: '#F59E0B' } }));
     expect(raiz(clara)!.querySelector(`img[src="${LOGO}"]`)).toBeTruthy();
     expect(raiz(clara)!.querySelector(`img[src="${LOGO_CLARA}"]`)).toBeNull();
+    // o texto do bloco segue a cor sobre a principal, não branco fixo
+    expect(raiz(clara)!.getAttribute('style')).toContain('color: var(--brand-ink)');
+    expect(raiz(clara)!.querySelector('p')!.className).not.toContain('text-white');
   });
 
   it('Clássico e manutenção: sem o rodapé do Moderno', async () => {

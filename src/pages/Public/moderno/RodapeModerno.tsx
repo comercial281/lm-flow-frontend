@@ -14,10 +14,11 @@ import { logoNaSuperficie, resolverAparencia, textoSobre, TEXTO_RODAPE_FABRICA }
    Rodapé do Moderno (spec 7, "Rodapé"; protótipo `footer`, `.f-grid`, `.say`).
    Bloco arredondado na cor principal, com a logo em marca d'água. Colunas ou
    uma linha (`footer_layout`). Os links são os mesmos do Clássico. Cores só
-   pelas variáveis do site; branco translúcido em rgba literal.
+   pelas variáveis do site: o texto do bloco é `--brand-ink` (branco ou tinta escura,
+   conforme a cor principal) e os tons mais suaves vêm de opacidade sobre ele.
 ──────────────────────────────────────────────────────────────────────────── */
 
-const LINK = 'text-[14px] text-[rgba(255,255,255,0.7)] transition-colors hover:text-white';
+const LINK = 'text-[14px] opacity-75 transition-opacity hover:opacity-100';
 const TITULO_COL = 'mb-3.5 mt-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--accent)]';
 
 function Coluna({ titulo, children }: { titulo: string; children: React.ReactNode }) {
@@ -51,12 +52,12 @@ export default function RodapeModerno({ site, tenant, onHome = false, abas }: Pr
       <MarcaDoSite
         site={site} logo={logo.url}
         logoCls={`h-10 w-auto max-w-[180px] object-contain ${filtroDaLogo}`}
-        nomeCls="font-[var(--display)] text-[18px] font-bold text-white"
+        nomeCls="font-[var(--display)] text-[18px] font-bold"
       />
     </Link>
   );
   const fraseEl = (
-    <p className={`font-[var(--display)] font-semibold text-white ${DESTAQUE_SOBRE_A_COR} ${ap.footer_text ? 'whitespace-pre-line' : ''} ${compacto ? 'text-[18px] leading-tight' : 'my-[18px] max-w-[15ch] text-[22px] leading-[1.2] tracking-[-0.02em]'}`}>
+    <p className={`font-[var(--display)] font-semibold ${DESTAQUE_SOBRE_A_COR} ${ap.footer_text ? 'whitespace-pre-line' : ''} ${compacto ? 'text-[18px] leading-tight' : 'my-[18px] max-w-[15ch] text-[22px] leading-[1.2] tracking-[-0.02em]'}`}>
       <TituloComDestaque texto={frase} modo={ap.heading_highlight} sobreEscuro />
     </p>
   );
@@ -64,7 +65,7 @@ export default function RodapeModerno({ site, tenant, onHome = false, abas }: Pr
     <div className="flex flex-wrap gap-2">
       {redes.map(sn => (
         <a key={sn.key} href={sn.url} target="_blank" rel="noreferrer" aria-label={sn.label} title={sn.label}
-          className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[rgba(255,255,255,0.28)] text-white transition-colors hover:bg-[rgba(255,255,255,0.14)]">
+          className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-current opacity-80 transition-opacity hover:opacity-100">
           <Ic d={ICONE_DA_REDE[sn.key] ?? I.link} s={15} />
         </a>
       ))}
@@ -80,8 +81,8 @@ export default function RodapeModerno({ site, tenant, onHome = false, abas }: Pr
   return (
     <footer
       data-estilo="moderno" data-rodape={compacto ? 'compact' : 'columns'}
-      className="relative isolate mx-auto my-4 w-[calc(100%-32px)] max-w-[1120px] overflow-hidden rounded-[28px] px-[22px] pb-6 pt-8 text-[rgba(255,255,255,0.7)] sm:px-[clamp(22px,5vw,64px)] sm:pt-14"
-      style={{ background: 'var(--brand)' }}
+      className="relative isolate mx-auto my-4 w-[calc(100%-32px)] max-w-[1120px] overflow-hidden rounded-[28px] px-[22px] pb-6 pt-8 sm:px-[clamp(22px,5vw,64px)] sm:pt-14"
+      style={{ background: 'var(--brand)', color: 'var(--brand-ink)' }}
     >
       {logo.url && (
         <img src={logo.url} alt="" aria-hidden="true"
@@ -134,7 +135,8 @@ export default function RodapeModerno({ site, tenant, onHome = false, abas }: Pr
       )}
 
       {compacto && <div className="mt-5">{fraseEl}</div>}
-      <div className={`flex flex-wrap justify-between gap-4 border-t border-[rgba(255,255,255,0.14)] pt-[18px] text-[12px] ${compacto ? 'mt-4' : 'mt-11'}`}>
+      <div aria-hidden="true" className={`h-px bg-current opacity-[0.16] ${compacto ? 'mt-4' : 'mt-11'}`} />
+      <div className={`flex flex-wrap justify-between gap-4 pt-[18px] text-[12px] opacity-75`}>
         <span><CreditoDoRodape nome={site.name} creci={site.creci} /></span>
       </div>
     </footer>

@@ -4,8 +4,8 @@
    global nem color-mix. A Instrument Serif só carrega com o itálico ligado
    (portalShared, fontHrefs). */
 
-/** Título sobre a cor principal: accent = o trecho na cor de destaque; itálico = serifada branca. */
+/** Título sobre a cor principal: accent = o trecho na cor de destaque; itálico = serifada na cor do texto do bloco. */
 export const DESTAQUE_SOBRE_A_COR =
   '[&_[data-destaque=accent]]:text-[var(--accent)] ' +
-  '[&_[data-destaque=italic]]:italic [&_[data-destaque=italic]]:font-normal [&_[data-destaque=italic]]:text-white ' +
+  '[&_[data-destaque=italic]]:italic [&_[data-destaque=italic]]:font-normal [&_[data-destaque=italic]]:text-[var(--brand-ink)] ' +
   '[&_[data-destaque=italic]]:[font-family:Instrument_Serif,Georgia,serif]';
