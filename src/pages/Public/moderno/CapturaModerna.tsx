@@ -147,8 +147,9 @@ export default function CapturaModerna({ site, wa, captura }: Props) {
   const comPainel = !!(waHref || telefone || email);
   return (
     <section id="contato" className={BLOCO}>
-      <div className={`${MIOLO} grid grid-cols-1 items-stretch gap-8 ${comPainel ? 'md:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]' : 'max-w-[720px]'}`}>
-        <div className="min-w-0">
+      <div className={`${MIOLO} grid grid-cols-1 items-stretch gap-8 ${comPainel ? 'md:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]' : ''}`}>
+        {/* Sem o painel, a coluna fica em até 720px, alinhada à esquerda como as outras seções. */}
+        <div className={`min-w-0 ${comPainel ? '' : 'max-w-[720px]'}`}>
           <h2 className={tituloDeSecao('text-[clamp(30px,3.8vw,46px)]')}><TituloComDestaque texto={TITULO} modo={modo} /></h2>
           <p className="mb-6 mt-3.5 max-w-[52ch] text-[14.5px] leading-relaxed text-[var(--m-text)]">{TEXTO}</p>
           <Formulario c={captura} />

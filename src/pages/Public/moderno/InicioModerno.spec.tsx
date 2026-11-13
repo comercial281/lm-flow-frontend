@@ -381,6 +381,15 @@ describe('Início do Moderno: "Não achou?"', () => {
     expect((fetch as unknown as ReturnType<typeof vi.fn>).mock.calls.some(([u]) => String(u).includes('/site/leads'))).toBe(false);
   });
 
+  it('sem nenhum contato no site: sem o painel, e o título e o formulário numa coluna de até 720px (não esticam até 1120px)', async () => {
+    await abrirHome(moderno({ contact: { whatsapp: '', phone: '', email: '' } } as SiteInfo), [imovel('R1')]);
+    const grade = document.getElementById('contato')!.firstElementChild as HTMLElement;
+    expect(grade.querySelector('aside')).toBeNull();
+    // Duas larguras máximas na mesma caixa: o Tailwind decide pela ordem do CSS e a de 1120px vencia.
+    expect(grade.className.match(/max-w-\[/g)).toHaveLength(1);
+    expect((grade.firstElementChild as HTMLElement).className).toContain('max-w-[720px]');
+  });
+
   it('sections.lead_capture desligado: sem o "Não achou?"', async () => {
     await abrirHome(moderno({ sections: { lead_capture: false } } as SiteInfo), [imovel('R1')]);
     expect(document.getElementById('contato')).toBeNull();
