@@ -11,13 +11,15 @@ interface Props {
   /** Enter sem item ativo, ou sair do campo. */
   onConfirmar?: () => void;
   className?: string;
+  /** Pra onde a lista abre: pra baixo (padrão) ou pra cima, quando o campo está no pé da tela (capa do Moderno). */
+  abrirPara?: 'baixo' | 'cima';
 }
 
 /**
  * Campo "Condomínio, bairro ou cidade": texto livre com sugestões (combobox).
  * Setas mudam o item ativo, Enter escolhe, Esc e clique fora fecham.
  */
-export default function CampoDeLugar({ items, tab, texto, onTexto, onEscolher, onConfirmar, className = '' }: Props) {
+export default function CampoDeLugar({ items, tab, texto, onTexto, onEscolher, onConfirmar, className = '', abrirPara = 'baixo' }: Props) {
   const id = useId();
   const raiz = useRef<HTMLDivElement>(null);
   const [aberto, setAberto] = useState(false);
@@ -47,8 +49,8 @@ export default function CampoDeLugar({ items, tab, texto, onTexto, onEscolher, o
       e.preventDefault();
       if (mostrando) setAtivo(a => (a <= 0 ? sugestoes.length - 1 : a - 1));
     } else if (e.key === 'Enter') {
-      e.preventDefault();
-      if (mostrando && ativo >= 0) escolher(sugestoes[ativo]);
+      if (mostrando && ativo >= 0) { e.preventDefault(); escolher(sugestoes[ativo]); }
+      // Sem item ativo o Enter segue para o formulário em volta (a busca da capa); a página de busca não tem formulário.
       else { setAberto(false); onConfirmar?.(); }
     } else if (e.key === 'Escape') {
       setAberto(false);
@@ -67,14 +69,14 @@ export default function CampoDeLugar({ items, tab, texto, onTexto, onEscolher, o
         type="text" role="combobox" aria-expanded={mostrando} aria-controls={`${id}-lista`} aria-autocomplete="list"
         aria-activedescendant={mostrando && ativo >= 0 ? idDe(ativo) : undefined}
         aria-label="Condomínio, bairro ou cidade" autoComplete="off"
-        value={texto} placeholder="Digite condomínio, bairro ou cidade"
+        value={texto} placeholder="Condomínio, bairro ou cidade"
         onChange={e => { onTexto(e.target.value); setAberto(true); }}
         onFocus={() => setAberto(true)}
         onKeyDown={aoTeclar}
         className="w-full rounded-xl border border-black/[0.08] bg-white py-3 pl-10 pr-3 text-[14px] outline-none focus:border-[var(--brand)]" />
       {mostrando && (
         <ul id={`${id}-lista`} role="listbox" aria-label="Sugestões"
-          className="absolute left-0 right-0 top-full z-30 mt-1 max-h-72 overflow-auto rounded-xl border border-black/[0.08] bg-white py-1 shadow-lg">
+          className={`absolute left-0 right-0 z-30 max-h-72 ${abrirPara === 'cima' ? 'bottom-full mb-2' : 'top-full mt-1'} overflow-auto rounded-xl border border-black/[0.08] bg-white py-1 shadow-lg`}>
           {sugestoes.map((s, i) => {
             const cabecalho = s.grupo !== grupoAnterior;
             grupoAnterior = s.grupo;

@@ -296,6 +296,13 @@ describe('Início do Moderno', () => {
     expect((await screen.findByTestId('busca')).textContent).toBe('?condominium=Collina');
   });
 
+  it('Enter no campo de lugar, só com texto digitado, faz a busca (place=…)', async () => {
+    await abrirHome(moderno({ home: { search: { fields: ['place'] } } } as SiteInfo), [imovel('R1')]);
+    const campo = screen.getByRole('combobox', { name: 'Condomínio, bairro ou cidade' });
+    await userEvent.type(campo, 'Centro{Enter}');
+    expect((await screen.findByTestId('busca')).textContent).toBe('?place=Centro');
+  });
+
   it('capa sobre a foto de ponta a ponta: sem recuo nem cantos, com a altura da tela em Tela cheia; o conteúdo na coluna da página', async () => {
     await abrirHome(moderno({}, { hero_height: 'full' }), [imovel('R1')]);
     let capa = document.querySelector<HTMLElement>('[data-capa-moderna]')!;

@@ -62,6 +62,7 @@ export default function BuscaModerna({ busca, abas, dividida = false }: { busca:
             // O campo de lugar já traz lupa e moldura: aqui só o texto, como os outros valores.
             <CampoDeLugar
               items={items} tab={tab} texto={valores.place ?? ''} onTexto={set('place')} onEscolher={escolherLugar}
+              abrirPara={caixinha ? 'baixo' : 'cima'}
               className="[&>span]:hidden [&_input]:truncate [&_input]:rounded-none [&_input]:border-0 [&_input]:bg-transparent [&_input]:p-0 [&_input]:pt-0.5 [&_input]:text-[14px] [&_input]:font-semibold [&_input]:text-[var(--m-head)] [&_input]:placeholder:font-normal [&_input]:placeholder:text-[var(--m-muted)]"
             />
           ) : (

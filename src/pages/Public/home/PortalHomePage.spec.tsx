@@ -1,4 +1,5 @@
 import { cleanup, fireEvent, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { SiteInfo } from '../portalShared';
 import { abrirHome, empreendimento, imovel } from './servidorDeTeste';
@@ -323,6 +324,13 @@ describe('PortalHomePage · rodapé', () => {
     fireEvent.click(await screen.findByRole('option', { name: /Collina/ }));
     fireEvent.click(screen.getByRole('button', { name: /Buscar/ }));
     expect((await screen.findByTestId('busca')).textContent).toBe('?condominium=Collina');
+  });
+
+  it('Enter no campo de lugar, só com texto digitado, faz a busca (place=…)', async () => {
+    await abrirHome({ home: { search: { fields: ['place'] } } }, [imovel('R1')]);
+    const campo = screen.getByRole('combobox', { name: 'Condomínio, bairro ou cidade' });
+    await userEvent.type(campo, 'Centro{Enter}');
+    expect((await screen.findByTestId('busca')).textContent).toBe('?place=Centro');
   });
 
   it('texto só digitado vai como place; trocar de aba limpa o lugar escolhido', async () => {

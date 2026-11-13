@@ -43,6 +43,22 @@ describe('CampoDeLugar', () => {
     expect(confirmar).toHaveBeenCalled();
   });
 
+  it('Enter sem item ativo não é engolido: o formulário em volta recebe o envio', async () => {
+    const user = userEvent.setup();
+    const enviar = vi.fn((e: React.FormEvent) => e.preventDefault());
+    render(<form onSubmit={enviar}><CampoDeLugar items={itens} tab="sale" texto="col" onTexto={vi.fn()} onEscolher={vi.fn()} /><button type="submit">ir</button></form>);
+    await user.click(screen.getByRole('combobox'));
+    await user.keyboard('{Enter}');
+    expect(enviar).toHaveBeenCalledTimes(1);
+  });
+
+  it('abrirPara="cima" abre a lista acima do campo', async () => {
+    const user = userEvent.setup();
+    render(<CampoDeLugar items={itens} tab="sale" texto="col" onTexto={vi.fn()} onEscolher={vi.fn()} abrirPara="cima" />);
+    await user.click(screen.getByRole('combobox'));
+    expect(screen.getByRole('listbox').className).toContain('bottom-full');
+  });
+
   it('clique fora fecha a lista', async () => {
     const user = userEvent.setup();
     render(<div><CampoDeLugar items={itens} tab="sale" texto="col" onTexto={vi.fn()} onEscolher={vi.fn()} /><button>fora</button></div>);

@@ -65,10 +65,12 @@ export default function HomeCapa({ site, home, items, tenant, abas, cities, hood
     <img src={fotoDaCapa(site, items)} alt="" className="h-full w-full object-cover" />
   );
 
-  // O lugar é texto com sugestões; os outros campos são listas.
+  // O lugar é texto com sugestões; os outros campos são listas. Sobre a foto a capa corta o que sai da
+  // borda (overflow-hidden; o markup dela é trava de teste), então a lista abre pra cima, sobre o título.
   const campo = (c: (typeof selects)[number]) => {
     if (c === 'place') {
-      return <CampoDeLugar key={c} items={items} tab={tab} texto={valores.place ?? ''} onTexto={set('place')} onEscolher={escolherLugar} />;
+      return <CampoDeLugar key={c} items={items} tab={tab} texto={valores.place ?? ''} onTexto={set('place')} onEscolher={escolherLugar}
+        abrirPara={ap.hero_layout === 'split' ? 'baixo' : 'cima'} />;
     }
     const o = opcoes[c];
     return <Select key={c} value={valores[c] ?? ''} onChange={set(c)} label={o.label} options={o.options} />;
