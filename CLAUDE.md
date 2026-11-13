@@ -11278,3 +11278,14 @@ Relato da Moeda Forte: quem clicava no WhatsApp da ficha do imóvel no site cheg
 - **Landing de anúncio:** os botões de WhatsApp da página e do obrigado por endereço próprio passam a abrir com "Olá! Vim pela página <endereço> e quero saber mais." (`whatsappDaLanding.ts`). Vai o **endereço (slug)**, não o nome: o nome é de bastidor ("LP BF v2"), pode repetir entre páginas e muda quando renomeiam; o endereço o lead já vê na barra, é único no site. Mudou a frase aqui, muda o `LANDING_RE` do servidor junto.
 - A frase da ficha do imóvel ("Olá! Tenho interesse no imóvel <código> — <título>.", `ImovelPublicPage.tsx`) **não pode mudar** sem mudar o `SITE_RE` do servidor: é por ela que o lead do site aparece.
 - Voltar só a tela é seguro (a opção some; IA com `mode: 'site'` gravado mostra o seletor vazio e segue valendo no servidor; a LP volta a abrir sem frase). Entra depois do backend #616.
+
+## Entrar do painel sem a sessão na URL (desde 2026-11-12)
+
+O **Entrar** do painel raiz abre o cliente em `/sso?code=<código>`. O código vale **uma vez e por 60 segundos**, é preso ao cliente e à pessoa, e a tela `/sso` (`SsoEntry`) troca ele pelo passe num POST (`ssoEntryService.exchange` → `POST /api/public/v1/sso_entry`, com `X-Tenant`). Antes o link levava a sessão inteira (`?token=`), que ficava no histórico do navegador e no log de acesso.
+
+- A tela tira `code`/`token` da barra (`history.replaceState`) antes de qualquer pedido e marca a página com `referrer: no-referrer`.
+- Código vencido, já usado ou de outro cliente: vai pro login, sem mensagem (o painel gera outro no próximo clique).
+- `?token=` (formato antigo) **ainda entra**, só pra janela do deploy e links abertos da versão anterior. Pode sair depois que o backend com `?code=` estiver no ar há um dia.
+- Quem usa: clicar em Entrar continua abrindo o cliente direto; se a aba demorar mais de 1 minuto pra abrir (ou o link for reaberto), cai no login e é só clicar em Entrar de novo.
+
+Não reabrir sem o dono pedir: a sessão não volta pra URL, nem no `#fragmento`.

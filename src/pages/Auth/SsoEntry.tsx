@@ -1,17 +1,53 @@
 import { useEffect } from 'react';
 import { useAuthStore } from '@/store/authStore';
+import { ssoEntryService } from '@/services/auth/ssoEntryService';
 
-// Entrada SSO: o super-admin abre /sso?token=<token> (gerado pelo painel raiz)
-// no subdomínio do cliente. Guarda o token, limpa a URL e recarrega logado.
+// Lê o que veio na URL e já tira da barra (histórico), antes de qualquer pedido.
+export function lerEntradaDaUrl(): { code: string | null; token: string | null } {
+  const params = new URLSearchParams(window.location.search);
+  const code = params.get('code');
+  const token = params.get('token');
+  if (code || token) window.history.replaceState(null, '', window.location.pathname);
+  return { code, token };
+}
+
+// Entrada pelo "Entrar" do painel raiz, no endereço do cliente.
+//
+// Desde 12/11/2026 (auditoria 3E-04) o painel manda /sso?code=<código>: um
+// código de uso único, de 60 s, que esta tela troca pelo passe num POST. O
+// passe nunca mais vai na URL. `?token=` (o formato antigo) ainda é aceito
+// enquanto existir link aberto da versão anterior do painel; sai depois.
 export default function SsoEntry() {
   useEffect(() => {
-    const token = new URLSearchParams(window.location.search).get('token');
-    if (token) {
-      useAuthStore.getState().setAccessToken(token); // persiste no localStorage
-      window.location.replace('/'); // recarrega limpo (tira o token da URL) — app valida e entra
+    // O endereço desta página não vai como Referer pra lugar nenhum.
+    const meta = document.createElement('meta');
+    meta.name = 'referrer';
+    meta.content = 'no-referrer';
+    document.head.appendChild(meta);
+
+    const { code, token } = lerEntradaDaUrl();
+    let ativo = true;
+
+    const entrar = (passe: string | null) => {
+      if (!ativo) return;
+      if (passe) {
+        useAuthStore.getState().setAccessToken(passe); // persiste no localStorage
+        window.location.replace('/'); // recarrega limpo — app valida e entra
+      } else {
+        window.location.replace('/login');
+      }
+    };
+
+    if (code) {
+      ssoEntryService.exchange(code).then(entrar);
     } else {
-      window.location.replace('/login');
+      entrar(token);
     }
+
+    return () => {
+      ativo = false;
+      meta.remove();
+    };
   }, []);
 
   return (
