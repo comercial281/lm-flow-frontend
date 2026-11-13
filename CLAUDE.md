@@ -6863,6 +6863,31 @@ Segunda parte do Moderno (spec `LM FLOW/specs/2026-11-13-modelo-site-moderno-des
 
 Testes: `moderno/CartaoClaro.spec.tsx`, `moderno/ImoveisModerno.spec.tsx`, `moderno/FichaModerna.spec.tsx`, `busca/useBuscaDosImoveis.spec.tsx`, `negritoNaDescricao.spec.ts`, e os de sempre (`PortalSearchPage.spec.tsx`, `ImovelPublicPage.spec.tsx`).
 
+## Modelo Moderno, parte (c) (13/11/2026)
+
+Última parte do Moderno (spec `LM FLOW/specs/2026-11-13-modelo-site-moderno-design.md`, seções 6.1, 7 e 8; plano `...-plano-frontend-c.md`). **O Moderno agora se escolhe na tela:** Meu site › Modelo do site tem o quarto cartão.
+
+**Site (com `style: modern`):**
+
+- **Financiamento:** cabeçalho em bloco na cor principal (título e intro), bancos em cartões claros com "Simular no site do banco" (mesmo link, mesma regra: só banco com link), texto de rodapé da página e "Ficou com dúvida na simulação?" com WhatsApp. Sem banco: o aviso de hoje.
+- **Anuncie:** à esquerda título, texto e o painel "Prefere conversar?" na cor principal (WhatsApp e telefone do site); à direita a ficha num cartão, nos dois passos ("O imóvel" e "Seus dados"), com rótulo ligado a cada campo. A lógica saiu pra `anuncie/useFichaDoAnuncie.ts` (Clássico sem mudança): mesmo envio só por e-mail (`/site/anuncie`), mesma validação, prévia sem envio e erro que mantém o que foi preenchido.
+- **Blog:** primeiro artigo em destaque (cartão inteiro clicável, foto ao lado do texto), os outros em grade de 3, "Carregar mais". **Artigo:** coluna de ~720px, capa arredondada, o mesmo HTML com estilos do Moderno (`ESTILO_DO_CORPO`), chamada "Gostou do conteúdo? Fale com a gente." na cor principal, "Imóveis em destaque" com o cartão claro e "Ver todos os artigos".
+- **Página própria:** coluna de leitura com o HTML do cliente (já sanitizado no servidor), "Voltar para o início".
+- **404 da lista** (`/imoveis/...` que não existe): "404" grande, título, texto, "Ver imóveis" e "Ir para o início". A 404 do domínio (`SiteDoDominio`, sem o site carregado) continua a de hoje.
+- **Manutenção:** fundo, cartão e tipo do Moderno; mesmo texto, contatos, título da aba e `noindex`.
+- `moderno/CascaModerna.tsx` dá fundo, fontes, topo e rodapé às páginas internas, com `data-pagina-moderna`.
+
+**Painel:**
+
+- `MODELOS_DO_SITE` tem o Moderno ("Capa de ponta a ponta, cartões de foto inteira e rodapé em bloco. Visual atual, fonte única.") e `MODELOS_DA_PREVIA` é a mesma lista. Miniatura própria (capa com topo em pílula, cartões de foto inteira, rodapé em bloco). Grade de 4 cartões no xl.
+- **Destaque nos títulos** (Aparência, `BlocoDestaqueNosTitulos`): Cor de destaque · Itálico · Nenhum. **Só aparece com o Moderno** (no Clássico o asterisco só some). Trocar ele não tira o "Em uso" do Moderno (`modeloAtual` ignora `heading_highlight`).
+- Ajuda do asterisco (`AJUDA_DO_DESTAQUE`: "Coloque uma palavra entre asteriscos pra destacar (vale no modelo Moderno).") no título da capa, das chamadas, do Como funciona, do Atendimento, na frase do rodapé e na descrição das vitrines.
+- `AnuncieModerno.tsx` entrou na lista `CAIXINHA_CRUA_PERMITIDA` do `conferir-padrao` (site público não carrega o Checkbox do app, mesma razão do Clássico).
+
+**Volta de versão:** voltar a tela tira o cartão Moderno do painel e as páginas internas voltam ao Clássico; quem já escolheu o Moderno continua com Início, Imóveis e ficha no Moderno (partes a e b) e o resto no Clássico até subir de novo.
+
+Testes: `moderno/PaginasModernas.spec.tsx` (as 7 páginas), `modelosDoSite.spec.ts`, `TelaModelo.spec.tsx`, `TelaAparencia.spec.tsx`, `telas/ajudaDoDestaque.spec.tsx`, e os de sempre (`PaginaManutencao.spec.tsx`, prévias, limite de envios).
+
 ## IA Vendedora · Configurar virou passo a passo (desde 2026-10-05)
 
 > Entrega 2 da refatoração da IA Vendedora. Spec: `LM FLOW/specs/2026-10-05-ia-vendedora-refatoracao-design.md`. Plano: `LM FLOW/plans/2026-10-05-ia-vendedora-entrega-2-passo-a-passo.md`. Servidor: PR #410 (`comercial281/lm-flow`, migration 303).
