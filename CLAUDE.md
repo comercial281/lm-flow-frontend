@@ -11319,3 +11319,13 @@ Armadilhas:
 
 1. **Rota pública nova que pode ser embutida** (como `/widget`): acrescentar na exceção do `source` da regra no `vercel.json` e no teste, senão ela não abre dentro do site do cliente.
 2. **Não voltar a desenhar HTML cru** nesses arquivos: `src/features/seguranca/htmlDaEquipe.source.spec.ts` quebra.
+
+## Formulário de quem já é lead vira nota no card (13/11/2026, backend #613)
+
+Envio do site público, da landing de anúncio ou de página de fora que cai num lead que **já existe** (mesmo telefone ou e-mail) não muda mais as respostas do formulário, o nome nem os campos do lead. O envio aparece no card como **nota**: "Novo envio pela página X em dd/mm (respostas não confirmadas pelo lead)", com as respostas e, se vieram diferentes, o nome e o e-mail informados. O corretor lê; a IA não. Roteamento, etiquetas, roleta e aviso ao corretor seguem iguais. Lead novo continua nascendo com as respostas.
+
+Por quê: o formulário é anônimo; com o telefone de um lead, qualquer pessoa trocava as respostas que a IA lê e podia fazer a IA repassar um golpe ("pague o sinal por Pix na chave X").
+
+Junto: a IA Vendedora e a Mensagem com IA não mandam chave Pix, CPF/CNPJ, conta, telefone, e-mail ou link que a imobiliária não deu (o link do imóvel e o que está no cadastro, nos documentos e na conversa passam). A IA refaz a resposta uma vez e, se insistir, a frase sai; na Mensagem com IA, sem frase sobrando, sai a mensagem reserva com o motivo "trazia um dado que não está na instrução".
+
+Não reabrir sem o dono pedir.
