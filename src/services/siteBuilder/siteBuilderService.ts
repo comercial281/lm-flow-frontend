@@ -173,6 +173,8 @@ export interface Site {
   hero_video_url?: string | null;
   /** Foto do banner da home, já resolvida pelo servidor (settings no backend). */
   hero_image?: SiteHeroImage | null;
+  /** Fotos extras do banner (até 5), já resolvidas pelo servidor. Servidor velho não manda. */
+  hero_image_extras?: SiteHeroImage[];
   /** Seções liga/desliga da home (armazenado em settings no backend). */
   sections?: SiteSections;
   /** Página inicial por blocos, já resolvida pelo servidor (settings['home']). */
@@ -344,6 +346,8 @@ export interface SiteFormData {
   hero_video_url?: string;
   /** Foto do banner da home. Viaja aninhada; o servidor normaliza antes de gravar. */
   hero_image?: SiteHeroImageChoice;
+  /** Até 5 fotos extras do banner, na ordem. Sempre a lista inteira (só `property` e `upload`). */
+  hero_image_extras?: SiteHeroImageChoice[];
   sections?: SiteSections;
   /** Sempre o objeto inteiro: o servidor troca cada bloco recebido por completo. */
   home?: HomeConfig;

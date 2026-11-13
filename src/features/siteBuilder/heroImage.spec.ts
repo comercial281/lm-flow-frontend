@@ -46,3 +46,26 @@ describe('foto do banner da home', () => {
     });
   });
 });
+
+describe('fotos extras do banner', () => {
+  it('sem nada gravado é lista vazia', async () => {
+    const { extrasFrom } = await import('./heroImage');
+    expect(extrasFrom(undefined)).toEqual([]);
+    expect(extrasFrom(null)).toEqual([]);
+  });
+
+  it('leva só o que pertence ao modo, descarta o vazio e limita a 5', async () => {
+    const { extrasFrom, MAX_FOTOS_EXTRAS } = await import('./heroImage');
+    expect(MAX_FOTOS_EXTRAS).toBe(5);
+    const lista = extrasFrom([
+      { mode: 'property', property_id: 'im-1', photo_id: 'ft-1', url: 'https://cdn/a.jpg' },
+      { mode: 'upload', url: 'https://cdn/b.jpg' },
+      { mode: 'auto' },
+      { mode: 'upload', url: '' },
+      ...Array.from({ length: 6 }, (_, i) => ({ mode: 'upload' as const, url: `https://cdn/${i}.jpg` })),
+    ]);
+    expect(lista).toHaveLength(5);
+    expect(lista[0]).toEqual({ mode: 'property', property_id: 'im-1', photo_id: 'ft-1' });
+    expect(lista[1]).toEqual({ mode: 'upload', url: 'https://cdn/b.jpg' });
+  });
+});

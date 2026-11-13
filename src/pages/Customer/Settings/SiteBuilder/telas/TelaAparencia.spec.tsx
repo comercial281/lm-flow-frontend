@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useState } from 'react';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import type { SiteFormData } from '@/services/siteBuilder/siteBuilderService';
+import type { Site, SiteFormData } from '@/services/siteBuilder/siteBuilderService';
 import { APARENCIA_FABRICA } from '@/features/siteBuilder/public/aparenciaConfig';
 
 const mocks = vi.hoisted(() => ({ uploadAsset: vi.fn(), extractLogoColors: vi.fn() }));
@@ -13,10 +13,10 @@ vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
 import TelaAparencia from './TelaAparencia';
 
-function Montar({ espiao, inicial = {} }: { espiao: (f: Partial<SiteFormData>) => void; inicial?: Partial<SiteFormData> }) {
+function Montar({ espiao, inicial = {}, site = null }: { espiao: (f: Partial<SiteFormData>) => void; inicial?: Partial<SiteFormData>; site?: Site | null }) {
   const [form, setForm] = useState<SiteFormData>({ name: 'Imobiliária Horizonte Azul', ...inicial });
   const setF = (f: Partial<SiteFormData>) => { espiao(f); setForm(prev => ({ ...prev, ...f })); };
-  return <TelaAparencia site={null} siteForm={form} setF={setF} heroPickPreview={null} setHeroPickPreview={vi.fn()} />;
+  return <TelaAparencia site={site} siteForm={form} setF={setF} heroPickPreview={null} setHeroPickPreview={vi.fn()} />;
 }
 
 const png = (nome: string) => new File(['x'], nome, { type: 'image/png' });
@@ -241,5 +241,51 @@ describe('TelaAparencia · logo na página inicial', () => {
   it('em destaque sem logo enviado: pede o logo', () => {
     render(<Montar espiao={vi.fn()} inicial={{ appearance: ap({ logo_position: 'hero' }) }} />);
     expect(screen.getByText(/Envie o logo em Logotipos/)).toBeTruthy();
+  });
+});
+
+describe('TelaAparencia · Mais fotos do banner', () => {
+  beforeEach(() => { vi.clearAllMocks(); });
+
+  const upload = (n: number) => ({ mode: 'upload' as const, url: `https://cdn/${n}.jpg` });
+
+  it('no automático não mostra Mais fotos', () => {
+    render(<Montar espiao={vi.fn()} inicial={{ hero_image: { mode: 'auto' }, hero_image_extras: [upload(1)] }} />);
+    expect(screen.queryByText('Mais fotos')).toBeNull();
+  });
+
+  it('adicionar foto enviada entra em hero_image_extras', async () => {
+    mocks.uploadAsset.mockResolvedValue({ url: 'https://cdn/extra.jpg' });
+    const espiao = vi.fn();
+    render(<Montar espiao={espiao} inicial={{ hero_image: { mode: 'upload', url: 'https://cdn/1.jpg' }, hero_image_extras: [] }} />);
+    expect(screen.getByText('Mais fotos')).toBeTruthy();
+    expect(screen.getByText('Com 2 fotos ou mais, o banner troca de foto a cada 6 segundos.')).toBeTruthy();
+    await userEvent.upload(screen.getByLabelText('Escolher arquivo: mais fotos do banner'), png('extra.png'));
+    await waitFor(() => expect(espiao).toHaveBeenCalledWith({ hero_image_extras: [{ mode: 'upload', url: 'https://cdn/extra.jpg' }] }));
+  });
+
+  it('com 5 extras os botões de adicionar somem', () => {
+    render(<Montar espiao={vi.fn()} inicial={{ hero_image: { mode: 'upload', url: 'https://cdn/1.jpg' }, hero_image_extras: [1, 2, 3, 4, 5].map(upload) }} />);
+    const bloco = screen.getByRole('group', { name: 'Mais fotos' });
+    expect(within(bloco).queryByRole('button', { name: 'Enviar foto' })).toBeNull();
+    expect(within(bloco).queryByRole('button', { name: 'Foto de um imóvel' })).toBeNull();
+    expect(within(bloco).getAllByRole('button', { name: /^Remover a \d/ })).toHaveLength(5);
+  });
+
+  it('remover tira a foto da lista', async () => {
+    const espiao = vi.fn();
+    render(<Montar espiao={espiao} inicial={{ hero_image: { mode: 'upload', url: 'https://cdn/1.jpg' }, hero_image_extras: [upload(1), upload(2)] }} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Remover a 1ª foto extra' }));
+    expect(espiao).toHaveBeenCalledWith({ hero_image_extras: [upload(2)] });
+  });
+
+  it('extra de imóvel despublicado mostra o aviso', () => {
+    const site = { hero_image_extras: [{
+      mode: 'property', property_id: 'im-9', photo_id: 'ft-9', url: null,
+      property: { id: 'im-9', title: 'Collina', code: 'AP9' }, reason: 'imovel_despublicado',
+    }] } as unknown as Site;
+    render(<Montar espiao={vi.fn()} site={site}
+      inicial={{ hero_image: { mode: 'upload', url: 'https://cdn/1.jpg' }, hero_image_extras: [{ mode: 'property', property_id: 'im-9', photo_id: 'ft-9' }] }} />);
+    expect(screen.getByText(/não está mais publicado no site/)).toBeTruthy();
   });
 });

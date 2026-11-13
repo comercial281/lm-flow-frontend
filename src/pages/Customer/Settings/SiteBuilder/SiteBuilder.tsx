@@ -14,7 +14,7 @@ import {
   type MenuDoPainel,
 } from '@/services/siteBuilder/siteBuilderService';
 import { type HeroImagePick } from '@/features/siteBuilder/HeroImagePicker';
-import { EMPTY_HERO_IMAGE, heroImageChoiceFrom } from '@/features/siteBuilder/heroImage';
+import { EMPTY_HERO_IMAGE, extrasFrom, heroImageChoiceFrom } from '@/features/siteBuilder/heroImage';
 import {
   financingFrom, financingPayload, listingFrom, listingPayload, parseEmails,
 } from '@/features/siteBuilder/portalPages';
@@ -84,6 +84,7 @@ const EMPTY_SITE_FORM: SiteFormData = {
   favicon_url: '',
   hero_video_url: '',
   hero_image: { ...EMPTY_HERO_IMAGE },
+  hero_image_extras: [],
   sections: { stats: true, lead_capture: true },
   primary_color: '#7C3AED',
   accent_color: '#9333EA',
@@ -194,6 +195,7 @@ export default function SiteBuilder() {
           favicon_url: s.branding.favicon_url ?? '',
           hero_video_url: s.hero_video_url ?? '',
           hero_image: heroImageChoiceFrom(s.hero_image),
+          hero_image_extras: extrasFrom(s.hero_image_extras),
           sections: {
             stats: s.sections?.stats ?? true,
             lead_capture: s.sections?.lead_capture ?? true,

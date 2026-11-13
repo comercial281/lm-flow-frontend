@@ -53,3 +53,14 @@ export function heroImageWarning(resolved?: SiteHeroImage | null): string | null
       return null;
   }
 }
+
+/** O banner troca entre a foto 1 e até 5 extras (6 no total). */
+export const MAX_FOTOS_EXTRAS = 5;
+
+/** As extras gravadas (como o servidor as serve) viram o campo do formulário. */
+export function extrasFrom(resolved?: SiteHeroImage[] | null): SiteHeroImageChoice[] {
+  return (resolved ?? [])
+    .map(heroImageChoiceFrom)
+    .filter(c => c.mode !== 'auto')
+    .slice(0, MAX_FOTOS_EXTRAS);
+}

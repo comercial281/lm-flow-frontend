@@ -11387,3 +11387,11 @@ A busca rápida da capa do site (Clássico e Moderno) ganhou dois campos novos e
 O que **ficou de fora de propósito**: "Em condomínio fechado" e "região". O cadastro não tem dado confiável pra nenhum dos dois (decisão do dono, 13/11/2026). Não reabrir sem o dono pedir.
 
 Armadilha: o servidor aceita `place` e `area` em `home.search.fields` na mesma ordem fixa de `CAMPOS_BUSCA` (`homeConfig.ts`). Campo novo da busca entra nos dois lados, senão o servidor descarta.
+
+## Banner da página inicial com até 6 fotos (13/11/2026)
+
+**O que o cliente vê em Aparência › Banner da página inicial:** com a Foto em "Foto de um imóvel" ou "Enviar uma foto", aparece embaixo o bloco **Mais fotos**: até 5 fotos extras, além da principal (6 no total). Cada extra vem de um imóvel publicado ("Foto de um imóvel") ou de um arquivo ("Enviar foto"), aparece em miniatura, se arrasta para mudar a ordem e tem a lixeira para tirar. Os dois botões somem quando já são 5. Se o imóvel de uma extra for despublicado, excluído ou ficar sem foto, a miniatura mostra o mesmo aviso da foto principal. No **Automático** o bloco some (as extras ficam guardadas, sem efeito).
+
+**O que o visitante vê:** com 2 fotos ou mais, o banner troca de foto a cada 6 segundos, com uma transição suave. O vídeo do banner, quando preenchido, continua passando por cima de tudo. Quem pediu "reduzir movimento" no aparelho vê só a primeira foto. As fotos escolhidas aqui saem **sem marca d'água**, diferente do Automático, que usa a capa do cartão do imóvel.
+
+**Volta de versão:** o backend antigo ignora `hero_image_extras` (as extras ficam gravadas, o site mostra só a foto 1). A tela antiga mostra só a foto 1 e, se salvar, não leva as extras. Nada quebra nos dois sentidos.
