@@ -6789,6 +6789,46 @@ Nova tela **Modelo do site** (primeira de "Personalizar"): três cartões, **Cl�
 - **"Ver como fica" em cada cartão (06/10), inclusive no "Em uso"** (não "Ver prévia", pra não repetir o botão da barra de cima): abre o site de verdade numa aba nova com `?modelo=<classico|editorial|popular>` (site em manutenção: o link de 24 h com `?previa=` + `modelo=`). O site aplica o modelo **só no navegador**, por cima do que o servidor mandou (`comModeloDaPrevia` em `public/previaDoModelo.ts`, nos dois pontos que carregam `/api/public/v1/site`: `usePortalData` e a ficha), e guarda o modelo em `sessionStorage['lmf-modelo']` pra navegação interna. O guardado não vale pra sempre: a primeira leitura de cada carregamento da página, sem `?modelo=` e numa navegação nova (link, endereço digitado; `performance` sem a informação conta como nova), esquece o modelo; recarregar e voltar/avançar mantêm. A faixa tem o link "Ver o site normal", que esquece o modelo e recarrega o mesmo endereço sem o `modelo=`. No painel, o botão fica ocupado enquanto gera o link (clique duplo não abre duas abas). A prévia mostra o site SALVO com o modelo, não o que está no formulário sem salvar.
 - **É só visual, e qualquer um pode abrir** (não tem token, não grava nada). Por isso a prévia do modelo é sempre `noindex`, não conta visita e não roda GA4, Pixel, GTM nem códigos; faixa "Prévia do modelo X. Nada foi salvo." (com a prévia de manutenção, uma faixa só: "... Nada foi salvo, e o site ainda não está publicado."). Sem `?modelo=`, `comModeloDaPrevia` devolve o mesmo objeto: o site normal sai idêntico. Formulário enviado na prévia do modelo **não manda nada pro servidor** (que não sabe da prévia): os três formulários (contato da página inicial, ficha do imóvel e Anuncie) param antes do envio e mostram o mesmo aviso da prévia, sem conversão.
 
+## Modelo Moderno, parte (a) (13/11/2026)
+
+Quarto modelo do site, **Moderno** (spec `LM FLOW/specs/2026-11-13-modelo-site-moderno-design.md`, protótipo aprovado pelo Tony em 13/11). Entra em três partes; esta é a (a): topo, faixa de cima, rodapé, a página inicial inteira e o destaque nos títulos. Imóveis, ficha e lançamento são a (b); as outras páginas, o cartão na tela e a opção na Aparência são a (c).
+
+**O que aparece pra quem visita (só na prévia, por enquanto):**
+
+- **Topo:** no Início, com o topo transparente e a capa sobre a foto, o menu fica dentro do cartão da capa, numa pílula de vidro; nas outras páginas (e com a capa dividida), barra sólida arredondada, branca ou na cor principal. WhatsApp à direita; no celular ele vira só o ícone e o menu abre pelo sanduíche.
+- **Início, na ordem de hoje:** capa em cartão arredondado (o filtro escurece de baixo pra cima e da esquerda e termina escuro dentro do cartão, nunca desbota pra cor do fundo), vitrines em carrossel de cartões de foto inteira (com "cartões grandes", duas colunas sem carrossel), Como funciona em cartões numerados, chamadas nos 3 jeitos (Faixa, Foto com o "Como podemos ajudar?" em vidro, Cartões), Atendimento, Mais buscados em mosaico (os 4 primeiros atalhos com a foto do imóvel mais recente que bate com o atalho; o resto em pílulas), a faixa de números de hoje e o "Não achou?" com os mesmos campos e o mesmo envio de hoje.
+- **Rodapé:** bloco arredondado na cor principal com o símbolo em marca d'água, logo (a clara, se houver), frase, redes em ícone, colunas e CRECI. "Compacto" vira uma linha.
+- **Fundo escuro:** o mesmo desenho com os tons escuros.
+
+**Como está montado:**
+
+- Duas chaves novas em `appearance` (`aparenciaConfig.ts`): `style` (`classic` | `modern`, fábrica `classic`) e `heading_highlight` (`accent` | `italic` | `none`, fábrica `accent`). O servidor guarda as duas (backend, PR próprio). Sem `style: modern`, nada do Moderno roda: `PortalHeader`/`PortalFooter` e o `PortalHomePage` escolhem o desenho pela chave, e o Moderno mora em `src/pages/Public/moderno/` (só importa o que `src/pages/Public` já importa: `conferir-dominio-limpo`).
+- **O cartão "Moderno" ainda não aparece em Modelo do site.** Só abre com `?modelo=moderno` ("Ver como fica" à mão): a prévia aceita `MODELOS_DA_PREVIA` (os cartões + o Moderno), a tela segue em `MODELOS_DO_SITE`. O cartão entra na parte (c).
+- Receita (`RECEITAS.moderno`): DM Sans, sem fonte de título, `style: modern`, `heading_highlight: accent`, fundo claro, topo transparente, faixa de cima escondida, capa foto inteira, cartões padrão, rodapé em colunas, lista em grade, chamadas no jeito Foto, Como funciona desligado, Atendimento ligado (com os textos de fábrica do Editorial nos campos vazios). Os três modelos de hoje gravam `style: classic`.
+- **Tons do Moderno em hex**, variáveis `--m-*` no `tokensDoSite` (só com `style: modern`): `--m-brand-2`, `--m-brand-soft`, `--m-head`, `--m-head-2`, `--m-ground`, `--m-surface`, `--m-line`, `--m-text`, `--m-muted`. Saem de `misturarCom` (mistura canal a canal) e `clarearAte`, nunca de `color-mix`/`oklch` (Chrome < 111 deixa o site em branco).
+
+**Destaque nos títulos (asterisco):**
+
+- O cliente marca **um** trecho entre asteriscos: `O imóvel certo pra sua *próxima fase.*` (`partesDoTitulo`/`semAsteriscos` em `destaqueNoTitulo.ts`; só o primeiro par vale, asterisco sem par sai como texto).
+- **Vale só nos títulos de seção do Início e na frase do rodapé:** capa (`search.title`), vitrines, Como funciona (`steps.title`), chamadas, Atendimento e `footer_text` (o "Não achou?" do Moderno já vem com "*pra você.*" marcado, texto fixo). **Título de página fica de fora** (Financiamento, página própria, artigo): sai no menu, na aba e no Google. O título de cada **passo** do Como funciona é texto puro (o asterisco ali é texto do cliente).
+- No Moderno: `accent` = o trecho na cor de destaque sobre foto ou cor principal; sobre o claro, cor do título com sublinhado grosso na cor de destaque (nunca texto na cor de destaque sobre o claro). `italic` = Instrument Serif itálica (carregada só com `italic` e `modern`), num tom mais claro da principal. `none` = sem marca (o `TituloComDestaque` nem cria o `span`).
+- **No Clássico o asterisco some e o texto fica** (`semAsteriscos` em capa, vitrines, Como funciona, chamadas, Atendimento e rodapé). Sem asterisco, o Clássico sai byte a byte igual (`molduraAntesDoC3.spec`, `aparenciaNoSite.spec`).
+
+**Decisões (não reabrir sem o dono pedir):**
+
+1. `heading_highlight` é opcional na receita: só o Moderno grava. Quem sai do Moderno pro Clássico fica com a chave gravada, sem efeito.
+2. Com `none`, o título sai sem `span` de destaque.
+3. **O topo do Início vira barra sólida aos 24px de rolagem**, igual ao Clássico (`useRolouNaHome`), e não quando a capa sai da tela. Um comportamento só nos dois modelos.
+4. **A faixa de cima não aparece no Início com o topo flutuando**, igual ao Clássico (a receita já nasce com ela escondida).
+5. **Rodapé "Compacto" mantém os links do menu** numa linha, como o compacto do Clássico: a opção muda o arranjo, não tira navegação.
+6. **Chamadas no jeito Foto sem foto própria usam a foto da capa** (`fotoDaCapa`), não a faixa escura do Clássico: o Moderno nasce em Foto e quase ninguém tem foto de chamada. Custo: a mesma foto duas vezes no Início.
+7. A busca da capa usa `ListaDoSite` (lista nativa do site público, que mora só no `portalShared`, exceção do `conferir-padrao`).
+8. As decisões das seções 10 e 11 da spec (nome, cor de destaque como padrão, fonte única, site inteiro, cartão de foto inteira nas vitrines, Chamadas em Foto e Como funciona desligado, faixa de números de hoje, "Não achou?" com os campos de hoje).
+
+**Volta de versão:** voltar a tela é seguro (ninguém está no Moderno; com `style: classic` nada muda, e o asterisco volta a aparecer no Clássico só se alguém já tiver escrito um).
+
+Testes: `src/pages/Public/moderno/*.spec.tsx` (Início, topo, rodapé), `portalShared.spec.tsx`, `aparenciaConfig.spec.ts`, `destaqueNoTitulo.spec.ts`, `maisBuscados.spec.ts`, `modelosDoSite.spec.ts`, `previaDoModelo.spec.ts`.
+
 ## IA Vendedora · Configurar virou passo a passo (desde 2026-10-05)
 
 > Entrega 2 da refatoração da IA Vendedora. Spec: `LM FLOW/specs/2026-10-05-ia-vendedora-refatoracao-design.md`. Plano: `LM FLOW/plans/2026-10-05-ia-vendedora-entrega-2-passo-a-passo.md`. Servidor: PR #410 (`comercial281/lm-flow`, migration 303).
