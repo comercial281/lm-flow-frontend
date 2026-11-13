@@ -82,11 +82,32 @@ function roupaModerna(ap: Aparencia, flutuando: boolean): RoupaModerna {
   };
 }
 
-const MENU_DO_CELULAR: RoupaDoMenuDoCelular = {
-  nav: 'rounded-b-[20px] border-t border-[var(--m-line)] bg-[var(--m-surface)] px-[22px] py-3 lg:hidden',
-  link: 'block py-2.5 text-[15px] font-medium text-[var(--m-head)]',
-  contatos: 'mt-2 border-t border-[var(--m-line)] pt-2 text-[13px] text-[var(--m-muted)]',
+/**
+ * O menu do celular abre dentro da barra e segue a cor dela: branco no topo
+ * branco (mesmo no fundo escuro), cor principal no topo na cor e a superfície
+ * do site no resto. Na cor principal, as linhas são a cor do texto em 20% num
+ * pseudo-elemento (sem color-mix).
+ */
+const LINHA_EM_CIMA = 'relative before:absolute before:inset-x-0 before:top-0 before:h-px before:bg-current before:opacity-20';
+const MENU_DO_CELULAR: Record<'fundo' | 'branco' | 'marca', RoupaDoMenuDoCelular> = {
+  fundo: {
+    nav: 'rounded-b-[20px] border-t border-[var(--m-line)] bg-[var(--m-surface)] px-[22px] py-3 lg:hidden',
+    link: 'block py-2.5 text-[15px] font-medium text-[var(--m-head)]',
+    contatos: 'mt-2 border-t border-[var(--m-line)] pt-2 text-[13px] text-[var(--m-muted)]',
+  },
+  branco: {
+    nav: 'rounded-b-[20px] border-t border-[#E2E4EB] bg-[#FFFFFF] px-[22px] py-3 lg:hidden',
+    link: 'block py-2.5 text-[15px] font-medium text-[#17140F]',
+    contatos: 'mt-2 border-t border-[#E2E4EB] pt-2 text-[13px] text-[#7C8195]',
+  },
+  marca: {
+    nav: `${LINHA_EM_CIMA} rounded-b-[20px] bg-[var(--brand)] px-[22px] py-3 text-[var(--brand-ink)] lg:hidden`,
+    link: 'block py-2.5 text-[15px] font-medium',
+    contatos: `${LINHA_EM_CIMA} mt-2 pt-2 text-[13px] opacity-80`,
+  },
 };
+const menuDoCelular = (ap: Aparencia) =>
+  MENU_DO_CELULAR[ap.header_style === 'white' ? 'branco' : ap.header_style === 'brand' ? 'marca' : 'fundo'];
 
 const juntar = (...cls: (string | false)[]) => cls.filter(Boolean).join(' ');
 
@@ -163,7 +184,7 @@ export default function TopoModerno({ site, tenant, onHome = false, abas }: Prop
               </div>
             </div>
 
-            {menuOpen && <MenuDoCelular site={site} nav={nav} fechar={() => setMenuOpen(false)} roupa={MENU_DO_CELULAR} />}
+            {menuOpen && <MenuDoCelular site={site} nav={nav} fechar={() => setMenuOpen(false)} roupa={menuDoCelular(ap)} />}
           </header>
         </div>
       </div>

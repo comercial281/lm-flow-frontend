@@ -105,4 +105,16 @@ describe('TopoModerno', () => {
     act(() => { document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })); });
     expect(c.querySelector('#menu-do-celular')).toBeNull();
   });
+
+  it('celular: o menu aberto segue a barra (branco no topo branco e na cor principal no topo na cor), mesmo no fundo escuro', async () => {
+    const abrir = async (ap: Partial<Aparencia>) => {
+      cleanup();
+      const c = await topo(moderno(ap));
+      fireEvent.click(screen.getByRole('button', { name: 'Menu' }));
+      return c.querySelector<HTMLElement>('#menu-do-celular')!.className;
+    };
+    expect(await abrir({ header_style: 'white', background: 'dark' })).toContain('bg-[#FFFFFF]');
+    expect(await abrir({ header_style: 'brand', background: 'dark' })).toContain('bg-[var(--brand)]');
+    expect(await abrir({ header_style: 'transparent', background: 'dark' })).toContain('bg-[var(--m-surface)]');
+  });
 });
