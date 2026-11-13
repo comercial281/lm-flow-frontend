@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { ChevronLeft, ChevronRight, Crown, Eye, EyeOff } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Crown, Eye, EyeOff, Stamp } from 'lucide-react';
 import { Button, Dialog, DialogContent, DialogDescription, DialogFooter, DialogTitle } from '@/components/ui/ds';
 import type { PropertyPhoto } from '@/services/propertyPhotos/propertyPhotosService';
 import type { Permissoes } from '@/features/properties/fotos/usePermissoesDasFotos';
@@ -15,9 +15,11 @@ interface Props {
   aoTrocar: (id: string | null) => void;
   aoUsarComoCapa: (id: string) => void;
   aoAlternarVisivel: (id: string) => void;
+  /** Só foto de imóvel: sem isto (condomínio), o botão da marca d'água não aparece. */
+  aoAlternarMarca?: (id: string) => void;
 }
 
-export default function FotoAmpliada({ fotos, todas, abertaId, capaId, pode, aoTrocar, aoUsarComoCapa, aoAlternarVisivel }: Props) {
+export default function FotoAmpliada({ fotos, todas, abertaId, capaId, pode, aoTrocar, aoUsarComoCapa, aoAlternarVisivel, aoAlternarMarca }: Props) {
   const i = fotos.findIndex(p => p.id === abertaId);
   const foto = i >= 0 ? fotos[i] : null;
   const andar = (passo: number) => {
@@ -44,7 +46,7 @@ export default function FotoAmpliada({ fotos, todas, abertaId, capaId, pode, aoT
           <>
             <DialogTitle className="sr-only">Foto ampliada</DialogTitle>
             <DialogDescription className="text-sm tabular-nums text-muted-foreground">
-              {`Foto ${todas.findIndex(p => p.id === foto.id) + 1} de ${todas.length}`}{!foto.published && ' · oculta'}
+              {`Foto ${todas.findIndex(p => p.id === foto.id) + 1} de ${todas.length}`}{!foto.published && ' · oculta'}{aoAlternarMarca && foto.skip_watermark && " · sem marca d'água"}
             </DialogDescription>
             <div className="relative flex max-h-[70vh] items-center justify-center overflow-hidden rounded-lg bg-black">
               <img src={foto.file_url} alt={foto.alt_text ?? foto.caption ?? ''} className="max-h-[70vh] w-auto max-w-full object-contain" />
@@ -74,6 +76,11 @@ export default function FotoAmpliada({ fotos, todas, abertaId, capaId, pode, aoT
                 >
                   {foto.published ? <EyeOff className="mr-2 h-4 w-4" /> : <Eye className="mr-2 h-4 w-4" />}
                   {foto.published ? 'Ocultar' : 'Mostrar'}
+                </Button>
+              )}
+              {aoAlternarMarca && (
+                <Button type="button" variant="outline" onClick={() => aoAlternarMarca(foto.id)} aria-pressed={!!foto.skip_watermark}>
+                  <Stamp className="mr-2 h-4 w-4" />{foto.skip_watermark ? "Pôr a marca d'água" : "Tirar a marca d'água"}
                 </Button>
               )}
             </DialogFooter>

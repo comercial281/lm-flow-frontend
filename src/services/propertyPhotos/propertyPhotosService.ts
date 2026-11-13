@@ -14,6 +14,8 @@ export interface PropertyPhoto {
   position: number;
   is_cover: boolean;
   published: boolean;
+  /** Sai no site sem a marca d'água do Meu site (a foto já veio com o logo do cliente). Só foto de imóvel. */
+  skip_watermark?: boolean;
   caption?: string | null;
   alt_text?: string | null;
   width_px?: number | null;
@@ -28,6 +30,7 @@ export interface PropertyPhotoFormData {
   caption?: string;
   is_cover?: boolean;
   published?: boolean;
+  skip_watermark?: boolean;
 }
 
 export interface PropertyPhotoUploadOpts {

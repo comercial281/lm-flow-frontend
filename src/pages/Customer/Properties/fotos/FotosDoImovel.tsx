@@ -5,7 +5,7 @@
 // condominiums.manage.
 import { useEffect, useRef, useState, type DragEvent } from 'react';
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, CheckSquare, Eye, EyeOff, Link as LinkIcon, Plus, Trash2, Upload } from 'lucide-react';
+import { ArrowLeft, CheckSquare, Eye, EyeOff, Link as LinkIcon, Plus, Stamp, Trash2, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 import Abas from '@/components/base/Abas';
 import { Aviso, BaseHeader, Carregando, EmptyState, Pagina } from '@/components/base';
@@ -85,8 +85,11 @@ export default function FotosDoImovel({ alvo = 'imovel' }: { alvo?: 'imovel' | '
   };
 
   const sairDaSelecao = () => { setSelecionando(false); setSelecionadas(new Set()); };
+  // Marca d'água por foto: só nas fotos do imóvel (o condomínio não tem a escolha).
+  const mexeNaMarca = !doCondominio && pode.ocultar;
+  const alternarMarca = mexeNaMarca ? (fid: string) => void dados.alternarMarca(fid) : undefined;
 
-  const loteDe = async (acao: 'ocultar' | 'mostrar' | 'excluir') => {
+  const loteDe = async (acao: 'ocultar' | 'mostrar' | 'excluir' | 'sem_marca' | 'com_marca') => {
     const ids = [...selecionadas];
     if (!ids.length || loteEmAndamento) return;
     if (acao === 'excluir' && !(await confirmar({
@@ -102,7 +105,13 @@ export default function FotosDoImovel({ alvo = 'imovel' }: { alvo?: 'imovel' | '
     } finally {
       setLoteEmAndamento(false);
     }
-    const feito = { ocultar: r.feitos === 1 ? 'oculta' : 'ocultas', mostrar: r.feitos === 1 ? 'visível' : 'visíveis', excluir: r.feitos === 1 ? 'excluída' : 'excluídas' }[acao];
+    const feito = {
+      ocultar: r.feitos === 1 ? 'oculta' : 'ocultas',
+      mostrar: r.feitos === 1 ? 'visível' : 'visíveis',
+      excluir: r.feitos === 1 ? 'excluída' : 'excluídas',
+      sem_marca: r.feitos === 1 ? "sem a marca d'água" : "sem a marca d'água",
+      com_marca: r.feitos === 1 ? "com a marca d'água" : "com a marca d'água",
+    }[acao];
     if (r.feitos === 0 && r.pulouCapa && !r.falhas) {
       toast.info('A capa não se oculta. Escolha outra capa antes.');
       sairDaSelecao();
@@ -210,6 +219,10 @@ export default function FotosDoImovel({ alvo = 'imovel' }: { alvo?: 'imovel' | '
               { label: 'Mostrar', icon: <Eye className="h-4 w-4" />, onClick: () => void loteDe('mostrar'), disabled: loteEmAndamento },
               { label: 'Ocultar', icon: <EyeOff className="h-4 w-4" />, onClick: () => void loteDe('ocultar'), disabled: loteEmAndamento },
             ] : []),
+            ...(mexeNaMarca ? [
+              { label: "Tirar a marca d'água", icon: <Stamp className="h-4 w-4" />, onClick: () => void loteDe('sem_marca'), disabled: loteEmAndamento },
+              { label: "Pôr a marca d'água", icon: <Stamp className="h-4 w-4" />, onClick: () => void loteDe('com_marca'), disabled: loteEmAndamento },
+            ] : []),
             ...(pode.excluir ? [{ label: 'Excluir', icon: <Trash2 className="h-4 w-4" />, onClick: () => void loteDe('excluir'), disabled: loteEmAndamento, variant: 'destructive' as const }] : []),
           ]}
         />
@@ -284,6 +297,7 @@ export default function FotosDoImovel({ alvo = 'imovel' }: { alvo?: 'imovel' | '
                       aoMover={(de, para) => void dados.mover('imagens', de, para)}
                       aoUsarComoCapa={fid => void dados.usarComoCapa(fid)}
                       aoAlternarVisivel={fid => void dados.alternarVisivel(fid)}
+                      aoAlternarMarca={alternarMarca}
                       aoExcluir={fid => void excluirUma(fid)}
                     />
                   </section>
@@ -332,6 +346,7 @@ export default function FotosDoImovel({ alvo = 'imovel' }: { alvo?: 'imovel' | '
         aoTrocar={setAmpliada}
         aoUsarComoCapa={fid => void dados.usarComoCapa(fid)}
         aoAlternarVisivel={fid => void dados.alternarVisivel(fid)}
+        aoAlternarMarca={alternarMarca}
       />
       <JanelaPorEndereco aberta={porEndereco} aoFechar={() => setPorEndereco(false)} aoAdicionar={dados.adicionarPorEndereco} />
       {dialogoDeConfirmacao}
