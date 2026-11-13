@@ -117,7 +117,7 @@ function NaFoto({ cards, foto, filtro, modo }: { cards: CartaoChamada[]; foto: s
             {cards.map((o, k) => (
               <button key={o.key} type="button" aria-pressed={k === escolhida} onClick={() => setEscolhida(k)}
                 className={`rounded-[14px] border px-3 py-2.5 text-left text-[14.5px] font-semibold leading-tight transition-colors ${k === escolhida
-                  ? 'border-white bg-white text-[#0B0B0F]'
+                  ? 'border-white bg-[#FFFFFF] text-[#0B0B0F]'
                   : 'border-[rgba(255,255,255,0.3)] bg-[rgba(255,255,255,0.12)] text-white hover:bg-[rgba(255,255,255,0.22)]'}`}>
                 {semAsteriscos(o.title)}
               </button>

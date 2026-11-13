@@ -279,6 +279,13 @@ describe('Início do Moderno: chamadas', () => {
     expect(within(sec).getByRole('heading', { level: 3, name: 'Financiamento' })).toBeInTheDocument();
   });
 
+  it('Foto: a opção marcada usa branco literal (a regra do fundo escuro repinta .bg-white e deixaria texto escuro sobre quase preto)', async () => {
+    await abrirHome(comChamadas({ layout: 'photo' }), [imovel('R1')]);
+    const marcada = within(chamadas()).getAllByRole('button').find(b => b.getAttribute('aria-pressed') === 'true')!;
+    expect(marcada.className).toContain('bg-[#FFFFFF]');
+    expect(marcada.className.split(/\s+/)).not.toContain('bg-white');
+  });
+
   it('Foto: a foto é a do fundo das chamadas; sem ela, a foto da capa', async () => {
     await abrirHome(comChamadas({ layout: 'photo', background_url: 'https://x.com/fundo.jpg', overlay: 40 },
       { hero: { image_url: 'https://x.com/capa.jpg' } }), [imovel('R1')]);
