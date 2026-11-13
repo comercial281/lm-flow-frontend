@@ -5,7 +5,7 @@ import {
   idDaCapa, juntar, moverNoGrupo, moverParaCapa, posicoes, separar, separarCapaDoLote, tipoPeloEndereco, validarArquivos,
 } from './regrasDasFotos';
 
-type Lote = 'ocultar' | 'mostrar' | 'excluir';
+type Lote = 'ocultar' | 'mostrar' | 'excluir' | 'sem_marca' | 'com_marca';
 
 // A ordem gravada já é "fotos, depois mídias"?
 const jaEstaArrumada = (fotos: PropertyPhoto[]) => {
@@ -136,6 +136,19 @@ export function useFotosDoImovel(propertyId: string, servico: ServicoDeFotos = p
     }
   }, [propertyId, servico, setFotos]);
 
+  // Foto que já veio com o logo do cliente: sai no site sem a nossa marca por cima.
+  const alternarMarca = useCallback(async (id: string) => {
+    const atual = fotosRef.current.find(p => p.id === id);
+    if (!atual) return;
+    try {
+      const nova = await servico.update(propertyId, id, { skip_watermark: !atual.skip_watermark });
+      setFotos(prev => prev.map(p => (p.id === id ? { ...p, skip_watermark: nova.skip_watermark } : p)));
+      toast.success(nova.skip_watermark ? "Sai no site sem a marca d'água" : "Volta a sair com a marca d'água");
+    } catch {
+      toast.error('Não deu pra mudar. Tente de novo.');
+    }
+  }, [propertyId, servico, setFotos]);
+
   const excluir = useCallback(async (id: string) => {
     try {
       await servico.delete(propertyId, id);
@@ -156,6 +169,7 @@ export function useFotosDoImovel(propertyId: string, servico: ServicoDeFotos = p
     for (const id of alvo.ids) {
       try {
         if (acao === 'excluir') await servico.delete(propertyId, id);
+        else if (acao === 'sem_marca' || acao === 'com_marca') await servico.update(propertyId, id, { skip_watermark: acao === 'sem_marca' });
         else await servico.update(propertyId, id, { published: acao === 'mostrar' });
         feitos++;
       } catch {
@@ -169,7 +183,7 @@ export function useFotosDoImovel(propertyId: string, servico: ServicoDeFotos = p
   return {
     fotos, carregando, erro, enviando, salvandoOrdem,
     capaId: idDaCapa(fotos),
-    carregar, enviar, adicionarPorEndereco, usarComoCapa, mover, alternarVisivel, excluir, emLote,
+    carregar, enviar, adicionarPorEndereco, usarComoCapa, mover, alternarVisivel, alternarMarca, excluir, emLote,
   };
 }
 
