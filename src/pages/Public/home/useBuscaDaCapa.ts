@@ -67,12 +67,19 @@ export function useBuscaDaCapa({ home, tenant, abas, cities, hoods, types, onTab
     onTab?.(k);
   };
 
-  const runSearch = (e: FormEvent) => {
-    e.preventDefault();
+  /**
+   * Vai pra `/imoveis` com a aba e os campos de hoje. `extra` (a busca por
+   * texto da capa do Moderno: bairro, cidade ou código) vale por cima dos
+   * campos, mesmo de um campo que o site não mostra. Sem `extra`, é a busca
+   * de sempre (a do Clássico).
+   */
+  const irParaBusca = (extra: Partial<Record<'city' | 'neighborhood' | 'code', string>> = {}) => {
     const params = new URLSearchParams();
     if (tab !== 'sale') params.set('tab', tab);
-    for (const c of campos) {
-      const v = valores[c];
+    // Na ordem dos campos de sempre: o endereço sai igual ao do Clássico com os mesmos valores.
+    const juntos: Partial<Record<CampoBusca, string>> = { ...valores, ...extra };
+    for (const c of CAMPOS_BUSCA.filter(k => campos.includes(k) || extra[k as keyof typeof extra])) {
+      const v = juntos[c];
       if (!v) continue;
       if (c === 'price') {
         for (const [k, n] of Object.entries(precoDaFaixa(tab, v))) params.set(k, n);
@@ -82,6 +89,11 @@ export function useBuscaDaCapa({ home, tenant, abas, cities, hoods, types, onTab
     }
     const qs = params.toString();
     navigate(caminhoDoSite(ctx, `/imoveis${qs ? `?${qs}` : ''}`));
+  };
+
+  const runSearch = (e: FormEvent) => {
+    e.preventDefault();
+    irParaBusca();
   };
 
   const opcoes: Record<CampoDeEscolha, { label: string; options: [string, string][] }> = {
@@ -95,7 +107,7 @@ export function useBuscaDaCapa({ home, tenant, abas, cities, hoods, types, onTab
     stage: { label: 'Fase', options: FASES_DO_PUBLICO.map(f => [f.valor, f.rotulo]) },
   };
 
-  return { tab, trocarAba, valores, set, selects, temCodigo, runSearch, opcoes };
+  return { tab, trocarAba, valores, set, selects, temCodigo, runSearch, irParaBusca, opcoes, cities, hoods };
 }
 
 /** O que a busca da capa entrega pra quem desenha o formulário. */
