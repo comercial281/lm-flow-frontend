@@ -24,6 +24,7 @@ import MessageTemplateService, {
   getChannelTemplateConfig,
 } from '@/services/channels/messageTemplatesService';
 import { TemplateFormData } from '@/types/channels/inbox';
+import { htmlSeguro } from '@/lib/htmlSeguro';
 
 const EmailTemplateEditor: React.FC = () => {
   const navigate = useNavigate();
@@ -484,7 +485,7 @@ const EmailTemplateEditor: React.FC = () => {
                   {/* Email body with HTML content */}
                   <div className="email-body p-4 bg-white dark:bg-slate-800">
                     <div
-                      dangerouslySetInnerHTML={{ __html: formData.content }}
+                      dangerouslySetInnerHTML={{ __html: htmlSeguro(formData.content) }}
                       className="text-sm text-slate-900 dark:text-slate-100"
                       style={{
                         maxWidth: '100%',

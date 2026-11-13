@@ -38,3 +38,17 @@ describe('initClarity', () => {
     expect(window.clarity).toBeUndefined();
   });
 });
+
+describe('Clarity no CRM (auditoria 3E-13)', () => {
+  beforeEach(() => document.body.removeAttribute('data-clarity-mask'));
+
+  it('ligado: a tela inteira sai mascarada na gravação', () => {
+    initClarity('projeto-x');
+    expect(document.body.getAttribute('data-clarity-mask')).toBe('True');
+  });
+
+  it('desligado: não mexe na página', () => {
+    initClarity(null);
+    expect(document.body.hasAttribute('data-clarity-mask')).toBe(false);
+  });
+});

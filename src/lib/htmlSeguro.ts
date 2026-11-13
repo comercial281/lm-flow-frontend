@@ -66,6 +66,7 @@ function normalizarCss(valor: string): string {
 
 let instancia: InstanciaDOMPurify | null = null;
 let tirarCorNestaChamada = false;
+let classesNestaChamada: ReadonlySet<string> | null = null;
 
 function purificador(): InstanciaDOMPurify {
   if (instancia) return instancia;
@@ -73,6 +74,15 @@ function purificador(): InstanciaDOMPurify {
   const p = DOMPurify(window);
 
   p.addHook('uponSanitizeAttribute', (_no, data) => {
+    // `class` só entra quando a chamada traz a lista fechada (opção `classes`), e
+    // só com os nomes dessa lista.
+    if (data.attrName === 'class') {
+      const permitidas = classesNestaChamada;
+      const nomes = permitidas ? data.attrValue.split(/\s+/).filter((n) => permitidas.has(n)) : [];
+      if (nomes.length) data.attrValue = nomes.join(' ');
+      else data.keepAttr = false;
+      return;
+    }
     if (data.attrName !== 'style') return;
     const css = normalizarCss(data.attrValue);
     if (ESTILO_PERIGOSO.test(css)) {
@@ -101,6 +111,12 @@ function purificador(): InstanciaDOMPurify {
 export interface OpcoesHtmlSeguro {
   /** Tira as cores do estilo inline (nota interna: o texto segue a cor do balão). */
   semCor?: boolean;
+  /**
+   * Classes que podem ficar (lista fechada, nome exato). Sem esta opção, `class`
+   * sai sempre. Uso: documento que a própria tela monta com classes do seu CSS
+   * (contrato da Locação: `blank`, `ct-data`, `ct-ass`).
+   */
+  classes?: readonly string[];
 }
 
 /** HTML pronto pra `dangerouslySetInnerHTML`: só a formatação da lista permitida. */
@@ -108,17 +124,20 @@ export function htmlSeguro(html: string | null | undefined, opcoes: OpcoesHtmlSe
   if (!html) return '';
   const p = purificador();
   tirarCorNestaChamada = Boolean(opcoes.semCor);
+  const comClasses = Boolean(opcoes.classes?.length);
+  classesNestaChamada = comClasses ? new Set(opcoes.classes) : null;
   try {
     return p.sanitize(String(html), {
       ALLOWED_TAGS: TAGS_PERMITIDAS,
-      ALLOWED_ATTR: ATRIBUTOS_PERMITIDOS,
+      ALLOWED_ATTR: comClasses ? [...ATRIBUTOS_PERMITIDOS, 'class'] : ATRIBUTOS_PERMITIDOS,
       FORBID_TAGS: TAGS_PROIBIDAS,
-      FORBID_ATTR: ATRIBUTOS_PROIBIDOS,
+      FORBID_ATTR: comClasses ? ATRIBUTOS_PROIBIDOS.filter((a) => a !== 'class') : ATRIBUTOS_PROIBIDOS,
       ALLOWED_URI_REGEXP: ENDERECO_PERMITIDO,
       ALLOW_DATA_ATTR: false,
       ALLOW_UNKNOWN_PROTOCOLS: false,
     });
   } finally {
     tirarCorNestaChamada = false;
+    classesNestaChamada = null;
   }
 }

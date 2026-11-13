@@ -20,6 +20,37 @@
       ]
     },
     {
+      "source": "/((?!lp/|lp\\.html|portal/|imovel/|widget|assets/).*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "(?:.+\\.)?lmflow\\.com\\.br"
+        }
+      ],
+      "headers": [
+        {
+          "key": "X-Frame-Options",
+          "value": "SAMEORIGIN"
+        },
+        {
+          "key": "Content-Security-Policy",
+          "value": "frame-ancestors 'self'"
+        },
+        {
+          "key": "Content-Security-Policy-Report-Only",
+          "value": "default-src 'self'; script-src 'self' https://connect.facebook.net https://www.googletagmanager.com https://www.google.com/recaptcha/ https://www.gstatic.com/recaptcha/ https://www.clarity.ms https://*.clarity.ms https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self' data: blob: https:; connect-src 'self' https://api.lmflow.com.br wss://api.lmflow.com.br https://*.lmflow.com.br wss://*.lmflow.com.br https://*.supabase.co https://*.ingest.sentry.io https://*.google-analytics.com https://*.facebook.com https://*.facebook.net https://*.clarity.ms https://www.googleapis.com https://cdn.jsdelivr.net; worker-src 'self' blob: https://cdn.jsdelivr.net; frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com https://player.vimeo.com https://my.matterport.com https://www.facebook.com https://www.google.com https://editor.unlayer.com https://*.lmflow.com.br; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "Permissions-Policy",
+          "value": "camera=(self), microphone=(self), geolocation=(self)"
+        }
+      ]
+    },
+    {
       "source": "/assets/(.*)",
       "headers": [
         {
