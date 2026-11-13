@@ -87,6 +87,19 @@ export function opcoesSemRepetir(valores: (string | null | undefined)[]): string
   return [...grupos.values()].map(maisComum).sort((a, b) => a.localeCompare(b, 'pt-BR'));
 }
 
+const TODAS_AS_ABAS: PortalTab[] = ['sale', 'rent', 'launch'];
+
+/**
+ * Aba que a busca usa. Só vale aba visível (`abas`): a da URL que não é
+ * (desligada ou sem imóvel) cai na da lista (`tabDaLista`, pelo caminho) e
+ * depois na primeira visível. É a regra da página de busca; o mosaico dos Mais
+ * buscados usa a mesma pra contar o que a busca vai mostrar.
+ */
+export function abaDaBusca(tabDaUrl: string | null, abas: PortalTab[] = TODAS_AS_ABAS, tabDaLista: PortalTab | null = null): PortalTab {
+  const daUrl = abas.find(a => a === tabDaUrl);
+  return daUrl ?? (tabDaLista && abas.includes(tabDaLista) ? tabDaLista : (abas[0] ?? 'sale'));
+}
+
 /**
  * Filtros da busca lidos da URL (`?type=…&city=…`), com a aba já decidida por
  * quem chama. É o que a página de busca usa, e o mosaico dos Mais buscados lê

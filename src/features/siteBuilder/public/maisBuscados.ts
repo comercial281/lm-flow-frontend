@@ -1,4 +1,4 @@
-import { filterProperties, filtrosDaUrl, type PortalFilters, type PortalProperty, type PortalTab } from './filtros';
+import { abaDaBusca, filterProperties, filtrosDaUrl, type PortalFilters, type PortalProperty } from './filtros';
 import type { AbaId, AtalhoManual, HomeConfig } from './homeConfig';
 import { opcaoDoTipo, pluralTipo, rotuloTipo } from './tiposDeImovel';
 
@@ -62,13 +62,14 @@ export function atalhosDoSite(home: HomeConfig, items: PortalProperty[], abas: A
 /**
  * Foto do bloco do mosaico (Moderno, spec 6.3): a capa do imóvel mais recente
  * (`created_at`) entre os que a busca do atalho traz, lida como a página de
- * busca lê a URL (`filtrosDaUrl`). Sem aba no atalho = Comprar. `total` conta
+ * busca lê a URL (`abaDaBusca` + `filtrosDaUrl`). `abas` = as abas visíveis do
+ * site: atalho sem aba (o automático) cai na primeira, como na busca; num site
+ * só de aluguel, Alugar. Sem `abas`, as três (sem aba = Comprar). `total` conta
  * todos os que batem, com ou sem foto. Nenhum com foto: null (vira pílula).
  */
-export function fotoDoAtalho(atalho: Atalho, items: PortalProperty[]): { url: string; total: number } | null {
+export function fotoDoAtalho(atalho: Atalho, items: PortalProperty[], abas?: AbaId[]): { url: string; total: number } | null {
   const params = new URLSearchParams(atalho.query);
-  const aba = params.get('tab');
-  const tab: PortalTab = aba === 'rent' || aba === 'launch' ? aba : 'sale';
+  const tab = abaDaBusca(params.get('tab'), abas);
   const batem = filterProperties(items, filtrosDaUrl(params, tab));
   const quando = (p: PortalProperty) => (p.created_at ? Date.parse(p.created_at) || 0 : 0);
   const maisRecente = batem.filter(p => p.cover_url).reduce<PortalProperty | null>(

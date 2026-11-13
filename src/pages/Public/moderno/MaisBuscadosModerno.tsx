@@ -12,7 +12,7 @@ import { BLOCO, MIOLO, tituloDeSecao } from './estilos';
    link pra busca com a query do atalho; sem atalho, a seção some). Os
    primeiros 4 atalhos que têm imóvel com foto viram blocos (1 grande, 1
    largo, 2 menores); a foto é a capa do imóvel mais recente que bate
-   (`fotoDoAtalho`) e o bloco mostra o rótulo e a contagem. Com menos de 4
+   (`fotoDoAtalho`, com a aba que a busca usaria) e o bloco mostra o rótulo e a contagem. Com menos de 4
    blocos a grade muda pra não sobrar buraco. O resto vira pílula.
 ──────────────────────────────────────────────────────────────────────────── */
 
@@ -46,7 +46,7 @@ export default function MaisBuscadosModerno({ home, items, tenant, abas }: Props
   const blocos: { a: Atalho; url: string; total: number; k: number }[] = [];
   const pilulas: { a: Atalho; k: number }[] = [];
   atalhos.forEach((a, k) => {
-    const foto = blocos.length < MAX_BLOCOS ? fotoDoAtalho(a, items) : null;
+    const foto = blocos.length < MAX_BLOCOS ? fotoDoAtalho(a, items, abas) : null;
     if (foto) blocos.push({ a, k, ...foto }); else pilulas.push({ a, k });
   });
   const desenho = GRADE[blocos.length];

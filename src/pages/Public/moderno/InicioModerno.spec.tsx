@@ -305,6 +305,15 @@ describe('Início do Moderno: Mais buscados em mosaico', () => {
     expect(within(sec).getByRole('link', { name: 'farm' }).querySelector('img')).toBeNull();
   });
 
+  it('site só de aluguel no automático: o mosaico segue a aba da busca e mostra o bloco', async () => {
+    const aluguel = (code: string) => imovel(code, { transaction_type: 'rent', rent_price_from: 2000, sale_price_from: null,
+      cover_url: `https://x.com/${code}.jpg`, address: { city: 'Campinas', neighborhood: 'Cambuí' } });
+    await abrirHome(moderno(), [aluguel('L1'), aluguel('L2')]);
+    const blocos = mosaico().querySelectorAll('[data-bloco]');
+    expect(blocos.length).toBeGreaterThanOrEqual(1);
+    expect(blocos[0].textContent).toContain('2');
+  });
+
   it('Mais buscados desligado: a seção some', async () => {
     await abrirHome(moderno({ home: { most_searched: { enabled: false } } } as SiteInfo), [imovel('A1'), imovel('A2')]);
     expect(document.querySelector('[data-mais-buscados]')).toBeNull();

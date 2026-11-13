@@ -111,4 +111,22 @@ describe('fotoDoAtalho (mosaico do Moderno)', () => {
     expect(fotoDoAtalho({ label: 'Aluguel até 3 mil', query: 'tab=rent&type=house&city=campinas&price_max=3000' }, items))
       .toEqual({ url: 'https://x/l1.jpg', total: 1 });
   });
+
+  it('atalho sem aba segue a aba da busca: site só de aluguel lê como Alugar', () => {
+    const items = [
+      foto('L1', 'apartment', 'Cambuí', '2026-01-01T00:00:00Z', 'https://x/l1.jpg', { transaction_type: 'rent', rent_price_from: 2000 }),
+      foto('L2', 'apartment', 'Cambuí', '2026-04-01T00:00:00Z', 'https://x/l2.jpg', { transaction_type: 'rent', rent_price_from: 3000 }),
+      foto('L3', 'apartment', 'Cambuí', '2026-06-01T00:00:00Z', null, { transaction_type: 'season', rent_price_from: 500 }),
+    ];
+    const [atalho] = atalhosAutomaticos(items);
+    expect(atalho.query).not.toContain('tab=');
+    expect(fotoDoAtalho(atalho, items, ['rent'])).toEqual({ url: 'https://x/l2.jpg', total: 3 });
+    // Sem as abas, a regra de antes (Comprar) continua.
+    expect(fotoDoAtalho(atalho, items)).toBeNull();
+  });
+
+  it('aba da query que o site não mostra cai na primeira visível, como na busca', () => {
+    const items = [foto('L1', 'house', 'Centro', '2026-01-01T00:00:00Z', 'https://x/l1.jpg', { transaction_type: 'rent', rent_price_from: 2000 })];
+    expect(fotoDoAtalho({ label: 'Casas', query: 'tab=sale&type=house' }, items, ['rent'])).toEqual({ url: 'https://x/l1.jpg', total: 1 });
+  });
 });
