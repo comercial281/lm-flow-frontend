@@ -6,7 +6,8 @@ import { BLOCO, BOTAO_PRINCIPAL, MIOLO, SOBRETITULO, tituloDeSecao } from './est
 /* ────────────────────────────────────────────────────────────────────────────
    "Atendimento" do Moderno (protótipo `.about`): os mesmos campos e regras do
    Clássico (`home.about`). Título e texto à direita; à esquerda a foto, se
-   houver, ou o selo. Sem título e sem texto, a seção some. O botão
+   houver, ou o selo. Sem foto e sem selo, uma coluna só (a da esquerda
+   ficaria vazia). Sem título e sem texto, a seção some. O botão
    `#contato` rola até o contato da própria página (mesma aba).
 ──────────────────────────────────────────────────────────────────────────── */
 
@@ -24,12 +25,13 @@ export default function AtendimentoModerno({ home, modo }: { home: HomeConfig; m
     </a>
   ) : null;
 
+  const duasColunas = !!a.photo_url || !!selo;
   return (
     <section id="atendimento" className={BLOCO}>
-      <div className={`${MIOLO} grid items-start gap-10 md:grid-cols-[minmax(0,4fr)_minmax(0,7fr)]`}>
+      <div className={`${MIOLO} grid items-start gap-10 ${duasColunas ? 'md:grid-cols-[minmax(0,4fr)_minmax(0,7fr)]' : ''}`}>
         {a.photo_url
           ? <img src={a.photo_url} alt="Foto de quem atende" loading="lazy" className="aspect-[4/5] w-full rounded-[28px] object-cover" />
-          : <div>{selo && <p className={SOBRETITULO}>{selo}</p>}</div>}
+          : selo && <div><p className={SOBRETITULO}>{selo}</p></div>}
         <div className="min-w-0">
           {a.photo_url && selo && <p className={SOBRETITULO}>{selo}</p>}
           {titulo && (
