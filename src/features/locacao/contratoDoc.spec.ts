@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { contarLacunas, contratoDoc, imovelCurto, limparMatricula, nomeDoArquivo } from './contratoDoc';
+import { CLASSES_DO_CONTRATO, contarLacunas, contratoDoc, imovelCurto, limparMatricula, nomeDoArquivo } from './contratoDoc';
+import { htmlSeguro } from '@/lib/htmlSeguro';
 import type { Contrato } from './tipos';
 
 const contrato = (o: Partial<Contrato> = {}): Contrato => ({
@@ -105,5 +106,20 @@ describe('apoios', () => {
   it('imóvel curto é o que vem antes do ponto', () => {
     expect(imovelCurto('Apto 12 · Rua Exemplo · Centro')).toBe('Apto 12');
     expect(imovelCurto('Casa')).toBe('Casa');
+  });
+});
+
+describe('contrato passa pelo limpador sem perder o desenho (auditoria 3E-07)', () => {
+  it('as lacunas e as classes do documento continuam depois de limpar', () => {
+    const vazio = contratoDoc(contrato(), cfg);
+    const limpo = htmlSeguro(vazio, { classes: CLASSES_DO_CONTRATO });
+    expect(contarLacunas(limpo)).toBe(contarLacunas(vazio));
+    expect(limpo).toContain('class="ct-ass"');
+  });
+
+  it('script gravado no texto do contrato não volta pra tela', () => {
+    const limpo = htmlSeguro('<p>Cláusula</p><img src=x onerror="fetch(1)"><span class="blank">nome</span>', { classes: CLASSES_DO_CONTRATO });
+    expect(limpo).not.toMatch(/onerror|fetch/);
+    expect(contarLacunas(limpo)).toBe(1);
   });
 });

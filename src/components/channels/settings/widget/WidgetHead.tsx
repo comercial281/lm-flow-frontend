@@ -1,6 +1,7 @@
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/ds';
 import { WidgetConfig } from '../helpers/widgetHelpers';
 import { getReplyTimeDisplayText } from '../helpers/widgetHelpers';
+import { htmlSeguro } from '@/lib/htmlSeguro';
 
 interface WidgetHeadProps {
   config: WidgetConfig & {
@@ -66,7 +67,7 @@ export default function WidgetHead({ config }: WidgetHeadProps) {
             {config.welcomeTagline && (
               <div
                 className="text-sm break-words text-slate-700 dark:text-slate-300"
-                dangerouslySetInnerHTML={{ __html: config.welcomeTagline }}
+                dangerouslySetInnerHTML={{ __html: htmlSeguro(config.welcomeTagline) }}
               />
             )}
           </div>

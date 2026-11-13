@@ -167,4 +167,27 @@ describe('htmlSeguro', () => {
     expect(htmlSeguro(null)).toBe('');
     expect(htmlSeguro(undefined)).toBe('');
   });
+  describe('classes em lista fechada (contrato da Locação, auditoria 3E-07)', () => {
+    it('sem a opção, class sai sempre', () => {
+      expect(htmlSeguro('<span class="blank">x</span>')).toBe('<span>x</span>');
+    });
+
+    it('com a opção, só ficam os nomes da lista', () => {
+      const html = htmlSeguro('<span class="blank intruso">x</span><p class="outra">y</p>', { classes: ['blank'] });
+      expect(html).toBe('<span class="blank">x</span><p>y</p>');
+    });
+
+    it('a lista de classes não libera script nem evento', () => {
+      const html = htmlSeguro('<span class="blank" onmouseover="alert(1)">x</span><img src=x onerror=alert(1)><script>alert(1)</script>', {
+        classes: ['blank'],
+      });
+      expect(html).not.toMatch(/onmouseover|onerror|<script/i);
+      expect(html).toContain('<span class="blank">x</span>');
+    });
+
+    it('a chamada seguinte, sem a opção, volta a tirar class', () => {
+      htmlSeguro('<span class="blank">x</span>', { classes: ['blank'] });
+      expect(htmlSeguro('<span class="blank">x</span>')).toBe('<span>x</span>');
+    });
+  });
 });

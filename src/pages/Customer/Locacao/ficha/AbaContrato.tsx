@@ -8,7 +8,8 @@ import { CampoDaJanela, GradeDaJanela } from '@/components/base/janela';
 import { useConfirmacao } from '@/hooks/useConfirmacao';
 import { apiErrorMessage } from '@/utils/apiHelpers';
 import { locacaoService } from '@/features/locacao/locacaoService';
-import { contarLacunas, contratoDoc, imovelCurto, nomeDoArquivo } from '@/features/locacao/contratoDoc';
+import { CLASSES_DO_CONTRATO, contarLacunas, contratoDoc, imovelCurto, nomeDoArquivo } from '@/features/locacao/contratoDoc';
+import { htmlSeguro } from '@/lib/htmlSeguro';
 import { ctBlocos } from '@/features/locacao/ctBlocos';
 import type { Contrato, PessoaQualificada, Qualificacao } from '@/features/locacao/tipos';
 import { Falha, Titulo } from '../comum';
@@ -54,7 +55,9 @@ export default function AbaContrato({ contrato: c, aoMudar }: { contrato: Contra
 
   const pintar = useCallback((html: string) => {
     if (!folha.current) return;
-    folha.current.innerHTML = html;
+    // Texto salvo é escrito pela equipe (qualquer cargo que edita o contrato):
+    // passa pelo limpador, mantendo só as classes que o documento usa.
+    folha.current.innerHTML = htmlSeguro(html, { classes: CLASSES_DO_CONTRATO });
     setLacunas(contarLacunas(html));
     setEditou(false);
   }, []);

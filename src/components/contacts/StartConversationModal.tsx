@@ -31,7 +31,7 @@ import { apiErrorMessage } from '@/utils/apiHelpers';
 import Aviso from '@/components/base/Aviso';
 import CampoDaJanela from '@/components/base/janela/CampoDaJanela';
 import { Checkbox } from '@/components/ui/ds';
-import { textoDoHtml } from '@/lib/htmlSeguro';
+import { htmlSeguro, textoDoHtml } from '@/lib/htmlSeguro';
 
 interface StartConversationModalProps {
   open: boolean;
@@ -650,7 +650,7 @@ export default function StartConversationModal({
                               return (
                                 <div
                                   className="prose prose-sm max-w-none"
-                                  dangerouslySetInnerHTML={{ __html: html }}
+                                  dangerouslySetInnerHTML={{ __html: htmlSeguro(html) }}
                                 />
                               );
                             })()}

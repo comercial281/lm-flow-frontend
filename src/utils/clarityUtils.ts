@@ -12,11 +12,22 @@ declare global {
   }
 }
 
+export const mascararTelaNoClarity = (): void => {
+  document.body?.setAttribute('data-clarity-mask', 'True');
+};
+
 export const initClarity = (configProjectId?: string | null): void => {
   const projectId = configProjectId || import.meta.env.VITE_CLARITY_PROJECT_ID;
 
+  if (!projectId) return;
+
+  // O CRM mostra nome, telefone e conversa de lead: com o Clarity ligado, a tela
+  // inteira sai mascarada na gravação (auditoria 3E-13, 12/11/2026). Fica o
+  // desenho da página e os cliques, nunca o texto. Não tirar sem o dono pedir.
+  mascararTelaNoClarity();
+
   // Only initialize in production with valid project ID
-  if (!projectId || import.meta.env.DEV) {
+  if (import.meta.env.DEV) {
     return;
   }
 

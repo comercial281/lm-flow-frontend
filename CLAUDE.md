@@ -11303,3 +11303,19 @@ Regras de servidor que a tela precisa respeitar. Não reabrir sem o dono pedir.
 - **"Enviar teste" do Disparo** só vai pro WhatsApp de alguém da equipe (o do perfil ou um número conectado do cliente; 55 e nono dígito tanto faz), até 20 por hora por pessoa. Fora disso: *"O teste só vai pro WhatsApp de alguém da equipe. Use o seu número (cadastre no seu perfil) ou o de um colega."* (#626).
 - **Login** (#625): errar a senha trava quem errou naquele IP, não a conta pra todo mundo. Ataque à conta vindo de muitos IPs: aparelho novo espera alguns minutos ("Muitas tentativas nesta conta"); quem já entrou daquele IP segue entrando.
 - **Upload**: a porta padrão de upload direto sem login não existe mais (404). Anexo de Conversas e do widget: até 100 MB e só os tipos do anexo de mensagem (#622).
+
+## Segurança da tela: HTML da equipe, volta do login, Clarity e iframe (desde 2026-11-12)
+
+Auditoria 3E-06, 3E-07, 3E-09 e 3E-13. Não reabrir sem o dono pedir.
+
+- **HTML escrito pela equipe do cliente passa pelo `htmlSeguro`** antes de ir pra tela: texto do contrato da Locação (`AbaContrato`), prévia de modelo de e-mail (`TemplatePreview`, `EmailTemplateEditor`, `StartConversationModal`) e textos do widget (`WidgetHead`, `PreChatForm`). Quem edita um contrato ou um modelo não roda código na sessão de quem abre. Fica a formatação da lista do `htmlSeguro`; script, evento (`onerror`…) e iframe saem.
+- **O contrato mantém o desenho**: `htmlSeguro(html, { classes: CLASSES_DO_CONTRATO })`. A opção `classes` é a lista fechada de nomes que podem ficar (`blank`, `ct-data`, `ct-ass`, de `contratoDoc.ts`); sem ela, `class` sai sempre. Classe nova no documento: acrescentar em `CLASSES_DO_CONTRATO`, senão ela some na tela e a lacuna amarela deixa de contar.
+- **Volta depois do login (`?returnUrl=`)**: só caminho deste mesmo endereço (`src/features/auth/destinoDepoisDoLogin.ts`). O navegador resolve o endereço e a origem tem que ser a mesma; `/\outro-site` e `/<tab>/outro-site` (que o navegador vira `//outro-site`) caem no caminho padrão.
+- **Clarity**: com o projeto configurado, a tela inteira sai mascarada na gravação (`data-clarity-mask="True"` no `body`, em `initClarity`). Ficam o desenho e os cliques, nunca nome, telefone ou conversa.
+- **Telas do CRM não abrem em iframe de outro site**: `X-Frame-Options: SAMEORIGIN` e `Content-Security-Policy: frame-ancestors 'self'` no `vercel.json`, só nos endereços `*.lmflow.com.br` e fora de `/lp`, `/portal`, `/imovel`, `/widget` e `/assets` (esses podem ser embutidos). Junto: `Referrer-Policy: strict-origin-when-cross-origin` e `Permissions-Policy` (câmera, microfone e localização só no próprio endereço).
+- **CSP completa em observação** (`Content-Security-Policy-Report-Only`, nas mesmas telas): não bloqueia nada, só avisa no console do navegador o que sairia da lista. Sem endpoint de relatório por enquanto. Passar a valer depois de conferir os avisos (origem nova de API, CDN ou integração entra na lista antes). O teste `src/features/seguranca/cabecalhosDoCrm.source.spec.ts` lê o `vercel.json`.
+
+Armadilhas:
+
+1. **Rota pública nova que pode ser embutida** (como `/widget`): acrescentar na exceção do `source` da regra no `vercel.json` e no teste, senão ela não abre dentro do site do cliente.
+2. **Não voltar a desenhar HTML cru** nesses arquivos: `src/features/seguranca/htmlDaEquipe.source.spec.ts` quebra.

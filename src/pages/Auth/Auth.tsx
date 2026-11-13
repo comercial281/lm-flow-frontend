@@ -28,16 +28,12 @@ import { AppLogo } from '@/components/AppLogo';
 import FlowBackground from './FlowBackground';
 import { loginFeedback } from '@/features/auth/loginFeedback';
 import { AVISO_SEM_ARMAZENAMENTO } from '@/features/auth/sessionPersistence';
+import { destinoDepoisDoLogin } from '@/features/auth/destinoDepoisDoLogin';
 import { FORGOT_PASSWORD_SENT, FORGOT_PASSWORD_HINT, forgotPasswordOutcome } from '@/features/auth/forgotPasswordCopy';
 
-// Só aceita caminho interno. O `returnUrl` sempre existiu aqui, mas nada o
-// preenchia; agora o PrivateRoute o preenche a cada redirect para o login, então
-// um link com `?returnUrl=https://…` viraria redirect aberto logo depois de
-// autenticar. `//host` também é absoluto (protocol-relative) e fica de fora.
-const safeReturnUrl = (value: string | null): string | null => {
-  if (!value || !value.startsWith('/') || value.startsWith('//')) return null;
-  return value;
-};
+// Só caminho interno (regra e motivo em destinoDepoisDoLogin). O PrivateRoute
+// preenche o `returnUrl` a cada redirect para o login.
+const safeReturnUrl = (value: string | null): string | null => destinoDepoisDoLogin(value);
 
 // ─── Animation variants ───────────────────────────────────────────────────
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

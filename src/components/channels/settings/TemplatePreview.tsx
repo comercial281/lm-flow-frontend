@@ -3,6 +3,7 @@ import { MessageSquare, Mail, Send, ExternalLink, Phone } from 'lucide-react';
 import { usesStructuredComponents } from '@/services/channels/messageTemplatesService';
 import { TemplateFormData } from '@/types';
 import { hora } from '@/lib/formato';
+import { htmlSeguro } from '@/lib/htmlSeguro';
 
 interface TemplatePreviewProps {
   template: Partial<TemplateFormData>;
@@ -161,7 +162,7 @@ const EmailPreview: React.FC<{
           <div className="prose prose-sm dark:prose-invert max-w-none">
             {template.content ? (
               <div
-                dangerouslySetInnerHTML={{ __html: template.content }}
+                dangerouslySetInnerHTML={{ __html: htmlSeguro(template.content) }}
                 className="text-sm text-slate-900 dark:text-slate-100"
               />
             ) : (

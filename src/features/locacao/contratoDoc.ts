@@ -21,6 +21,10 @@ export function esc(s: unknown): string {
   return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
+// As únicas classes que o documento usa (documento.css). O texto salvo passa pelo
+// htmlSeguro com esta lista: classe fora dela sai.
+export const CLASSES_DO_CONTRATO = ['blank', 'ct-data', 'ct-ass'] as const;
+
 const blank = (t: string) => `<span class="blank" title="Preencha antes de imprimir">${t}</span>`;
 const valor = (v: string | null | undefined, ph: string) => (v && String(v).trim() ? esc(v) : blank(ph));
 const vExt = (v: number) => `${dinheiro(v)} (${extenso(v)})`;

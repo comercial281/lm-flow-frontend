@@ -14,6 +14,7 @@ import type {
   CurrentUser,
   Campaign,
 } from '@/types/settings';
+import { htmlSeguro } from '@/lib/htmlSeguro';
 
 interface PreChatFormProps {
   config: WidgetConfig;
@@ -343,7 +344,7 @@ export const PreChatForm: React.FC<PreChatFormProps> = ({
       {shouldShowHeaderMessage && (
         <div
           className="mb-4 text-base leading-5 text-slate-700"
-          dangerouslySetInnerHTML={{ __html: headerMessage || '' }}
+          dangerouslySetInnerHTML={{ __html: htmlSeguro(headerMessage) }}
         />
       )}
 
