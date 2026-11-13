@@ -22,6 +22,7 @@ import {
   type Aparencia, type Superficie,
 } from '@/features/siteBuilder/public/aparenciaConfig';
 import { ATRIBUTO_DO_TOPO, useLogoPousado } from '@/features/siteBuilder/public/logoPousado';
+import { semAsteriscos } from '@/features/siteBuilder/public/destaqueNoTitulo';
 
 // Tipos e filtro moram em filtros.ts (sem ciclo com vitrines.ts); reexportados aqui.
 export { filterProperties };
@@ -1085,7 +1086,7 @@ function RodapeCompleto({ site, tenant, onHome = false, abas }: PropsDaMoldura) 
         </div>
         <div className="border-t border-black/[0.06]">
           <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-6 gap-y-1 px-4 py-4 text-[12px] text-neutral-400 sm:px-6">
-            <p className="whitespace-pre-line text-neutral-500">{frase}</p>
+            <p className="whitespace-pre-line text-neutral-500">{semAsteriscos(frase)}</p>
             <p><CreditoDoRodape nome={site.name} creci={site.creci} /></p>
           </div>
         </div>
@@ -1100,7 +1101,7 @@ function RodapeCompleto({ site, tenant, onHome = false, abas }: PropsDaMoldura) 
           {logo.url
             ? <img src={logo.url} alt={site.name || ''} className="h-9 w-auto max-w-[150px] object-contain" />
             : <span className="font-[var(--display)] text-lg font-semibold">{site.name || 'Imóveis'}</span>}
-          <p className={`mt-3 max-w-xs text-[13px] leading-relaxed text-neutral-500${ap.footer_text ? ' whitespace-pre-line' : ''}`}>{frase}</p>
+          <p className={`mt-3 max-w-xs text-[13px] leading-relaxed text-neutral-500${ap.footer_text ? ' whitespace-pre-line' : ''}`}>{semAsteriscos(frase)}</p>
         </div>
         {imoveis.length > 0 && (
           <FooterCol title="Imóveis">

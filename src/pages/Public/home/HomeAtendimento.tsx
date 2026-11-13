@@ -1,4 +1,5 @@
 import type { HomeConfig } from '@/features/siteBuilder/public/homeConfig';
+import { semAsteriscos } from '@/features/siteBuilder/public/destaqueNoTitulo';
 
 /* ────────────────────────────────────────────────────────────────────────────
    "Atendimento": quem atende o cliente. Opcional (home.about.enabled, desligado
@@ -27,7 +28,7 @@ export default function HomeAtendimento({ home }: { home: HomeConfig }) {
   const conteudo = (
     <div className={comFoto ? 'text-left' : 'mx-auto max-w-2xl'}>
       {a.eyebrow?.trim() && <p className="text-[12px] font-semibold uppercase tracking-[0.14em] text-[var(--brand)]">{a.eyebrow.trim()}</p>}
-      {titulo && <h2 className="mt-2 font-[var(--display)] text-3xl font-semibold leading-tight text-[var(--ink)] sm:text-4xl">{titulo}</h2>}
+      {titulo && <h2 className="mt-2 font-[var(--display)] text-3xl font-semibold leading-tight text-[var(--ink)] sm:text-4xl">{semAsteriscos(titulo)}</h2>}
       {texto && <p className="mt-4 whitespace-pre-line text-[15px] leading-relaxed text-neutral-600">{texto}</p>}
       {botao}
     </div>

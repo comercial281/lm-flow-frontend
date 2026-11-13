@@ -4,6 +4,7 @@ import type { AbaId, HomeConfig, Vitrine } from '@/features/siteBuilder/public/h
 import { buscaDaRegra, vitrinesVisiveis } from '@/features/siteBuilder/public/vitrines';
 import { caminhoDoSite } from '@/features/siteBuilder/public/dominioDoSite';
 import { useCtxDoSite } from '@/features/siteBuilder/public/useTenantDoSite';
+import { semAsteriscos } from '@/features/siteBuilder/public/destaqueNoTitulo';
 
 /* ────────────────────────────────────────────────────────────────────────────
    Vitrines da página inicial: as de fábrica (Lançamentos, Imóveis em destaque)
@@ -55,7 +56,7 @@ export default function HomeVitrines({ home, items, tenant, wa, abas, cartoesGra
                 {vitrine.kind === 'featured' && (
                   <span className="text-[12px] font-semibold uppercase tracking-[0.16em] text-[var(--brand)]">Selecionados a dedo</span>
                 )}
-                <h2 className={`${vitrine.kind === 'featured' ? 'mt-1 ' : ''}font-[var(--display)] text-3xl font-semibold sm:text-4xl`}>{vitrine.title}</h2>
+                <h2 className={`${vitrine.kind === 'featured' ? 'mt-1 ' : ''}font-[var(--display)] text-3xl font-semibold sm:text-4xl`}>{semAsteriscos(vitrine.title)}</h2>
               </div>
               {temLink && <Link to={verTodos} className="hidden shrink-0 items-center gap-1.5 rounded-full px-4 py-2 text-[13px] font-semibold text-white transition-opacity hover:opacity-90 sm:inline-flex" style={{ background: 'var(--solid)' }}>
                 {rotuloLink} <Ic d={I.arrow} s={16} />

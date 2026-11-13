@@ -9,6 +9,7 @@ import { caminhoDoSite } from '@/features/siteBuilder/public/dominioDoSite';
 import { useCtxDoSite } from '@/features/siteBuilder/public/useTenantDoSite';
 import { filtroDaCapa, logoNaCapa, logoNaSuperficie, resolverAparencia } from '@/features/siteBuilder/public/aparenciaConfig';
 import { ATRIBUTO_DO_LOGO_DA_CAPA, useLogoPousado } from '@/features/siteBuilder/public/logoPousado';
+import { semAsteriscos } from '@/features/siteBuilder/public/destaqueNoTitulo';
 
 /* ────────────────────────────────────────────────────────────────────────────
    Capa da página inicial: foto/vídeo, título, subtítulo e a busca rápida.
@@ -172,7 +173,7 @@ export default function HomeCapa({ site, home, items, tenant, abas, cities, hood
           <div className="min-w-0">
             <p className="text-[13px] font-semibold uppercase tracking-[0.2em] text-neutral-500">{site.name || 'Portal Imobiliário'}</p>
             <h1 className="mt-3 font-[var(--display)] text-4xl font-semibold leading-[1.05] text-[var(--ink)] sm:text-5xl">
-              {titulo}
+              {semAsteriscos(titulo)}
             </h1>
             <p className="mt-4 max-w-xl text-[15px] leading-relaxed text-neutral-600 sm:text-base">{subtitulo}</p>
             {busca}
@@ -205,7 +206,7 @@ export default function HomeCapa({ site, home, items, tenant, abas, cities, hood
                 na borda direita, a mesma da busca. Logo comprido para no max-w. */}
             <div className="lg:flex lg:items-center lg:justify-between lg:gap-10">
               <h1 className="max-w-2xl font-[var(--display)] text-4xl font-semibold leading-[1.05] text-white sm:text-5xl md:text-6xl">
-                {titulo}
+                {semAsteriscos(titulo)}
               </h1>
               <img {...{ [ATRIBUTO_DO_LOGO_DA_CAPA]: '' }} src={logoDaCapa.url} alt={site.name || 'Portal'}
                 className={`hidden h-[126px] w-auto max-w-[420px] shrink-0 object-right lg:block ${logoCls}`} />
@@ -215,7 +216,7 @@ export default function HomeCapa({ site, home, items, tenant, abas, cities, hood
           <>
             <p className="text-[13px] font-semibold uppercase tracking-[0.2em] text-white/80">{site.name || 'Portal Imobiliário'}</p>
             <h1 className="mt-3 max-w-2xl font-[var(--display)] text-4xl font-semibold leading-[1.05] text-white sm:text-5xl md:text-6xl">
-              {titulo}
+              {semAsteriscos(titulo)}
             </h1>
           </>
         )}

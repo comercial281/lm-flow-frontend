@@ -80,6 +80,17 @@ describe('PortalHomePage por blocos', () => {
     expect(screen.getAllByRole('link', { name: 'Comprar' }).length).toBeGreaterThan(0);
   });
 
+  it('Clássico: asteriscos do título somem e o texto fica igual', async () => {
+    await abrirHome(
+      { home: { search: { title: 'Seu lar *aqui*' }, showcases: [{ id: 'featured', kind: 'featured', enabled: true, title: 'Destaques *da semana*' }] } },
+      [imovel('R1', { featured: true })],
+    );
+
+    expect(screen.getByRole('heading', { level: 1, name: 'Seu lar aqui' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 2, name: 'Destaques da semana' })).toBeInTheDocument();
+    expect(screen.queryByText(/\*/)).toBeNull();
+  });
+
   it('as duas vitrines de fábrica desligadas e nenhuma livre: nenhum título de vitrine', async () => {
     await abrirHome(
       { home: { showcases: [
