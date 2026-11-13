@@ -15,7 +15,9 @@ import { BLOCO, BOTAO_PRINCIPAL, MIOLO, tituloDeSecao } from './estilos';
    (`captura`). Os "comprar/vender/alugar" e a mensagem livre do protótipo
    não entram. Título e formulário à esquerda; à direita, o painel na cor
    principal com o WhatsApp, o telefone e o e-mail do site (os mesmos do
-   topo e do rodapé). Sem nenhum deles, o painel não aparece.
+   topo e do rodapé), do tamanho do que mostra (logo e, logo abaixo, os
+   contatos; não estica até a altura do formulário). Sem nenhum deles, o
+   painel não aparece.
    `id="contato"`: é a âncora do menu e das chamadas.
 ──────────────────────────────────────────────────────────────────────────── */
 
@@ -64,10 +66,10 @@ function Painel({ site, wa }: { site: SiteInfo; wa?: string | null }) {
   // Logo normal vira branca só sobre cor principal escura (como no rodapé).
   const filtroDaLogo = logo.clara || textoSobre(brand) !== '#FFFFFF' ? '' : 'brightness-0 invert';
   return (
-    <aside className="flex flex-col gap-10 rounded-[28px] p-8" style={{ background: 'var(--brand)', color: 'var(--brand-ink)' }}>
+    <aside data-painel-de-contato className="flex flex-col gap-8 self-start rounded-[28px] p-8" style={{ background: 'var(--brand)', color: 'var(--brand-ink)' }}>
       <MarcaDoSite site={site} logo={logo.url} logoCls={`h-9 w-auto max-w-[180px] self-start object-contain ${filtroDaLogo}`}
         nomeCls="font-[var(--display)] text-[18px] font-bold" />
-      <ul className="mt-auto">
+      <ul>
         {waHref && wa && (
           <LinhaDoPainel href={waHref} icone={I.wa} externo>
             <b className="block text-[17px] font-medium">{telefoneLegivel(onlyDigits(wa))}</b>

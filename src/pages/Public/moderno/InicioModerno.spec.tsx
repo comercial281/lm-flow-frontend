@@ -484,6 +484,13 @@ describe('Início do Moderno: "Não achou?"', () => {
     expect(within(sec).getByRole('link', { name: /contato@imob\.com\.br/ })).toHaveAttribute('href', 'mailto:contato@imob.com.br');
   });
 
+  it('o painel tem o tamanho do que mostra: não estica até a altura do formulário, e os contatos vêm logo abaixo do logo', async () => {
+    await abrirHome(moderno({ contact: contato } as SiteInfo), [imovel('R1')]);
+    const painel = document.querySelector<HTMLElement>('#contato [data-painel-de-contato]')!;
+    expect(painel.className.split(/\s+/)).toEqual(expect.arrayContaining(['self-start', 'gap-8']));
+    expect(painel.querySelector('ul')!.className).not.toContain('mt-auto');
+  });
+
   it('telefone inválido: avisa e não envia', async () => {
     await abrirHome(moderno(), [imovel('R1')]);
     const sec = document.getElementById('contato')!;
