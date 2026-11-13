@@ -1,4 +1,4 @@
-import { useRef, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { Link } from 'react-router-dom';
 import { I, Ic, type PortalProperty } from '../portalShared';
 import type { AbaId, HomeConfig } from '@/features/siteBuilder/public/homeConfig';
@@ -13,8 +13,8 @@ import { BLOCO, BOTAO_REDONDO, MIOLO, SETA_DIREITA, SETA_ESQUERDA, SOBRETITULO, 
    Vitrines do Moderno (spec 7 "Início"; protótipo `.head-row`, `.rail`): as
    mesmas vitrines, itens e "Ver todos" do Clássico (`vitrinesVisiveis`,
    `verTodosDaVitrine`), em carrossel de cartões de foto inteira; as setas
-   rolam um cartão. Cartões grandes (`card_style = large`): duas colunas, sem
-   carrossel nem setas.
+   rolam um cartão e só aparecem quando há o que rolar. Cartões grandes
+   (`card_style = large`): duas colunas, sem carrossel nem setas.
 ──────────────────────────────────────────────────────────────────────────── */
 
 interface Props {
@@ -29,12 +29,37 @@ function rolarUmCartao(trilho: HTMLElement | null, sentido: 1 | -1) {
   trilho.scrollBy?.({ left: sentido * (cartao.offsetWidth + 14), behavior: 'smooth' });
 }
 
+/**
+ * O carrossel tem o que rolar? Mede o trilho (e de novo quando ele muda de
+ * largura). Sem medida (antes do layout, ou sem ResizeObserver) conta como
+ * "tem": na dúvida as setas aparecem.
+ */
+function useTemOQueRolar(trilho: RefObject<HTMLDivElement | null>, ativo: boolean, quantos: number): boolean {
+  const [rola, setRola] = useState(true);
+  useEffect(() => {
+    const el = trilho.current;
+    if (!ativo || !el) return;
+    const medir = () => setRola(el.clientWidth === 0 || el.scrollWidth > el.clientWidth + 1);
+    medir();
+    if (typeof ResizeObserver === 'undefined') {
+      window.addEventListener('resize', medir);
+      return () => window.removeEventListener('resize', medir);
+    }
+    const ro = new ResizeObserver(medir);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [trilho, ativo, quantos]);
+  return rola;
+}
+
 function Vitrine({ titulo, sobretitulo, link, grande, modo, children }: {
   titulo: string; sobretitulo: string | null; link: { href: string; rotulo: string } | null;
   grande: boolean; modo: DestaqueDosTitulos; children: ReactNode[];
 }) {
   const trilho = useRef<HTMLDivElement>(null);
-  const comSetas = !grande && children.length > 1;
+  const carrossel = !grande && children.length > 1;
+  // Setas só quando os cartões não cabem na largura (2 ou 3 cartões no computador cabem).
+  const comSetas = useTemOQueRolar(trilho, carrossel, children.length) && carrossel;
   return (
     <section className={BLOCO}>
       <div className={MIOLO}>

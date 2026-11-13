@@ -70,6 +70,27 @@ describe('Início do Moderno', () => {
     expect(within(sec).getByRole('button', { name: 'Próximo' })).toBeInTheDocument();
   });
 
+  it('setas só quando o carrossel tem o que rolar (cartões que cabem na largura: sem setas)', async () => {
+    const itens = ['R1', 'R2'].map(c => imovel(c, { featured: true }));
+    const largura = vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(1120);
+    const conteudo = vi.spyOn(HTMLElement.prototype, 'scrollWidth', 'get').mockReturnValue(614);
+    try {
+      await abrirHome(moderno(), itens);
+      const sec = (await screen.findByRole('heading', { level: 2, name: 'Imóveis em destaque' })).closest('section')!;
+      expect(within(sec).getAllByRole('article')).toHaveLength(2);
+      await waitFor(() => expect(within(sec).queryByRole('button', { name: 'Próximo' })).toBeNull());
+      cleanup();
+
+      conteudo.mockReturnValue(1690);
+      await abrirHome(moderno(), itens);
+      const sec2 = (await screen.findByRole('heading', { level: 2, name: 'Imóveis em destaque' })).closest('section')!;
+      await new Promise(r => setTimeout(r, 0));
+      expect(within(sec2).getByRole('button', { name: 'Próximo' })).toBeInTheDocument();
+    } finally {
+      largura.mockRestore(); conteudo.mockRestore();
+    }
+  });
+
   it('cartões grandes: duas colunas, sem as setas do carrossel', async () => {
     await abrirHome(moderno({}, { card_style: 'large' }), [imovel('R1', { featured: true }), imovel('R2', { featured: true })]);
 
