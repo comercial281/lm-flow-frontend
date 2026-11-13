@@ -40,10 +40,15 @@ function Lista({ rotulo, valor, mudar, vazio, opcoes }: { rotulo: string; valor:
   return (
     <Rotulado rotulo={rotulo}>
       {id => (
-        <ListaDoSite
-          id={id} value={valor} onChange={mudar} vazio={vazio} options={opcoes}
-          className={`${CAMPO} appearance-none border-[var(--m-line)] [&_option]:bg-[#FFFFFF] [&_option]:text-[#17140F]`}
-        />
+        <div className="relative">
+          <ListaDoSite
+            id={id} value={valor} onChange={mudar} vazio={vazio} options={opcoes}
+            className={`${CAMPO} appearance-none border-[var(--m-line)] pr-10 [&_option]:bg-[#FFFFFF] [&_option]:text-[#17140F]`}
+          />
+          <span aria-hidden className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[var(--m-muted)]">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6" /></svg>
+          </span>
+        </div>
       )}
     </Rotulado>
   );
