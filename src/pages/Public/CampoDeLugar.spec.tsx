@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import CampoDeLugar from './CampoDeLugar';
@@ -75,5 +75,36 @@ describe('CampoDeLugar', () => {
     await user.keyboard('{Escape}{Tab}');
     expect(screen.queryByRole('listbox')).toBeNull();
     expect(confirmar).toHaveBeenCalled();
+  });
+
+  it('apertar o mouse na lista (a barra de rolagem, um cabeçalho) não tira o foco nem confirma', async () => {
+    const user = userEvent.setup();
+    const confirmar = vi.fn();
+    render(<CampoDeLugar items={itens} tab="sale" texto="col" onTexto={vi.fn()} onEscolher={vi.fn()} onConfirmar={confirmar} />);
+    await user.click(screen.getByRole('combobox'));
+    const lista = screen.getByRole('listbox');
+    // false = o preventDefault segurou o foco no campo.
+    expect(fireEvent.mouseDown(lista)).toBe(false);
+    expect(screen.getByRole('listbox')).toBeInTheDocument();
+    expect(confirmar).not.toHaveBeenCalled();
+  });
+
+  it('as setas rolam a lista até o item ativo (com o cabeçalho do grupo)', async () => {
+    const user = userEvent.setup();
+    const rolar = vi.fn();
+    const original = Element.prototype.scrollIntoView;
+    Element.prototype.scrollIntoView = rolar;
+    try {
+      render(<CampoDeLugar items={itens} tab="sale" texto="col" onTexto={vi.fn()} onEscolher={vi.fn()} />);
+      await user.click(screen.getByRole('combobox'));
+      await user.keyboard('{ArrowDown}{ArrowDown}');
+      expect(rolar).toHaveBeenCalledTimes(2);
+      expect(rolar).toHaveBeenLastCalledWith({ block: 'nearest' });
+      expect(rolar.mock.contexts[1]).toBe(screen.getAllByRole('option')[1].parentElement);
+      await user.keyboard('{ArrowUp}');
+      expect(rolar.mock.contexts[2]).toBe(screen.getAllByRole('option')[0].parentElement);
+    } finally {
+      Element.prototype.scrollIntoView = original;
+    }
   });
 });

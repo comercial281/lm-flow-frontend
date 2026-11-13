@@ -42,14 +42,21 @@ export default function CampoDeLugar({ items, tab, texto, onTexto, onEscolher, o
   const escolher = (s: SugestaoDeLugar) => { setAberto(false); setAtivo(-1); onEscolher(s); };
   const idDe = (i: number) => `${id}-op-${i}`;
 
+  // A lista rola (8 itens + cabeçalhos passam da altura dela): a seta leva junto o item ativo,
+  // com o cabeçalho do grupo quando ele é o primeiro. jsdom não tem scrollIntoView.
+  const irPara = (i: number) => {
+    setAtivo(i);
+    document.getElementById(idDe(i))?.parentElement?.scrollIntoView?.({ block: 'nearest' });
+  };
+
   const aoTeclar = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'ArrowDown') {
       e.preventDefault();
       if (!mostrando) { setAberto(true); return; }
-      setAtivo(a => (a + 1) % sugestoes.length);
+      irPara((ativo + 1) % sugestoes.length);
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
-      if (mostrando) setAtivo(a => (a <= 0 ? sugestoes.length - 1 : a - 1));
+      if (mostrando) irPara(ativo <= 0 ? sugestoes.length - 1 : ativo - 1);
     } else if (e.key === 'Enter') {
       if (mostrando && ativo >= 0) { e.preventDefault(); escolher(sugestoes[ativo]); }
       // Sem item ativo o Enter segue para o formulário em volta (a busca da capa); a página de busca não tem formulário.
@@ -77,7 +84,8 @@ export default function CampoDeLugar({ items, tab, texto, onTexto, onEscolher, o
         onKeyDown={aoTeclar}
         className="w-full rounded-xl border border-black/[0.08] bg-white py-3 pl-10 pr-3 text-[14px] outline-none focus:border-[var(--brand)]" />
       {mostrando && (
-        <ul id={`${id}-lista`} role="listbox" aria-label="Sugestões"
+        // Clicar na lista (inclusive arrastar a barra de rolagem) não tira o foco do campo: senão ele confirma e fecha.
+        <ul id={`${id}-lista`} role="listbox" aria-label="Sugestões" onMouseDown={e => e.preventDefault()}
           className={`absolute left-0 right-0 z-30 max-h-72 ${abrirPara === 'cima' ? 'bottom-full mb-2' : 'top-full mt-1'} overflow-auto rounded-xl border border-black/[0.08] bg-white py-1 shadow-lg`}>
           {sugestoes.map((s, i) => {
             const cabecalho = s.grupo !== grupoAnterior;
