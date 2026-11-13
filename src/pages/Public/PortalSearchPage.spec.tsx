@@ -441,11 +441,11 @@ describe('condomínio, bairro ou cidade e Área', () => {
     await abrirBusca(comBairro());
     await escolherCentro();
     expect(urlAtual().get('neighborhood')).toBe('Centro');
-    fireEvent.click(screen.getByRole('button', { name: 'Limpar condomínio, bairro ou cidade' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Limpar busca' }));
     expect(urlAtual().get('neighborhood')).toBeNull();
     expect(campoDeLugar().value).toBe('');
     expect(titulos()).toHaveLength(2);
-    expect(screen.queryByRole('button', { name: 'Limpar condomínio, bairro ou cidade' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Limpar busca' })).toBeNull();
   });
 
   it('escolher bairro e voltar ao campo + Enter não soma place', async () => {
@@ -528,11 +528,28 @@ describe('uma caixa de texto só: lugar ou código', () => {
     expect(titulos()).toEqual(['Imóvel L77']);
   });
 
+  it('pedaço do código + Enter também acha (como a caixa de código de antes)', async () => {
+    await abrirBusca(cat());
+    fireEvent.change(campoDeLugar(), { target: { value: 'AP06' } });
+    fireEvent.keyDown(campoDeLugar(), { key: 'Enter' });
+    expect(urlAtual().get('code')).toBe('AP06');
+    expect(urlAtual().get('place')).toBeNull();
+    expect(titulos()).toEqual(['Imóvel AP0632']);
+  });
+
+  it('texto com espaço vai como place, mesmo com número', async () => {
+    await abrirBusca(cat());
+    fireEvent.change(campoDeLugar(), { target: { value: 'Vila 2' } });
+    fireEvent.keyDown(campoDeLugar(), { key: 'Enter' });
+    expect(urlAtual().get('place')).toBe('Vila 2');
+    expect(urlAtual().get('code')).toBeNull();
+  });
+
   it('?code=AP0632 ao abrir: o campo mostra o código e o × tira', async () => {
     await abrirBusca(cat(), '/portal/imob/imoveis?code=AP0632');
     expect(campoDeLugar().value).toBe('AP0632');
     expect(titulos()).toEqual(['Imóvel AP0632']);
-    fireEvent.click(screen.getByRole('button', { name: 'Limpar condomínio, bairro ou cidade' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Limpar busca' }));
     expect(urlAtual().get('code')).toBeNull();
     expect(campoDeLugar().value).toBe('');
     expect(titulos()).toHaveLength(2);

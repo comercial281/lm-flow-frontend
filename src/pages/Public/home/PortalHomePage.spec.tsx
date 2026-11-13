@@ -399,6 +399,13 @@ describe('Capa do Clássico: uma caixa de texto só', () => {
     expect((await screen.findByTestId('busca')).textContent).toBe('?place=R');
   });
 
+  it('lugar ligado e pedaço do código: vai como code', async () => {
+    await abrirHome({ home: { search: { fields: ['place'] } } }, [imovel('R1'), imovel('AP0632')]);
+    fireEvent.change(caixaDeLugar(), { target: { value: 'AP06' } });
+    fireEvent.click(screen.getByRole('button', { name: /Buscar/ }));
+    expect((await screen.findByTestId('busca')).textContent).toBe('?code=AP06');
+  });
+
   it('lugar desligado: a caixa de código fica como sempre', async () => {
     await abrirHome({ home: { search: { fields: ['type', 'code'] } } }, [imovel('R1')]);
     expect(screen.queryByRole('combobox', { name: /Condomínio/ })).toBeNull();

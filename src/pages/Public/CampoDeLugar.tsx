@@ -96,7 +96,7 @@ export default function CampoDeLugar({
         onKeyDown={aoTeclar}
         className={`w-full rounded-xl border border-black/[0.08] bg-white py-3 pl-10 ${onLimpar && texto ? 'pr-10' : 'pr-3'} text-[14px] outline-none focus:border-[var(--brand)]`} />
       {onLimpar && texto && (
-        <button type="button" aria-label="Limpar condomínio, bairro ou cidade"
+        <button type="button" aria-label="Limpar busca"
           onMouseDown={e => e.preventDefault()} onClick={() => { setAberto(false); onLimpar(); }}
           className="absolute right-2 top-1/2 grid h-7 w-7 -translate-y-1/2 place-items-center rounded-full text-neutral-400 hover:text-neutral-700">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden><path d="M18 6 6 18M6 6l12 12" /></svg>

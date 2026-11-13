@@ -124,7 +124,7 @@ describe('Imóveis no Moderno', () => {
     await abrir([imovel('AP0632'), imovel('A2')], '/portal/imob/imoveis?code=AP0632');
     const caixa = screen.getByRole('combobox', { name: 'Condomínio, bairro, cidade ou código' }) as HTMLInputElement;
     expect(caixa.value).toBe('AP0632');
-    fireEvent.click(screen.getByRole('button', { name: 'Limpar condomínio, bairro ou cidade' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Limpar busca' }));
     expect(urlAtual().get('code')).toBeNull();
     expect(caixa.value).toBe('');
     expect(screen.getAllByRole('article')).toHaveLength(2);
@@ -176,7 +176,7 @@ describe('Imóveis no Moderno: condomínio, bairro ou cidade e Área', () => {
     expect(campo().value).toBe('co');
     expect(titulosDosCartoes()).toBe(2);
     expect(within(screen.getByRole('list', { name: 'Filtros ativos' })).getByText('“co”')).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'Limpar condomínio, bairro ou cidade' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Limpar busca' }));
     expect(urlAtual().get('place')).toBeNull();
     expect(campo().value).toBe('');
   });
