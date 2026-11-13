@@ -193,12 +193,14 @@ describe('tokensDoSite · tons do Moderno', () => {
       .toEqual(['#F2F3F6', '#FFFFFF', '#E2E4EB', '#4B5064', '#7C8195']);
   });
 
-  it('Moderno escuro: neutros escuros, título clareado e tom suave rumo ao card', () => {
+  it('Moderno escuro: neutros escuros, título clareado e tom suave rumo ao chão escuro (frio, como no protótipo)', () => {
     const v = tokensDoSite(site({ style: 'modern', background: 'dark' })).cssVars as Record<string, string>;
     expect([v['--m-ground'], v['--m-surface'], v['--m-line'], v['--m-text'], v['--m-muted']])
       .toEqual(['#0E1016', '#171A22', '#272B36', '#B8BCCB', '#868B9C']);
     expect(v['--m-head']).toBe(v['--brand-text']);
-    expect(v['--m-brand-soft']).toBe(misturarCom('#0E1A6B', v['--site-card'], 0.62));
+    // Protótipo: color-mix(brand, #0E1016 62%). Nunca o card quente do Clássico (#1E1A15), que acinzenta a marca.
+    expect(v['--m-brand-soft']).toBe(misturarCom('#0E1A6B', '#0E1016', 0.62));
+    expect(v['--m-brand-soft']).not.toBe(misturarCom('#0E1A6B', v['--site-card'], 0.62));
   });
 
   it('Moderno escuro: o tom do itálico (--m-head-2) também passa pelo clarearAte e fica legível', () => {

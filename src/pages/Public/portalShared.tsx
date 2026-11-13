@@ -231,7 +231,8 @@ export function tokensDoSite(site: SiteInfo) {
   }
   const tonsModernos = moderno ? {
     ['--m-brand-2' as string]: misturarCom(brand, '#FFFFFF', 0.14),
-    ['--m-brand-soft' as string]: escuro ? misturarCom(brand, cores.card, 0.62) : misturarCom(brand, '#FFFFFF', 0.9),
+    // No escuro, rumo ao chão escuro do Moderno (#0E1016, o --m-ground), como no protótipo: o card quente do Clássico acinzentava a marca.
+    ['--m-brand-soft' as string]: escuro ? misturarCom(brand, '#0E1016', 0.62) : misturarCom(brand, '#FFFFFF', 0.9),
     ['--m-head' as string]: escuro ? clarearAte(brand, cores.card) : brand,
     // O tom do itálico do destaque é texto: no escuro passa pelo clarearAte, como o --m-head.
     ['--m-head-2' as string]: escuro ? clarearAte(misturarCom(brand, '#FFFFFF', 0.22), cores.card) : misturarCom(brand, '#FFFFFF', 0.22),
