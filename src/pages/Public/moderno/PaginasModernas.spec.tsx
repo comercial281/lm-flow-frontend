@@ -5,6 +5,8 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import PortalFinanciamentoPage from '../PortalFinanciamentoPage';
 import PortalAnunciePage from '../PortalAnunciePage';
+import PortalBlogPage from '../PortalBlogPage';
+import PortalArticlePage from '../PortalArticlePage';
 import { esquecerModeloDaPrevia } from '@/features/siteBuilder/public/previaDoModelo';
 import { TEXTO_ENVIO_NA_PREVIA } from '@/features/siteBuilder/public/previa';
 import type { SiteInfo } from '../portalShared';
@@ -156,5 +158,51 @@ describe('Anuncie no Moderno', () => {
     await u.click(screen.getByRole('button', { name: 'Enviar minha ficha' }));
     expect(screen.getByText('Digite um telefone válido com DDD.')).toBeTruthy();
     expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith('/site/anuncie'))).toBe(false);
+  });
+});
+
+const artigo = (n: number) => ({ id: `a${n}`, title: `Artigo ${n}`, slug: `artigo-${n}`, excerpt: `Resumo ${n}`, cover_image_url: `https://cdn.x/a${n}.jpg`, published_at: '2026-11-01T12:00:00Z', reading_time_minutes: 4 });
+
+describe('Blog no Moderno', () => {
+  const ROTA = { caminho: '/portal/imob/blog', padrao: '/portal/:tenant/blog', elemento: <PortalBlogPage /> };
+  const artigos = (n: number) => (url: string) => (url.includes('/site/articles') ? resposta({ data: Array.from({ length: n }, (_, i) => artigo(i + 1)), meta: { total: n } }) : null);
+
+  it('o primeiro artigo em destaque e os outros em grade, cada um levando ao artigo', async () => {
+    await abrir(ROTA, MODERNO, artigos(4));
+    expect(paginaModerna('blog')).not.toBeNull();
+    await screen.findByText('Artigo 1');
+    const destaque = screen.getByTestId('artigo-em-destaque');
+    expect(within(destaque).getByRole('heading', { name: 'Artigo 1' })).toBeTruthy();
+    expect(destaque.getAttribute('href')).toBe('/portal/imob/blog/artigo-1');
+    const grade = screen.getByTestId('artigos-em-grade');
+    expect(grade.querySelectorAll('a')).toHaveLength(3);
+  });
+
+  it('sem artigo: a mensagem de hoje', async () => {
+    await abrir(ROTA, MODERNO, artigos(0));
+    expect(await screen.findByText('Nenhum artigo publicado ainda.')).toBeTruthy();
+  });
+});
+
+describe('Artigo no Moderno', () => {
+  const ROTA = { caminho: '/portal/imob/blog/artigo-1', padrao: '/portal/:tenant/blog/:slug', elemento: <PortalArticlePage /> };
+  const imovel = { id: 'p1', code: 'AP1', title: 'Apartamento destaque', transaction_type: 'sale', property_type: 'apartment', listing_kind: 'resale', featured: true, address: { city: 'Campinas' } };
+  const dados = (url: string) => {
+    if (url.includes('/site/articles/artigo-1')) return resposta({ data: { ...artigo(1), body_html: '<p>Corpo do <strong>artigo</strong>.</p>' } });
+    if (url.includes('/site/properties')) return resposta({ data: [imovel], meta: { total: 1 } });
+    return null;
+  };
+
+  it('coluna de leitura, chamada do WhatsApp na cor principal, imóveis em cartão claro e "Ver todos os artigos"', async () => {
+    await abrir(ROTA, MODERNO, dados);
+    expect(paginaModerna('artigo')).not.toBeNull();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Artigo 1' })).toBeTruthy();
+    expect(screen.getByText('artigo').tagName).toBe('STRONG');
+    const chamada = screen.getByTestId('chamada-do-artigo');
+    expect(within(chamada).getByText('Gostou do conteúdo? Fale com a gente.')).toBeTruthy();
+    expect(within(chamada).getByRole('link', { name: /WhatsApp/ })).toBeTruthy();
+    expect(screen.getByRole('heading', { level: 2, name: 'Imóveis em destaque' })).toBeTruthy();
+    expect(screen.getByText('Apartamento · AP1')).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Ver todos os artigos' }).getAttribute('href')).toBe('/portal/imob/blog');
   });
 });

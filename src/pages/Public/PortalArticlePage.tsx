@@ -9,6 +9,8 @@ import {
 import PaginaManutencao from './PaginaManutencao';
 import { usePortalTracking } from './usePortalTracking';
 import { useIconeDaAba } from '@/features/siteBuilder/public/useIconeDaAba';
+import CascaModerna from './moderno/CascaModerna';
+import ArtigoModerno from './moderno/ArtigoModerno';
 
 /* ────────────────────────────────────────────────────────────────────────────
    Portal Imobiliário — ARTIGO (detalhe de um post do blog) (Produto A).
@@ -34,7 +36,7 @@ export default function PortalArticlePage() {
   const { slug } = useParams<{ slug: string }>();
   const tenant = useTenantDoSite();
   const ctx = useCtxDoSite(tenant ?? '');
-  const { state, site, items, fontHrefs, abas, cssVars, fundo, manutencao } = usePortalData(tenant);
+  const { state, site, items, fontHrefs, abas, cssVars, fundo, manutencao, aparencia } = usePortalData(tenant);
   const { pathname } = useLocation();
   // Em manutenção nada de rastreamento nem visita: a página é a de manutenção.
   usePortalTracking(state === 'ok' && !manutencao ? site : null, tenant, { kind: 'article', path: pathname, pageSlug: slug });
@@ -75,6 +77,15 @@ export default function PortalArticlePage() {
   if (manutencao) return <PaginaManutencao site={site} />;
   if (state === 'error') {
     return <div className="flex min-h-screen items-center justify-center px-6 text-center text-neutral-500" style={{ fontFamily: 'system-ui' }}>Portal indisponível.</div>;
+  }
+
+  // Moderno: outro desenho, com o mesmo artigo, a mesma vitrine e o mesmo WhatsApp.
+  if (aparencia.style === 'modern') {
+    return (
+      <CascaModerna nome="artigo" site={site} tenant={tenant!} abas={abas} fontHrefs={fontHrefs} cssVars={cssVars as CSSProperties} fundo={fundo}>
+        <ArtigoModerno tenant={tenant!} article={article} loading={loading} featured={featured} wa={wa} waHref={waHref} />
+      </CascaModerna>
+    );
   }
 
   return (
