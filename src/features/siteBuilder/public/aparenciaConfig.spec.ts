@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   APARENCIA_FABRICA, DEGRADE_DA_CAPA_FABRICA, FONTES_DO_SITE, TINTA_ESCURA,
-  clarearAte, contrasteEntre, filtroDaCapa, fonteDoSite, fontesDoSite, logoNaCapa, logoNaSuperficie, resolverAparencia, textoSobre,
+  clarearAte, contrasteEntre, filtroDaCapa, fonteDoSite, fontesDoSite, logoNaCapa, logoNaSuperficie, misturarCom, resolverAparencia, textoSobre,
 } from './aparenciaConfig';
 
 describe('resolverAparencia', () => {
@@ -203,5 +203,19 @@ describe('logoNaSuperficie na cor principal', () => {
   it('a clara só quando a cor principal é escura (texto branco)', () => {
     expect(logoNaSuperficie('https://cdn.x/logo.png', comClara, 'marca', '#0E7C5A').clara).toBe(true);
     expect(logoNaSuperficie('https://cdn.x/logo.png', comClara, 'marca', '#FACC15')).toEqual({ url: 'https://cdn.x/logo.png', clara: false });
+  });
+});
+
+describe('misturarCom', () => {
+  const canal = (c: number, alvo: number, t: number) => Math.round(c + (alvo - c) * t).toString(16).padStart(2, '0');
+  it('mistura canal a canal em direção ao alvo e devolve #RRGGBB maiúsculo', () => {
+    const esperado = `#${[0x0E, 0x1A, 0x6B].map(c => canal(c, 255, 0.14)).join('')}`.toUpperCase();
+    expect(misturarCom('#0E1A6B', '#FFFFFF', 0.14)).toBe(esperado);
+    expect(misturarCom('#0E1A6B', '#FFFFFF', 0)).toBe('#0E1A6B');
+    expect(misturarCom('#0E1A6B', '#FFFFFF', 1)).toBe('#FFFFFF');
+  });
+  it('cor ou alvo que não é hex volta a cor como veio', () => {
+    expect(misturarCom('rgb(1,2,3)', '#FFFFFF', 0.5)).toBe('rgb(1,2,3)');
+    expect(misturarCom('#0E1A6B', 'red', 0.5)).toBe('#0E1A6B');
   });
 });

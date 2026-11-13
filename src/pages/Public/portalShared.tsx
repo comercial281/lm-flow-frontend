@@ -18,7 +18,7 @@ import { abasVisiveis } from '@/features/siteBuilder/public/vitrines';
 import { seloDaFase } from '@/features/properties/listingKind';
 import { ORDENS, ROTULO_ORDEM, ehOrdem, type Ordem } from '@/features/siteBuilder/public/listaConfig';
 import {
-  CORES_DO_FUNDO, TEXTO_RODAPE_FABRICA, clarearAte, fontesDoSite, logoNaCapa, logoNaSuperficie, resolverAparencia, textoSobre,
+  CORES_DO_FUNDO, TEXTO_RODAPE_FABRICA, clarearAte, fontesDoSite, logoNaCapa, logoNaSuperficie, misturarCom, resolverAparencia, textoSobre,
   type Aparencia, type Superficie,
 } from '@/features/siteBuilder/public/aparenciaConfig';
 import { ATRIBUTO_DO_TOPO, useLogoPousado } from '@/features/siteBuilder/public/logoPousado';
@@ -221,6 +221,23 @@ export function tokensDoSite(site: SiteInfo) {
   // um `<link>` só, como sempre. Cada página põe um `<link>` por endereço.
   const { fontStack, displayStack, hrefs: fontHrefs } = fontesDoSite(site.branding?.font_family, aparencia.heading_font);
   const cores = CORES_DO_FUNDO[aparencia.background];
+  const escuro = aparencia.background === 'dark';
+  const moderno = aparencia.style === 'modern';
+  // Moderno: tons derivados em hex (sem color-mix) e o itálico do destaque.
+  if (moderno && aparencia.heading_highlight === 'italic') {
+    fontHrefs.push('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@1&display=swap');
+  }
+  const tonsModernos = moderno ? {
+    ['--m-brand-2' as string]: misturarCom(brand, '#FFFFFF', 0.14),
+    ['--m-brand-soft' as string]: escuro ? misturarCom(brand, cores.card, 0.62) : misturarCom(brand, '#FFFFFF', 0.9),
+    ['--m-head' as string]: escuro ? clarearAte(brand, cores.card) : brand,
+    ['--m-head-2' as string]: misturarCom(brand, '#FFFFFF', 0.22),
+    ['--m-ground' as string]: escuro ? '#0E1016' : '#F2F3F6',
+    ['--m-surface' as string]: escuro ? '#171A22' : '#FFFFFF',
+    ['--m-line' as string]: escuro ? '#272B36' : '#E2E4EB',
+    ['--m-text' as string]: escuro ? '#B8BCCB' : '#4B5064',
+    ['--m-muted' as string]: escuro ? '#868B9C' : '#7C8195',
+  } : {};
   const cssVars = {
     ['--brand' as string]: brand,
     ['--accent' as string]: accent,
@@ -232,6 +249,7 @@ export function tokensDoSite(site: SiteInfo) {
     ['--brand-ink' as string]: textoSobre(brand),
     ['--brand-text' as string]: aparencia.background === 'dark' ? clarearAte(brand, cores.card) : brand,
     ['--display' as string]: displayStack,
+    ...tonsModernos,
     fontFamily: fontStack,
   } as CSSProperties;
   const fundo = aparencia.background === 'dark' ? 'escuro' as const : undefined;

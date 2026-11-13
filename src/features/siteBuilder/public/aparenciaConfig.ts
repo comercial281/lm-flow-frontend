@@ -200,6 +200,17 @@ export function contrasteEntre(a: string, b: string): number | null {
 const hex = (rgb: number[]) => `#${rgb.map(v => Math.round(v).toString(16).padStart(2, '0')).join('').toUpperCase()}`;
 
 /**
+ * A cor misturada com `alvo` na proporção `t` (0 = a cor, 1 = o alvo), canal a
+ * canal, em hex `#RRGGBB`. Os tons derivados do Moderno saem daqui porque
+ * `color-mix` não roda em Chrome < 111. Cor ou alvo que não é hex volta como veio.
+ */
+export function misturarCom(cor: string, alvo: string, t: number): string {
+  const a = rgbDe(cor); const b = rgbDe(alvo);
+  if (!a || !b) return cor;
+  return hex(a.map((v, i) => v + (b[i] - v) * t));
+}
+
+/**
  * A cor clareada (misturada com branco, de 2 em 2%) até dar `minimo` de
  * contraste sobre `fundo`. Usada no texto na cor da marca do fundo escuro
  * (`--brand-text`): uma marca azul-marinho ou roxa some sobre o quase preto.

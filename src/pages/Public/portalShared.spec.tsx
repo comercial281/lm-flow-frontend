@@ -1,7 +1,8 @@
 import { cleanup, render, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it } from 'vitest';
-import { PropertyCard, PropertyRow, type PortalProperty } from './portalShared';
+import { PropertyCard, PropertyRow, tokensDoSite, type PortalProperty } from './portalShared';
+import { misturarCom } from '../../features/siteBuilder/public/aparenciaConfig';
 
 /* ────────────────────────────────────────────────────────────────────────────
    Linha larga da lista (Meu site › Lista de imóveis › cartões em linhas): diz
@@ -168,5 +169,43 @@ describe('cartão grande (Aparência › cartões grandes)', () => {
     const html = padrao.outerHTML;
     cleanup();
     expect(desenharCartao(false).outerHTML).toBe(html);
+  });
+});
+
+describe('tokensDoSite · tons do Moderno', () => {
+  const CLASSICO = ['--brand', '--accent', '--ink', '--paper', '--site-card', '--solid', '--accent-ink', '--brand-ink', '--brand-text', '--display', 'fontFamily'];
+  const M = ['--m-brand-2', '--m-brand-soft', '--m-head', '--m-head-2', '--m-ground', '--m-surface', '--m-line', '--m-text', '--m-muted'];
+  const site = (appearance?: Record<string, unknown>) => ({ branding: { primary_color: '#0E1A6B', accent_color: '#C8A24A' }, appearance } as never);
+
+  it('sem style (Clássico): as mesmas chaves de sempre, nenhuma --m-*', () => {
+    expect(Object.keys(tokensDoSite(site()).cssVars).sort()).toEqual([...CLASSICO].sort());
+    expect(Object.keys(tokensDoSite(site({ style: 'classic', background: 'dark' })).cssVars).sort()).toEqual([...CLASSICO].sort());
+  });
+
+  it('Moderno claro: as 9 chaves --m-* com os tons do protótipo', () => {
+    const v = tokensDoSite(site({ style: 'modern' })).cssVars as Record<string, string>;
+    for (const k of [...CLASSICO, ...M]) expect(v[k], k).toBeTruthy();
+    expect(v['--m-brand-2']).toBe(misturarCom('#0E1A6B', '#FFFFFF', 0.14));
+    expect(v['--m-brand-soft']).toBe(misturarCom('#0E1A6B', '#FFFFFF', 0.9));
+    expect(v['--m-head']).toBe('#0E1A6B');
+    expect(v['--m-head-2']).toBe(misturarCom('#0E1A6B', '#FFFFFF', 0.22));
+    expect([v['--m-ground'], v['--m-surface'], v['--m-line'], v['--m-text'], v['--m-muted']])
+      .toEqual(['#F2F3F6', '#FFFFFF', '#E2E4EB', '#4B5064', '#7C8195']);
+  });
+
+  it('Moderno escuro: neutros escuros, título clareado e tom suave rumo ao card', () => {
+    const v = tokensDoSite(site({ style: 'modern', background: 'dark' })).cssVars as Record<string, string>;
+    expect([v['--m-ground'], v['--m-surface'], v['--m-line'], v['--m-text'], v['--m-muted']])
+      .toEqual(['#0E1016', '#171A22', '#272B36', '#B8BCCB', '#868B9C']);
+    expect(v['--m-head']).toBe(v['--brand-text']);
+    expect(v['--m-brand-soft']).toBe(misturarCom('#0E1A6B', v['--site-card'], 0.62));
+  });
+
+  it('Instrument Serif só com Moderno + destaque em itálico', () => {
+    const tem = (a?: Record<string, unknown>) => tokensDoSite(site(a)).fontHrefs.some(h => h.includes('Instrument+Serif'));
+    expect(tem({ style: 'modern', heading_highlight: 'italic' })).toBe(true);
+    expect(tem({ style: 'modern', heading_highlight: 'accent' })).toBe(false);
+    expect(tem({ style: 'classic', heading_highlight: 'italic' })).toBe(false);
+    expect(tem()).toBe(false);
   });
 });
