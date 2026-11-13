@@ -115,14 +115,14 @@ export default function PortalSearchPage() {
   const escolhida = useRef<SugestaoDeLugar | null>(null);
   // O que o campo mostra pela URL: o rótulo da sugestão escolhida enquanto a URL ainda é a dela
   // (qualquer grupo); mudou o select, o campo volta a só condomínio/place.
-  const textoDaUrl = () => {
+  const escolhidaNaUrl = () => {
     const e = escolhida.current;
-    const bate = !!e && !filters.place
+    return !!e && !filters.place
       && (e.filtros.condominium ?? '') === filters.condominium
       && (e.filtros.neighborhood ?? '') === filters.neighborhood
       && (e.filtros.city ?? '') === filters.city;
-    return bate ? e!.rotulo : (filters.condominium || filters.place || '');
   };
+  const textoDaUrl = () => (escolhidaNaUrl() ? escolhida.current!.rotulo : (filters.condominium || filters.place || ''));
   useEffect(() => {
     setTextoDoLugar(textoDaUrl());
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -136,8 +136,13 @@ export default function PortalSearchPage() {
     const t = textoDoLugar.trim();
     if (t === textoDaUrl().trim()) return;
     if (!t && (filters.neighborhood || filters.city) && !filters.condominium && !filters.place) return;
+    // Mexeu no texto de uma sugestão que ainda está na URL: os filtros dela (bairro, cidade) saem junto,
+    // senão "Granja" ficaria preso ao bairro "Centro" e a lista viria vazia.
+    const daEscolhida = escolhidaNaUrl()
+      ? Object.fromEntries(Object.keys(escolhida.current!.filtros).map(k => [k, '']))
+      : {};
     escolhida.current = null;
-    update({ place: t, condominium: '' }, true);
+    update({ ...daEscolhida, place: t, condominium: '' }, true);
   };
 
   // Ordem não é filtro: "Limpar filtros" mantém a escolhida.

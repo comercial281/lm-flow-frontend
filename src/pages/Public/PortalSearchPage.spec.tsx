@@ -456,6 +456,16 @@ describe('condomínio, bairro ou cidade e Área', () => {
     expect(titulos()).toEqual(['Imóvel B2']);
   });
 
+  it('escolher bairro e trocar o texto: o bairro sai e fica só o texto', async () => {
+    await abrirBusca(comBairro());
+    await escolherCentro();
+    fireEvent.change(campoDeLugar(), { target: { value: 'Cambuí' } });
+    fireEvent.keyDown(campoDeLugar(), { key: 'Enter' });
+    expect(urlAtual().get('place')).toBe('Cambuí');
+    expect(urlAtual().get('neighborhood')).toBeNull();
+    expect(titulos()).toEqual(['Imóvel B2']);
+  });
+
   it('sair do campo com Tab grava o texto digitado', async () => {
     await abrirBusca(comBairro());
     fireEvent.change(campoDeLugar(), { target: { value: 'zzz' } });
