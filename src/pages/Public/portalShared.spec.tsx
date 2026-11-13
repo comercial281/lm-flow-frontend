@@ -2,7 +2,7 @@ import { cleanup, render, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it } from 'vitest';
 import { PropertyCard, PropertyRow, tokensDoSite, type PortalProperty } from './portalShared';
-import { clarearAte, contrasteEntre, misturarCom } from '../../features/siteBuilder/public/aparenciaConfig';
+import { clarearAte, contrasteEntre, misturarCom, textoSobre } from '../../features/siteBuilder/public/aparenciaConfig';
 
 /* ────────────────────────────────────────────────────────────────────────────
    Linha larga da lista (Meu site › Lista de imóveis › cartões em linhas): diz
@@ -220,6 +220,15 @@ describe('tokensDoSite · tons do Moderno', () => {
     const d = tokensDoSite(site({ style: 'modern' })).cssVars as Record<string, string>;
     expect(d['--m-head']).toBe('#0E1A6B');
     expect(d['--m-head-2']).toBe(misturarCom('#0E1A6B', '#FFFFFF', 0.22));
+  });
+
+  it('--m-accent-on-brand: o destaque quando contrasta 3:1 com a marca; sem destaque salvo (accent = marca), o texto da marca', () => {
+    const v = (branding: Record<string, string>) => tokensDoSite({ branding, appearance: { style: 'modern' } } as never).cssVars as Record<string, string>;
+    expect(v({ primary_color: '#0E1A6B' })['--m-accent-on-brand']).toBe(textoSobre('#0E1A6B'));
+    expect(v({ primary_color: '#0E1A6B', accent_color: '#0E1A6B' })['--m-accent-on-brand']).toBe('#FFFFFF');
+    expect(v({ primary_color: '#0E1A6B', accent_color: '#C8A24A' })['--m-accent-on-brand']).toBe('#C8A24A');
+    expect(v({ primary_color: '#FDE899' })['--m-accent-on-brand']).toBe(textoSobre('#FDE899'));
+    expect(Object.keys(tokensDoSite(site()).cssVars)).not.toContain('--m-accent-on-brand');
   });
 
   it('Instrument Serif só com Moderno + destaque em itálico', () => {

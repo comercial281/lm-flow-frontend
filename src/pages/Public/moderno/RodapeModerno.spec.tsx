@@ -45,6 +45,13 @@ describe('RodapeModerno', () => {
     expect(raiz(c)!.textContent).not.toContain('*');
   });
 
+  it('título de coluna e destaque do rodapé usam --m-accent-on-brand (o destaque cru some quando é igual à marca)', async () => {
+    const c = await rodape(moderno({ footer_text: 'Seu lar *de verdade*', heading_highlight: 'accent' }));
+    expect(raiz(c)!.querySelector('h4')!.className).toContain('text-[var(--m-accent-on-brand)]');
+    expect(raiz(c)!.querySelector('h4')!.className).not.toContain('text-[var(--accent)]');
+    expect(raiz(c)!.querySelector('[data-destaque="accent"]')!.closest('p')!.className).toContain('var(--m-accent-on-brand)');
+  });
+
   it('destaque em itálico e modo none (sem span)', async () => {
     const it1 = await rodape(moderno({ footer_text: 'Seu lar *de verdade*', heading_highlight: 'italic' }));
     expect(raiz(it1)!.querySelector('span[data-destaque="italic"]')).toBeTruthy();

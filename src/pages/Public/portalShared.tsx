@@ -18,7 +18,7 @@ import { abasVisiveis } from '@/features/siteBuilder/public/vitrines';
 import { seloDaFase } from '@/features/properties/listingKind';
 import { ORDENS, ROTULO_ORDEM, ehOrdem, type Ordem } from '@/features/siteBuilder/public/listaConfig';
 import {
-  CORES_DO_FUNDO, TEXTO_RODAPE_FABRICA, clarearAte, escurecerAte, fontesDoSite, logoNaCapa, logoNaSuperficie, misturarCom, resolverAparencia, textoSobre,
+  CORES_DO_FUNDO, TEXTO_RODAPE_FABRICA, clarearAte, contrasteEntre, escurecerAte, fontesDoSite, logoNaCapa, logoNaSuperficie, misturarCom, resolverAparencia, textoSobre,
   type Aparencia, type Superficie,
 } from '@/features/siteBuilder/public/aparenciaConfig';
 import { ATRIBUTO_DO_TOPO, useLogoPousado } from '@/features/siteBuilder/public/logoPousado';
@@ -237,6 +237,8 @@ export function tokensDoSite(site: SiteInfo) {
     ['--m-head' as string]: escuro ? clarearAte(brand, cores.card) : escurecerAte(brand, '#F2F3F6'),
     // O tom do itálico do destaque é texto: no escuro passa pelo clarearAte, como o --m-head.
     ['--m-head-2' as string]: escuro ? clarearAte(misturarCom(brand, '#FFFFFF', 0.22), cores.card) : escurecerAte(misturarCom(brand, '#FFFFFF', 0.22), '#F2F3F6'),
+    // Destaque sobre a cor principal (rodapé, faixa de chamadas): o accent só se contrasta 3:1 com a marca; senão (sem destaque salvo, accent = marca) o texto da marca.
+    ['--m-accent-on-brand' as string]: (contrasteEntre(accent, brand) ?? 0) >= 3 ? accent : textoSobre(brand),
     ['--m-ground' as string]: escuro ? '#0E1016' : '#F2F3F6',
     ['--m-surface' as string]: escuro ? '#171A22' : '#FFFFFF',
     ['--m-line' as string]: escuro ? '#272B36' : '#E2E4EB',

@@ -8,7 +8,7 @@ import type { DestaqueDosTitulos } from '@/features/siteBuilder/public/aparencia
 
 /** Título sobre a cor principal: accent = o trecho na cor de destaque; itálico = serifada na cor do texto do bloco. */
 export const DESTAQUE_SOBRE_A_COR =
-  '[&_[data-destaque=accent]]:text-[var(--accent)] ' +
+  '[&_[data-destaque=accent]]:text-[var(--m-accent-on-brand)] ' +
   '[&_[data-destaque=italic]]:italic [&_[data-destaque=italic]]:font-normal [&_[data-destaque=italic]]:text-[var(--brand-ink)] ' +
   '[&_[data-destaque=italic]]:[font-family:Instrument_Serif,Georgia,serif]';
 

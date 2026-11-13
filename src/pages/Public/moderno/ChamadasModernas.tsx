@@ -61,7 +61,7 @@ function NaFaixa({ cards, modo }: { cards: CartaoChamada[]; modo: DestaqueDosTit
             <span aria-hidden className={`absolute left-[clamp(20px,3vw,36px)] right-[clamp(20px,3vw,36px)] top-0 h-px bg-current opacity-[0.16] ${
               i % cols === 0 ? 'md:hidden' : 'md:bottom-0 md:left-0 md:right-auto md:h-auto md:w-px'}`} />
           )}
-          <Bolinha c={c} corDoIcone="text-[var(--accent)]" />
+          <Bolinha c={c} corDoIcone="text-[var(--m-accent-on-brand)]" />
           <Titulo c={c} modo={modo} sobreACor />
           {c.text && <p className="mb-1.5 text-[14px] leading-relaxed opacity-75">{c.text}</p>}
           <Destino c={c} className="mt-auto inline-flex items-center gap-2 self-start rounded-full border-[1.5px] border-current px-[18px] py-2.5 text-[14px] font-semibold transition-transform hover:-translate-y-px">

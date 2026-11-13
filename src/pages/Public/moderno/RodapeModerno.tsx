@@ -19,7 +19,7 @@ import { logoNaSuperficie, resolverAparencia, textoSobre, TEXTO_RODAPE_FABRICA }
 ──────────────────────────────────────────────────────────────────────────── */
 
 const LINK = 'text-[14px] opacity-75 transition-opacity hover:opacity-100';
-const TITULO_COL = 'mb-3.5 mt-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--accent)]';
+const TITULO_COL = 'mb-3.5 mt-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--m-accent-on-brand)]';
 
 function Coluna({ titulo, children }: { titulo: string; children: React.ReactNode }) {
   return (
