@@ -296,6 +296,20 @@ describe('TelaAparencia · Mais fotos do banner', () => {
     expect(screen.queryByText(/voltou ao automático/)).toBeNull();
   });
 
+  it('foto 1 despublicada com extra válida: o aviso diz que o banner segue com as outras fotos', () => {
+    const site = {
+      hero_image: {
+        mode: 'property', property_id: 'im-1', photo_id: null, url: null,
+        property: { id: 'im-1', title: 'Collina', code: 'AP1' }, reason: 'imovel_despublicado',
+      },
+      hero_image_extras: [{ mode: 'upload', url: 'https://cdn/2.jpg' }],
+    } as unknown as Site;
+    render(<Montar espiao={vi.fn()} site={site}
+      inicial={{ hero_image: { mode: 'property', property_id: 'im-1', photo_id: null }, hero_image_extras: [{ mode: 'upload', url: 'https://cdn/2.jpg' }] }} />);
+    expect(screen.getByText('A foto principal saiu do banner: o imóvel «Collina» não está mais publicado no site. O banner segue com as outras fotos.')).toBeTruthy();
+    expect(screen.queryByText(/voltou ao automático/)).toBeNull();
+  });
+
   it('escolher a foto de um imóvel entra em hero_image_extras e mostra a prévia', async () => {
     const espiao = vi.fn();
     render(<Montar espiao={espiao} inicial={{ hero_image: { mode: 'upload', url: 'https://cdn/1.jpg' }, hero_image_extras: [] }} />);

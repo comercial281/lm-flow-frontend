@@ -44,6 +44,24 @@ describe('foto do banner da home', () => {
       expect(heroImageWarning({ mode: 'property', property_id: 'im-1', reason: 'imovel_removido' }))
         .toMatch(/excluído/);
     });
+
+    it('com outras fotos no banner não fala em automático: a foto principal sai e o banner segue com as outras', () => {
+      const base = { mode: 'property' as const, property_id: 'im-1', property: { id: 'im-1', title: 'Apto Vila Mariana', code: 'AP1' } };
+      expect(heroImageWarning({ ...base, reason: 'imovel_despublicado' }, true))
+        .toBe('A foto principal saiu do banner: o imóvel «Apto Vila Mariana» não está mais publicado no site. O banner segue com as outras fotos.');
+      expect(heroImageWarning({ ...base, reason: 'imovel_removido' }, true))
+        .toBe('A foto principal saiu do banner: o imóvel escolhido foi excluído. O banner segue com as outras fotos.');
+      expect(heroImageWarning({ ...base, reason: 'imovel_sem_foto' }, true)).not.toMatch(/automático/);
+      expect(heroImageWarning({ ...base, reason: 'erro' }, true)).not.toMatch(/automático/);
+      expect(heroImageWarning({ ...base, url: 'https://cdn/a.jpg' }, true)).toBeNull();
+    });
+
+    it('extra conta como outra foto só quando o servidor ainda serve a imagem', async () => {
+      const { temExtraNoBanner } = await import('./heroImage');
+      expect(temExtraNoBanner(undefined)).toBe(false);
+      expect(temExtraNoBanner([{ mode: 'property', property_id: 'im-2', reason: 'imovel_despublicado' }])).toBe(false);
+      expect(temExtraNoBanner([{ mode: 'upload', url: 'https://cdn/b.jpg' }])).toBe(true);
+    });
   });
 });
 

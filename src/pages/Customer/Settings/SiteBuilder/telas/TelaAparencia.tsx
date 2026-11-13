@@ -6,7 +6,7 @@ import { extractLogoColors } from '@/utils/logoColors';
 import { siteBuilderService } from '@/services/siteBuilder/siteBuilderService';
 import HeroImagePicker, { type HeroImagePick } from '@/features/siteBuilder/HeroImagePicker';
 import MaisFotosDoBanner, { chaveDaExtra, type PreviaDaExtra } from './MaisFotosDoBanner';
-import { EMPTY_HERO_IMAGE, MAX_FOTOS_EXTRAS, HERO_IMAGE_MODE_LABELS, heroImageChoiceFrom, heroImageWarning } from '@/features/siteBuilder/heroImage';
+import { EMPTY_HERO_IMAGE, MAX_FOTOS_EXTRAS, HERO_IMAGE_MODE_LABELS, heroImageChoiceFrom, heroImageWarning, temExtraNoBanner } from '@/features/siteBuilder/heroImage';
 import { Seletor } from '@/components/base/Seletor';
 import { tituloDaAba } from '@/features/siteBuilder/public/tituloDaAba';
 import { APARENCIA_FABRICA, FONTES_DO_SITE, type Aparencia } from '@/features/siteBuilder/public/aparenciaConfig';
@@ -245,7 +245,7 @@ export default function TelaAparencia({ site, siteForm, setF, heroPickPreview, s
           // Prévia: a foto recém-escolhida (ainda não salva) ou a que o servidor serve hoje.
           const propertyPreviewUrl = heroPickPreview?.url ?? (savedMatches ? resolved?.url : null);
           const propertyTitle = heroPickPreview?.property_title ?? (savedMatches ? resolved?.property?.title : null);
-          const warning = !heroPickPreview && savedMatches ? heroImageWarning(resolved) : null;
+          const warning = !heroPickPreview && savedMatches ? heroImageWarning(resolved, temExtraNoBanner(site?.hero_image_extras)) : null;
           const setMode = (mode: typeof choice.mode) => {
             setHeroPickPreview(null);
             if (mode === 'auto') setF({ hero_image: { mode: 'auto' } });
