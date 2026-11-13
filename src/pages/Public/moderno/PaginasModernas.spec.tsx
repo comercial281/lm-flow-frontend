@@ -4,6 +4,9 @@ import type { ReactElement } from 'react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import PortalFinanciamentoPage from '../PortalFinanciamentoPage';
+import PortalAnunciePage from '../PortalAnunciePage';
+import { esquecerModeloDaPrevia } from '@/features/siteBuilder/public/previaDoModelo';
+import { TEXTO_ENVIO_NA_PREVIA } from '@/features/siteBuilder/public/previa';
 import type { SiteInfo } from '../portalShared';
 
 vi.mock('@/features/siteBuilder/public/siteVisits', () => ({ sendSiteVisit: vi.fn() }));
@@ -42,7 +45,7 @@ export async function abrir(rota: Rota, site: SiteInfo, extra: Extra = () => nul
 
 const paginaModerna = (nome: string) => document.querySelector(`[data-pagina-moderna="${nome}"]`);
 
-afterEach(() => { vi.unstubAllGlobals(); });
+afterEach(() => { vi.unstubAllGlobals(); esquecerModeloDaPrevia(); window.history.replaceState({}, '', '/'); });
 
 describe('Financiamento no Moderno', () => {
   const ROTA = { caminho: '/portal/imob/financiamento', padrao: '/portal/:tenant/financiamento', elemento: <PortalFinanciamentoPage /> };
@@ -82,3 +85,76 @@ describe('Financiamento no Moderno', () => {
   });
 });
 
+
+describe('Anuncie no Moderno', () => {
+  const ROTA = { caminho: '/portal/imob/anuncie', padrao: '/portal/:tenant/anuncie', elemento: <PortalAnunciePage /> };
+  const ANUNCIE = { anuncie: { enabled: true, title: 'Anuncie com a gente', intro: 'Avaliamos seu imóvel.' } };
+  const aceita = (url: string) => (url.endsWith('/site/anuncie') ? resposta({ data: { ok: true } }) : null);
+
+  /** Preenche os dois passos e manda; devolve o corpo do POST. */
+  async function preencherEEnviar(fetchMock: ReturnType<typeof vi.fn>) {
+    const u = userEvent.setup();
+    await u.type(screen.getByLabelText(/Endereço/), 'Rua A, 10, Centro, Campinas');
+    await u.type(screen.getByLabelText('Dormitórios'), '3');
+    await u.click(screen.getByRole('button', { name: /Próximo/ }));
+    await u.type(screen.getByLabelText(/Seu nome/), 'Ana');
+    await u.type(screen.getByLabelText('WhatsApp *'), '11987654321');
+    await u.click(screen.getByRole('button', { name: 'Enviar minha ficha' }));
+    await waitFor(() => expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith('/site/anuncie'))).toBe(true));
+    const chamada = fetchMock.mock.calls.find(([url]) => String(url).endsWith('/site/anuncie'))!;
+    return JSON.parse(String((chamada[1] as RequestInit).body));
+  }
+
+  it('desenha o Moderno: título e texto à esquerda, ficha no cartão com os dois passos', async () => {
+    await abrir(ROTA, { ...MODERNO, ...ANUNCIE } as SiteInfo);
+    expect(paginaModerna('anuncie')).not.toBeNull();
+    expect(screen.getByRole('heading', { level: 1, name: 'Anuncie com a gente' })).toBeTruthy();
+    expect(screen.getByText('O imóvel')).toBeTruthy();
+    expect(screen.getByText('Seus dados')).toBeTruthy();
+    expect(screen.getAllByRole('link', { name: /WhatsApp/ }).length).toBeGreaterThan(0);
+  });
+
+  it('manda o mesmo corpo de sempre (só por e-mail, /site/anuncie) e mostra o obrigado', async () => {
+    const { fetchMock } = await abrir(ROTA, { ...MODERNO, ...ANUNCIE } as SiteInfo, aceita);
+    const corpo = await preencherEEnviar(fetchMock);
+    expect(corpo).toEqual({
+      lead: {
+        name: 'Ana', phone: corpo.lead.phone, email: null, source: 'site',
+        form_data: {
+          finalidade: '', tipo: '', negocio: '', endereco: 'Rua A, 10, Centro, Campinas',
+          condominio_nome: '', condominio_valor: '', area_total: '', area_util: '', dormitorios: '3', suites: '',
+          vagas_cobertas: '', vagas_descobertas: '', aceita_financiamento: false, valor_pretendido: '', caracteristicas: '',
+          proprietario_nome: 'Ana', proprietario_telefone: corpo.lead.phone, proprietario_email: '',
+        },
+      },
+    });
+    expect(corpo.lead.phone.replace(/\D/g, '')).toContain('11987654321');
+    expect(await screen.findByText('Recebemos a sua ficha!')).toBeTruthy();
+  });
+
+  it('prévia do modelo: não envia nada', async () => {
+    window.history.replaceState({}, '', '/?modelo=moderno');
+    const { fetchMock } = await abrir(ROTA, ANUNCIE as SiteInfo, aceita);
+    expect(paginaModerna('anuncie')).not.toBeNull();
+    const u = userEvent.setup();
+    await u.type(screen.getByLabelText(/Endereço/), 'Rua A');
+    await u.click(screen.getByRole('button', { name: /Próximo/ }));
+    await u.type(screen.getByLabelText(/Seu nome/), 'Ana');
+    await u.type(screen.getByLabelText('WhatsApp *'), '11987654321');
+    await u.click(screen.getByRole('button', { name: 'Enviar minha ficha' }));
+    expect(await screen.findByText(TEXTO_ENVIO_NA_PREVIA)).toBeTruthy();
+    expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith('/site/anuncie'))).toBe(false);
+  });
+
+  it('telefone inválido não envia e avisa', async () => {
+    const { fetchMock } = await abrir(ROTA, { ...MODERNO, ...ANUNCIE } as SiteInfo, aceita);
+    const u = userEvent.setup();
+    await u.type(screen.getByLabelText(/Endereço/), 'Rua A');
+    await u.click(screen.getByRole('button', { name: /Próximo/ }));
+    await u.type(screen.getByLabelText(/Seu nome/), 'Ana');
+    await u.type(screen.getByLabelText('WhatsApp *'), '1198');
+    await u.click(screen.getByRole('button', { name: 'Enviar minha ficha' }));
+    expect(screen.getByText('Digite um telefone válido com DDD.')).toBeTruthy();
+    expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith('/site/anuncie'))).toBe(false);
+  });
+});
