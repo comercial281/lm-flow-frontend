@@ -24,6 +24,7 @@ import {
 import { ATRIBUTO_DO_TOPO, useLogoPousado } from '@/features/siteBuilder/public/logoPousado';
 import { semAsteriscos } from '@/features/siteBuilder/public/destaqueNoTitulo';
 import TopoModerno from './moderno/TopoModerno';
+import RodapeModerno from './moderno/RodapeModerno';
 
 // Tipos e filtro moram em filtros.ts (sem ciclo com vitrines.ts); reexportados aqui.
 export { filterProperties };
@@ -854,9 +855,10 @@ export function PortalHeader(props: PropsDaMoldura) {
   return resolverAparencia(props.site.appearance).style === 'modern' ? <TopoModerno {...props} /> : <TopoCompleto {...props} />;
 }
 
-/** Rodapé do site. Em manutenção, o rodapé enxuto (só logo e WhatsApp). */
+/** Rodapé do site. Em manutenção, o rodapé enxuto (só logo e WhatsApp); no Moderno, o bloco dele. */
 export function PortalFooter(props: PropsDaMoldura) {
-  return estaEmManutencao(props.site) ? <RodapeEmManutencao {...props} /> : <RodapeCompleto {...props} />;
+  if (estaEmManutencao(props.site)) return <RodapeEmManutencao {...props} />;
+  return resolverAparencia(props.site.appearance).style === 'modern' ? <RodapeModerno {...props} /> : <RodapeCompleto {...props} />;
 }
 
 /**
@@ -1066,7 +1068,7 @@ function LinkDoRodapeEl({ l }: { l: LinkDoMenu }) {
  * lista própria (Sobre nós, Blog, Contato, Anuncie, Financiamento), sem as
  * páginas criadas. Vale enquanto o menu é o de fábrica (`menuPersonalizado`).
  */
-function linksDoRodapeDeAntes(site: SiteInfo, abas: AbaId[] | undefined, hasBlog: boolean, ctx: CtxDoSite, onHome: boolean) {
+export function linksDoRodapeDeAntes(site: SiteInfo, abas: AbaId[] | undefined, hasBlog: boolean, ctx: CtxDoSite, onHome: boolean) {
   const showStats = site.sections?.stats !== false;
   const showLeadCapture = site.sections?.lead_capture !== false;
   const sectionHref = (id: string) => (onHome ? `#${id}` : caminhoDoSite(ctx, `/#${id}`));
@@ -1092,7 +1094,7 @@ function linksDoRodapeDeAntes(site: SiteInfo, abas: AbaId[] | undefined, hasBlog
  * Contato, Financiamento, Anuncie, páginas, Blog e os externos), cada coluna
  * na ordem do menu. No compacto, o menu inteiro na ordem dele.
  */
-function linksDoRodapeDoMenu(menu: LinkDoMenu[]) {
+export function linksDoRodapeDoMenu(menu: LinkDoMenu[]) {
   return {
     imoveis: menu.filter(l => ehAba(l.chave)),
     institucional: menu.filter(l => !ehAba(l.chave)),
@@ -1104,7 +1106,7 @@ function linksDoRodapeDoMenu(menu: LinkDoMenu[]) {
  * "feito com LM Flow": fica sempre, discreto, com o link pro site do LM Flow.
  * O cliente não tira (não há opção na Aparência).
  */
-function CreditoDoRodape({ nome, creci }: { nome?: string; creci?: string | null }) {
+export function CreditoDoRodape({ nome, creci }: { nome?: string; creci?: string | null }) {
   const linha = linhaDoCreci(creci);
   return (
     <>
