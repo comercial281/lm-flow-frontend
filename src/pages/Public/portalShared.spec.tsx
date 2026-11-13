@@ -2,7 +2,7 @@ import { cleanup, render, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it } from 'vitest';
 import { PropertyCard, PropertyRow, tokensDoSite, type PortalProperty } from './portalShared';
-import { misturarCom } from '../../features/siteBuilder/public/aparenciaConfig';
+import { clarearAte, contrasteEntre, misturarCom } from '../../features/siteBuilder/public/aparenciaConfig';
 
 /* ────────────────────────────────────────────────────────────────────────────
    Linha larga da lista (Meu site › Lista de imóveis › cartões em linhas): diz
@@ -199,6 +199,12 @@ describe('tokensDoSite · tons do Moderno', () => {
       .toEqual(['#0E1016', '#171A22', '#272B36', '#B8BCCB', '#868B9C']);
     expect(v['--m-head']).toBe(v['--brand-text']);
     expect(v['--m-brand-soft']).toBe(misturarCom('#0E1A6B', v['--site-card'], 0.62));
+  });
+
+  it('Moderno escuro: o tom do itálico (--m-head-2) também passa pelo clarearAte e fica legível', () => {
+    const v = tokensDoSite({ branding: { primary_color: '#1B2A4A' }, appearance: { style: 'modern', background: 'dark' } } as never).cssVars as Record<string, string>;
+    expect(v['--m-head-2']).toBe(clarearAte(misturarCom('#1B2A4A', '#FFFFFF', 0.22), v['--site-card']));
+    for (const fundo of [v['--m-surface'], v['--m-ground']]) expect(contrasteEntre(v['--m-head-2'], fundo)!).toBeGreaterThanOrEqual(4.5);
   });
 
   it('Instrument Serif só com Moderno + destaque em itálico', () => {

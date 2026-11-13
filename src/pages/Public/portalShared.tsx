@@ -233,7 +233,8 @@ export function tokensDoSite(site: SiteInfo) {
     ['--m-brand-2' as string]: misturarCom(brand, '#FFFFFF', 0.14),
     ['--m-brand-soft' as string]: escuro ? misturarCom(brand, cores.card, 0.62) : misturarCom(brand, '#FFFFFF', 0.9),
     ['--m-head' as string]: escuro ? clarearAte(brand, cores.card) : brand,
-    ['--m-head-2' as string]: misturarCom(brand, '#FFFFFF', 0.22),
+    // O tom do itálico do destaque é texto: no escuro passa pelo clarearAte, como o --m-head.
+    ['--m-head-2' as string]: escuro ? clarearAte(misturarCom(brand, '#FFFFFF', 0.22), cores.card) : misturarCom(brand, '#FFFFFF', 0.22),
     ['--m-ground' as string]: escuro ? '#0E1016' : '#F2F3F6',
     ['--m-surface' as string]: escuro ? '#171A22' : '#FFFFFF',
     ['--m-line' as string]: escuro ? '#272B36' : '#E2E4EB',
