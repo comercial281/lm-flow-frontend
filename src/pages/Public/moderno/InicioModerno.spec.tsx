@@ -148,22 +148,37 @@ describe('Início do Moderno', () => {
     expect(botao.getAttribute('target')).toBeNull();
   });
 
-  it('Atendimento sem foto e sem selo: uma coluna só, sem a coluna da esquerda vazia', async () => {
+  it('Atendimento sem foto: selo e título à esquerda, texto e botão à direita no pé do título (duas colunas equilibradas)', async () => {
+    await abrirHome(moderno({ home: { about: { enabled: true, eyebrow: 'Atendimento', title: 'Fale com a gente', text: 'Atendimento humano.',
+      button_label: 'Falar', button_link: 'https://wa.me/5511' } } } as SiteInfo), [imovel('R1')]);
+
+    const grade = document.getElementById('atendimento')!.firstElementChild as HTMLElement;
+    expect(grade.children).toHaveLength(2);
+    expect(grade.className.split(/\s+/)).toEqual(expect.arrayContaining(['md:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]', 'md:items-end']));
+    const [esquerda, direita] = Array.from(grade.children) as HTMLElement[];
+    expect(esquerda.firstElementChild!.textContent).toBe('Atendimento');
+    expect(within(esquerda).getByRole('heading', { level: 2, name: 'Fale com a gente' })).toBeInTheDocument();
+    expect(within(direita).getByText('Atendimento humano.')).toBeInTheDocument();
+    const botao = within(direita).getByRole('link', { name: 'Falar' });
+    expect(botao.getAttribute('target')).toBe('_blank');
+  });
+
+  it('Atendimento sem foto e sem selo: o mesmo desenho, sem o selo', async () => {
     await abrirHome(moderno({ home: { about: { enabled: true, title: 'Fale com a gente', text: 'Atendimento humano.' } } } as SiteInfo), [imovel('R1')]);
+
+    const grade = document.getElementById('atendimento')!.firstElementChild as HTMLElement;
+    expect(grade.children).toHaveLength(2);
+    expect(grade.className).toContain('md:items-end');
+    expect((grade.children[0] as HTMLElement).firstElementChild!.tagName).toBe('H2');
+  });
+
+  it('Atendimento sem foto e só com selo e título: uma coluna só (sem coluna vazia)', async () => {
+    await abrirHome(moderno({ home: { about: { enabled: true, eyebrow: 'Atendimento', title: 'Fale com a gente' } } } as SiteInfo), [imovel('R1')]);
 
     const grade = document.getElementById('atendimento')!.firstElementChild!;
     expect(grade.children).toHaveLength(1);
     expect(grade.className).not.toContain('md:grid-cols-');
-    expect(within(grade as HTMLElement).getByRole('heading', { level: 2, name: 'Fale com a gente' })).toBeInTheDocument();
-  });
-
-  it('Atendimento sem foto e com selo: o selo à esquerda e o título à direita, como no protótipo', async () => {
-    await abrirHome(moderno({ home: { about: { enabled: true, eyebrow: 'Atendimento', title: 'Fale com a gente' } } } as SiteInfo), [imovel('R1')]);
-
-    const grade = document.getElementById('atendimento')!.firstElementChild!;
-    expect(grade.children).toHaveLength(2);
-    expect(grade.children[0].textContent).toBe('Atendimento');
-    expect(grade.className).toContain('md:grid-cols-[minmax(0,4fr)_minmax(0,7fr)]');
+    expect(grade.children[0].firstElementChild!.textContent).toBe('Atendimento');
   });
 
   it('Atendimento sem título e sem texto: não aparece', async () => {

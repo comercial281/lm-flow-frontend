@@ -5,10 +5,14 @@ import { BLOCO, BOTAO_PRINCIPAL, MIOLO, SOBRETITULO, tituloDeSecao } from './est
 
 /* ────────────────────────────────────────────────────────────────────────────
    "Atendimento" do Moderno (protótipo `.about`): os mesmos campos e regras do
-   Clássico (`home.about`). Título e texto à direita; à esquerda a foto, se
-   houver, ou o selo. Sem foto e sem selo, uma coluna só (a da esquerda
-   ficaria vazia). Sem título e sem texto, a seção some. O botão
+   Clássico (`home.about`). Sem título e sem texto, a seção some. O botão
    `#contato` rola até o contato da própria página (mesma aba).
+   - Com foto: a foto num cartão à esquerda; selo, título, texto e botão à
+     direita, centrados na altura da foto.
+   - Sem foto: duas colunas equilibradas. À esquerda o selo em cima do título
+     grande; à direita o texto e o botão, alinhados ao pé do título. Se um
+     dos lados ficaria vazio (só título, ou só texto), uma coluna só.
+   - Celular: uma coluna (selo, título, texto, botão).
 ──────────────────────────────────────────────────────────────────────────── */
 
 export default function AtendimentoModerno({ home, modo }: { home: HomeConfig; modo: DestaqueDosTitulos }) {
@@ -25,23 +29,52 @@ export default function AtendimentoModerno({ home, modo }: { home: HomeConfig; m
     </a>
   ) : null;
 
-  const duasColunas = !!a.photo_url || !!selo;
+  const seloEl = selo && <p className={SOBRETITULO}>{selo}</p>;
+  const textoEl = texto && <p className="mt-[18px] max-w-[52ch] whitespace-pre-line text-[15px] leading-relaxed text-[var(--m-text)]">{texto}</p>;
+
+  if (a.photo_url) {
+    return (
+      <section id="atendimento" className={BLOCO}>
+        <div className={`${MIOLO} grid gap-10 md:grid-cols-[minmax(0,4fr)_minmax(0,7fr)] md:items-center`}>
+          <img src={a.photo_url} alt="Foto de quem atende" loading="lazy" className="aspect-[4/5] w-full rounded-[28px] object-cover" />
+          <div className="min-w-0">
+            {seloEl}
+            {titulo && (
+              <h2 className={tituloDeSecao('text-[clamp(28px,3.6vw,44px)]')}>
+                <TituloComDestaque texto={titulo} modo={modo} />
+              </h2>
+            )}
+            {textoEl}
+            {botao}
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  // Sem foto: selo + título de um lado, texto + botão do outro, no pé do título.
+  const esquerda = (seloEl || titulo) && (
+    <div className="min-w-0">
+      {seloEl}
+      {titulo && (
+        <h2 className={tituloDeSecao()}>
+          <TituloComDestaque texto={titulo} modo={modo} />
+        </h2>
+      )}
+    </div>
+  );
+  const direita = (texto || botao) && (
+    <div className="min-w-0 md:[&>p:first-child]:mt-0 md:[&>a:first-child]:mt-0">
+      {textoEl}
+      {botao}
+    </div>
+  );
+  const duasColunas = !!titulo && !!direita;
   return (
     <section id="atendimento" className={BLOCO}>
-      <div className={`${MIOLO} grid items-start gap-10 ${duasColunas ? 'md:grid-cols-[minmax(0,4fr)_minmax(0,7fr)]' : ''}`}>
-        {a.photo_url
-          ? <img src={a.photo_url} alt="Foto de quem atende" loading="lazy" className="aspect-[4/5] w-full rounded-[28px] object-cover" />
-          : selo && <div><p className={SOBRETITULO}>{selo}</p></div>}
-        <div className="min-w-0">
-          {a.photo_url && selo && <p className={SOBRETITULO}>{selo}</p>}
-          {titulo && (
-            <h2 className={tituloDeSecao('text-[clamp(28px,3.6vw,44px)]')}>
-              <TituloComDestaque texto={titulo} modo={modo} />
-            </h2>
-          )}
-          {texto && <p className="mt-[18px] max-w-[52ch] whitespace-pre-line text-[15px] leading-relaxed text-[var(--m-text)]">{texto}</p>}
-          {botao}
-        </div>
+      <div className={`${MIOLO} grid gap-x-16 ${duasColunas ? 'md:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] md:items-end' : ''}`}>
+        {esquerda}
+        {direita}
       </div>
     </section>
   );
