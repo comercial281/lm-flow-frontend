@@ -37,10 +37,23 @@ export interface PropsDaBusca {
   onTab?: (tab: AbaId) => void;
 }
 
-/** Até 4 campos de escolha cabem na primeira linha; com mais, 3 ficam nela e o resto vai pra "Mais filtros". */
-export function dividirCampos(selects: CampoDeEscolha[]): { primeira: CampoDeEscolha[]; mais: CampoDeEscolha[] } {
+export type ModeloDaCapa = 'classico' | 'moderno';
+
+/**
+ * Até 4 campos de escolha cabem na primeira linha; com mais, o resto vai pra "Mais filtros".
+ * Moderno: 3 na barra (o botão Buscar fecha a linha). Clássico: a linha tem 4 colunas, então
+ * fica com 4 campos; se o texto de lugar estiver entre os 3 primeiros, ele ocupa 2 colunas e
+ * a linha fecha com 3 (ver `lugarLargo`).
+ */
+export function dividirCampos(selects: CampoDeEscolha[], modelo: ModeloDaCapa): { primeira: CampoDeEscolha[]; mais: CampoDeEscolha[] } {
   if (selects.length <= 4) return { primeira: selects, mais: [] };
-  return { primeira: selects.slice(0, 3), mais: selects.slice(3) };
+  const n = modelo === 'classico' && !selects.slice(0, 3).includes('place') ? 4 : 3;
+  return { primeira: selects.slice(0, n), mais: selects.slice(n) };
+}
+
+/** Clássico com "Mais filtros": o lugar na primeira linha de 3 ocupa 2 das 4 colunas. */
+export function lugarLargo(primeira: CampoDeEscolha[], mais: CampoDeEscolha[]): boolean {
+  return mais.length > 0 && primeira.length === 3 && primeira.includes('place');
 }
 
 /** Título e subtítulo da capa, com os de fábrica quando o cliente não escreveu. */
@@ -62,7 +75,7 @@ export function fotosDaCapa(site: SiteInfo, items: PortalProperty[]): string[] {
   return lista.length ? lista : [fotoDaCapa(site, items)];
 }
 
-export function useBuscaDaCapa({ home, tenant, abas, cities, hoods, types, items, onTab }: PropsDaBusca) {
+export function useBuscaDaCapa({ home, tenant, abas, cities, hoods, types, items, onTab, modelo }: PropsDaBusca) {
   const navigate = useNavigate();
   const ctx = useCtxDoSite(tenant);
   // Sem aba visível (catálogo vazio ou todas desligadas), a busca cai em Comprar.
@@ -76,7 +89,7 @@ export function useBuscaDaCapa({ home, tenant, abas, cities, hoods, types, items
   // Fase é de empreendimento, e Alugar não tem empreendimento: o campo some nessa aba.
   const campos = CAMPOS_BUSCA.filter(c => home.search.fields.includes(c) && !(c === 'stage' && tab === 'rent'));
   const selects = campos.filter((c): c is CampoDeEscolha => c !== 'code');
-  const { primeira, mais } = dividirCampos(selects);
+  const { primeira, mais } = dividirCampos(selects, modelo);
   const temCodigo = campos.includes('code');
   const escolherLugar = (s: SugestaoDeLugar) => { setLugar(s); setValores(v => ({ ...v, place: s.rotulo })); };
   const alternarMais = () => setAbertos(a => !a);

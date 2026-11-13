@@ -315,6 +315,24 @@ describe('PortalHomePage · rodapé', () => {
     expect((await screen.findByTestId('busca')).textContent).toBe('?area=100');
   });
 
+  it('Clássico com 6 campos e sem o texto: 4 campos na primeira linha, sem buraco', async () => {
+    await abrirHome(
+      { home: { search: { fields: ['type', 'city', 'neighborhood', 'price', 'bedrooms', 'area'] } } },
+      [imovel('R1')],
+    );
+    expect(screen.getByDisplayValue('Faixa de preço')).toBeInTheDocument();
+    expect(screen.queryByDisplayValue('Dormitórios')).toBeNull();
+  });
+
+  it('Clássico com 6 campos e o texto entre os 3 primeiros: o texto ocupa 2 colunas', async () => {
+    await abrirHome(
+      { home: { search: { fields: ['type', 'place', 'city', 'price', 'bedrooms', 'area'] } } },
+      [imovel('R1')],
+    );
+    expect(screen.getByRole('combobox', { name: 'Condomínio, bairro ou cidade' }).parentElement!.className).toContain('md:col-span-2');
+    expect(screen.queryByDisplayValue('Faixa de preço')).toBeNull();
+  });
+
   it('escolher o Collina e buscar vai para /imoveis?condominium=…', async () => {
     await abrirHome(
       { home: { search: { fields: ['place'] } } },

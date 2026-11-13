@@ -73,7 +73,7 @@ function Midia({ site, items }: { site: SiteInfo; items: PortalProperty[] }) {
 }
 
 export default function CapaModerna({ site, home, items, tenant, abas, cities, hoods, types, onTab }: Props) {
-  const busca = useBuscaDaCapa({ home, tenant, abas, cities, hoods, types, items, onTab });
+  const busca = useBuscaDaCapa({ home, tenant, abas, cities, hoods, types, items, onTab, modelo: 'moderno' });
   const { titulo, subtitulo } = textosDaCapa(site, home);
   const ap = resolverAparencia(site.appearance);
   const telaCheia = ap.hero_height === 'full';
