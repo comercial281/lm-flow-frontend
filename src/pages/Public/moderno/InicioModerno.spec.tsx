@@ -202,9 +202,12 @@ describe('Início do Moderno', () => {
     expect(fileira.hasAttribute('data-capa-texto')).toBe(true);
     expect(cls(fileira)).toContain('items-center');
     expect(cls(fileira)).not.toContain('items-end');
-    // …e o recuo da direita no computador é o mesmo da margem da busca.
-    expect(cls(fileira)).toContain('lg:pr-[clamp(12px,3vw,32px)]');
-    expect(cls(document.querySelector('form[role="search"]')!)).toContain('mx-[clamp(12px,3vw,32px)]');
+    // …e texto, logo e busca dividem a mesma coluna, sem recuo próprio: a borda
+    // direita do logo é a da busca.
+    const coluna = fileira.parentElement!;
+    expect(coluna.contains(document.querySelector('form[role="search"]'))).toBe(true);
+    expect(fileira.className).not.toMatch(/\b(lg:)?p[xlr]-/);
+    expect(document.querySelector('form[role="search"]')!.className).not.toMatch(/\bmx-/);
     // O título e o subtítulo ficam juntos na coluna da esquerda.
     expect(fileira.firstElementChild!.querySelector('h1')).not.toBeNull();
   });
@@ -251,6 +254,30 @@ describe('Início do Moderno', () => {
     expect(grade.querySelectorAll('[data-campo-da-busca]')).toHaveLength(5);
     expect(grade.className.split(/\s+/)).toContain('lg:grid-cols-3');
     expect(grade.lastElementChild).toBe(screen.getByRole('button', { name: /Buscar/ }));
+  });
+
+  it('capa sobre a foto de ponta a ponta: sem recuo nem cantos, com a altura da tela em Tela cheia; o conteúdo na coluna da página', async () => {
+    await abrirHome(moderno({}, { hero_height: 'full' }), [imovel('R1')]);
+    let capa = document.querySelector<HTMLElement>('[data-capa-moderna]')!;
+    expect(capa.id).toBe('topo');
+    expect(capa.hasAttribute('data-capa-de-ponta-a-ponta')).toBe(true);
+    expect(capa.className).not.toMatch(/rounded|\bp[xt]-|max-w-/);
+    expect(capa.className).toContain('min-h-[max(580px,100svh)]');
+    const coluna = capa.children[1] as HTMLElement;
+    expect(coluna.className.split(/\s+/)).toEqual(expect.arrayContaining(['mx-auto', 'max-w-[1120px]', 'px-4']));
+    cleanup();
+
+    await abrirHome(moderno({}, { hero_height: 'half' }), [imovel('R1')]);
+    capa = document.querySelector<HTMLElement>('[data-capa-moderna]')!;
+    expect(capa.className).toContain('min-h-[580px]');
+    expect(capa.className).not.toContain('100svh');
+  });
+
+  it('capa dividida continua com a foto num cartão arredondado (não vira ponta a ponta)', async () => {
+    await abrirHome(moderno({ hero: { image_url: 'https://x.com/capa.jpg' } } as SiteInfo, { hero_layout: 'split' }), [imovel('R1')]);
+    expect(document.querySelector('[data-capa-de-ponta-a-ponta]')).toBeNull();
+    const cartao = document.querySelector('#topo img[src="https://x.com/capa.jpg"]')!.closest('.rounded-\\[28px\\]');
+    expect(cartao).not.toBeNull();
   });
 
   it('topo transparente flutua sobre o cartão da capa: o cartão deixa o espaço dele em cima; topo branco não', async () => {

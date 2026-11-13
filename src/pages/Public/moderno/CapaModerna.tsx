@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import type { PortalProperty, SiteInfo } from '../portalShared';
 import type { AbaId, HomeConfig } from '@/features/siteBuilder/public/homeConfig';
 import { filtroDaCapaModerna, logoNaCapa, logoNaSuperficie, resolverAparencia } from '@/features/siteBuilder/public/aparenciaConfig';
@@ -12,12 +13,14 @@ import { MIOLO } from './estilos';
 /* ────────────────────────────────────────────────────────────────────────────
    Capa do Moderno (spec 6.4 e 7; protótipo `.hero`, `.hero-photo`, `.hero-row`).
 
-   - Sobre a foto: a foto num cartão arredondado recuado da borda (16px de
-     lado, 12px em cima, até 1120px: a mesma caixa do topo). O filtro
-     (`hero_overlay`) escurece de baixo pra cima e da esquerda e termina ESCURO
-     dentro do cartão, nunca desbota pro fundo do site. Título, subtítulo e a
-     busca no pé do cartão. Quando o topo flutua por cima do cartão
-     (`topoSobreACapa`), o cartão deixa o espaço dele em cima.
+   - Sobre a foto: a foto de ponta a ponta (sem recuo, sem cantos), com a
+     altura da tela em "Tela cheia" e 580px em "Metade" (decisão do Tony,
+     13/11: substitui o cartão recuado). O filtro (`hero_overlay`) escurece de
+     baixo pra cima e da esquerda e termina ESCURO no pé da foto, nunca
+     desbota pro fundo do site. Título, subtítulo, logo e busca seguem a
+     coluna da página (16px de lado, até 1120px), com a busca no pé da foto.
+     Quando o topo flutua por cima (`topoSobreACapa`), a capa deixa o espaço
+     dele em cima.
    - Logo em destaque (`logoNaCapa`): com os tamanhos do Clássico (126px no
      computador, 80/96px no celular). No computador à direita do título,
      centrado no bloco título + subtítulo e na mesma borda direita da busca;
@@ -36,6 +39,31 @@ interface Props {
 
 const TITULO = 'font-[var(--display)] text-[clamp(38px,5vw,68px)] font-semibold leading-[1.02] tracking-[-0.03em] max-w-[13ch] [text-wrap:balance]';
 
+/** O espaço que a capa deixa em cima quando o topo flutua: 12px + 72px do topo e 12px de folga. */
+const ESPACO_DO_TOPO = 96;
+
+/**
+ * Altura do topo que flutua por cima da capa, medida na tela: com a faixa da
+ * prévia (que mora no mesmo bloco fixo e quebra em 2 ou 3 linhas no celular)
+ * ele fica mais alto, e o título não pode ficar embaixo dele. Sem medida
+ * (antes de montar, ou sem o topo): os 96px de sempre.
+ */
+function useEspacoDoTopo(ativo: boolean): number {
+  const [altura, setAltura] = useState(0);
+  useEffect(() => {
+    if (!ativo) return;
+    const topo = document.querySelector<HTMLElement>('[data-estilo="moderno"]');
+    if (!topo) return;
+    const medir = () => setAltura(topo.offsetHeight);
+    medir();
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(medir) : null;
+    ro?.observe(topo);
+    window.addEventListener('resize', medir);
+    return () => { ro?.disconnect(); window.removeEventListener('resize', medir); };
+  }, [ativo]);
+  return Math.max(ESPACO_DO_TOPO, altura + 12);
+}
+
 function Midia({ site, items }: { site: SiteInfo; items: PortalProperty[] }) {
   if (site.hero?.video_url) {
     return <video src={site.hero.video_url} autoPlay muted loop playsInline preload="auto" className="h-full w-full object-cover" />;
@@ -48,6 +76,9 @@ export default function CapaModerna({ site, home, items, tenant, abas, cities, h
   const { titulo, subtitulo } = textosDaCapa(site, home);
   const ap = resolverAparencia(site.appearance);
   const telaCheia = ap.hero_height === 'full';
+
+  const sobOTopo = topoSobreACapa(ap, true);
+  const espacoDoTopo = useEspacoDoTopo(sobOTopo);
 
   const destaque = logoNaCapa(ap, site.branding?.logo_url);
   const pousado = useLogoPousado(destaque);
@@ -81,36 +112,35 @@ export default function CapaModerna({ site, home, items, tenant, abas, cities, h
     : null;
 
   return (
-    <section id="topo" className="px-4 pt-3">
-      <div
-        data-capa-moderna
-        className={`${MIOLO} relative isolate flex overflow-hidden rounded-[28px] bg-[#080A16] text-white ${telaCheia ? 'min-h-[max(580px,calc(100svh-24px))]' : 'min-h-[580px]'}`}
-      >
-        <div className="absolute inset-0 -z-10">
-          <Midia site={site} items={items} />
-          <div className="absolute inset-0" style={{ background: filtroDaCapaModerna(ap.hero_overlay) }} />
-        </div>
+    <section
+      id="topo" data-capa-moderna data-capa-de-ponta-a-ponta
+      className={`relative isolate flex overflow-hidden bg-[#080A16] text-white ${telaCheia ? 'min-h-[max(580px,100svh)]' : 'min-h-[580px]'}`}
+    >
+      <div className="absolute inset-0 -z-10">
+        <Midia site={site} items={items} />
+        <div className="absolute inset-0" style={{ background: filtroDaCapaModerna(ap.hero_overlay) }} />
+      </div>
 
-        {/* O topo flutua por cima do cartão (fixo, 12px + 72px): o espaço dele fica aqui. */}
-        <div className={`flex min-w-0 flex-1 flex-col justify-end ${topoSobreACapa(ap, true) ? 'pt-[96px]' : 'pt-12'}`}>
-          {/* Título e subtítulo à esquerda; no computador o logo à direita, centrado
-              no bloco do texto e encostado na mesma borda direita da busca (o
-              recuo da direita é o da busca). Tamanhos do logo da capa do Clássico. */}
-          <div
-            data-capa-texto
-            className="grid items-center gap-8 pb-6 pl-[clamp(22px,5vw,64px)] pr-[clamp(22px,5vw,64px)] lg:grid-cols-[minmax(0,1fr)_auto] lg:pr-[clamp(12px,3vw,32px)]"
-          >
-            <div className="min-w-0">
-              {logoEl('mb-6 h-20 w-auto max-w-[75%] object-left sm:h-24 lg:hidden')}
-              <h1 className={`${TITULO} text-white ${DESTAQUE_SOBRE_A_FOTO}`}>
-                <TituloComDestaque texto={titulo} modo={ap.heading_highlight} sobreEscuro />
-              </h1>
-              <p className="mt-[18px] max-w-[46ch] text-[16px] leading-relaxed text-[rgba(255,255,255,0.86)]">{subtitulo}</p>
-            </div>
-            {logoEl('hidden h-[126px] w-auto max-w-[420px] shrink-0 self-center object-right lg:block')}
+      {/* O conteúdo segue a coluna do resto da página (16px de lado, até 1120px).
+          O topo flutua por cima da foto (fixo, 12px + 72px, mais a faixa da prévia): o espaço dele fica aqui. */}
+      <div
+        className={`${MIOLO} flex w-full min-w-0 flex-col justify-end px-4 ${sobOTopo ? 'pt-[96px]' : 'pt-12'}`}
+        style={sobOTopo && espacoDoTopo > ESPACO_DO_TOPO ? { paddingTop: espacoDoTopo } : undefined}
+      >
+        {/* Título e subtítulo à esquerda; no computador o logo à direita, centrado
+            no bloco do texto e encostado na borda direita da coluna (a mesma da
+            busca). Tamanhos do logo da capa do Clássico. */}
+        <div data-capa-texto className="grid items-center gap-8 pb-6 lg:grid-cols-[minmax(0,1fr)_auto]">
+          <div className="min-w-0">
+            {logoEl('mb-6 h-20 w-auto max-w-[75%] object-left sm:h-24 lg:hidden')}
+            <h1 className={`${TITULO} text-white ${DESTAQUE_SOBRE_A_FOTO}`}>
+              <TituloComDestaque texto={titulo} modo={ap.heading_highlight} sobreEscuro />
+            </h1>
+            <p className="mt-[18px] max-w-[46ch] text-[16px] leading-relaxed text-[rgba(255,255,255,0.86)]">{subtitulo}</p>
           </div>
-          <BuscaModerna busca={busca} abas={abas} />
+          {logoEl('hidden h-[126px] w-auto max-w-[420px] shrink-0 self-center object-right lg:block')}
         </div>
+        <BuscaModerna busca={busca} abas={abas} />
       </div>
     </section>
   );

@@ -75,7 +75,7 @@ export default function BuscaModerna({ busca, abas, dividida = false }: { busca:
       role="search" onSubmit={runSearch}
       className={juntar(
         'rounded-[22px] bg-[var(--m-surface)] p-2 text-[var(--m-head)]',
-        dividida ? 'border border-[var(--m-line)]' : 'mx-[clamp(12px,3vw,32px)] mb-[clamp(12px,3vw,28px)] shadow-[0_18px_40px_-18px_rgba(8,10,22,0.5)]',
+        dividida ? 'border border-[var(--m-line)]' : 'mb-[clamp(16px,3vw,32px)] shadow-[0_18px_40px_-18px_rgba(8,10,22,0.5)]',
       )}
     >
       {(comAbas || temCodigo) && (

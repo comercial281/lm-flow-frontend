@@ -16,8 +16,8 @@ import { ATRIBUTO_DO_TOPO, useLogoPousado } from '@/features/siteBuilder/public/
    Topo do Moderno (spec 7, "Topo"; protótipo `.nav`, `.menu`, `.nav-int`).
 
    - Início + topo transparente + capa sobre a foto: o topo fica FIXO no alto,
-     recuado como o cartão da capa (16px de lado, 12px em cima, até 1120px), e
-     flutua por cima do cartão com o menu em pílula de vidro. Ao rolar, vira a
+     recuado na coluna da página (16px de lado, 12px em cima, até 1120px), e
+     flutua por cima da foto da capa (de ponta a ponta) com o menu em pílula de vidro. Ao rolar, vira a
      barra sólida arredondada, ainda fixa. Nunca entra no fluxo: a página não
      salta (o defeito de 17/09 do Clássico). A capa do Moderno é quem deixa o
      espaço dele (`topoSobreACapa`).
@@ -37,7 +37,7 @@ import { ATRIBUTO_DO_TOPO, useLogoPousado } from '@/features/siteBuilder/public/
 /**
  * O topo flutua por cima da capa (fixo, fora do fluxo)? Só no Início, com o
  * topo transparente e a capa sobre a foto. A capa do Moderno usa a MESMA regra
- * pra deixar o espaço do topo dentro do cartão.
+ * pra deixar o espaço do topo em cima da foto.
  */
 export function topoSobreACapa(ap: Aparencia, onHome: boolean): boolean {
   return onHome && ap.header_style === 'transparent' && ap.hero_layout !== 'split';
