@@ -209,7 +209,7 @@ describe('Início do Moderno', () => {
     expect(fileira.firstElementChild!.querySelector('h1')).not.toBeNull();
   });
 
-  it('busca com 6 campos: 6 caixinhas iguais em 3 colunas, e o Buscar numa coluna própria no pé da última linha', async () => {
+  it('busca com 6 campos: 6 caixinhas iguais em 3 colunas, e o Buscar numa coluna própria da altura das 2 linhas', async () => {
     await abrirHome(
       moderno({ home: { search: { fields: ['type', 'city', 'neighborhood', 'price', 'bedrooms', 'parking', 'code'] } } } as SiteInfo),
       [imovel('R1')],
@@ -225,7 +225,10 @@ describe('Início do Moderno', () => {
     const buscar = screen.getByRole('button', { name: /Buscar/ });
     expect(grade.contains(buscar)).toBe(false);
     expect(grade.nextElementSibling).toBe(buscar);
-    expect(buscar.className.split(/\s+/)).toEqual(expect.arrayContaining(['lg:self-end', 'min-h-[60px]', 'w-full']));
+    // Grade fechada cheia em 2 linhas: o botão estica pelas duas (sem caixa vazia em cima dele).
+    expect(buscar.className.split(/\s+/)).toEqual(expect.arrayContaining(['lg:self-stretch', 'min-h-[60px]', 'w-full', 'items-center']));
+    expect(buscar.className.split(/\s+/)).not.toContain('lg:self-end');
+    expect(buscar.parentElement!.className.split(/\s+/)).toContain('lg:flex-row');
     expect(caixas[0].className.split(/\s+/)).toContain('min-h-[60px]');
     // Código continua na fileira das abas.
     expect(screen.getByLabelText('Código do imóvel')).toBeTruthy();
@@ -236,7 +239,11 @@ describe('Início do Moderno', () => {
     let grade = document.querySelector<HTMLElement>('[data-campos-da-busca]')!;
     expect(grade.querySelectorAll('[data-campo-da-busca]')).toHaveLength(4);
     expect(grade.className.split(/\s+/)).toContain('lg:grid-cols-4');
-    expect(grade.nextElementSibling).toBe(screen.getByRole('button', { name: /Buscar/ }));
+    const buscar4 = screen.getByRole('button', { name: /Buscar/ });
+    expect(grade.nextElementSibling).toBe(buscar4);
+    // Uma linha só: altura de uma caixinha, no pé.
+    expect(buscar4.className.split(/\s+/)).toContain('lg:self-end');
+    expect(buscar4.className.split(/\s+/)).not.toContain('lg:self-stretch');
     cleanup();
 
     await abrirHome(moderno({ home: { search: { fields: ['type', 'city', 'neighborhood', 'price', 'bedrooms'] } } } as SiteInfo), [imovel('R1')]);

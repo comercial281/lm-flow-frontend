@@ -37,8 +37,9 @@ const COLUNAS_NO_COMPUTADOR = ['', 'lg:grid-cols-1', 'lg:grid-cols-2', 'lg:grid-
 /**
  * Colunas no computador: até 4 por linha, linhas equilibradas (6 campos = 3 + 3,
  * 5 = 3 + 2, 7 = 4 + 3, 8 = 4 + 4). Com a última linha cheia, o "Buscar" fica
- * numa coluna própria à direita, no pé da última linha; com uma vaga sobrando,
- * ele ocupa a vaga (no fim da última linha). Nunca fica solto entre linhas.
+ * numa coluna própria à direita: numa linha só, ao lado dos campos; com mais
+ * de uma, da altura de todas elas (sem caixa vazia em cima dele). Com uma vaga
+ * sobrando, ele ocupa a vaga (no fim da última linha). Nunca fica solto entre linhas.
  */
 function gradeDaBusca(n: number): { colunas: number; botaoNaGrade: boolean } {
   if (n <= 0) return { colunas: 0, botaoNaGrade: false };
@@ -54,6 +55,8 @@ export default function BuscaModerna({ busca, abas, dividida = false }: { busca:
   const n = selects.length;
   // Capa dividida (coluna estreita): 2 por linha e o botão largo embaixo.
   const { colunas, botaoNaGrade: naGrade } = gradeDaBusca(n);
+  // Coluna própria com mais de uma linha de campos: o botão estica pela altura toda.
+  const ocupaAsLinhas = !dividida && !naGrade && n > colunas;
   const botaoNaGrade = !dividida && naGrade;
   const botao = (cls: string) => (
     <button
@@ -133,7 +136,7 @@ export default function BuscaModerna({ busca, abas, dividida = false }: { busca:
           </div>
         )}
         {!botaoNaGrade && botao(juntar(
-          dividida ? 'w-full' : 'w-full lg:w-auto lg:self-end lg:px-7',
+          dividida ? 'w-full' : `w-full lg:w-auto lg:px-7 ${ocupaAsLinhas ? 'lg:self-stretch' : 'lg:self-end'}`,
           !dividida && n === 0 && 'lg:ml-auto',
         ))}
       </div>
