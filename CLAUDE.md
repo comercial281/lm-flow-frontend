@@ -4280,9 +4280,10 @@ Decisões do dono (não reabrir sem ele pedir):
   rota continua aberta para quem lê; só o menu não oferece. A primeira chave é
   sempre a da rota, e o spec confere.
 - **Saíram do menu, para todo mundo (inclusive a Leal Mídia)**, e abrem só pelo
-  endereço: Propostas, Contratos, Captação (voltam quando prontas); Interesses,
+  endereço: Contratos, Captação (voltam quando prontas); Interesses,
   Ações agendadas, Marketplace (sem plano). A lista está no topo de
-  `menuItems.ts`, e o spec impede que voltem por engano.
+  `menuItems.ts`, e o spec impede que voltem por engano. Propostas voltou em
+  13/11/2026 (seção "Propostas de volta ao menu").
 - **Saiu o "Personalizar menu"** (esconder, favoritar, reordenar): com seções
   fixas ele quebrava os rótulos. O que estava salvo no navegador é ignorado.
 - **A Página do Facebook é integração** (desde 01/10/2026, a pedido do dono):
@@ -9434,7 +9435,7 @@ O que aparece na tela:
   - `/contacts/scheduled-actions` leva pra `/conversations`.
   - `/marketplace` leva pra `/settings/integrations`.
 - **Área do Admin:** a escolha de modelo em Novo cliente › "Selecione as automações" continua. O que mudou: ganhou a linha "A entrada do funil se monta em Automações." e os modelos que só traziam regra (Recepção de Lead Meta Ads, Recepção + Roleta de Corretores, Lembretes de visita) deixaram de ser oferecidos, porque regra não é mais criada. Os que trazem etiquetas ou funis seguem. O mesmo vale pra "Aplicar funil de follow-up nos clientes".
-- **Continuam fora do menu, mas vivas:** Propostas, Contratos, Captação (redirect) e Plano. Não foram tocadas.
+- **Continuam fora do menu, mas vivas:** Contratos, Captação (redirect) e Plano. Não foram tocadas. (Propostas voltou ao menu em 13/11/2026.)
 - **Ficam:** o construtor de Automações, o card de interesse no lead (`propertyInterestsService`), o `ScheduleActionModal` (Agendar envio) com `scheduledActionsService` e `scheduledTemplatesService`, e as rotas GET `/lead_automation_rules/{ad_origins,form_origins,groups,send_numbers}` que o construtor usa.
 
 Decisões (não reabrir sem o dono pedir):
@@ -11329,3 +11330,35 @@ Por quê: o formulário é anônimo; com o telefone de um lead, qualquer pessoa 
 Junto: a IA Vendedora e a Mensagem com IA não mandam chave Pix, CPF/CNPJ, conta, telefone, e-mail ou link que a imobiliária não deu (o link do imóvel e o que está no cadastro, nos documentos e na conversa passam). A IA refaz a resposta uma vez e, se insistir, a frase sai; na Mensagem com IA, sem frase sobrando, sai a mensagem reserva com o motivo "trazia um dado que não está na instrução".
 
 Não reabrir sem o dono pedir.
+
+## Propostas de volta ao menu (desde 2026-11-13)
+
+Pedido do dono. Propostas saiu do menu em 01/10/2026 ("volta quando pronta"), mas o
+card do lead registra proposta desde 02/10 (aba Visitas e propostas): quem registra
+precisa de um lugar para ver todas. Leitura de 12/11: nenhum cliente tinha proposta
+real (só a Demo e 2 de teste na Nova 27), o que é esperado com a tela escondida.
+
+O que aparece na tela:
+
+- **Atividades → Propostas** (`/proposals`), depois de Tarefas e Visitas. Abre a
+  mesma tela de antes, sem mudança nela.
+- **Quem vê:** o cargo com `proposals.read` e o cliente com a função Propostas
+  ligada (`featureKey: 'proposals'`, no catálogo; ausência = ligada, então aparece
+  para todos os clientes). O Corretor de fábrica tem a chave e vê o item; a lista
+  dele traz só as propostas dos leads dele (recorte do servidor, `visible_lead_records`).
+
+Decisões do dono (não reabrir sem ele pedir):
+
+- **Volta como está.** Mover o card para a etapa de proposta ao registrar, e
+  "proposta aceita" fechar como Ganho, continuam como próxima entrega, se o uso pedir.
+- **O corretor continua sem Propostas na Dashboard** (decisão de 01/10): o item no
+  menu não muda os números dele.
+
+Armadilhas:
+
+1. O `menuItems.spec` trava a lista do Corretor de fábrica: Propostas agora faz parte
+   dela. Tirar o item do corretor é tirar `proposals.read` do cargo, nunca um filtro
+   no menu.
+2. Para esconder de um cliente, desligar a função Propostas na Área do Admin; o link
+   do número Propostas na Dashboard some junto (`usePodeAbrir`, mesma chave).
+
