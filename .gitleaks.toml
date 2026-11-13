@@ -1,0 +1,25 @@
+# gitleaks (CI, .github/workflows/security.yml): barra chave ou senha nova num PR antes
+# de ela entrar no repo. Este repo é PÚBLICO: o que entra aqui o mundo lê. O secret
+# scanning do GitHub já barra chave de fornecedor conhecido; o gitleaks pega também o
+# genérico (senha, token sem formato), que o GitHub só faz no plano pago.
+#
+# Exceções = achados da varredura do histórico inteiro em 13/11/2026, todos conferidos:
+# nenhum é chave viva.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Falsos positivos conferidos em 13/11/2026"
+paths = [
+  # "apiKeyPlaceholder" das traduções: texto de exemplo do campo.
+  '''^src/i18n/locales/[^/]+/journey\.json$''',
+  # Plano de feature com `Bearer FAKE_JWT` de propósito.
+  '''^_bmad/implementation/spec-tutorial-lm-flow\.md$''',
+]
+# 52df3ff8: .vercel-master-env com token OIDC da Vercel que venceu em 06/06/2026
+# (12 h de vida); o arquivo saiu do repo em 02/07/2026 (0849476c).
+# aae1a6f4: chave de lista do React no SiteBuilder, não segredo.
+commits = [
+  "52df3ff86c7fd691aa05bc5f4df1c172f62d9875",
+  "aae1a6f4fed39ab2b5edafec2e84bf2c61a83a60",
+]
