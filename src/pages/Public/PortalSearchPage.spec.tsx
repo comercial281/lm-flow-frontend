@@ -378,3 +378,52 @@ describe('PortalSearchPage — lista do servidor (/imoveis/a-venda/casa/campinas
     expect(screen.queryByRole('heading', { name: 'Página não encontrada' })).toBeNull();
   });
 });
+
+const campoDeLugar = () => screen.getByRole('combobox', { name: 'Condomínio, bairro ou cidade' }) as HTMLInputElement;
+
+describe('condomínio, bairro ou cidade e Área', () => {
+  const base = () => [
+    imovel('C1', { condominium_name: 'Collina Parque dos Príncipes', icon_summary: { useful_area_m2: 120 } }),
+    imovel('C2', { icon_summary: { useful_area_m2: 60 } }),
+  ];
+
+  it('?condominium= filtra e o campo mostra o nome', async () => {
+    await abrirBusca(base(), '/portal/imob/imoveis?condominium=Collina%20Parque%20dos%20Pr%C3%ADncipes');
+    expect(await screen.findByDisplayValue(/Collina Parque dos Príncipes/)).toBeInTheDocument();
+    expect(titulos()).toEqual(['Imóvel C1']);
+  });
+
+  it('?neighborhood= não preenche o campo de texto', async () => {
+    await abrirBusca(base(), '/portal/imob/imoveis?neighborhood=Centro');
+    expect(campoDeLugar().value).toBe('');
+  });
+
+  it('Área 100 m²+ tira o imóvel pequeno e grava area na URL', async () => {
+    await abrirBusca(base());
+    expect(titulos()).toHaveLength(2);
+    selecionar('Área', '100');
+    expect(titulos()).toEqual(['Imóvel C1']);
+    expect(urlAtual().get('area')).toBe('100');
+  });
+
+  it('escolher uma sugestão grava o condomínio e mostra o rótulo', async () => {
+    await abrirBusca(base());
+    const campo = campoDeLugar() as HTMLInputElement;
+    fireEvent.change(campo, { target: { value: 'colli' } });
+    fireEvent.click(await screen.findByRole('option', { name: /Collina Parque dos Príncipes/ }));
+    expect(urlAtual().get('condominium')).toBe('Collina Parque dos Príncipes');
+    expect(titulos()).toEqual(['Imóvel C1']);
+    expect(campoDeLugar().value).toMatch(/Collina/);
+  });
+
+  it('Enter grava o texto digitado como place e Limpar filtros esvazia o campo', async () => {
+    await abrirBusca(base());
+    const campo = campoDeLugar() as HTMLInputElement;
+    fireEvent.change(campo, { target: { value: 'zzz' } });
+    fireEvent.keyDown(campo, { key: 'Enter' });
+    expect(urlAtual().get('place')).toBe('zzz');
+    fireEvent.click(screen.getAllByRole('button', { name: 'Limpar filtros' })[0]);
+    expect(urlAtual().get('place')).toBeNull();
+    expect(campoDeLugar().value).toBe('');
+  });
+});

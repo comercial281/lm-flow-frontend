@@ -1,17 +1,19 @@
-import { useEffect, useMemo, useState, type CSSProperties } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { useSearchParams, useLocation } from 'react-router-dom';
 import { useCtxDoSite, useTenantDoSite } from '@/features/siteBuilder/public/useTenantDoSite';
 import {
   API, I, Ic, OrdenarPor, PortalFooter, PortalHeader, PropertyCard, PropertyRow, Select,
   filterProperties, usePortalData, type PortalFilters, type PortalTab,
 } from './portalShared';
+import CampoDeLugar from './CampoDeLugar';
+import type { SugestaoDeLugar } from '@/features/siteBuilder/public/sugestoesDeLugar';
 import PaginaManutencao from './PaginaManutencao';
 import PaginaNaoEncontrada from './PaginaNaoEncontrada';
 import { chaveDaLista, fetchListaDoSite, type ListaDoSite } from './portalProperties';
 import { caminhoDoSite } from '@/features/siteBuilder/public/dominioDoSite';
 import { opcaoDoTipo, opcoesDeTipo } from '@/features/siteBuilder/public/tiposDeImovel';
 import { opcoesDePreco, precoDaFaixa } from '@/features/siteBuilder/public/faixasDePreco';
-import { abaDaBusca, filtrosDaUrl, opcaoDoTexto } from '@/features/siteBuilder/public/filtros';
+import { AREAS_MINIMAS, abaDaBusca, filtrosDaUrl, opcaoDoTexto } from '@/features/siteBuilder/public/filtros';
 import { FASES_DO_PUBLICO } from '@/features/properties/listingKind';
 import { usePortalTracking } from './usePortalTracking';
 import { useIconeDaAba } from '@/features/siteBuilder/public/useIconeDaAba';
@@ -107,11 +109,36 @@ export default function PortalSearchPage() {
     setParams(next, { replace });
   };
 
+  // Campo "Condomínio, bairro ou cidade": o texto é local enquanto se digita; Enter ou sair do
+  // campo grava `place`. Só condomínio e place da URL preenchem o campo (bairro/cidade ficam nos selects).
+  const [textoDoLugar, setTextoDoLugar] = useState(filters.condominium || filters.place || '');
+  const rotuloEscolhido = useRef<{ condominium: string; rotulo: string } | null>(null);
+  useEffect(() => {
+    const e = rotuloEscolhido.current;
+    setTextoDoLugar(e && e.condominium === filters.condominium ? e.rotulo : (filters.condominium || filters.place || ''));
+  }, [filters.condominium, filters.place]);
+  const escolherLugar = (s: SugestaoDeLugar) => {
+    rotuloEscolhido.current = { condominium: s.filtros.condominium ?? '', rotulo: s.rotulo };
+    setTextoDoLugar(s.rotulo);
+    update({ place: '', condominium: '', neighborhood: '', city: '', ...s.filtros });
+  };
+  const confirmarLugar = () => {
+    const t = textoDoLugar.trim();
+    const mostrado = rotuloEscolhido.current && rotuloEscolhido.current.condominium === filters.condominium
+      ? rotuloEscolhido.current.rotulo : (filters.condominium || filters.place || '');
+    if (t === mostrado.trim()) return;
+    if (!t && (filters.neighborhood || filters.city) && !filters.condominium && !filters.place) return;
+    rotuloEscolhido.current = null;
+    update({ place: t, condominium: '' }, true);
+  };
+
   // Ordem não é filtro: "Limpar filtros" mantém a escolhida.
   const clearAll = () => {
     const next = new URLSearchParams(filters.tab === 'sale' ? {} : { tab: filters.tab });
     const sort = params.get('sort');
     if (sort) next.set('sort', sort);
+    rotuloEscolhido.current = null;
+    setTextoDoLugar('');
     setParams(next, { replace: true });
   };
 
@@ -128,7 +155,8 @@ export default function PortalSearchPage() {
   const filtered = useMemo(() => filterProperties(daLista, filters), [daLista, filters]);
   const ordenados = useMemo(() => ordenarImoveis(filtered, ordem, filters.tab), [filtered, ordem, filters.tab]);
   const hasActiveFilters = !!(filters.type || filters.city || filters.neighborhood || filters.bedrooms || filters.code
-    || filters.price_min || filters.price_max || filters.suites || filters.parking || filters.stage);
+    || filters.price_min || filters.price_max || filters.suites || filters.parking || filters.stage
+    || filters.place || filters.condominium || filters.area);
 
   // Aluguel tem faixas de preço próprias: trocar de/para Alugar zera o preço.
   // Alugar não tem empreendimento: a fase escolhida sai junto.
@@ -180,6 +208,9 @@ export default function PortalSearchPage() {
               ))}
             </div>}
 
+            <CampoDeLugar className="mb-2" items={items} tab={filters.tab} texto={textoDoLugar}
+              onTexto={setTextoDoLugar} onEscolher={escolherLugar} onConfirmar={confirmarLugar} />
+
             <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
               <Select value={opcaoDoTipo(types, filters.type)} onChange={v => update({ type: v })} label="Tipo" options={opcoesDeTipo(types)} />
               <Select value={cidade.valor} onChange={v => update({ city: v })} label="Cidade" options={cidade.opcoes} />
@@ -188,6 +219,7 @@ export default function PortalSearchPage() {
               <Select value={preco.valor}
                 onChange={v => update({ price_min: '', price_max: '', ...precoDaFaixa(filters.tab, v) })}
                 label="Faixa de preço" options={preco.opcoes} />
+              <Select value={filters.area ?? ''} onChange={v => update({ area: v })} label="Área" options={AREAS_MINIMAS} />
               <Select value={filters.suites ?? ''} onChange={v => update({ suites: v })} label="Suítes" options={MAIS_DE} />
               <Select value={filters.parking ?? ''} onChange={v => update({ parking: v })} label="Vagas" options={MAIS_DE} />
               {/* Fase é de empreendimento, e Alugar não tem empreendimento. */}

@@ -55,6 +55,12 @@ export interface PortalFilters {
   area?: string;
 }
 
+/** Faixas do select "Área" (m² mínimos). As duas buscas importam daqui. */
+export const AREAS_MINIMAS: [string, string][] = [
+  ['50', '50 m²+'], ['80', '80 m²+'], ['100', '100 m²+'], ['150', '150 m²+'],
+  ['200', '200 m²+'], ['300', '300 m²+'], ['500', '500 m²+'],
+];
+
 const RENT_TX = ['rent', 'season', 'sale_rent'];
 const isDev = (p: PortalProperty) => p.listing_kind === 'development';
 
