@@ -18,6 +18,8 @@ import DadosDoEmpreendimento from './ficha/DadosDoEmpreendimento';
 import GaleriaEmTelaCheia from './ficha/GaleriaEmTelaCheia';
 import { I, Ic } from './ficha/iconesDaFicha';
 import { derivadosDaFicha, useFichaDoImovel } from './ficha/useFichaDoImovel';
+import { resolverAparencia } from '@/features/siteBuilder/public/aparenciaConfig';
+import FichaModerna from './moderno/FichaModerna';
 
 /* ────────────────────────────────────────────────────────────────────────────
    Portal Imobiliário — PÁGINA DO IMÓVEL (Produto A). Mesma pegada "Editorial
@@ -42,10 +44,11 @@ export default function ImovelPublicPage() {
 
 
 function FichaDoImovel() {
+  const f = useFichaDoImovel();
   const {
     tenant, ctx, state, site, prop, ficha, manutencao, active, setActive, lightbox, setLightbox, suggestions,
     fontHrefs, cssVars, fundo, wa, abas, waHref, mostraBook, contato,
-  } = useFichaDoImovel();
+  } = f;
   const {
     name, setName, phone, setPhone, phoneErr, setPhoneErr, sent, enviando, falhouEnvio, enviadoNaPrevia,
     pedindoBook, setPedindoBook, finalidade, setFinalidade, submitLead, escolheFinalidade,
@@ -53,6 +56,8 @@ function FichaDoImovel() {
 
   if (state === 'loading') return <div data-carregando className="flex min-h-screen items-center justify-center text-neutral-400" style={{ fontFamily: 'system-ui' }}>Carregando…</div>;
   if (state === 'notfound' || !prop || !ficha) return <div className="flex min-h-screen items-center justify-center px-6 text-center text-neutral-500" style={{ fontFamily: 'system-ui' }}>Imóvel não encontrado.</div>;
+  // Moderno: outro desenho, com a mesma carga, visita e contato.
+  if (resolverAparencia(site.appearance).style === 'modern') return <FichaModerna f={f} prop={prop} ficha={ficha} />;
 
   const {
     photos, typeLabel, isRent, price, priceSuffix, money, linhaDoCodigo, atendimento,
