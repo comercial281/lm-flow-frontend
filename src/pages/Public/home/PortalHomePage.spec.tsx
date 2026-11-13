@@ -296,4 +296,48 @@ describe('PortalHomePage · rodapé', () => {
       }
     });
   });
+
+  it('capa de fábrica não mostra Mais filtros', async () => {
+    await abrirHome({}, [imovel('R1')]);
+    expect(screen.queryByRole('button', { name: /Mais filtros/ })).toBeNull();
+  });
+
+  it('6 campos: Mais filtros abre a segunda linha e Menos filtros fecha', async () => {
+    await abrirHome(
+      { home: { search: { fields: ['type', 'city', 'neighborhood', 'price', 'bedrooms', 'area'] } } },
+      [imovel('R1')],
+    );
+    expect(screen.queryByDisplayValue('Área')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Mais filtros' }));
+    fireEvent.change(screen.getByDisplayValue('Área'), { target: { value: '100' } });
+    fireEvent.click(screen.getByRole('button', { name: /Buscar/ }));
+    expect((await screen.findByTestId('busca')).textContent).toBe('?area=100');
+  });
+
+  it('escolher o Collina e buscar vai para /imoveis?condominium=…', async () => {
+    await abrirHome(
+      { home: { search: { fields: ['place'] } } },
+      [imovel('R1', { condominium_name: 'Collina' })],
+    );
+    fireEvent.change(screen.getByRole('combobox', { name: 'Condomínio, bairro ou cidade' }), { target: { value: 'coll' } });
+    fireEvent.click(await screen.findByRole('option', { name: /Collina/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Buscar/ }));
+    expect((await screen.findByTestId('busca')).textContent).toBe('?condominium=Collina');
+  });
+
+  it('texto só digitado vai como place; trocar de aba limpa o lugar escolhido', async () => {
+    await abrirHome(
+      { home: { search: { fields: ['place'] } } },
+      [imovel('R1', { condominium_name: 'Collina' }), imovel('L1', { transaction_type: 'rent', rent_price_from: 2000, sale_price_from: null })],
+    );
+    const campo = screen.getByRole('combobox', { name: 'Condomínio, bairro ou cidade' }) as HTMLInputElement;
+    fireEvent.change(campo, { target: { value: 'coll' } });
+    fireEvent.click(await screen.findByRole('option', { name: /Collina/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Alugar' }));
+    expect(campo.value).toBe('');
+    fireEvent.change(campo, { target: { value: 'Centro' } });
+    fireEvent.click(screen.getByRole('button', { name: /Buscar/ }));
+    expect((await screen.findByTestId('busca')).textContent).toBe('?tab=rent&place=Centro');
+  });
 });
+

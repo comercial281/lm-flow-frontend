@@ -227,14 +227,14 @@ describe('Início do Moderno', () => {
     expect(fileira.firstElementChild!.querySelector('h1')).not.toBeNull();
   });
 
-  it('busca com 6 campos: uma barra só, 6 campos lado a lado (largura igual, sem caixinha) e o Buscar no fim da mesma linha', async () => {
+  it('busca com 4 campos e Código: uma barra só, 4 campos lado a lado (largura igual, sem caixinha) e o Buscar no fim da mesma linha', async () => {
     await abrirHome(
-      moderno({ home: { search: { fields: ['type', 'city', 'neighborhood', 'price', 'bedrooms', 'parking', 'code'] } } } as SiteInfo),
+      moderno({ home: { search: { fields: ['type', 'city', 'neighborhood', 'bedrooms', 'code'] } } } as SiteInfo),
       [imovel('R1')],
     );
     const linha = document.querySelector<HTMLElement>('[data-campos-da-busca]')!;
     const campos = linha.querySelectorAll('[data-campo-da-busca]');
-    expect(campos).toHaveLength(6);
+    expect(campos).toHaveLength(4);
     // Computador: uma linha (flex), cada campo com a mesma parte da largura e podendo encolher.
     expect(linha.className.split(/\s+/)).toEqual(expect.arrayContaining(['lg:flex', 'sm:grid-cols-3', 'grid-cols-1']));
     expect(new Set(Array.from(campos, c => c.className)).size).toBe(1);
@@ -264,6 +264,36 @@ describe('Início do Moderno', () => {
     expect(linha.querySelectorAll('[data-campo-da-busca]')).toHaveLength(2);
     expect(linha.className.split(/\s+/)).toContain('sm:grid-cols-2');
     expect(linha.lastElementChild).toBe(screen.getByRole('button', { name: /Buscar/ }));
+  });
+
+  it('capa de fábrica não mostra Mais filtros', async () => {
+    await abrirHome(moderno(), [imovel('R1')]);
+    expect(screen.queryByRole('button', { name: /Mais filtros/ })).toBeNull();
+  });
+
+  it('6 campos: 3 na barra, e Mais filtros abre a segunda linha com Área', async () => {
+    await abrirHome(
+      moderno({ home: { search: { fields: ['type', 'city', 'neighborhood', 'price', 'bedrooms', 'area'] } } } as SiteInfo),
+      [imovel('R1')],
+    );
+    expect(document.querySelector('[data-campos-da-busca]')!.querySelectorAll('[data-campo-da-busca]')).toHaveLength(3);
+    expect(screen.queryByLabelText('Área')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Mais filtros' }));
+    expect(document.querySelector('[data-campos-da-busca-mais]')!.querySelectorAll('[data-campo-da-busca]')).toHaveLength(3);
+    fireEvent.change(screen.getByLabelText('Área'), { target: { value: '100' } });
+    fireEvent.click(screen.getByRole('button', { name: /Buscar/ }));
+    expect((await screen.findByTestId('busca')).textContent).toBe('?area=100');
+  });
+
+  it('escolher o Collina e buscar vai para /imoveis?condominium=…', async () => {
+    await abrirHome(
+      moderno({ home: { search: { fields: ['place'] } } } as SiteInfo),
+      [imovel('R1', { condominium_name: 'Collina' })],
+    );
+    fireEvent.change(screen.getByRole('combobox', { name: 'Condomínio, bairro ou cidade' }), { target: { value: 'coll' } });
+    fireEvent.click(await screen.findByRole('option', { name: /Collina/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Buscar/ }));
+    expect((await screen.findByTestId('busca')).textContent).toBe('?condominium=Collina');
   });
 
   it('capa sobre a foto de ponta a ponta: sem recuo nem cantos, com a altura da tela em Tela cheia; o conteúdo na coluna da página', async () => {

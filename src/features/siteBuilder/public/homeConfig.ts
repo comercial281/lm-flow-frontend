@@ -3,10 +3,10 @@
 // servidor velho (sem `home`) ou de lixo, caindo sempre no padrão de fábrica.
 
 export type AbaId = 'sale' | 'rent' | 'launch';
-export type CampoBusca = 'type' | 'city' | 'neighborhood' | 'price' | 'bedrooms' | 'suites' | 'parking' | 'stage' | 'code';
+export type CampoBusca = 'type' | 'place' | 'city' | 'neighborhood' | 'price' | 'bedrooms' | 'suites' | 'parking' | 'area' | 'stage' | 'code';
 
 /** Ordem fixa dos campos da busca rápida. */
-export const CAMPOS_BUSCA: CampoBusca[] = ['type', 'city', 'neighborhood', 'price', 'bedrooms', 'suites', 'parking', 'stage', 'code'];
+export const CAMPOS_BUSCA: CampoBusca[] = ['type', 'place', 'city', 'neighborhood', 'price', 'bedrooms', 'suites', 'parking', 'area', 'stage', 'code'];
 
 export interface RegrasVitrine {
   transaction: 'sale' | 'rent' | null;

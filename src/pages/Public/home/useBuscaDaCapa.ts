@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import type { PortalProperty, SiteInfo } from '../portalShared';
 import { opcoesDeTipo } from '@/features/siteBuilder/public/tiposDeImovel';
 import { CAMPOS_BUSCA, TITULO_CAPA_FABRICA, type AbaId, type CampoBusca, type HomeConfig } from '@/features/siteBuilder/public/homeConfig';
+import { AREAS_MINIMAS } from '@/features/siteBuilder/public/filtros';
+import type { SugestaoDeLugar } from '@/features/siteBuilder/public/sugestoesDeLugar';
 import { faixasDePreco, precoDaFaixa } from '@/features/siteBuilder/public/faixasDePreco';
 import { FASES_DO_PUBLICO } from '@/features/properties/listingKind';
 import { caminhoDoSite } from '@/features/siteBuilder/public/dominioDoSite';
@@ -29,8 +31,16 @@ export interface PropsDaBusca {
   cities: string[];
   hoods: string[];
   types: string[];
+  /** O catálogo: de onde saem as sugestões do campo de lugar. */
+  items: PortalProperty[];
   /** Avisado quando a pessoa troca de aba (a captura de contato acompanha). */
   onTab?: (tab: AbaId) => void;
+}
+
+/** Até 4 campos de escolha cabem na primeira linha; com mais, 3 ficam nela e o resto vai pra "Mais filtros". */
+export function dividirCampos(selects: CampoDeEscolha[]): { primeira: CampoDeEscolha[]; mais: CampoDeEscolha[] } {
+  if (selects.length <= 4) return { primeira: selects, mais: [] };
+  return { primeira: selects.slice(0, 3), mais: selects.slice(3) };
 }
 
 /** Título e subtítulo da capa, com os de fábrica quando o cliente não escreveu. */
@@ -46,23 +56,31 @@ export function fotoDaCapa(site: SiteInfo, items: PortalProperty[]): string {
   return site.hero?.image_url || items[0]?.cover_url || CAPA_PADRAO;
 }
 
-export function useBuscaDaCapa({ home, tenant, abas, cities, hoods, types, onTab }: PropsDaBusca) {
+export function useBuscaDaCapa({ home, tenant, abas, cities, hoods, types, items, onTab }: PropsDaBusca) {
   const navigate = useNavigate();
   const ctx = useCtxDoSite(tenant);
   // Sem aba visível (catálogo vazio ou todas desligadas), a busca cai em Comprar.
   const [tab, setTab] = useState<AbaId>(abas[0] ?? 'sale');
   const [valores, setValores] = useState<Partial<Record<CampoBusca, string>>>({});
+  // Lugar escolhido numa sugestão (condomínio, bairro ou cidade); `valores.place` é o texto do campo.
+  const [lugar, setLugar] = useState<SugestaoDeLugar | null>(null);
+  const [abertos, setAbertos] = useState(false);
   const set = (k: CampoBusca) => (v: string) => setValores(s => ({ ...s, [k]: v }));
 
   // Fase é de empreendimento, e Alugar não tem empreendimento: o campo some nessa aba.
   const campos = CAMPOS_BUSCA.filter(c => home.search.fields.includes(c) && !(c === 'stage' && tab === 'rent'));
   const selects = campos.filter((c): c is CampoDeEscolha => c !== 'code');
+  const { primeira, mais } = dividirCampos(selects);
   const temCodigo = campos.includes('code');
+  const escolherLugar = (s: SugestaoDeLugar) => { setLugar(s); setValores(v => ({ ...v, place: s.rotulo })); };
+  const alternarMais = () => setAbertos(a => !a);
 
   const trocarAba = (k: AbaId) => {
     // As faixas de preço do aluguel são outras: a faixa marcada não vale mais.
     if (faixasDePreco(k) !== faixasDePreco(tab)) setValores(s => ({ ...s, price: '' }));
     if (k === 'rent') setValores(s => ({ ...s, stage: '' }));
+    // As sugestões são da aba: o lugar escolhido (e o texto dele) não vale na outra.
+    if (lugar) { setLugar(null); setValores(s => ({ ...s, place: '' })); }
     setTab(k);
     onTab?.(k);
   };
@@ -74,7 +92,14 @@ export function useBuscaDaCapa({ home, tenant, abas, cities, hoods, types, onTab
     for (const c of campos) {
       const v = valores[c];
       if (!v) continue;
-      if (c === 'price') {
+      if (c === 'place') {
+        // Texto que ainda é o da sugestão escolhida vai com os filtros dela; mexeu no texto, é texto livre.
+        if (lugar && lugar.rotulo === v) {
+          for (const [k, n] of Object.entries(lugar.filtros)) if (n) params.set(k, n);
+        } else if (v.trim()) {
+          params.set('place', v.trim());
+        }
+      } else if (c === 'price') {
         for (const [k, n] of Object.entries(precoDaFaixa(tab, v))) params.set(k, n);
       } else {
         params.set(c, v);
@@ -92,10 +117,12 @@ export function useBuscaDaCapa({ home, tenant, abas, cities, hoods, types, onTab
     bedrooms: { label: 'Dormitórios', options: ATE_4 },
     suites: { label: 'Suítes', options: ATE_3 },
     parking: { label: 'Vagas', options: ATE_3 },
+    area: { label: 'Área', options: AREAS_MINIMAS },
+    place: { label: 'Condomínio, bairro ou cidade', options: [] },
     stage: { label: 'Fase', options: FASES_DO_PUBLICO.map(f => [f.valor, f.rotulo]) },
   };
 
-  return { tab, trocarAba, valores, set, selects, temCodigo, runSearch, opcoes };
+  return { tab, trocarAba, valores, set, selects, primeira, mais, abertos, alternarMais, escolherLugar, items, temCodigo, runSearch, opcoes };
 }
 
 /** O que a busca da capa entrega pra quem desenha o formulário. */

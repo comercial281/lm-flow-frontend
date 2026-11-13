@@ -42,4 +42,14 @@ describe('TelaBusca', () => {
       home: { ...HOME_FABRICA, search: { ...HOME_FABRICA.search, fields: ['type', 'city', 'neighborhood', 'price', 'bedrooms', 'code'] } },
     });
   });
+
+  it('lista Condomínio, bairro ou cidade e Área; marcar Área põe area antes de code', async () => {
+    const espiao = vi.fn();
+    render(<Montar espiao={espiao} />);
+    expect(screen.getByLabelText('Condomínio, bairro ou cidade')).toBeTruthy();
+    await userEvent.click(screen.getByLabelText('Área'));
+    expect(espiao).toHaveBeenCalledWith({
+      home: { ...HOME_FABRICA, search: { ...HOME_FABRICA.search, fields: ['type', 'city', 'neighborhood', 'bedrooms', 'area', 'code'] } },
+    });
+  });
 });

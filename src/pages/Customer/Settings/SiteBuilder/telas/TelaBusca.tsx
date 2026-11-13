@@ -13,8 +13,8 @@ const ABAS: { id: AbaId; rotulo: string }[] = [
 ];
 
 const ROTULO_CAMPO: Record<CampoBusca, string> = {
-  type: 'Tipo', city: 'Cidade', neighborhood: 'Bairro', price: 'Faixa de preço', bedrooms: 'Dormitórios',
-  suites: 'Suítes', parking: 'Vagas', stage: 'Fase da obra', code: 'Código',
+  type: 'Tipo', place: 'Condomínio, bairro ou cidade', city: 'Cidade', neighborhood: 'Bairro', price: 'Faixa de preço', bedrooms: 'Dormitórios',
+  suites: 'Suítes', parking: 'Vagas', area: 'Área', stage: 'Fase da obra', code: 'Código',
 };
 
 export default function TelaBusca({ siteForm, setF }: FormProps) {

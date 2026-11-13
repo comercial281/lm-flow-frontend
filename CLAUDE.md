@@ -11373,3 +11373,17 @@ Por quê: o formulário é anônimo; com o telefone de um lead, qualquer pessoa 
 Junto: a IA Vendedora e a Mensagem com IA não mandam chave Pix, CPF/CNPJ, conta, telefone, e-mail ou link que a imobiliária não deu (o link do imóvel e o que está no cadastro, nos documentos e na conversa passam). A IA refaz a resposta uma vez e, se insistir, a frase sai; na Mensagem com IA, sem frase sobrando, sai a mensagem reserva com o motivo "trazia um dado que não está na instrução".
 
 Não reabrir sem o dono pedir.
+
+## Busca da capa: condomínio, bairro ou cidade, Área e Mais filtros (13/11/2026)
+
+A busca rápida da capa do site (Clássico e Moderno) ganhou dois campos novos e um botão.
+
+- **"Condomínio, bairro ou cidade"**: um campo de texto com sugestões. A pessoa digita a partir de 2 letras e vê até 8 sugestões, em três grupos: **Condomínio**, **Bairro** e **Cidade**. Só aparece o que tem imóvel publicado na aba escolhida (Comprar, Alugar ou Lançamentos). Escolher uma sugestão e clicar em Buscar leva à página de busca já filtrada por aquele condomínio, bairro ou cidade. Texto digitado sem escolher sugestão vai como busca livre pelo texto (acha o nome em condomínio, bairro ou cidade). Mexeu no texto depois de escolher, vale o texto. Trocar de aba limpa o lugar escolhido.
+- **Condomínio**: o grupo só traz imóveis ligados a um condomínio cadastrado (aba Condomínios). Imóvel com o nome do prédio só na descrição não conta.
+- **Área**: lista de área mínima (50, 80, 100, 150, 200, 300 e 500 m²+). Leva à página de busca com a área já marcada.
+- **Mais filtros**: com até 4 campos de escolha ligados, a capa fica como sempre. Com mais de 4, três ficam na primeira linha e o resto vai para uma segunda linha, atrás do botão **Mais filtros** (vira **Menos filtros** quando aberta). O Código não conta nos 4 e continua onde está, junto do Buscar.
+- **Onde liga**: Personalizar › Página inicial › Busca rápida, na lista de campos. Os dois campos novos nascem **desligados**: o site que já existe não muda sozinho.
+
+O que **ficou de fora de propósito**: "Em condomínio fechado" e "região". O cadastro não tem dado confiável pra nenhum dos dois (decisão do dono, 13/11/2026). Não reabrir sem o dono pedir.
+
+Armadilha: o servidor aceita `place` e `area` em `home.search.fields` na mesma ordem fixa de `CAMPOS_BUSCA` (`homeConfig.ts`). Campo novo da busca entra nos dois lados, senão o servidor descarta.
