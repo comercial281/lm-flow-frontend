@@ -580,6 +580,23 @@ export function Select({ value, onChange, label, options }: { value: string; onC
     </div>
   );
 }
+/**
+ * Lista do site público sem moldura (a busca da capa do Moderno): a mesma
+ * lista nativa do `Select`, com o `id` pro rótulo de fora, a opção vazia
+ * escrita por quem chama (vazia = filtro fora da busca) e a aparência de quem
+ * chama. O `<select>` do site público mora só neste arquivo (conferir-padrao,
+ * decisão 3 da spec do Seletor).
+ */
+export function ListaDoSite({ id, value, onChange, vazio, options, className }: {
+  id: string; value: string; onChange: (v: string) => void; vazio: string; options: [string, string][]; className: string;
+}) {
+  return (
+    <select id={id} value={value} onChange={e => onChange(e.target.value)} className={className}>
+      <option value="">{vazio}</option>
+      {options.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+    </select>
+  );
+}
 export function Stat({ n, label }: { n: string; label: string }) {
   return (
     <div>

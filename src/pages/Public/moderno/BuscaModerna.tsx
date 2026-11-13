@@ -1,5 +1,5 @@
 import { useId } from 'react';
-import { I, Ic } from '../portalShared';
+import { I, Ic, ListaDoSite } from '../portalShared';
 import type { AbaId } from '@/features/siteBuilder/public/homeConfig';
 import { ROTULO_ABA, type BuscaDaCapa, type CampoDeEscolha } from '../home/useBuscaDaCapa';
 
@@ -81,13 +81,10 @@ export default function BuscaModerna({ busca, abas, dividida = false }: { busca:
                   </span>
                   <div className="min-w-0 flex-1">
                     <label htmlFor={campoId} className="block text-[11.5px] leading-[1.2] text-[var(--m-muted)]">{o.label}</label>
-                    <select
-                      id={campoId} value={valores[c] ?? ''} onChange={e => set(c)(e.target.value)}
+                    <ListaDoSite
+                      id={campoId} value={valores[c] ?? ''} onChange={set(c)} vazio="Qualquer" options={o.options}
                       className="w-full min-w-0 appearance-none truncate border-0 bg-transparent pt-0.5 text-[14px] font-semibold text-[var(--m-head)] outline-none [&_option]:text-[#17140F]"
-                    >
-                      <option value="">Qualquer</option>
-                      {o.options.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-                    </select>
+                    />
                   </div>
                 </div>
               );
