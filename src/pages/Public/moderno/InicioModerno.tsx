@@ -8,14 +8,16 @@ import VitrinesModernas from './VitrinesModernas';
 import ComoFuncionaModerno from './ComoFuncionaModerno';
 import AtendimentoModerno from './AtendimentoModerno';
 import NumerosModernos from './NumerosModernos';
+import ChamadasModernas from './ChamadasModernas';
+import MaisBuscadosModerno from './MaisBuscadosModerno';
+import CapturaModerna from './CapturaModerna';
 
 /* ────────────────────────────────────────────────────────────────────────────
    Início do Moderno (spec 7 "Início"): as seções de hoje, na ordem de hoje,
    com o desenho do protótipo. Topo e rodapé vêm do PortalHeader/PortalFooter.
    Ordem: capa · vitrines · Como funciona · chamadas · Atendimento · mais
-   buscados · números · "Não achou?". Chamadas, Mais buscados e "Não achou?"
-   entram na parte 2 (Task 8): os lugares estão marcados abaixo, e `captura`
-   já traz o estado e o envio do contato, que continuam no PortalHomePage.
+   buscados · números · "Não achou?". `captura` traz o estado e o envio do
+   contato, que continuam no PortalHomePage (os mesmos do Clássico).
 ──────────────────────────────────────────────────────────────────────────── */
 
 /** O "Não achou?" de hoje: estado e envio moram no PortalHomePage (o mesmo do Clássico). */
@@ -33,12 +35,12 @@ export interface PropsDaCaptura {
 interface Props {
   site: SiteInfo; home: HomeConfig; items: PortalProperty[]; tenant: string; abas: AbaId[];
   cities: string[]; hoods: string[]; types: string[];
-  /** WhatsApp do site: as chamadas e o "Não achou?" da parte 2 usam. */
+  /** WhatsApp do site: o painel do "Não achou?" mostra. */
   wa?: string | null;
   captura: PropsDaCaptura;
 }
 
-export default function InicioModerno({ site, home, items, tenant, abas, cities, hoods, types, captura }: Props) {
+export default function InicioModerno({ site, home, items, tenant, abas, cities, hoods, types, wa, captura }: Props) {
   const ap = resolverAparencia(site.appearance);
   const modo = ap.heading_highlight;
 
@@ -51,11 +53,11 @@ export default function InicioModerno({ site, home, items, tenant, abas, cities,
       />
       <VitrinesModernas home={home} items={items} tenant={tenant} abas={abas} modo={modo} cartoesGrandes={ap.card_style === 'large'} />
       <ComoFuncionaModerno home={home} modo={modo} />
-      {/* Task 8: chamadas (Faixa / Foto / Cartões). */}
+      <ChamadasModernas site={site} home={home} items={items} tenant={tenant} modo={modo} />
       <AtendimentoModerno home={home} modo={modo} />
-      {/* Task 8: Mais buscados em mosaico. */}
+      <MaisBuscadosModerno home={home} items={items} tenant={tenant} abas={abas} />
       {site.sections?.stats !== false && <NumerosModernos imoveis={items.length} cidades={cities.length} modo={modo} />}
-      {/* Task 8: "Não achou?" (CapturaModerna, com `captura`). */}
+      <CapturaModerna site={site} wa={wa} captura={captura} />
     </div>
   );
 }

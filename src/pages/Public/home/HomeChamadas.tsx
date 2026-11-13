@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import type { AnchorHTMLAttributes, ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { I, Ic, type SiteInfo } from '../portalShared';
 import type { HomeConfig } from '@/features/siteBuilder/public/homeConfig';
@@ -21,14 +21,15 @@ import { semAsteriscos } from '@/features/siteBuilder/public/destaqueNoTitulo';
    fundo claro com cartões brancos.
 ──────────────────────────────────────────────────────────────────────────── */
 
-const ICONE: Record<CartaoChamada['icone'], string> = {
+export const ICONE: Record<CartaoChamada['icone'], string> = {
   bank: I.bank, sign: I.sign, search: I.search, whatsapp: I.chat, link: I.link, page: I.page,
 };
 
-function Destino({ c, className, children }: { c: CartaoChamada; className: string; children: ReactNode }) {
-  if (c.externo) return <a href={c.to} target="_blank" rel="noopener noreferrer" className={className}>{children}</a>;
-  if (c.to.startsWith('#')) return <a href={c.to} className={className}>{children}</a>;
-  return <Link to={c.to} className={className}>{children}</Link>;
+/** Link da chamada (externo em outra aba, âncora da página ou rota do site). `resto` = atributos a mais (o Moderno marca o cartão principal). */
+export function Destino({ c, className, children, ...resto }: { c: CartaoChamada; className: string; children: ReactNode } & AnchorHTMLAttributes<HTMLAnchorElement>) {
+  if (c.externo) return <a {...resto} href={c.to} target="_blank" rel="noopener noreferrer" className={className}>{children}</a>;
+  if (c.to.startsWith('#')) return <a {...resto} href={c.to} className={className}>{children}</a>;
+  return <Link {...resto} to={c.to} className={className}>{children}</Link>;
 }
 
 interface Props { site: SiteInfo; tenant: string; home: HomeConfig }

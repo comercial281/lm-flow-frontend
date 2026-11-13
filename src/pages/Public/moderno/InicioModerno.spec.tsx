@@ -1,8 +1,10 @@
-import { cleanup, fireEvent, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { SiteInfo } from '../portalShared';
 import { APARENCIA_FABRICA, type Aparencia } from '@/features/siteBuilder/public/aparenciaConfig';
 import { abrirHome, empreendimento, imovel } from '../home/servidorDeTeste';
+import { BR_PHONE_PLACEHOLDER } from '@/lib/brPhone';
 
 /* ────────────────────────────────────────────────────────────────────────────
    Início do Moderno, parte 1 (spec 6.1, 6.2, 6.4 e 7 "Início"): capa em
@@ -166,15 +168,194 @@ describe('Início do Moderno', () => {
     expect(h1.compareDocumentPosition(foto) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
-  it('ordem: capa, vitrines, Como funciona, Atendimento, números', async () => {
-    await abrirHome(moderno({ home: { steps: { enabled: true, items: [{ title: 'Um', text: '' }] }, about: { enabled: true, title: 'Oi' } } } as SiteInfo),
-      [imovel('R1', { featured: true })]);
+  it('ordem: capa, vitrines, Como funciona, chamadas, Atendimento, Mais buscados, números, "Não achou?"', async () => {
+    await abrirHome(moderno({
+      financiamento: { enabled: true }, anuncie: { enabled: true },
+      home: { steps: { enabled: true, items: [{ title: 'Um', text: '' }] }, about: { enabled: true, title: 'Oi' },
+        most_searched: { mode: 'manual', items: [{ label: 'Casas', transaction: 'sale', property_type: 'apartment' }] } },
+    } as SiteInfo), [imovel('R1', { featured: true })]);
     const ordem = [
       document.getElementById('topo')!, screen.getByRole('heading', { level: 2, name: 'Imóveis em destaque' }),
-      document.getElementById('como-funciona')!, document.getElementById('atendimento')!, document.getElementById('sobre')!,
+      document.getElementById('como-funciona')!, document.querySelector('[data-chamadas]')!, document.getElementById('atendimento')!,
+      document.querySelector('[data-mais-buscados]')!, document.getElementById('sobre')!, document.getElementById('contato')!,
     ];
+    ordem.forEach(el => expect(el).toBeTruthy());
     for (let k = 0; k < ordem.length - 1; k++) {
       expect(ordem[k].compareDocumentPosition(ordem[k + 1]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     }
+  });
+});
+
+/* ────────────────────────────────────────────────────────────────────────────
+   Início do Moderno, parte 2: chamadas nos 3 jeitos, Mais buscados em
+   mosaico e "Não achou?". Mesmas chamadas, atalhos e envio do Clássico.
+──────────────────────────────────────────────────────────────────────────── */
+
+const TITULOS_DE_FABRICA = ['Financiamento', 'Anuncie seu imóvel', 'Imóvel sob encomenda'];
+const comChamadas = (callouts: Record<string, unknown>, extra: Partial<SiteInfo> = {}) =>
+  moderno({ financiamento: { enabled: true }, anuncie: { enabled: true }, ...extra, home: { callouts } } as SiteInfo);
+const chamadas = () => document.querySelector<HTMLElement>('[data-chamadas]')!;
+
+describe('Início do Moderno: chamadas', () => {
+  it.each(['band', 'photo', 'cards'])('jeito %s: os 3 títulos de fábrica, sem asterisco', async layout => {
+    await abrirHome(comChamadas({ layout }), [imovel('R1')]);
+    const sec = chamadas();
+    expect(sec.getAttribute('data-chamadas')).toBe(layout);
+    for (const t of TITULOS_DE_FABRICA) expect(within(sec).getAllByText(t).length).toBeGreaterThan(0);
+  });
+
+  it('Faixa e Cartões: cada chamada com o botão e o destino de hoje', async () => {
+    await abrirHome(comChamadas({ layout: 'band' }), [imovel('R1')]);
+    const sec = chamadas();
+    expect(within(sec).getAllByRole('heading', { level: 3 }).map(h => h.textContent)).toEqual(TITULOS_DE_FABRICA);
+    expect(within(sec).getByRole('link', { name: /Faça uma simulação/ })).toHaveAttribute('href', '/portal/imob/financiamento');
+    expect(within(sec).getByRole('link', { name: /Cadastre seu imóvel/ })).toHaveAttribute('href', '/portal/imob/anuncie');
+    expect(within(sec).getByRole('link', { name: /Encomende seu imóvel/ })).toHaveAttribute('href', '#contato');
+  });
+
+  it('Cartões: o primeiro na cor principal, os outros claros', async () => {
+    await abrirHome(comChamadas({ layout: 'cards' }), [imovel('R1')]);
+    const cartoes = within(chamadas()).getAllByRole('link');
+    expect(cartoes).toHaveLength(3);
+    expect(cartoes[0].getAttribute('data-principal')).toBe('');
+    expect(cartoes[1].getAttribute('data-principal')).toBeNull();
+  });
+
+  it('Foto: "Como podemos ajudar?" lista as chamadas; clicar em "Imóvel sob encomenda" troca título, texto, botão e contador', async () => {
+    await abrirHome(comChamadas({ layout: 'photo' }), [imovel('R1')]);
+    const sec = chamadas();
+    expect(within(sec).getByText('Como podemos ajudar?')).toBeInTheDocument();
+    expect(within(sec).getByRole('heading', { level: 3, name: 'Financiamento' })).toBeInTheDocument();
+    expect(within(sec).getByText('01 / 03')).toBeInTheDocument();
+
+    fireEvent.click(within(sec).getByRole('button', { name: 'Imóvel sob encomenda' }));
+    expect(within(sec).getByRole('heading', { level: 3, name: 'Imóvel sob encomenda' })).toBeInTheDocument();
+    expect(within(sec).getByText('Descreva o que você procura e avisamos assim que encontrarmos.')).toBeInTheDocument();
+    expect(within(sec).getByRole('link', { name: /Encomende seu imóvel/ })).toHaveAttribute('href', '#contato');
+    expect(within(sec).getByText('03 / 03')).toBeInTheDocument();
+    expect(within(sec).getByRole('button', { name: 'Imóvel sob encomenda' })).toHaveAttribute('aria-pressed', 'true');
+
+    // As setas andam em volta.
+    fireEvent.click(within(sec).getByRole('button', { name: 'Próximo' }));
+    expect(within(sec).getByRole('heading', { level: 3, name: 'Financiamento' })).toBeInTheDocument();
+  });
+
+  it('Foto: a foto é a do fundo das chamadas; sem ela, a foto da capa', async () => {
+    await abrirHome(comChamadas({ layout: 'photo', background_url: 'https://x.com/fundo.jpg', overlay: 40 },
+      { hero: { image_url: 'https://x.com/capa.jpg' } }), [imovel('R1')]);
+    expect(chamadas().querySelector('img')!.getAttribute('src')).toBe('https://x.com/fundo.jpg');
+    cleanup();
+    await abrirHome(comChamadas({ layout: 'photo' }, { hero: { image_url: 'https://x.com/capa.jpg' } }), [imovel('R1')]);
+    expect(chamadas().querySelector('img')!.getAttribute('src')).toBe('https://x.com/capa.jpg');
+  });
+
+  it('título de chamada com asterisco: destaque no Moderno', async () => {
+    await abrirHome(moderno({ financiamento: { enabled: true }, home: { callouts: { layout: 'band', defaults: {
+      financing: { enabled: true, title: 'Financie *fácil*' } } } } } as SiteInfo), [imovel('R1')]);
+    const h3 = within(chamadas()).getByRole('heading', { level: 3, name: 'Financie fácil' });
+    expect(h3.querySelector('[data-destaque="accent"]')?.textContent).toBe('fácil');
+  });
+
+  it('menos de 2 chamadas: a faixa some (regra do Clássico)', async () => {
+    await abrirHome(moderno({ sections: { lead_capture: true } } as SiteInfo), [imovel('R1')]);
+    expect(document.querySelector('[data-chamadas]')).toBeNull();
+  });
+});
+
+describe('Início do Moderno: Mais buscados em mosaico', () => {
+  const manual = (...labels: [string, string][]) => ({ home: { most_searched: { mode: 'manual', items: labels.map(([label, property_type]) => ({
+    label, transaction: 'sale', property_type, city: null, neighborhood: null, price_max: null })) } } }) as SiteInfo;
+  const mosaico = () => document.querySelector<HTMLElement>('[data-mais-buscados]')!;
+
+  it('atalho com foto vira bloco (foto do mais recente, rótulo e contagem); sem foto vira pílula; sem bloco vazio', async () => {
+    await abrirHome(moderno(manual(['Apartamentos', 'apartment'], ['Casas', 'house'])), [
+      imovel('A1', { cover_url: 'https://x.com/a1.jpg', created_at: '2026-01-01T00:00:00Z' }),
+      imovel('A2', { cover_url: 'https://x.com/a2.jpg', created_at: '2026-06-01T00:00:00Z' }),
+      imovel('C1', { property_type: 'house', cover_url: null }),
+    ]);
+    const sec = mosaico();
+    const blocos = sec.querySelectorAll('[data-bloco]');
+    expect(blocos).toHaveLength(1);
+    const bloco = blocos[0] as HTMLElement;
+    expect(bloco.querySelector('img')!.getAttribute('src')).toBe('https://x.com/a2.jpg');
+    expect(bloco).toHaveAttribute('href', '/portal/imob/imoveis?type=apartment');
+    expect(bloco.textContent).toContain('Apartamentos');
+    expect(bloco.textContent).toContain('2');
+
+    const pilula = within(sec).getByRole('link', { name: 'Casas' });
+    expect(pilula).toHaveAttribute('href', '/portal/imob/imoveis?type=house');
+    expect(pilula.querySelector('img')).toBeNull();
+    expect(pilula.hasAttribute('data-bloco')).toBe(false);
+  });
+
+  it('nenhum atalho com foto: só pílulas, sem o mosaico', async () => {
+    await abrirHome(moderno(manual(['Apartamentos', 'apartment'])), [imovel('A1')]);
+    const sec = mosaico();
+    expect(sec.querySelector('[data-mosaico]')).toBeNull();
+    expect(sec.querySelectorAll('img')).toHaveLength(0);
+    expect(within(sec).getByRole('link', { name: 'Apartamentos' })).toBeInTheDocument();
+  });
+
+  it('até 4 blocos; o quinto atalho com foto vira pílula', async () => {
+    const tipos = ['apartment', 'house', 'lot', 'commercial', 'farm'];
+    await abrirHome(moderno(manual(...tipos.map(t => [t, t] as [string, string]))),
+      tipos.map(t => imovel(t, { property_type: t, cover_url: `https://x.com/${t}.jpg` })));
+    const sec = mosaico();
+    expect(sec.querySelectorAll('[data-bloco]')).toHaveLength(4);
+    expect(within(sec).getByRole('link', { name: 'farm' }).querySelector('img')).toBeNull();
+  });
+
+  it('Mais buscados desligado: a seção some', async () => {
+    await abrirHome(moderno({ home: { most_searched: { enabled: false } } } as SiteInfo), [imovel('A1'), imovel('A2')]);
+    expect(document.querySelector('[data-mais-buscados]')).toBeNull();
+  });
+});
+
+describe('Início do Moderno: "Não achou?"', () => {
+  const contato = { whatsapp: '5511987654321', phone: '(11) 3333-4444', email: 'contato@imob.com.br' };
+
+  it('mesmo envio do Clássico: POST /site/leads com form_type home, e o obrigado', async () => {
+    await abrirHome(moderno({ contact: contato } as SiteInfo), [imovel('R1')]);
+    const sec = document.getElementById('contato')!;
+    await userEvent.type(within(sec).getByPlaceholderText('Como podemos te chamar?'), 'Maria');
+    await userEvent.type(within(sec).getByPlaceholderText(BR_PHONE_PLACEHOLDER), '11987654321');
+    await userEvent.click(within(sec).getByRole('button', { name: 'Quero ajuda pra encontrar' }));
+
+    const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
+    await waitFor(() => expect(fetchMock.mock.calls.some(([u]) => String(u).includes('/site/leads'))).toBe(true));
+    const [, init] = fetchMock.mock.calls.find(([u]) => String(u).includes('/site/leads'))!;
+    expect(init.method).toBe('POST');
+    expect(JSON.parse(init.body)).toEqual({ lead: {
+      name: 'Maria', phone: '11987654321', source: 'portal', form_type: 'home', finalidade: 'venda',
+      message: 'Quero ajuda pra encontrar um imóvel (portal home).',
+    } });
+    expect(await screen.findByText('Recebemos seu contato!')).toBeInTheDocument();
+  });
+
+  it('título com o destaque, "Quero comprar / Quero alugar" e o painel com WhatsApp, telefone e e-mail do site', async () => {
+    await abrirHome(moderno({ contact: contato } as SiteInfo), [imovel('R1')]);
+    const sec = document.getElementById('contato')!;
+    expect(within(sec).getByRole('heading', { level: 2, name: 'Não achou? A gente encontra pra você.' })).toBeInTheDocument();
+    expect(within(sec).getByRole('radiogroup', { name: 'O que você procura' })).toBeInTheDocument();
+    fireEvent.click(within(sec).getByLabelText('Quero alugar'));
+    expect(within(sec).getByLabelText('Quero alugar')).toBeChecked();
+    expect(within(sec).getByRole('link', { name: /\(11\) 98765-4321/ })).toHaveAttribute('href', 'https://wa.me/5511987654321');
+    expect(within(sec).getByRole('link', { name: /\(11\) 3333-4444/ })).toHaveAttribute('href', 'tel:1133334444');
+    expect(within(sec).getByRole('link', { name: /contato@imob\.com\.br/ })).toHaveAttribute('href', 'mailto:contato@imob.com.br');
+  });
+
+  it('telefone inválido: avisa e não envia', async () => {
+    await abrirHome(moderno(), [imovel('R1')]);
+    const sec = document.getElementById('contato')!;
+    await userEvent.type(within(sec).getByPlaceholderText('Como podemos te chamar?'), 'Maria');
+    await userEvent.type(within(sec).getByPlaceholderText(BR_PHONE_PLACEHOLDER), '1198');
+    await userEvent.click(within(sec).getByRole('button', { name: 'Quero ajuda pra encontrar' }));
+    expect(within(sec).getByText('Digite um telefone válido com DDD.')).toBeInTheDocument();
+    expect((fetch as unknown as ReturnType<typeof vi.fn>).mock.calls.some(([u]) => String(u).includes('/site/leads'))).toBe(false);
+  });
+
+  it('sections.lead_capture desligado: sem o "Não achou?"', async () => {
+    await abrirHome(moderno({ sections: { lead_capture: false } } as SiteInfo), [imovel('R1')]);
+    expect(document.getElementById('contato')).toBeNull();
   });
 });

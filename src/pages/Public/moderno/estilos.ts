@@ -18,3 +18,8 @@ export const SOBRETITULO = 'mb-3.5 text-[13px] font-semibold text-[var(--m-head)
 export const BOTAO_PRINCIPAL =
   'inline-flex items-center justify-center gap-2 rounded-full bg-[var(--brand)] px-5 py-3 text-[14px] font-semibold ' +
   'text-[var(--brand-ink)] transition-transform hover:-translate-y-px';
+/** Botão redondo das setas (carrossel das vitrines, chamadas no jeito Foto). */
+export const BOTAO_REDONDO = 'grid h-10 w-10 place-items-center rounded-full border border-[var(--m-line)] bg-[var(--m-surface)] text-[var(--m-head)]';
+/** Setas dos botões redondos. */
+export const SETA_ESQUERDA = 'M15 18l-6-6 6-6';
+export const SETA_DIREITA = 'M9 18l6-6-6-6';

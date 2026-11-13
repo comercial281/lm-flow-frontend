@@ -7,7 +7,7 @@ import { abaDaVitrine, verTodosDaVitrine, vitrinesVisiveis } from '@/features/si
 import { useCtxDoSite } from '@/features/siteBuilder/public/useTenantDoSite';
 import { TituloComDestaque } from '../TituloComDestaque';
 import CartaoFotoInteira from './CartaoFotoInteira';
-import { BLOCO, MIOLO, SOBRETITULO, tituloDeSecao } from './estilos';
+import { BLOCO, BOTAO_REDONDO, MIOLO, SETA_DIREITA, SETA_ESQUERDA, SOBRETITULO, tituloDeSecao } from './estilos';
 
 /* ────────────────────────────────────────────────────────────────────────────
    Vitrines do Moderno (spec 7 "Início"; protótipo `.head-row`, `.rail`): as
@@ -21,8 +21,6 @@ interface Props {
   home: HomeConfig; items: PortalProperty[]; tenant: string; abas: AbaId[];
   modo: DestaqueDosTitulos; cartoesGrandes: boolean;
 }
-
-const BOTAO_REDONDO = 'grid h-10 w-10 place-items-center rounded-full border border-[var(--m-line)] bg-[var(--m-surface)] text-[var(--m-head)]';
 
 /** Rola o carrossel um cartão (largura do primeiro + o espaço entre eles). */
 function rolarUmCartao(trilho: HTMLElement | null, sentido: 1 | -1) {
@@ -54,10 +52,10 @@ function Vitrine({ titulo, sobretitulo, link, grande, modo, children }: {
               )}
               {comSetas && <>
                 <button type="button" aria-label="Anterior" onClick={() => rolarUmCartao(trilho.current, -1)} className={BOTAO_REDONDO}>
-                  <Ic d="M15 18l-6-6 6-6" s={16} />
+                  <Ic d={SETA_ESQUERDA} s={16} />
                 </button>
                 <button type="button" aria-label="Próximo" onClick={() => rolarUmCartao(trilho.current, 1)} className={BOTAO_REDONDO}>
-                  <Ic d="M9 18l6-6-6-6" s={16} />
+                  <Ic d={SETA_DIREITA} s={16} />
                 </button>
               </>}
             </div>
