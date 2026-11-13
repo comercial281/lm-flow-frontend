@@ -4,7 +4,8 @@ import type { AbaId, HomeConfig } from '@/features/siteBuilder/public/homeConfig
 import { filtroDaCapaModerna, logoNaCapa, logoNaSuperficie, resolverAparencia } from '@/features/siteBuilder/public/aparenciaConfig';
 import { ATRIBUTO_DO_LOGO_DA_CAPA, useLogoPousado } from '@/features/siteBuilder/public/logoPousado';
 import { TituloComDestaque } from '../TituloComDestaque';
-import { fotoDaCapa, textosDaCapa, useBuscaDaCapa } from '../home/useBuscaDaCapa';
+import FundoDaCapa from '../home/FundoDaCapa';
+import { fotosDaCapa, textosDaCapa, useBuscaDaCapa } from '../home/useBuscaDaCapa';
 import BuscaModerna from './BuscaModerna';
 import { topoSobreACapa } from './TopoModerno';
 import { DESTAQUE_SOBRE_A_FOTO, DESTAQUE_SOBRE_O_CLARO } from './destaqueModerno';
@@ -68,7 +69,7 @@ function Midia({ site, items }: { site: SiteInfo; items: PortalProperty[] }) {
   if (site.hero?.video_url) {
     return <video src={site.hero.video_url} autoPlay muted loop playsInline preload="auto" className="h-full w-full object-cover" />;
   }
-  return <img src={fotoDaCapa(site, items)} alt="" fetchPriority="high" className="h-full w-full object-cover" />;
+  return <FundoDaCapa fotos={fotosDaCapa(site, items)} prioridade />;
 }
 
 export default function CapaModerna({ site, home, items, tenant, abas, cities, hoods, types, onTab }: Props) {

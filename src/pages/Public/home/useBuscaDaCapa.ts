@@ -56,6 +56,12 @@ export function fotoDaCapa(site: SiteInfo, items: PortalProperty[]): string {
   return site.hero?.image_url || items[0]?.cover_url || CAPA_PADRAO;
 }
 
+/** Fotos do fundo da capa: a lista do servidor (1 a 6); sem ela, a foto única de `fotoDaCapa`. */
+export function fotosDaCapa(site: SiteInfo, items: PortalProperty[]): string[] {
+  const lista = (site.hero?.image_urls ?? []).filter(Boolean);
+  return lista.length ? lista : [fotoDaCapa(site, items)];
+}
+
 export function useBuscaDaCapa({ home, tenant, abas, cities, hoods, types, items, onTab }: PropsDaBusca) {
   const navigate = useNavigate();
   const ctx = useCtxDoSite(tenant);

@@ -4,7 +4,8 @@ import { filtroDaCapa, logoNaCapa, logoNaSuperficie, resolverAparencia } from '@
 import { ATRIBUTO_DO_LOGO_DA_CAPA, useLogoPousado } from '@/features/siteBuilder/public/logoPousado';
 import { semAsteriscos } from '@/features/siteBuilder/public/destaqueNoTitulo';
 import CampoDeLugar from '../CampoDeLugar';
-import { ROTULO_ABA, fotoDaCapa, textosDaCapa, useBuscaDaCapa } from './useBuscaDaCapa';
+import FundoDaCapa from './FundoDaCapa';
+import { ROTULO_ABA, fotosDaCapa, textosDaCapa, useBuscaDaCapa } from './useBuscaDaCapa';
 
 /* ────────────────────────────────────────────────────────────────────────────
    Capa da página inicial: foto/vídeo, título, subtítulo e a busca rápida.
@@ -62,7 +63,7 @@ export default function HomeCapa({ site, home, items, tenant, abas, cities, hood
   ) : (
     // Foto escolhida no Site Builder (de um imóvel ou enviada); sem ela,
     // a capa do primeiro imóvel da lista, como sempre foi.
-    <img src={fotoDaCapa(site, items)} alt="" className="h-full w-full object-cover" />
+    <FundoDaCapa fotos={fotosDaCapa(site, items)} />
   );
 
   // O lugar é texto com sugestões; os outros campos são listas. Sobre a foto a capa corta o que sai da
