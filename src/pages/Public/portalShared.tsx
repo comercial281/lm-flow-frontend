@@ -552,16 +552,31 @@ export function PropertyRow(props: PropsDoCartao) {
  * Mora aqui (e não na página de busca) porque este arquivo é a exceção da lista
  * nativa no conferir-padrao: o portal público é outro público, com outro visual.
  */
-export function OrdenarPor({ valor, onChange }: { valor: Ordem; onChange: (v: Ordem) => void }) {
+const ROUPA_DO_ORDENAR = {
+  classico: {
+    rotulo: 'flex items-center gap-2 text-[13px] text-neutral-500',
+    lista: 'appearance-none rounded-full border border-black/[0.08] bg-white py-2 pl-3.5 pr-8 text-[13px] font-semibold text-[var(--ink)] outline-none focus:border-[var(--brand)] focus-visible:ring-2 focus-visible:ring-[var(--brand)]/40',
+    seta: 'pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400',
+  },
+  // Moderno (protótipo `.sort`): só as variáveis do Moderno; a opção da lista nativa em escuro fixo.
+  moderno: {
+    rotulo: 'flex items-center gap-2 text-[13px] text-[var(--m-muted)]',
+    lista: 'appearance-none rounded-full border border-[var(--m-line)] bg-[var(--m-surface)] py-2 pl-3.5 pr-8 text-[13px] font-semibold text-[var(--m-head)] outline-none focus:border-[var(--brand)] [&_option]:bg-[#FFFFFF] [&_option]:text-[#17140F]',
+    seta: 'pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[var(--m-muted)]',
+  },
+};
+
+export function OrdenarPor({ valor, onChange, moderno = false }: { valor: Ordem; onChange: (v: Ordem) => void; moderno?: boolean }) {
+  const roupa = ROUPA_DO_ORDENAR[moderno ? 'moderno' : 'classico'];
   return (
-    <label className="flex items-center gap-2 text-[13px] text-neutral-500">
+    <label className={roupa.rotulo}>
       <span className="shrink-0">Ordenar por</span>
       <span className="relative">
         <select value={valor} onChange={e => { if (ehOrdem(e.target.value)) onChange(e.target.value); }}
-          className="appearance-none rounded-full border border-black/[0.08] bg-white py-2 pl-3.5 pr-8 text-[13px] font-semibold text-[var(--ink)] outline-none focus:border-[var(--brand)] focus-visible:ring-2 focus-visible:ring-[var(--brand)]/40">
+          className={roupa.lista}>
           {ORDENS.map(o => <option key={o} value={o}>{ROTULO_ORDEM[o]}</option>)}
         </select>
-        <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400">
+        <span className={roupa.seta}>
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6" /></svg>
         </span>
       </span>
