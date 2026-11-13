@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { aplicarModelo, modeloAtual, MODELOS_DO_SITE, type EstadoDoVisual } from './modelosDoSite';
+import { aplicarModelo, modeloAtual, MODELOS_DA_PREVIA, MODELOS_DO_SITE, type EstadoDoVisual } from './modelosDoSite';
 import { APARENCIA_FABRICA } from './public/aparenciaConfig';
 import { HOME_FABRICA, PASSOS_MCMV } from './public/homeConfig';
 import { LISTA_FABRICA } from './public/listaConfig';
@@ -115,5 +115,39 @@ describe('modelosDoSite', () => {
   it('modeloAtual não liga pra cores nem textos', () => {
     const r = aplicarModelo('classico', { font_family: null, appearance: APARENCIA_FABRICA, home: HOME_FABRICA, listing: LISTA_FABRICA });
     expect(modeloAtual({ ...r, appearance: { ...r.appearance, footer_text: 'outro', hero_overlay: 10 } })).toBe('classico');
+  });
+
+  describe('Moderno', () => {
+    it('MODELOS_DO_SITE segue com 3; a prévia tem 4', () => {
+      expect(MODELOS_DO_SITE).toHaveLength(3);
+      expect(MODELOS_DA_PREVIA.map(m => m.id)).toEqual(['classico', 'editorial', 'popular', 'moderno']);
+      expect(MODELOS_DA_PREVIA[3].nome).toBe('Moderno');
+    });
+
+    it('grava a receita e preserva cores e textos', () => {
+      const r = aplicarModelo('moderno', personalizado());
+      expect(r.font_family).toBe('DM Sans');
+      expect(r.appearance).toMatchObject({
+        heading_font: null, style: 'modern', heading_highlight: 'accent', background: 'light',
+        header_style: 'transparent', top_bar: 'hidden', hero_layout: 'photo', hero_height: 'full',
+        menu_style: 'normal', card_style: 'standard', footer_layout: 'columns',
+      });
+      expect(r.listing.card_layout).toBe('grid');
+      expect(r.home.callouts.layout).toBe('photo');
+      expect(r.home.steps.enabled).toBe(false);
+      expect(r.home.about.enabled).toBe(true);
+      expect(r.home.about.title).toBeTruthy();
+      expect(r.appearance.footer_text).toBe('Frase do cliente');
+      expect(r.home.search.title).toBe('Busque aqui');
+    });
+
+    it('Clássico grava style classic e reconhece-se; Moderno é reconhecido', () => {
+      const m = aplicarModelo('moderno', personalizado());
+      expect(modeloAtual(m)).toBe('moderno');
+      const c = aplicarModelo('classico', m);
+      expect(c.appearance.style).toBe('classic');
+      expect(modeloAtual(c)).toBe('classico');
+      expect(modeloAtual({ ...c, appearance: { ...c.appearance, style: 'modern' } })).toBeNull();
+    });
   });
 });

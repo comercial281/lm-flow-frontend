@@ -1,7 +1,7 @@
 // src/features/siteBuilder/public/previaDoModelo.ts
 // Prévia do modelo (Meu site › Modelo do site · "Ver prévia").
 //
-// O painel abre `<endereço do site>?modelo=<classico|editorial|popular>` (com
+// O painel abre `<endereço do site>?modelo=<classico|editorial|popular|moderno>` (com
 // o `?previa=` junto quando o site está em manutenção). Aqui o site lê o
 // `?modelo=`, guarda em `sessionStorage['lmf-modelo']` (a navegação interna
 // perde a busca da URL) e aplica o modelo SÓ no navegador, por cima do site
@@ -20,7 +20,7 @@
 //
 // Só importa `../modelosDoSite` e os `./*Config`: o site no domínio do
 // cliente é um pacote enxuto (ver scripts/conferir-dominio-limpo.mjs).
-import { MODELOS_DO_SITE, aplicarModelo, type ModeloDoSiteId } from '../modelosDoSite';
+import { MODELOS_DA_PREVIA, aplicarModelo, type ModeloDoSiteId } from '../modelosDoSite';
 import { resolverAparencia } from './aparenciaConfig';
 import { resolverHome } from './homeConfig';
 import { resolverLista } from './listaConfig';
@@ -64,7 +64,7 @@ function esquecerGuardado(): void {
 
 function limpo(v: string | null | undefined): ModeloDoSiteId | null {
   const t = (v ?? '').trim();
-  return MODELOS_DO_SITE.find(m => m.id === t)?.id ?? null;
+  return MODELOS_DA_PREVIA.find(m => m.id === t)?.id ?? null;
 }
 
 /**
@@ -141,7 +141,7 @@ export function ehPreviaDoModelo(site: { modelo_em_previa?: string | null } | nu
 
 /** Nome do modelo pra faixa ("Editorial"). */
 export function nomeDoModelo(id: ModeloDoSiteId): string {
-  return MODELOS_DO_SITE.find(m => m.id === id)?.nome ?? id;
+  return MODELOS_DA_PREVIA.find(m => m.id === id)?.nome ?? id;
 }
 
 /** O mesmo endereço sem o `modelo=` (a prévia de manutenção e os filtros ficam). */
