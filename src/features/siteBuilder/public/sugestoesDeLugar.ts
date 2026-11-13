@@ -125,3 +125,32 @@ export function sugestoesDeLugar(items: PortalProperty[], tab: PortalTab, texto:
   if (normalizarTexto(texto).length < 2) return [];
   return buscarNoIndice(indiceDeLugar(items, tab), texto, limite);
 }
+
+/**
+ * A regra única de "é código?" da caixa de busca (barra da capa do Moderno, campo de lugar da
+ * capa do Clássico e da página de Imóveis). Devolve a aba pra onde a busca vai, ou `null` quando
+ * o texto vai como lugar (`place`).
+ * 1. Código inteiro de um imóvel do catálogo (sem acento nem maiúscula): a aba de agora, se ele
+ *    está nela; senão a primeira das abas do site que o mostra (um código de aluguel digitado em
+ *    Comprar vai pra Alugar, senão a lista viria vazia).
+ * 2. Pedaço de código (como a caixa de código de antes achava): com pelo menos um número, sem
+ *    espaço e dentro do código de algum imóvel publicado. Fica na aba de agora; se todos os
+ *    imóveis que casam estão numa outra aba só, vai pra ela. ("Vila 2" tem espaço: é lugar.)
+ */
+export function abaDoCodigo(items: PortalProperty[], texto: string, tab: PortalTab, abas: PortalTab[]): PortalTab | null {
+  const alvo = normalizarTexto(texto);
+  if (!alvo) return null;
+  const mostra = (achados: PortalProperty[]) => (t: PortalTab) =>
+    filterProperties(achados, { tab: t, type: '', city: '', neighborhood: '', bedrooms: '', code: '' }).length > 0;
+
+  const iguais = items.filter(p => normalizarTexto(p.code) === alvo);
+  if (iguais.length) return [tab, ...abas].find(mostra(iguais)) ?? tab;
+
+  if (!/\d/.test(alvo) || /\s/.test(alvo)) return null;
+  const pedacos = items.filter(p => normalizarTexto(p.code).includes(alvo));
+  if (!pedacos.length) return null;
+  const temNa = mostra(pedacos);
+  if (temNa(tab)) return tab;
+  const outras = abas.filter(a => a !== tab && temNa(a));
+  return outras.length === 1 ? outras[0] : tab;
+}

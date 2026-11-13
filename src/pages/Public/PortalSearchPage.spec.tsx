@@ -379,7 +379,7 @@ describe('PortalSearchPage — lista do servidor (/imoveis/a-venda/casa/campinas
   });
 });
 
-const campoDeLugar = () => screen.getByRole('combobox', { name: 'Condomínio, bairro ou cidade' }) as HTMLInputElement;
+const campoDeLugar = () => screen.getByRole('combobox', { name: 'Condomínio, bairro, cidade ou código' }) as HTMLInputElement;
 
 describe('condomínio, bairro ou cidade e Área', () => {
   const base = () => [
@@ -441,11 +441,11 @@ describe('condomínio, bairro ou cidade e Área', () => {
     await abrirBusca(comBairro());
     await escolherCentro();
     expect(urlAtual().get('neighborhood')).toBe('Centro');
-    fireEvent.click(screen.getByRole('button', { name: 'Limpar condomínio, bairro ou cidade' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Limpar busca' }));
     expect(urlAtual().get('neighborhood')).toBeNull();
     expect(campoDeLugar().value).toBe('');
     expect(titulos()).toHaveLength(2);
-    expect(screen.queryByRole('button', { name: 'Limpar condomínio, bairro ou cidade' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Limpar busca' })).toBeNull();
   });
 
   it('escolher bairro e voltar ao campo + Enter não soma place', async () => {
@@ -482,5 +482,84 @@ describe('condomínio, bairro ou cidade e Área', () => {
     fireEvent.change(campoDeLugar(), { target: { value: 'zzz' } });
     fireEvent.blur(campoDeLugar());
     expect(urlAtual().get('place')).toBe('zzz');
+  });
+});
+
+/* Uma caixa de texto só (decisão do Tony em 13/11): o campo de lugar também aceita o código. */
+describe('uma caixa de texto só: lugar ou código', () => {
+  const cat = () => [
+    imovel('AP0632', { condominium_name: 'Collina' }),
+    imovel('R2'),
+    imovel('L77', { transaction_type: 'rent', rent_price_from: 2000, sale_price_from: null }),
+  ];
+
+  it('um campo só, com o exemplo novo, e sem a caixa de código', async () => {
+    await abrirBusca(cat());
+    expect(campoDeLugar().getAttribute('placeholder')).toBe('Digite condomínio, bairro, cidade ou código');
+    expect(screen.queryByPlaceholderText(/código do imóvel/i)).toBeNull();
+    expect(screen.queryAllByRole('textbox')).toHaveLength(0);
+  });
+
+  it('código de imóvel publicado + Enter filtra pelo código (sem place)', async () => {
+    await abrirBusca(cat());
+    fireEvent.change(campoDeLugar(), { target: { value: 'ap0632' } });
+    fireEvent.keyDown(campoDeLugar(), { key: 'Enter' });
+    expect(urlAtual().get('code')).toBe('ap0632');
+    expect(urlAtual().get('place')).toBeNull();
+    expect(titulos()).toEqual(['Imóvel AP0632']);
+    expect(campoDeLugar().value).toBe('ap0632');
+  });
+
+  it('texto que não é código vai como place (e tira o código de antes)', async () => {
+    await abrirBusca(cat(), '/portal/imob/imoveis?code=R2');
+    fireEvent.change(campoDeLugar(), { target: { value: 'Collina' } });
+    fireEvent.keyDown(campoDeLugar(), { key: 'Enter' });
+    expect(urlAtual().get('place')).toBe('Collina');
+    expect(urlAtual().get('code')).toBeNull();
+    expect(titulos()).toEqual(['Imóvel AP0632']);
+  });
+
+  it('código de outra aba: vai pra aba dele', async () => {
+    await abrirBusca(cat());
+    fireEvent.change(campoDeLugar(), { target: { value: 'L77' } });
+    fireEvent.keyDown(campoDeLugar(), { key: 'Enter' });
+    expect(urlAtual().get('tab')).toBe('rent');
+    expect(urlAtual().get('code')).toBe('L77');
+    expect(titulos()).toEqual(['Imóvel L77']);
+  });
+
+  it('pedaço do código + Enter também acha (como a caixa de código de antes)', async () => {
+    await abrirBusca(cat());
+    fireEvent.change(campoDeLugar(), { target: { value: 'AP06' } });
+    fireEvent.keyDown(campoDeLugar(), { key: 'Enter' });
+    expect(urlAtual().get('code')).toBe('AP06');
+    expect(urlAtual().get('place')).toBeNull();
+    expect(titulos()).toEqual(['Imóvel AP0632']);
+  });
+
+  it('texto com espaço vai como place, mesmo com número', async () => {
+    await abrirBusca(cat());
+    fireEvent.change(campoDeLugar(), { target: { value: 'Vila 2' } });
+    fireEvent.keyDown(campoDeLugar(), { key: 'Enter' });
+    expect(urlAtual().get('place')).toBe('Vila 2');
+    expect(urlAtual().get('code')).toBeNull();
+  });
+
+  it('?code=AP0632 ao abrir: o campo mostra o código e o × tira', async () => {
+    await abrirBusca(cat(), '/portal/imob/imoveis?code=AP0632');
+    expect(campoDeLugar().value).toBe('AP0632');
+    expect(titulos()).toEqual(['Imóvel AP0632']);
+    fireEvent.click(screen.getByRole('button', { name: 'Limpar busca' }));
+    expect(urlAtual().get('code')).toBeNull();
+    expect(campoDeLugar().value).toBe('');
+    expect(titulos()).toHaveLength(2);
+  });
+
+  it('escolher uma sugestão tira o código de antes', async () => {
+    await abrirBusca(cat(), '/portal/imob/imoveis?code=R2');
+    fireEvent.change(campoDeLugar(), { target: { value: 'colli' } });
+    fireEvent.click(await screen.findByRole('option', { name: /Collina/ }));
+    expect(urlAtual().get('condominium')).toBe('Collina');
+    expect(urlAtual().get('code')).toBeNull();
   });
 });

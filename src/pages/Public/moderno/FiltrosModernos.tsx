@@ -1,17 +1,18 @@
 import { useId, useState } from 'react';
-import { I, Ic, ListaDoSite, type PortalTab } from '../portalShared';
+import { ListaDoSite, type PortalTab } from '../portalShared';
 import { opcaoDoTipo, opcoesDeTipo } from '@/features/siteBuilder/public/tiposDeImovel';
 import { precoDaFaixa } from '@/features/siteBuilder/public/faixasDePreco';
 import { FASES_DO_PUBLICO } from '@/features/properties/listingKind';
 import type { BuscaDosImoveis } from '../busca/useBuscaDosImoveis';
 import { AREAS_MINIMAS } from '@/features/siteBuilder/public/filtros';
-import CampoDeLugar from '../CampoDeLugar';
+import CampoDeLugar, { EXEMPLO_DA_CAIXA, ROTULO_DA_CAIXA } from '../CampoDeLugar';
 
 /* ────────────────────────────────────────────────────────────────────────────
    Painel de filtros da página de Imóveis do Moderno (protótipo `.filters`,
-   `.f-row`, `.f-more`, `.sel`): abas e código em cima; o campo
-   "Condomínio, bairro ou cidade" (o mesmo do Clássico e da capa, com o "×"
-   que tira o lugar); 5 filtros à vista (Tipo, Cidade, Bairro, Dormitórios,
+   `.f-row`, `.f-more`, `.sel`): abas em cima; o campo "Condomínio, bairro,
+   cidade ou código" (o mesmo do Clássico e da capa, com o "×" que tira o
+   lugar ou o código; uma caixa de texto só, decisão do Tony em 13/11, então
+   o campo de código separado saiu); 5 filtros à vista (Tipo, Cidade, Bairro, Dormitórios,
    Faixa de preço); "Mais filtros" abre Área, Suítes, Vagas e Fase (Fase só
    fora de Alugar). Os filtros valem na hora,
    como no Clássico: não há botão Buscar. Valores e destinos são os do
@@ -60,31 +61,22 @@ export default function FiltrosModernos({ busca }: { busca: BuscaDosImoveis }) {
 
   return (
     <div className="grid gap-2.5 rounded-[22px] border border-[var(--m-line)] bg-[var(--m-surface)] p-3">
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--m-line)] pb-2.5">
-        {comAbas ? (
-          <div className="flex flex-wrap gap-1">
-            {abas.map(k => (
-              <button
-                key={k} type="button" aria-pressed={filters.tab === k} onClick={() => trocarAba(k)}
-                className={`rounded-full px-3.5 py-1.5 text-[13px] font-semibold transition-colors ${filters.tab === k ? 'bg-[var(--brand)] text-[var(--brand-ink)]' : 'text-[var(--m-muted)] hover:text-[var(--m-head)]'}`}
-              >
-                {ROTULO_ABA[k]}
-              </button>
-            ))}
-          </div>
-        ) : <span />}
-        <label className="relative flex w-full items-center sm:w-[240px]">
-          <span className="pointer-events-none absolute left-3 text-[var(--m-muted)]"><Ic d={I.search} s={16} /></span>
-          <span className="sr-only">Código do imóvel</span>
-          <input
-            value={filters.code} onChange={e => update({ code: e.target.value }, true)} placeholder="Código do imóvel"
-            className="h-10 w-full rounded-full border border-[var(--m-line)] bg-[var(--m-ground)] pl-9 pr-3 text-[13.5px] text-[var(--m-head)] outline-none placeholder:text-[var(--m-muted)] focus:border-[var(--brand)]"
-          />
-        </label>
-      </div>
+      {/* Uma aba só não é escolha: sem abas, a fileira de cima some (o código mora no campo de lugar). */}
+      {comAbas && (
+        <div className="flex flex-wrap gap-1 border-b border-[var(--m-line)] pb-2.5">
+          {abas.map(k => (
+            <button
+              key={k} type="button" aria-pressed={filters.tab === k} onClick={() => trocarAba(k)}
+              className={`rounded-full px-3.5 py-1.5 text-[13px] font-semibold transition-colors ${filters.tab === k ? 'bg-[var(--brand)] text-[var(--brand-ink)]' : 'text-[var(--m-muted)] hover:text-[var(--m-head)]'}`}
+            >
+              {ROTULO_ABA[k]}
+            </button>
+          ))}
+        </div>
+      )}
 
       <CampoDeLugar
-        items={items} tab={filters.tab} texto={textoDoLugar}
+        items={items} tab={filters.tab} texto={textoDoLugar} rotulo={ROTULO_DA_CAIXA} placeholder={EXEMPLO_DA_CAIXA}
         onTexto={setTextoDoLugar} onEscolher={escolherLugar} onConfirmar={confirmarLugar} onLimpar={limparLugar}
         className={LUGAR}
       />
