@@ -11374,7 +11374,7 @@ Junto: a IA Vendedora e a Mensagem com IA não mandam chave Pix, CPF/CNPJ, conta
 
 Não reabrir sem o dono pedir.
 
-## Fotos do imóvel: foto sem a marca d'água (13/11/2026, backend #PR_BACK)
+## Fotos do imóvel: foto sem a marca d'água (13/11/2026, backend #639)
 
 Pedido do Tony (Moeda Forte): as fotos baixadas do site antigo já vieram com o logo da imobiliária no meio, e a marca d'água do Meu site caía em cima dele (logo duplo).
 
