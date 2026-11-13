@@ -148,3 +148,6 @@ export function useBuscaDosImoveis(tenant: string | undefined) {
     cidade, bairro, preco,
   };
 }
+
+/** Tudo o que a página de Imóveis desenha (Clássico e Moderno). */
+export type BuscaDosImoveis = ReturnType<typeof useBuscaDosImoveis>;

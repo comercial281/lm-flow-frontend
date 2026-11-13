@@ -10,6 +10,8 @@ import { opcaoDoTipo, opcoesDeTipo } from '@/features/siteBuilder/public/tiposDe
 import { precoDaFaixa } from '@/features/siteBuilder/public/faixasDePreco';
 import { FASES_DO_PUBLICO } from '@/features/properties/listingKind';
 import { useBuscaDosImoveis } from './busca/useBuscaDosImoveis';
+import { resolverAparencia } from '@/features/siteBuilder/public/aparenciaConfig';
+import ImoveisModerno from './moderno/ImoveisModerno';
 
 /* ────────────────────────────────────────────────────────────────────────────
    Portal Imobiliário — página dedicada de BUSCA / FILTROS (Produto A).
@@ -22,11 +24,12 @@ const MAIS_DE: [string, string][] = [['1', '1+'], ['2', '2+'], ['3', '3+']];
 
 export default function PortalSearchPage() {
   const tenant = useTenantDoSite();
+  const busca = useBuscaDosImoveis(tenant);
   const {
     state, site, fontHrefs, wa, types, abas, cssVars, fundo, manutencao, ctx, chave, listaDoServidor, listaOk,
     filters, update, clearAll, hasActiveFilters, trocarAba, lista, ordem, trocarOrdem,
     filtered, shown, remaining, mostrarMais, cidade, bairro, preco,
-  } = useBuscaDosImoveis(tenant);
+  } = busca;
 
   if (state === 'loading' || listaDoServidor === undefined) {
     return <div data-carregando className="flex min-h-screen items-center justify-center text-neutral-400" style={{ fontFamily: 'system-ui' }}>Carregando…</div>;
@@ -37,6 +40,19 @@ export default function PortalSearchPage() {
     return <div className="flex min-h-screen items-center justify-center px-6 text-center text-neutral-500" style={{ fontFamily: 'system-ui' }}>Portal indisponível.</div>;
   }
   if (listaDoServidor === null && chave) return <PaginaNaoEncontrada inicio={caminhoDoSite(ctx, '/')} imoveis={caminhoDoSite(ctx, '/imoveis')} />;
+
+  // Moderno: outro desenho, com a mesma busca (URL, ordem, visita).
+  if (resolverAparencia(site.appearance).style === 'modern') {
+    return (
+      <div style={cssVars as CSSProperties} data-fundo={fundo} className="min-h-screen bg-[var(--m-ground)] text-[var(--m-text)] antialiased">
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        {fontHrefs.map(h => <link key={h} href={h} rel="stylesheet" />)}
+        <PortalHeader site={site} tenant={tenant!} abas={abas} />
+        <ImoveisModerno busca={busca} tenant={tenant!} />
+        <PortalFooter site={site} tenant={tenant!} abas={abas} />
+      </div>
+    );
+  }
 
   return (
     <div style={cssVars as CSSProperties} data-fundo={fundo} className="min-h-screen bg-[var(--paper)] text-[var(--ink)] antialiased">
