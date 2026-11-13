@@ -7,6 +7,8 @@ import { PortalFooter, PortalHeader, usePortalData } from './portalShared';
 import PaginaManutencao from './PaginaManutencao';
 import { usePortalTracking } from './usePortalTracking';
 import { useIconeDaAba } from '@/features/siteBuilder/public/useIconeDaAba';
+import CascaModerna from './moderno/CascaModerna';
+import PaginaPropriaModerna from './moderno/PaginaPropriaModerna';
 
 /* Página criada no Meu site (Páginas), aberta em /portal/:tenant/p/:slug.
    O HTML (`content_html`) chega já sanitizado pelo servidor. */
@@ -19,7 +21,7 @@ export default function PortalCustomPage() {
   const { slug } = useParams<{ slug: string }>();
   const tenant = useTenantDoSite();
   const ctx = useCtxDoSite(tenant ?? '');
-  const { state, site, fontHrefs, abas, cssVars, fundo, manutencao } = usePortalData(tenant);
+  const { state, site, fontHrefs, abas, cssVars, fundo, manutencao, aparencia } = usePortalData(tenant);
   const { pathname } = useLocation();
   // Em manutenção nada de rastreamento nem visita: a página é a de manutenção.
   usePortalTracking(state === 'ok' && !manutencao ? site : null, tenant, { kind: 'page', path: pathname, pageSlug: slug });
@@ -52,6 +54,15 @@ export default function PortalCustomPage() {
   if (manutencao) return <PaginaManutencao site={site} />;
   if (state === 'error') {
     return <div className="flex min-h-screen items-center justify-center px-6 text-center text-neutral-500" style={{ fontFamily: 'system-ui' }}>Portal indisponível.</div>;
+  }
+
+  // Moderno: outro desenho, com a mesma página (o HTML já sanitizado no servidor).
+  if (aparencia.style === 'modern') {
+    return (
+      <CascaModerna nome="pagina" site={site} tenant={tenant!} abas={abas} fontHrefs={fontHrefs} cssVars={cssVars as CSSProperties} fundo={fundo}>
+        <PaginaPropriaModerna page={page} loading={loading} inicio={caminhoDoSite(ctx, '/')} />
+      </CascaModerna>
+    );
   }
 
   return (

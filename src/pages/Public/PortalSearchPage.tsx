@@ -42,7 +42,7 @@ export default function PortalSearchPage() {
   if (state === 'error' || listaDoServidor === 'erro') {
     return <div className="flex min-h-screen items-center justify-center px-6 text-center text-neutral-500" style={{ fontFamily: 'system-ui' }}>Portal indisponível.</div>;
   }
-  if (listaDoServidor === null && chave) return <PaginaNaoEncontrada inicio={caminhoDoSite(ctx, '/')} imoveis={caminhoDoSite(ctx, '/imoveis')} />;
+  if (listaDoServidor === null && chave) return <PaginaNaoEncontrada inicio={caminhoDoSite(ctx, '/')} imoveis={caminhoDoSite(ctx, '/imoveis')} site={site} />;
 
   // Moderno: outro desenho, com a mesma busca (URL, ordem, visita).
   if (resolverAparencia(site.appearance).style === 'modern') {

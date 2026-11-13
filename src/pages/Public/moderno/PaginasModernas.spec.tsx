@@ -7,6 +7,10 @@ import PortalFinanciamentoPage from '../PortalFinanciamentoPage';
 import PortalAnunciePage from '../PortalAnunciePage';
 import PortalBlogPage from '../PortalBlogPage';
 import PortalArticlePage from '../PortalArticlePage';
+import PortalCustomPage from '../PortalCustomPage';
+import PortalSearchPage from '../PortalSearchPage';
+import PaginaManutencao from '../PaginaManutencao';
+import PaginaNaoEncontrada from '../PaginaNaoEncontrada';
 import { esquecerModeloDaPrevia } from '@/features/siteBuilder/public/previaDoModelo';
 import { TEXTO_ENVIO_NA_PREVIA } from '@/features/siteBuilder/public/previa';
 import type { SiteInfo } from '../portalShared';
@@ -204,5 +208,48 @@ describe('Artigo no Moderno', () => {
     expect(screen.getByRole('heading', { level: 2, name: 'Imóveis em destaque' })).toBeTruthy();
     expect(screen.getByText('Apartamento · AP1')).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Ver todos os artigos' }).getAttribute('href')).toBe('/portal/imob/blog');
+  });
+});
+
+describe('Página própria no Moderno', () => {
+  const ROTA = { caminho: '/portal/imob/p/sobre', padrao: '/portal/:tenant/p/:slug', elemento: <PortalCustomPage /> };
+  it('coluna de leitura com o HTML do cliente e "Voltar para o início"', async () => {
+    await abrir(ROTA, MODERNO, url => (url.includes('/site/pages/sobre') ? resposta({ data: { title: 'Sobre nós', slug: 'sobre', content_html: '<p>Somos <em>daqui</em>.</p>' } }) : null));
+    expect(paginaModerna('pagina')).not.toBeNull();
+    expect(screen.getByRole('heading', { level: 1, name: 'Sobre nós' })).toBeTruthy();
+    expect(screen.getByText('daqui').tagName).toBe('EM');
+    expect(screen.getByRole('link', { name: /Voltar para o início/ }).getAttribute('href')).toBe('/portal/imob');
+  });
+  it('página que não existe: o aviso de hoje', async () => {
+    await abrir(ROTA, MODERNO, url => (url.includes('/site/pages/sobre') ? resposta({}, false) : null));
+    expect(screen.getByText('Página não encontrada.')).toBeTruthy();
+  });
+});
+
+describe('404 no Moderno', () => {
+  it('lista que não existe (/imoveis/...): "404", título e os dois botões', async () => {
+    const ROTA = { caminho: '/portal/imob/imoveis/a-venda/casa/xyz', padrao: '/portal/:tenant/imoveis/*', elemento: <PortalSearchPage /> };
+    await abrir(ROTA, MODERNO, url => (url.includes('/site/lists/') || url.includes('/site/listas') || url.includes('lista') ? resposta({}, false) : null));
+    expect(await screen.findByText('404')).toBeTruthy();
+    expect(screen.getByRole('heading', { level: 1, name: 'Página não encontrada' })).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Ver imóveis' }).getAttribute('href')).toBe('/portal/imob/imoveis');
+    expect(screen.getByRole('link', { name: 'Ir para o início' }).getAttribute('href')).toBe('/portal/imob');
+  });
+  it('sem site (404 do domínio): continua a de hoje', () => {
+    render(<PaginaNaoEncontrada />);
+    expect(screen.queryByText('404')).toBeNull();
+    expect(screen.getByRole('heading', { name: 'Página não encontrada' })).toBeTruthy();
+  });
+});
+
+describe('Manutenção no Moderno', () => {
+  it('fundo e cartão do Moderno, mesmo texto, título da aba e noindex', () => {
+    const site = { name: 'Imob', contact: { whatsapp: '11999990000' }, ...MODERNO } as SiteInfo;
+    const { container } = render(<PaginaManutencao site={site} />);
+    expect(container.querySelector('[data-pagina-moderna="manutencao"]')).not.toBeNull();
+    expect(screen.getByRole('heading', { level: 1, name: 'Estamos atualizando nosso site. Volte em breve.' })).toBeTruthy();
+    expect(document.title).toBe('Imob — Em manutenção');
+    expect(document.head.querySelector('meta[name="robots"]')?.getAttribute('content')).toBe('noindex');
+    expect(screen.getByRole('link', { name: /Falar no WhatsApp/ })).toBeTruthy();
   });
 });
