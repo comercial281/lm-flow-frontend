@@ -115,8 +115,9 @@ export default function CapaModerna({ site, home, items, tenant, abas, cities, h
   return (
     <section
       id="topo" data-capa-moderna data-capa-de-ponta-a-ponta
-      className={`relative isolate flex overflow-hidden bg-[#080A16] text-white ${telaCheia ? 'min-h-[max(580px,100svh)]' : 'min-h-[580px]'}`}
+      className={`relative isolate z-10 flex bg-[#080A16] text-white ${telaCheia ? 'min-h-[max(580px,100svh)]' : 'min-h-[580px]'}`}
     >
+      {/* Sem overflow-hidden e com z-10: a lista de sugestões da busca passa do pé da foto por cima da seção seguinte. */}
       <div className="absolute inset-0 -z-10">
         <Midia site={site} items={items} />
         <div className="absolute inset-0" style={{ background: filtroDaCapaModerna(ap.hero_overlay) }} />

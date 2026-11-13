@@ -13,13 +13,19 @@ interface Props {
   className?: string;
   /** Pra onde a lista abre: pra baixo (padrão) ou pra cima, quando o campo está no pé da tela (capa do Moderno). */
   abrirPara?: 'baixo' | 'cima';
+  /** Nome do campo (leitor de tela) e texto de exemplo; a barra grande do Moderno também aceita código. */
+  rotulo?: string;
+  placeholder?: string;
 }
 
 /**
  * Campo "Condomínio, bairro ou cidade": texto livre com sugestões (combobox).
  * Setas mudam o item ativo, Enter escolhe, Esc e clique fora fecham.
  */
-export default function CampoDeLugar({ items, tab, texto, onTexto, onEscolher, onConfirmar, className = '', abrirPara = 'baixo' }: Props) {
+export default function CampoDeLugar({
+  items, tab, texto, onTexto, onEscolher, onConfirmar, className = '', abrirPara = 'baixo',
+  rotulo = 'Condomínio, bairro ou cidade', placeholder = rotulo,
+}: Props) {
   const id = useId();
   const raiz = useRef<HTMLDivElement>(null);
   const [aberto, setAberto] = useState(false);
@@ -77,8 +83,8 @@ export default function CampoDeLugar({ items, tab, texto, onTexto, onEscolher, o
       <input
         type="text" role="combobox" aria-expanded={mostrando} aria-controls={`${id}-lista`} aria-autocomplete="list"
         aria-activedescendant={mostrando && ativo >= 0 ? idDe(ativo) : undefined}
-        aria-label="Condomínio, bairro ou cidade" autoComplete="off"
-        value={texto} placeholder="Condomínio, bairro ou cidade"
+        aria-label={rotulo} autoComplete="off"
+        value={texto} placeholder={placeholder}
         onChange={e => { onTexto(e.target.value); setAberto(true); }}
         onFocus={() => setAberto(true)}
         onKeyDown={aoTeclar}

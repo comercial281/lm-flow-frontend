@@ -5,17 +5,23 @@ import CampoDeLugar from '../CampoDeLugar';
 import { ROTULO_ABA, type BuscaDaCapa, type CampoDeEscolha } from '../home/useBuscaDaCapa';
 
 /* ────────────────────────────────────────────────────────────────────────────
-   Busca da capa do Moderno (protótipo `.search`, `.s-tabs`, `.field`): abas e
-   código na linha de cima, um campo por filtro com ícone e rótulo, e "Buscar"
-   na cor principal. Estado e destino são os do Clássico (`useBuscaDaCapa`).
-   Sobre a foto (o padrão do protótipo): uma barra só na superfície do site,
-   com sombra. Campos lado a lado numa linha, separados por linhas finas
-   (--m-line), cada um com ícone redondo, rótulo pequeno e valor em negrito
-   (corta com reticências, nunca quebra), e "Buscar" no fim da mesma linha,
-   da altura dela. Até 1023px: 3 por linha (linhas só entre campos da mesma
-   linha, e uma linha entre as fileiras) e o botão largo no fim; no celular,
-   um por linha com linha entre eles e o botão largo no fim. Capa dividida:
-   com borda, campos em caixinhas 2 por linha e o botão embaixo, largo.
+   Busca da capa do Moderno (protótipo `.search`, `.s-tabs`, `.field`), com a
+   barra de pesquisa grande que o Tony pediu em 13/11:
+   1. Abas (Comprar, Alugar, Lançamentos) e, quando há, "Mais filtros".
+   2. A barra grande, sempre visível: "Digite condomínio, bairro, cidade ou
+      código" e o "Buscar" ao lado (no celular, largo embaixo). É o mesmo
+      campo de lugar do Clássico (`CampoDeLugar`, sugestões agrupadas em
+      Condomínio, Bairro e Cidade). Escolher uma sugestão guarda a escolha
+      (não busca sozinho); no Buscar, a sugestão vai com os filtros dela, o
+      código de um imóvel publicado vira `code` e o resto vira `place`
+      (`runSearch` em `useBuscaDaCapa`). Decisão do Tony em 13/11: um campo
+      só, o nosso padrão.
+   3. Os filtros numa linha, separados por linhas finas (--m-line), cada um
+      com ícone redondo, rótulo pequeno e valor em negrito (corta com
+      reticências). Até 1023px: 3 por linha; no celular, um por linha. O
+      lugar nunca é célula aqui (a barra é ele).
+   Estado e destino são os do Clássico (`useBuscaDaCapa`). Capa dividida:
+   com borda, filtros em caixinhas 2 por linha.
 ──────────────────────────────────────────────────────────────────────────── */
 
 const CASA = 'M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1Z';
@@ -28,7 +34,7 @@ const ICONE: Record<CampoDeEscolha, string> = {
 
 const juntar = (...cls: (string | false)[]) => cls.filter(Boolean).join(' ');
 
-/** Divisórias da barra: só entre campos da mesma linha (e entre as linhas, até 1023px). */
+/** Divisórias da linha de filtros: só entre filtros da mesma linha (e entre as linhas, até 1023px). */
 const DIVISORIAS = [
   'border-[var(--m-line)]',
   'max-sm:[&:not(:first-child)]:border-t',
@@ -38,9 +44,21 @@ const DIVISORIAS = [
 /** Colunas até 1023px: até 3 (classes fixas: o Tailwind só gera o que está escrito). */
 const COLUNAS_NO_TABLET = ['', 'sm:grid-cols-1', 'sm:grid-cols-2', 'sm:grid-cols-3'];
 
+/** A barra grande por cima do visual do campo de lugar (lupa, moldura, altura e lista). */
+const BARRA_GRANDE = [
+  'min-w-0 flex-1',
+  '[&>span]:left-5 [&>span]:text-[var(--m-muted)]',
+  '[&_input]:h-[62px] [&_input]:text-ellipsis [&_input]:rounded-2xl [&_input]:border-[var(--m-line)] [&_input]:bg-[var(--m-ground)]',
+  '[&_input]:py-0 [&_input]:pl-[50px] [&_input]:pr-4 [&_input]:text-[16px] sm:[&_input]:text-[17px] [&_input]:font-medium [&_input]:text-[var(--m-head)]',
+  '[&_input]:placeholder:font-normal [&_input]:placeholder:text-[var(--m-muted)]',
+  // Celular: o exemplo inteiro ("… ou código") cabe na largura de 390px, sem reticências.
+  'max-sm:[&>span]:left-4 max-sm:[&_input]:pl-[44px] max-sm:[&_input]:pr-3 max-sm:[&_input]:placeholder:text-[13px]',
+  '[&_[role=listbox]]:mt-2 [&_[role=listbox]]:rounded-[14px] [&_[role=listbox]]:text-[#17140F]',
+].join(' ');
+
 export default function BuscaModerna({ busca, abas, dividida = false }: { busca: BuscaDaCapa; abas: AbaId[]; dividida?: boolean }) {
   const id = useId();
-  const { tab, trocarAba, valores, set, primeira, mais, abertos, alternarMais, escolherLugar, items, temCodigo, runSearch, opcoes } = busca;
+  const { tab, trocarAba, valores, set, primeira, mais, abertos, alternarMais, escolherLugar, items, runSearch, opcoes } = busca;
   // Uma aba só não é escolha: a fileira some (como no Clássico).
   const comAbas = abas.length > 1;
   const n = primeira.length;
@@ -49,42 +67,33 @@ export default function BuscaModerna({ busca, abas, dividida = false }: { busca:
     const campoId = `${id}-${c}`;
     return (
       <div key={c} data-campo-da-busca className={juntar(
-        'flex min-w-0 items-center px-3 py-2',
-        // Na barra, 2,5 de vão: 6 campos cabem a partir de 1100px com o rótulo inteiro.
-        caixinha ? 'gap-3 rounded-[14px] border border-[var(--m-line)]' : `gap-2.5 lg:min-w-0 lg:flex-1 lg:basis-0 ${DIVISORIAS}`,
+        'flex min-w-0 items-center gap-2.5 px-3 py-1.5',
+        caixinha ? 'rounded-[14px] border border-[var(--m-line)]' : `lg:min-w-0 lg:flex-1 lg:basis-0 ${DIVISORIAS}`,
       )}>
-        <span className="grid h-[34px] w-[34px] flex-none place-items-center rounded-full bg-[var(--m-brand-soft)] text-[var(--m-head)]">
-          <Ic d={ICONE[c]} s={16} />
+        <span className="grid h-[30px] w-[30px] flex-none place-items-center rounded-full bg-[var(--m-brand-soft)] text-[var(--m-head)]">
+          <Ic d={ICONE[c]} s={15} />
         </span>
         <div className="min-w-0 flex-1">
-          <label htmlFor={c === 'place' ? undefined : campoId} className="block truncate text-[11.5px] leading-[1.2] text-[var(--m-muted)]">{o.label}</label>
-          {c === 'place' ? (
-            // O campo de lugar já traz lupa e moldura: aqui só o texto, como os outros valores.
-            <CampoDeLugar
-              items={items} tab={tab} texto={valores.place ?? ''} onTexto={set('place')} onEscolher={escolherLugar}
-              abrirPara={caixinha ? 'baixo' : 'cima'}
-              className="[&>span]:hidden [&_input]:truncate [&_input]:rounded-none [&_input]:border-0 [&_input]:bg-transparent [&_input]:p-0 [&_input]:pt-0.5 [&_input]:text-[14px] [&_input]:font-semibold [&_input]:text-[var(--m-head)] [&_input]:placeholder:font-normal [&_input]:placeholder:text-[var(--m-muted)]"
-            />
-          ) : (
-            <ListaDoSite
-              id={campoId} value={valores[c] ?? ''} onChange={set(c)} vazio="Qualquer" options={o.options}
-              className="w-full min-w-0 appearance-none truncate border-0 bg-transparent pt-0.5 text-[14px] font-semibold text-[var(--m-head)] outline-none [&_option]:text-[#17140F]"
-            />
-          )}
+          <label htmlFor={campoId} className="block truncate text-[11px] leading-[1.2] text-[var(--m-muted)]">{o.label}</label>
+          <ListaDoSite
+            id={campoId} value={valores[c] ?? ''} onChange={set(c)} vazio="Qualquer" options={o.options}
+            className="w-full min-w-0 appearance-none truncate border-0 bg-transparent pt-0.5 text-[13.5px] font-semibold text-[var(--m-head)] outline-none [&_option]:text-[#17140F]"
+          />
         </div>
       </div>
     );
   };
+
   return (
     <form
       role="search" onSubmit={runSearch}
       className={juntar(
-        'rounded-[22px] bg-[var(--m-surface)] p-2 text-[var(--m-head)]',
+        'rounded-[22px] bg-[var(--m-surface)] p-2.5 text-[var(--m-head)]',
         dividida ? 'border border-[var(--m-line)]' : 'mb-[clamp(16px,3vw,32px)] shadow-[0_18px_40px_-18px_rgba(8,10,22,0.5)]',
       )}
     >
-      {(comAbas || temCodigo || mais.length > 0) && (
-        <div className="mb-1 flex flex-wrap items-center justify-between gap-2.5 border-b border-[var(--m-line)] px-1.5 pb-2.5 pt-0.5">
+      {(comAbas || mais.length > 0) && (
+        <div className="flex flex-wrap items-center justify-between gap-1 px-0.5 pb-2.5">
           {comAbas ? (
             <div className="flex flex-wrap gap-1">
               {abas.map(k => (
@@ -108,38 +117,35 @@ export default function BuscaModerna({ busca, abas, dividida = false }: { busca:
               {abertos ? 'Menos filtros' : 'Mais filtros'}
             </button>
           )}
-          {temCodigo && (
-            <label className="flex items-center gap-2 text-[13px] text-[var(--m-muted)]">
-              <Ic d={I.search} s={14} />
-              <input
-                value={valores.code ?? ''} onChange={e => set('code')(e.target.value)}
-                aria-label="Código do imóvel" placeholder="Código do imóvel"
-                className="w-[140px] bg-transparent text-[13px] font-semibold text-[var(--m-head)] outline-none placeholder:font-normal placeholder:text-[var(--m-muted)]"
-              />
-            </label>
-          )}
         </div>
       )}
 
-      <div
-        data-campos-da-busca
-        className={juntar(
-          'grid min-w-0 grid-cols-1',
-          dividida ? 'gap-2 sm:grid-cols-2' : `${COLUNAS_NO_TABLET[Math.min(n, 3)] ?? ''} lg:flex lg:items-stretch`,
-        )}
-      >
-        {primeira.map(c => celula(c, dividida))}
+      {/* A barra grande (o campo de lugar, que também aceita código) e o Buscar. */}
+      <div data-barra-da-busca className="flex flex-col gap-2 sm:flex-row">
+        <CampoDeLugar
+          items={items} tab={tab} texto={valores.place ?? ''} onTexto={set('place')} onEscolher={escolherLugar}
+          rotulo="Condomínio, bairro, cidade ou código" placeholder="Digite condomínio, bairro, cidade ou código"
+          className={BARRA_GRANDE}
+        />
         <button
           type="submit"
-          className={juntar(
-            'inline-flex items-center justify-center gap-2 rounded-2xl bg-[var(--brand)] px-6 py-[15px] text-[14px] font-semibold text-[var(--brand-ink)] transition-transform hover:-translate-y-px sm:col-span-full',
-            !dividida && 'mt-2 lg:ml-1 lg:mt-0 lg:flex-none',
-            !dividida && n === 0 && 'lg:ml-auto',
-          )}
+          className="inline-flex h-[62px] flex-none items-center justify-center gap-2 rounded-2xl bg-[var(--brand)] px-8 text-[16px] font-semibold text-[var(--brand-ink)] transition-transform hover:-translate-y-px"
         >
-          <Ic d={I.search} s={16} /> Buscar
+          <Ic d={I.search} s={18} /> Buscar
         </button>
       </div>
+
+      {n > 0 && (
+        <div
+          data-campos-da-busca
+          className={juntar(
+            'mt-2 grid min-w-0 grid-cols-1',
+            dividida ? 'gap-2 sm:grid-cols-2' : `${COLUNAS_NO_TABLET[Math.min(n, 3)] ?? ''} lg:flex lg:items-stretch`,
+          )}
+        >
+          {primeira.map(c => celula(c, dividida))}
+        </div>
+      )}
 
       {abertos && mais.length > 0 && (
         <div data-campos-da-busca-mais className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-3 lg:grid-cols-4">

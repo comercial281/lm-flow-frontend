@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import type { PortalProperty, SiteInfo } from '../portalShared';
 import { opcoesDeTipo } from '@/features/siteBuilder/public/tiposDeImovel';
 import { CAMPOS_BUSCA, TITULO_CAPA_FABRICA, type AbaId, type CampoBusca, type HomeConfig } from '@/features/siteBuilder/public/homeConfig';
-import { AREAS_MINIMAS } from '@/features/siteBuilder/public/filtros';
+import { AREAS_MINIMAS, normalizarTexto } from '@/features/siteBuilder/public/filtros';
 import type { SugestaoDeLugar } from '@/features/siteBuilder/public/sugestoesDeLugar';
 import { faixasDePreco, precoDaFaixa } from '@/features/siteBuilder/public/faixasDePreco';
 import { FASES_DO_PUBLICO } from '@/features/properties/listingKind';
@@ -43,7 +43,8 @@ export type ModeloDaCapa = 'classico' | 'moderno';
 
 /**
  * Até 4 campos de escolha cabem na primeira linha; com mais, o resto vai pra "Mais filtros".
- * Moderno: 3 na barra (o botão Buscar fecha a linha). Clássico: a linha tem 4 colunas, então
+ * Moderno: 3 (a linha de filtros tem 3 colunas no tablet; o lugar não entra, ele é a barra
+ * grande). Clássico: a linha tem 4 colunas, então
  * fica com 4 campos; se o texto de lugar estiver entre os 3 primeiros, ele ocupa 2 colunas e
  * a linha fecha com 3 (ver `lugarLargo`).
  */
@@ -56,6 +57,12 @@ export function dividirCampos(selects: CampoDeEscolha[], modelo: ModeloDaCapa): 
 /** Clássico com "Mais filtros": o lugar na primeira linha de 3 ocupa 2 das 4 colunas. */
 export function lugarLargo(primeira: CampoDeEscolha[], mais: CampoDeEscolha[]): boolean {
   return mais.length > 0 && primeira.length === 3 && primeira.includes('place');
+}
+
+/** O texto é o código de um imóvel do catálogo (sem acento nem maiúscula)? */
+export function ehCodigoDoCatalogo(items: PortalProperty[], texto: string): boolean {
+  const alvo = normalizarTexto(texto);
+  return !!alvo && items.some(p => normalizarTexto(p.code) === alvo);
 }
 
 /** Título e subtítulo da capa, com os de fábrica quando o cliente não escreveu. */
@@ -90,7 +97,8 @@ export function useBuscaDaCapa({ home, tenant, abas, cities, hoods, types, items
 
   // Fase é de empreendimento, e Alugar não tem empreendimento: o campo some nessa aba.
   const campos = CAMPOS_BUSCA.filter(c => home.search.fields.includes(c) && !(c === 'stage' && tab === 'rent'));
-  const selects = campos.filter((c): c is CampoDeEscolha => c !== 'code');
+  // No Moderno o lugar não é célula de filtro: a barra grande é o campo (sempre visível), e ela não conta pro "Mais filtros".
+  const selects = campos.filter((c): c is CampoDeEscolha => c !== 'code' && !(modelo === 'moderno' && c === 'place'));
   const { primeira, mais } = dividirCampos(selects, modelo);
   const temCodigo = campos.includes('code');
   const escolherLugar = (s: SugestaoDeLugar) => { setLugar(s); setValores(v => ({ ...v, place: s.rotulo })); };
@@ -106,12 +114,27 @@ export function useBuscaDaCapa({ home, tenant, abas, cities, hoods, types, items
     onTab?.(k);
   };
 
+  /**
+   * Vai pra `/imoveis` com a aba e os campos de hoje, na ordem de `CAMPOS_BUSCA`.
+   * No Moderno, a barra grande vale mesmo sem o campo de lugar ligado: a sugestão
+   * escolhida vai com os filtros dela; o texto livre que é o código de um imóvel
+   * publicado vira `code`, e o resto vira `place` (condomínio, bairro ou cidade).
+   */
   const runSearch = (e: FormEvent) => {
     e.preventDefault();
+    const juntos: Partial<Record<CampoBusca, string>> = { ...valores };
+    let incluir: CampoBusca[] = campos;
+    if (modelo === 'moderno') {
+      incluir = [...campos.filter(c => c !== 'code'), 'place', 'code'];
+      juntos.code = '';
+      const t = (valores.place ?? '').trim();
+      const daSugestao = lugar && lugar.rotulo === valores.place;
+      if (t && !daSugestao && ehCodigoDoCatalogo(items, t)) { juntos.code = t; juntos.place = ''; }
+    }
     const params = new URLSearchParams();
     if (tab !== 'sale') params.set('tab', tab);
-    for (const c of campos) {
-      const v = valores[c];
+    for (const c of CAMPOS_BUSCA.filter(k => incluir.includes(k))) {
+      const v = juntos[c];
       if (!v) continue;
       if (c === 'place') {
         // Texto que ainda é o da sugestão escolhida vai com os filtros dela; mexeu no texto, é texto livre.
