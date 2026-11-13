@@ -161,7 +161,7 @@ describe('menu novo: seções (fase 4)', () => {
     // Gestão de proprietários passa no cargo; quem tira do corretor sem
     // proprietário liberado é o `aplicarProprietariosNoMenu`, no MainLayout.
     expect(vistas.flatMap(s => s.itens.map(i => i.name))).toEqual([
-      'Dashboard', 'Conversas', 'Funil de vendas', 'Tarefas', 'Visitas', 'Meus imóveis', 'Gestão de proprietários', 'Contatos', 'Bolsão',
+      'Dashboard', 'Conversas', 'Funil de vendas', 'Tarefas', 'Visitas', 'Propostas', 'Meus imóveis', 'Gestão de proprietários', 'Contatos', 'Bolsão',
       'Funis de mensagem',
     ]);
   });
@@ -185,11 +185,14 @@ describe('menu novo: seções (fase 4)', () => {
     expect(bolsao.href).toBe('/bolsao');
   });
 
-  it('Atividades é uma seção (depois de Principal) com Tarefas e Visitas; cada item some sem o cargo', () => {
+  it('Atividades é uma seção (depois de Principal) com Tarefas, Visitas e Propostas; cada item some sem o cargo', () => {
     const ordem = secoes.map(x => x.id);
     expect(ordem.indexOf('atividades')).toBe(ordem.indexOf('principal') + 1);
     const nomes = (c: Set<string>) => comCargo(c).find(x => x.id === 'atividades')?.itens.map(i => [i.name, i.href]);
+    expect(nomes(new Set(['visits.read', 'pipelines.read', 'proposals.read']))).toEqual([['Tarefas', '/tarefas'], ['Visitas', '/visits'], ['Propostas', '/proposals']]);
     expect(nomes(new Set(['visits.read', 'pipelines.read']))).toEqual([['Tarefas', '/tarefas'], ['Visitas', '/visits']]);
+    expect(nomes(new Set(['proposals.read']))).toEqual([['Propostas', '/proposals']]);
+    expect(achar('/proposals').featureKey).toBe('proposals');
     expect(nomes(new Set(['visits.read']))).toEqual([['Visitas', '/visits']]);
     expect(nomes(new Set(['pipelines.read']))).toEqual([['Tarefas', '/tarefas']]);
     expect(nomes(new Set())).toBeUndefined();
@@ -208,7 +211,7 @@ describe('menu novo: seções (fase 4)', () => {
 
   it('as telas que saíram do menu não voltam por engano', () => {
     const hrefs = todos.map(i => i.href);
-    for (const fora of ['/proposals', '/contracts', '/property-capture-requests', '/property-interests',
+    for (const fora of ['/contracts', '/property-capture-requests', '/property-interests',
       '/contacts/scheduled-actions', '/marketplace', '/automations']) {
       expect(hrefs).not.toContain(fora);
     }

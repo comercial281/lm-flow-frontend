@@ -39,6 +39,7 @@ import {
   ListOrdered,
   Presentation,
   PanelsTopLeft,
+  HandCoins,
 } from 'lucide-react';
 import { openSupport } from '@/components/support/openSupport';
 
@@ -202,11 +203,11 @@ export const MENU_FREE_BY_DESIGN = ['/tutorials'];
  * pelo endereço digitado; só não têm entrada no menu, nem para a Leal Mídia.
  *
  * Em breve (voltam quando estiverem prontas):
- *   - Propostas ............ /proposals
  *   - Contratos ............ /contracts
  *   - Captação ............. /property-capture-requests (vira a aba Novas
  *     captações da Gestão de proprietários, que voltou ao menu em 03/10/2026)
  *   - Plano/assinatura (ainda sem tela)
+ * Propostas voltou em 13/11/2026 (seção Atividades).
  * Regras de lead e Lembretes saíram em 03/10/2026 (Automações · sprint 2) e as
  * telas foram apagadas em 17/10/2026: os endereços antigos levam pra Automações.
  * Interesses, Ações agendadas e Marketplace também tiveram tela e endereço
@@ -285,6 +286,10 @@ export const getCustomerMenuSections = (): MenuSection[] => [
     itens: [
       { name: 'Tarefas', href: '/tarefas', icon: ListTodo, ...permissionFromRoute('/tarefas'), featureKey: 'pipelines' },
       { name: 'Visitas', href: '/visits', icon: CalendarClock, ...permissionFromRoute('/visits'), featureKey: 'visits' },
+      // Voltou ao menu em 13/11/2026 (decisão do dono): o card registra
+      // proposta, então tem que existir a lista de todas. O corretor vê só as
+      // dos leads dele (recorte do servidor, `visible_lead_records`).
+      { name: 'Propostas', href: '/proposals', icon: HandCoins, ...permissionFromRoute('/proposals'), featureKey: 'proposals' },
     ],
   },
   {
