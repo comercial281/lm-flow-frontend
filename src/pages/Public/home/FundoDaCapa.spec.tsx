@@ -21,7 +21,20 @@ describe('FundoDaCapa', () => {
     const { container } = render(<FundoDaCapa fotos={['a.jpg', 'b.jpg', 'c.jpg']} />);
     act(() => { vi.advanceTimersByTime(6000); });
     expect(imgs(container).find(i => i.getAttribute('src') === 'b.jpg')!.className).toContain('opacity-100');
-    expect(imgs(container).find(i => i.getAttribute('src') === 'a.jpg')!.className).toContain('opacity-0');
+    expect(imgs(container).find(i => i.getAttribute('src') === 'c.jpg')!.className).toContain('opacity-0');
+  });
+  it('na troca a que sai continua no DOM (mesmo nó), opaca e embaixo, e some depois do fade', () => {
+    const { container } = render(<FundoDaCapa fotos={['a.jpg', 'b.jpg', 'c.jpg']} />);
+    const a = imgs(container).find(i => i.getAttribute('src') === 'a.jpg')!;
+    act(() => { vi.advanceTimersByTime(6000); });
+    expect(a.isConnected).toBe(true);
+    expect(a.className).toContain('opacity-100');
+    expect(a.className).toContain('z-0');
+    const b = imgs(container).find(i => i.getAttribute('src') === 'b.jpg')!;
+    expect(b.className).toContain('z-10');
+    expect(b.className).toContain('opacity-100');
+    act(() => { vi.advanceTimersByTime(1200); });
+    expect(a.isConnected).toBe(false);
   });
   it('uma foto só vira um img simples', () => {
     const { container } = render(<FundoDaCapa fotos={['a.jpg']} />);
