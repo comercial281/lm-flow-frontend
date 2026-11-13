@@ -64,3 +64,23 @@ export function extrasFrom(resolved?: SiteHeroImage[] | null): SiteHeroImageChoi
     .filter(c => c.mode !== 'auto')
     .slice(0, MAX_FOTOS_EXTRAS);
 }
+
+/**
+ * Aviso de uma foto EXTRA que deixou de valer. Diferente da foto 1, aqui o site
+ * não cai no automático: a foto só sai da rotação do banner.
+ */
+export function extraPhotoWarning(resolved?: SiteHeroImage | null): string | null {
+  if (!resolved || resolved.mode !== 'property') return null;
+  switch (resolved.reason) {
+    case 'imovel_removido':
+      return 'Esta foto saiu do banner: o imóvel foi excluído.';
+    case 'imovel_despublicado':
+      return 'Esta foto saiu do banner: o imóvel foi despublicado.';
+    case 'imovel_sem_foto':
+      return 'Esta foto saiu do banner: a foto não está mais publicada.';
+    case 'erro':
+      return 'Esta foto saiu do banner: não deu para carregar.';
+    default:
+      return null;
+  }
+}

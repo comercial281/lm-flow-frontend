@@ -8,10 +8,16 @@ import { APARENCIA_FABRICA } from '@/features/siteBuilder/public/aparenciaConfig
 const mocks = vi.hoisted(() => ({ uploadAsset: vi.fn(), extractLogoColors: vi.fn() }));
 vi.mock('@/services/siteBuilder/siteBuilderService', () => ({ siteBuilderService: { uploadAsset: mocks.uploadAsset } }));
 vi.mock('@/utils/logoColors', () => ({ extractLogoColors: mocks.extractLogoColors }));
-vi.mock('@/features/siteBuilder/HeroImagePicker', () => ({ default: () => null }));
+vi.mock('@/features/siteBuilder/HeroImagePicker', () => ({
+  default: ({ open, onPick }: { open: boolean; onPick: (p: unknown) => void }) => open
+    ? <button type="button" onClick={() => onPick({ property_id: 'im-7', photo_id: 'ft-7', url: 'https://cdn/im7.jpg', property_title: 'Collina' })}>Escolher no seletor</button>
+    : null,
+}));
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
 import TelaAparencia from './TelaAparencia';
+import { reordenarExtras } from './MaisFotosDoBanner';
+import { toast } from 'sonner';
 
 function Montar({ espiao, inicial = {}, site = null }: { espiao: (f: Partial<SiteFormData>) => void; inicial?: Partial<SiteFormData>; site?: Site | null }) {
   const [form, setForm] = useState<SiteFormData>({ name: 'Imobiliária Horizonte Azul', ...inicial });
@@ -286,6 +292,35 @@ describe('TelaAparencia · Mais fotos do banner', () => {
     }] } as unknown as Site;
     render(<Montar espiao={vi.fn()} site={site}
       inicial={{ hero_image: { mode: 'upload', url: 'https://cdn/1.jpg' }, hero_image_extras: [{ mode: 'property', property_id: 'im-9', photo_id: 'ft-9' }] }} />);
-    expect(screen.getByText(/não está mais publicado no site/)).toBeTruthy();
+    expect(screen.getByText('Esta foto saiu do banner: o imóvel foi despublicado.')).toBeTruthy();
+    expect(screen.queryByText(/voltou ao automático/)).toBeNull();
+  });
+
+  it('escolher a foto de um imóvel entra em hero_image_extras e mostra a prévia', async () => {
+    const espiao = vi.fn();
+    render(<Montar espiao={espiao} inicial={{ hero_image: { mode: 'upload', url: 'https://cdn/1.jpg' }, hero_image_extras: [] }} />);
+    const bloco = screen.getByRole('group', { name: 'Mais fotos' });
+    await userEvent.click(within(bloco).getByRole('button', { name: 'Foto de um imóvel' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Escolher no seletor' }));
+    expect(espiao).toHaveBeenCalledWith({ hero_image_extras: [{ mode: 'property', property_id: 'im-7', photo_id: 'ft-7' }] });
+    expect((bloco.querySelector('img') as HTMLImageElement).src).toBe('https://cdn/im7.jpg');
+    expect(within(bloco).getByText('Collina')).toBeTruthy();
+  });
+
+  it('falha no envio mostra erro e não adiciona a foto', async () => {
+    mocks.uploadAsset.mockRejectedValue(new Error('boom'));
+    const espiao = vi.fn();
+    render(<Montar espiao={espiao} inicial={{ hero_image: { mode: 'upload', url: 'https://cdn/1.jpg' }, hero_image_extras: [] }} />);
+    await userEvent.upload(screen.getByLabelText('Escolher arquivo: mais fotos do banner'), png('x.png'));
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith('Falha no upload da foto.'));
+    expect(espiao).not.toHaveBeenCalledWith(expect.objectContaining({ hero_image_extras: expect.anything() }));
+  });
+
+  it('reordenar move a foto para o lugar da outra', () => {
+    const lista = ['a', 'b', 'c'];
+    expect(reordenarExtras(lista, ['a', 'b', 'c'], 'a', 'c')).toEqual(['b', 'c', 'a']);
+    expect(reordenarExtras(lista, ['a', 'b', 'c'], 'c', 'a')).toEqual(['c', 'a', 'b']);
+    expect(reordenarExtras(lista, ['a', 'b', 'c'], 'a', 'a')).toBe(lista);
+    expect(reordenarExtras(lista, ['a', 'b', 'c'], 'a', 'zz')).toBe(lista);
   });
 });

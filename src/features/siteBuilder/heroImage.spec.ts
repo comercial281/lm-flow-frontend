@@ -54,18 +54,35 @@ describe('fotos extras do banner', () => {
     expect(extrasFrom(null)).toEqual([]);
   });
 
-  it('leva só o que pertence ao modo, descarta o vazio e limita a 5', async () => {
+  it('leva só o que pertence ao modo e descarta o vazio, na mesma ordem', async () => {
+    const { extrasFrom } = await import('./heroImage');
+    expect(extrasFrom([
+      { mode: 'property', property_id: 'im-1', photo_id: 'ft-1', url: 'https://cdn/a.jpg' },
+      { mode: 'upload', url: '' },
+      { mode: 'auto' },
+      { mode: 'property' },
+      { mode: 'upload', url: 'https://cdn/b.jpg' },
+    ])).toEqual([
+      { mode: 'property', property_id: 'im-1', photo_id: 'ft-1' },
+      { mode: 'upload', url: 'https://cdn/b.jpg' },
+    ]);
+  });
+
+  it('limita a 5, guardando as primeiras', async () => {
     const { extrasFrom, MAX_FOTOS_EXTRAS } = await import('./heroImage');
     expect(MAX_FOTOS_EXTRAS).toBe(5);
-    const lista = extrasFrom([
-      { mode: 'property', property_id: 'im-1', photo_id: 'ft-1', url: 'https://cdn/a.jpg' },
-      { mode: 'upload', url: 'https://cdn/b.jpg' },
-      { mode: 'auto' },
-      { mode: 'upload', url: '' },
-      ...Array.from({ length: 6 }, (_, i) => ({ mode: 'upload' as const, url: `https://cdn/${i}.jpg` })),
-    ]);
-    expect(lista).toHaveLength(5);
-    expect(lista[0]).toEqual({ mode: 'property', property_id: 'im-1', photo_id: 'ft-1' });
-    expect(lista[1]).toEqual({ mode: 'upload', url: 'https://cdn/b.jpg' });
+    const lista = extrasFrom(Array.from({ length: 7 }, (_, i) => ({ mode: 'upload' as const, url: `https://cdn/${i}.jpg` })));
+    expect(lista.map(c => c.url)).toEqual([0, 1, 2, 3, 4].map(i => `https://cdn/${i}.jpg`));
+  });
+
+  it('aviso próprio da extra: a foto sai do banner, não vai pro automático', async () => {
+    const { extraPhotoWarning } = await import('./heroImage');
+    const base = { mode: 'property' as const, property_id: 'im-1' };
+    expect(extraPhotoWarning({ ...base, reason: 'imovel_removido' })).toBe('Esta foto saiu do banner: o imóvel foi excluído.');
+    expect(extraPhotoWarning({ ...base, reason: 'imovel_despublicado' })).toBe('Esta foto saiu do banner: o imóvel foi despublicado.');
+    expect(extraPhotoWarning({ ...base, reason: 'imovel_sem_foto' })).toBe('Esta foto saiu do banner: a foto não está mais publicada.');
+    expect(extraPhotoWarning({ ...base, reason: 'erro' })).toBe('Esta foto saiu do banner: não deu para carregar.');
+    expect(extraPhotoWarning({ ...base, url: 'https://cdn/a.jpg' })).toBeNull();
+    expect(extraPhotoWarning(undefined)).toBeNull();
   });
 });

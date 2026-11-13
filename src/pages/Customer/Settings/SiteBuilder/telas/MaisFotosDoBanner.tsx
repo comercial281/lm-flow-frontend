@@ -8,10 +8,18 @@ import { GripVertical, Image as ImageIcon, Loader2, Trash2, Upload } from 'lucid
 import { Button } from '@/components/ui/ds';
 import { cn } from '@/lib/utils';
 import type { SiteHeroImage, SiteHeroImageChoice } from '@/services/siteBuilder/siteBuilderService';
-import { MAX_FOTOS_EXTRAS, heroImageWarning } from '@/features/siteBuilder/heroImage';
+import { MAX_FOTOS_EXTRAS, extraPhotoWarning } from '@/features/siteBuilder/heroImage';
 
 /** Prévia de uma extra recém-escolhida de imóvel (ainda não salva), guardada pela chave da escolha. */
 export interface PreviaDaExtra { url: string; titulo: string }
+
+/** Move a extra `deId` para o lugar da `paraId` (ids na ordem atual). Fora da lista, não mexe. */
+export function reordenarExtras<T>(extras: T[], ids: string[], deId: string, paraId: string): T[] {
+  const de = ids.indexOf(deId);
+  const para = ids.indexOf(paraId);
+  if (de < 0 || para < 0 || de === para) return extras;
+  return arrayMove(extras, de, para);
+}
 
 /** Chave estável da escolha: a mesma foto tem sempre a mesma chave, salva ou não. */
 export function chaveDaExtra(c: SiteHeroImageChoice): string {
@@ -78,9 +86,7 @@ export default function MaisFotosDoBanner(p: Props) {
   });
   const aoSoltar = ({ active, over }: DragEndEvent) => {
     if (!over || active.id === over.id) return;
-    const de = ids.indexOf(String(active.id));
-    const para = ids.indexOf(String(over.id));
-    if (de >= 0 && para >= 0) p.aoMudar(arrayMove(p.extras, de, para));
+    p.aoMudar(reordenarExtras(p.extras, ids, String(active.id), String(over.id)));
   };
   const cheio = p.extras.length >= MAX_FOTOS_EXTRAS;
   const ref = p.inputRef ?? uploadRef;
@@ -101,7 +107,7 @@ export default function MaisFotosDoBanner(p: Props) {
                   : undefined;
                 const url = extra.mode === 'upload' ? extra.url ?? null : previa?.url ?? salva?.url ?? null;
                 const titulo = previa?.titulo ?? salva?.property?.title ?? null;
-                const aviso = !previa && salva ? heroImageWarning(salva) : null;
+                const aviso = !previa && salva ? extraPhotoWarning(salva) : null;
                 return (
                   <Cartao key={ids[i]} id={ids[i]} posicao={i + 1} extra={extra} url={url} titulo={titulo} aviso={aviso}
                     aoRemover={() => p.aoMudar(p.extras.filter((_, j) => j !== i))} />
