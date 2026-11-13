@@ -53,7 +53,7 @@ export default function CapaModerna({ site, home, items, tenant, abas, cities, h
   if (ap.hero_layout === 'split') {
     return (
       <section id="topo" className="px-4 pt-3">
-        <div className={`${MIOLO} grid gap-3 md:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)]${telaCheia ? ' md:min-h-[calc(100svh-120px)]' : ''}`}>
+        <div className={`${MIOLO} grid gap-3 md:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] ${telaCheia ? 'md:min-h-[calc(100svh-120px)]' : ''}`}>
           <div className="flex min-w-0 flex-col justify-center py-8 md:pr-[clamp(8px,3vw,40px)]">
             <h1 className={`${TITULO} text-[var(--m-head)] ${DESTAQUE_SOBRE_O_CLARO}`}>
               <TituloComDestaque texto={titulo} modo={ap.heading_highlight} />
