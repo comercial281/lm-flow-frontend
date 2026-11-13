@@ -77,7 +77,7 @@ export default function BuscaModerna({ busca, abas, dividida = false }: { busca:
           <label htmlFor={campoId} className="block truncate text-[11px] leading-[1.2] text-[var(--m-muted)]">{o.label}</label>
           <ListaDoSite
             id={campoId} value={valores[c] ?? ''} onChange={set(c)} vazio="Qualquer" options={o.options}
-            className="w-full min-w-0 appearance-none truncate border-0 bg-transparent pt-0.5 text-[13.5px] font-semibold text-[var(--m-head)] outline-none [&_option]:text-[#17140F]"
+            className="w-full min-w-0 appearance-none truncate border-0 bg-transparent pt-0.5 text-[13.5px] font-semibold text-[var(--m-head)] outline-none [&_option]:bg-[#FFFFFF] [&_option]:text-[#17140F]"
           />
         </div>
       </div>

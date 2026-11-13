@@ -692,6 +692,32 @@ describe('Início do Moderno: barra de pesquisa grande', () => {
     expect((await screen.findByTestId('busca')).textContent).toBe('?place=AP0566');
   });
 
+  it('código de um imóvel de outra aba: vai com o código e a aba dele', async () => {
+    await abrirHome(moderno(), [
+      imovel('R1'),
+      imovel('L77', { transaction_type: 'rent', rent_price_from: 2000, sale_price_from: null }),
+    ]);
+    digitar('l77');
+    fireEvent.click(screen.getByRole('button', { name: /Buscar/ }));
+    expect((await screen.findByTestId('busca')).textContent).toBe('?tab=rent&code=l77');
+  });
+
+  it('sugestão de bairro e a célula Bairro: a sugestão vale com a célula vazia; com a célula preenchida, vale a célula', async () => {
+    await abrir();
+    digitar('teres');
+    fireEvent.click(within(screen.getByRole('listbox')).getByRole('option', { name: /Santa Teresinha/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Buscar/ }));
+    expect((await screen.findByTestId('busca')).textContent).toBe('?neighborhood=Santa+Teresinha');
+    cleanup();
+
+    await abrir();
+    digitar('teres');
+    fireEvent.click(within(screen.getByRole('listbox')).getByRole('option', { name: /Santa Teresinha/ }));
+    fireEvent.change(screen.getByLabelText('Bairro'), { target: { value: 'Gonzaga' } });
+    fireEvent.click(screen.getByRole('button', { name: /Buscar/ }));
+    expect((await screen.findByTestId('busca')).textContent).toBe('?neighborhood=Gonzaga');
+  });
+
   it('sugestão escolhida e depois editada vira texto livre', async () => {
     await abrir();
     digitar('teres');

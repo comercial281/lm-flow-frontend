@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import type { PortalProperty, SiteInfo } from '../portalShared';
 import { opcoesDeTipo } from '@/features/siteBuilder/public/tiposDeImovel';
 import { CAMPOS_BUSCA, TITULO_CAPA_FABRICA, type AbaId, type CampoBusca, type HomeConfig } from '@/features/siteBuilder/public/homeConfig';
-import { AREAS_MINIMAS, normalizarTexto } from '@/features/siteBuilder/public/filtros';
+import { AREAS_MINIMAS, filterProperties, normalizarTexto } from '@/features/siteBuilder/public/filtros';
 import type { SugestaoDeLugar } from '@/features/siteBuilder/public/sugestoesDeLugar';
 import { faixasDePreco, precoDaFaixa } from '@/features/siteBuilder/public/faixasDePreco';
 import { FASES_DO_PUBLICO } from '@/features/properties/listingKind';
@@ -59,10 +59,18 @@ export function lugarLargo(primeira: CampoDeEscolha[], mais: CampoDeEscolha[]): 
   return mais.length > 0 && primeira.length === 3 && primeira.includes('place');
 }
 
-/** O texto é o código de um imóvel do catálogo (sem acento nem maiúscula)? */
-export function ehCodigoDoCatalogo(items: PortalProperty[], texto: string): boolean {
+/**
+ * O texto é o código de um imóvel do catálogo (sem acento nem maiúscula)? Devolve a aba em que
+ * ele aparece: a de agora, se ele está nela; senão a primeira das abas do site que o mostra
+ * (um código de aluguel digitado em Comprar vai pra Alugar, senão a lista viria vazia).
+ * `null` = não é código de imóvel publicado.
+ */
+export function abaDoCodigo(items: PortalProperty[], texto: string, tab: AbaId, abas: AbaId[]): AbaId | null {
   const alvo = normalizarTexto(texto);
-  return !!alvo && items.some(p => normalizarTexto(p.code) === alvo);
+  const achados = alvo ? items.filter(p => normalizarTexto(p.code) === alvo) : [];
+  if (!achados.length) return null;
+  const mostra = (t: AbaId) => filterProperties(achados, { tab: t, type: '', city: '', neighborhood: '', bedrooms: '', code: '' }).length > 0;
+  return [tab, ...abas].find(mostra) ?? tab;
 }
 
 /** Título e subtítulo da capa, com os de fábrica quando o cliente não escreveu. */
@@ -124,15 +132,21 @@ export function useBuscaDaCapa({ home, tenant, abas, cities, hoods, types, items
     e.preventDefault();
     const juntos: Partial<Record<CampoBusca, string>> = { ...valores };
     let incluir: CampoBusca[] = campos;
+    let abaDoEndereco = tab;
     if (modelo === 'moderno') {
       incluir = [...campos.filter(c => c !== 'code'), 'place', 'code'];
       juntos.code = '';
       const t = (valores.place ?? '').trim();
       const daSugestao = lugar && lugar.rotulo === valores.place;
-      if (t && !daSugestao && ehCodigoDoCatalogo(items, t)) { juntos.code = t; juntos.place = ''; }
+      const abaDoImovel = t && !daSugestao ? abaDoCodigo(items, t, tab, abas) : null;
+      if (abaDoImovel) {
+        juntos.code = t; juntos.place = '';
+        // O imóvel é de outra aba: vai pra ela, sem a faixa de preço e a fase (são da aba de antes).
+        if (abaDoImovel !== tab) { abaDoEndereco = abaDoImovel; juntos.price = ''; juntos.stage = ''; }
+      }
     }
     const params = new URLSearchParams();
-    if (tab !== 'sale') params.set('tab', tab);
+    if (abaDoEndereco !== 'sale') params.set('tab', abaDoEndereco);
     for (const c of CAMPOS_BUSCA.filter(k => incluir.includes(k))) {
       const v = juntos[c];
       if (!v) continue;
@@ -144,7 +158,7 @@ export function useBuscaDaCapa({ home, tenant, abas, cities, hoods, types, items
           params.set('place', v.trim());
         }
       } else if (c === 'price') {
-        for (const [k, n] of Object.entries(precoDaFaixa(tab, v))) params.set(k, n);
+        for (const [k, n] of Object.entries(precoDaFaixa(abaDoEndereco, v))) params.set(k, n);
       } else {
         params.set(c, v);
       }

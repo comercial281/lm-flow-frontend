@@ -437,6 +437,17 @@ describe('condomínio, bairro ou cidade e Área', () => {
     fireEvent.click(within(await screen.findByRole('listbox')).getByRole('option', { name: 'Centro' }));
   };
 
+  it('o × do campo tira o lugar escolhido (o bairro da sugestão sai junto)', async () => {
+    await abrirBusca(comBairro());
+    await escolherCentro();
+    expect(urlAtual().get('neighborhood')).toBe('Centro');
+    fireEvent.click(screen.getByRole('button', { name: 'Limpar condomínio, bairro ou cidade' }));
+    expect(urlAtual().get('neighborhood')).toBeNull();
+    expect(campoDeLugar().value).toBe('');
+    expect(titulos()).toHaveLength(2);
+    expect(screen.queryByRole('button', { name: 'Limpar condomínio, bairro ou cidade' })).toBeNull();
+  });
+
   it('escolher bairro e voltar ao campo + Enter não soma place', async () => {
     await abrirBusca(comBairro());
     await escolherCentro();

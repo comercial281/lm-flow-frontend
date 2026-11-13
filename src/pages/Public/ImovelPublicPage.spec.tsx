@@ -63,6 +63,15 @@ const pediuParecidos = (f: ReturnType<typeof vi.fn>) => f.mock.calls.some(([u]) 
 afterEach(() => { vi.unstubAllGlobals(); });
 
 describe('ImovelPublicPage', () => {
+  it('descrição com **trecho** mostra negrito, sem os asteriscos (Moeda Forte)', async () => {
+    await abrirFicha({}, { description: 'Casa **reformada** e ampla.\n\nAceita **<b>FGTS</b>**' });
+
+    expect(screen.getByText('reformada').tagName).toBe('STRONG');
+    expect(screen.queryByText(/\*\*/)).toBeNull();
+    // HTML escrito na descrição sai como texto.
+    expect(screen.getByText('<b>FGTS</b>').tagName).toBe('STRONG');
+  });
+
   it('aba Lançamentos desligada não aparece no topo nem no rodapé da ficha', async () => {
     await abrirFicha({ home: { search: { tabs: { launch: false } } } });
 
