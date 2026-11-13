@@ -18,7 +18,7 @@ import { abasVisiveis } from '@/features/siteBuilder/public/vitrines';
 import { seloDaFase } from '@/features/properties/listingKind';
 import { ORDENS, ROTULO_ORDEM, ehOrdem, type Ordem } from '@/features/siteBuilder/public/listaConfig';
 import {
-  CORES_DO_FUNDO, TEXTO_RODAPE_FABRICA, clarearAte, fontesDoSite, logoNaCapa, logoNaSuperficie, misturarCom, resolverAparencia, textoSobre,
+  CORES_DO_FUNDO, TEXTO_RODAPE_FABRICA, clarearAte, escurecerAte, fontesDoSite, logoNaCapa, logoNaSuperficie, misturarCom, resolverAparencia, textoSobre,
   type Aparencia, type Superficie,
 } from '@/features/siteBuilder/public/aparenciaConfig';
 import { ATRIBUTO_DO_TOPO, useLogoPousado } from '@/features/siteBuilder/public/logoPousado';
@@ -233,9 +233,10 @@ export function tokensDoSite(site: SiteInfo) {
     ['--m-brand-2' as string]: misturarCom(brand, '#FFFFFF', 0.14),
     // No escuro, rumo ao chão escuro do Moderno (#0E1016, o --m-ground), como no protótipo: o card quente do Clássico acinzentava a marca.
     ['--m-brand-soft' as string]: escuro ? misturarCom(brand, '#0E1016', 0.62) : misturarCom(brand, '#FFFFFF', 0.9),
-    ['--m-head' as string]: escuro ? clarearAte(brand, cores.card) : brand,
+    // No claro, a marca escurece até 4,5:1 sobre o chão (#F2F3F6, o mais escuro dos dois claros; o card #FFFFFF então passa também).
+    ['--m-head' as string]: escuro ? clarearAte(brand, cores.card) : escurecerAte(brand, '#F2F3F6'),
     // O tom do itálico do destaque é texto: no escuro passa pelo clarearAte, como o --m-head.
-    ['--m-head-2' as string]: escuro ? clarearAte(misturarCom(brand, '#FFFFFF', 0.22), cores.card) : misturarCom(brand, '#FFFFFF', 0.22),
+    ['--m-head-2' as string]: escuro ? clarearAte(misturarCom(brand, '#FFFFFF', 0.22), cores.card) : escurecerAte(misturarCom(brand, '#FFFFFF', 0.22), '#F2F3F6'),
     ['--m-ground' as string]: escuro ? '#0E1016' : '#F2F3F6',
     ['--m-surface' as string]: escuro ? '#171A22' : '#FFFFFF',
     ['--m-line' as string]: escuro ? '#272B36' : '#E2E4EB',

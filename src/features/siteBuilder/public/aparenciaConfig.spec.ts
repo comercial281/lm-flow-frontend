@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   APARENCIA_FABRICA, DEGRADE_DA_CAPA_FABRICA, FONTES_DO_SITE, TINTA_ESCURA,
-  clarearAte, contrasteEntre, filtroDaCapa, filtroDaCapaModerna, fonteDoSite, fontesDoSite, logoNaCapa, logoNaSuperficie, misturarCom, resolverAparencia, textoSobre,
+  clarearAte, escurecerAte, contrasteEntre, filtroDaCapa, filtroDaCapaModerna, fonteDoSite, fontesDoSite, logoNaCapa, logoNaSuperficie, misturarCom, resolverAparencia, textoSobre,
 } from './aparenciaConfig';
 
 describe('resolverAparencia', () => {
@@ -213,6 +213,18 @@ describe('clarearAte', () => {
   it('cor que já dá o contraste volta como está; cor que não é hex vira a tinta clara', () => {
     expect(clarearAte('#FACC15', '#14110D')).toBe('#FACC15');
     expect(clarearAte('rebeccapurple', '#14110D')).toBe('#F4EFE7');
+  });
+});
+
+describe('escurecerAte', () => {
+  it.each(['#FDE899', '#C9A227', '#FACC15'])('%s escurece até 4,5:1 sobre o fundo claro', cor => {
+    const c = escurecerAte(cor, '#F2F3F6');
+    expect(contrasteEntre(c, '#F2F3F6')).toBeGreaterThanOrEqual(4.5);
+    expect(c).not.toBe(cor);
+  });
+  it('cor que já dá o contraste volta como está; cor que não é hex vira a tinta escura', () => {
+    expect(escurecerAte('#0E1A6B', '#FFFFFF')).toBe('#0E1A6B');
+    expect(escurecerAte('rebeccapurple', '#FFFFFF')).toBe('#17140F');
   });
 });
 

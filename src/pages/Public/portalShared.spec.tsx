@@ -209,6 +209,19 @@ describe('tokensDoSite · tons do Moderno', () => {
     for (const fundo of [v['--m-surface'], v['--m-ground']]) expect(contrasteEntre(v['--m-head-2'], fundo)!).toBeGreaterThanOrEqual(4.5);
   });
 
+  it('Moderno claro com marca clara: --m-head e --m-head-2 escurecem até 4,5:1 sobre o chão e o card; marca escura não muda', () => {
+    for (const cor of ['#FDE899', '#C9A227']) {
+      const v = tokensDoSite({ branding: { primary_color: cor }, appearance: { style: 'modern' } } as never).cssVars as Record<string, string>;
+      for (const k of ['--m-head', '--m-head-2']) {
+        for (const fundo of ['#FFFFFF', '#F2F3F6']) expect(contrasteEntre(v[k], fundo)!, `${cor} ${k} ${fundo}`).toBeGreaterThanOrEqual(4.5);
+      }
+      expect(v['--brand']).toBe(cor);
+    }
+    const d = tokensDoSite(site({ style: 'modern' })).cssVars as Record<string, string>;
+    expect(d['--m-head']).toBe('#0E1A6B');
+    expect(d['--m-head-2']).toBe(misturarCom('#0E1A6B', '#FFFFFF', 0.22));
+  });
+
   it('Instrument Serif só com Moderno + destaque em itálico', () => {
     const tem = (a?: Record<string, unknown>) => tokensDoSite(site(a)).fontHrefs.some(h => h.includes('Instrument+Serif'));
     expect(tem({ style: 'modern', heading_highlight: 'italic' })).toBe(true);

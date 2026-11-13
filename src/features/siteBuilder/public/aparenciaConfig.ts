@@ -243,6 +243,23 @@ export function clarearAte(cor: string, fundo: string, minimo = CONTRASTE_MINIMO
 }
 
 /**
+ * Espelho do `clarearAte`: a cor escurecida (misturada com preto, de 2 em 2%)
+ * até dar `minimo` de contraste sobre `fundo`. Usada no texto na cor da marca
+ * do Moderno claro (`--m-head`): uma marca amarela ou dourada some sobre o
+ * quase branco. Cor que já dá o contraste volta como está; cor que não é hex
+ * vira a tinta escura do fundo claro.
+ */
+export function escurecerAte(cor: string, fundo: string, minimo = CONTRASTE_MINIMO): string {
+  const rgb = rgbDe(cor);
+  if (!rgb || !rgbDe(fundo)) return CORES_DO_FUNDO.light.ink;
+  for (let t = 0; t <= 1.0001; t += 0.02) {
+    const c = hex(rgb.map(v => v * (1 - t)));
+    if ((contrasteEntre(c, fundo) ?? 0) >= minimo) return t === 0 ? cor : c;
+  }
+  return '#000000';
+}
+
+/**
  * Cor do texto sobre uma cor de fundo (selo na cor de destaque, topo na cor
  * principal): branco ou a tinta escura, a que tiver mais contraste. Cor que
  * não é hexadecimal fica com branco, como sempre foi.
