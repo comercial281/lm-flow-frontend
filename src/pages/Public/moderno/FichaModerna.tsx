@@ -8,6 +8,8 @@ import { derivadosDaFicha, type PropertyDTO, type useFichaDoImovel } from '../fi
 import type { FichaDoImovel } from '../ficha/fichaDoImovel';
 import GaleriaModerna from './GaleriaModerna';
 import CartaoDeInteresse from './CartaoDeInteresse';
+import CartaoClaro from './CartaoClaro';
+import SecoesDaFichaModerna from './SecoesDaFichaModerna';
 import { MIOLO } from './estilos';
 
 /* ────────────────────────────────────────────────────────────────────────────
@@ -41,13 +43,19 @@ function numerosDaFaixa(p: PropertyDTO): NumeroDaFaixa[] {
 const COLUNAS_DA_FAIXA = ['', 'lg:grid-cols-1', 'lg:grid-cols-2', 'lg:grid-cols-3', 'lg:grid-cols-4', 'lg:grid-cols-5', 'lg:grid-cols-6'];
 
 export default function FichaModerna({ f, prop, ficha }: { f: Ficha; prop: PropertyDTO; ficha: FichaDoImovel }) {
-  const { tenant, ctx, site, manutencao, active, setActive, lightbox, setLightbox, fontHrefs, cssVars, fundo, abas, waHref, mostraBook, contato } = f;
+  const { tenant, ctx, site, manutencao, active, setActive, lightbox, setLightbox, suggestions, fontHrefs, cssVars, fundo, wa, abas, waHref, mostraBook, contato } = f;
   const d = derivadosDaFicha(prop, ficha, site);
   const { photos, typeLabel, price, priceSuffix, money, linhaDoCodigo, atendimento, regionText, selos, fase } = d;
   const lancamento = prop.listing_kind === 'development';
   const numeros = numerosDaFaixa(prop);
   const sobretitulo = [typeLabel, prop.code].filter(Boolean).join(' · ');
   const abrirFoto = (i: number) => { setActive(i); setLightbox(true); };
+  // Bloco do book: o cartão de interesse vira o pedido do book; no celular, a página desce até ele.
+  const pedirBook = () => {
+    contato.setPedindoBook(true);
+    const noFluxo = document.getElementById('contato');
+    if (noFluxo && noFluxo.offsetParent !== null) noFluxo.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
+  };
   const cartao = {
     contato, mostraBook, waHref, price, priceSuffix, aPartirDe: lancamento && !d.isRent, fase, linhaDoCodigo, money, atendimento,
   };
@@ -122,14 +130,48 @@ export default function FichaModerna({ f, prop, ficha }: { f: Ficha; prop: Prope
               <div className="mt-8 lg:hidden">
                 <CartaoDeInteresse {...cartao} id="contato" />
               </div>
+
+              <SecoesDaFichaModerna prop={prop} d={d} mostraBook={mostraBook} pedirBook={pedirBook} />
             </div>
 
             <aside className="hidden lg:block lg:sticky lg:top-24">
               <CartaoDeInteresse {...cartao} />
             </aside>
           </div>
+
+          {/* Imóveis recomendados (o servidor escolhe; em manutenção a lista dá 404). */}
+          {!manutencao && ficha.parecidos && suggestions.length > 0 && (
+            <section className="pt-[clamp(56px,8vw,96px)]">
+              <h2 className="mb-6 font-[var(--display)] text-[clamp(26px,3.4vw,40px)] font-semibold leading-[1.06] tracking-[-0.03em] text-[var(--m-head)]">
+                Você também pode gostar
+              </h2>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {suggestions.map(s => <CartaoClaro key={s.id} tenant={tenant!} p={s} wa={wa} />)}
+              </div>
+            </section>
+          )}
         </div>
       </main>
+
+      {/* Celular: a barra fixa de contato continua (é por ela que o lead do anúncio fala). */}
+      <div data-testid="barra-de-contato" className="fixed inset-x-0 bottom-0 z-40 flex items-center gap-3 border-t border-[var(--m-line)] bg-[var(--m-surface)] px-4 py-3 shadow-[0_-12px_30px_-20px_rgba(8,10,22,0.35)] lg:hidden">
+        {(price || fase) && (
+          <div className="min-w-0 flex-1">
+            {price && (
+              <>
+                <div className="text-[11px] text-[var(--m-muted)]">{d.isRent ? 'aluguel' : 'a partir de'}</div>
+                <div className="font-[var(--display)] text-[18px] font-semibold leading-none text-[var(--m-head)] tabular-nums">
+                  {price}{priceSuffix && <span className="text-[11px] font-medium text-[var(--m-muted)]">{priceSuffix}</span>}
+                </div>
+              </>
+            )}
+            {fase && <div className="mt-1 truncate text-[11px] font-semibold text-[var(--m-head)]">{fase}</div>}
+          </div>
+        )}
+        {waHref
+          ? <a href={waHref} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-full bg-[#1FAF5A] px-5 py-2.5 text-[14px] font-semibold text-white"><Ic d={I.wa} s={17} /> WhatsApp</a>
+          : <a href="#contato" className="rounded-full bg-[var(--brand)] px-5 py-2.5 text-[14px] font-semibold text-[var(--brand-ink)]">Tenho interesse</a>}
+      </div>
 
       <PortalFooter site={site} tenant={tenant!} abas={abas} />
 

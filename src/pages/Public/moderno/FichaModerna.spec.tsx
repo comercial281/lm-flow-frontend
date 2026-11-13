@@ -170,3 +170,88 @@ describe('Ficha no Moderno: galeria em mosaico', () => {
     expect(screen.getByRole('link', { name: 'Tour virtual' })).toBeTruthy();
   });
 });
+
+describe('Ficha no Moderno: conteúdo', () => {
+  const titulo = (nome: string) => screen.queryByRole('heading', { level: 2, name: nome });
+
+  it('revenda sem dados extras: só o que existe, sem título solto', async () => {
+    await abrirFicha(MODERNO, { description: '' });
+    for (const nome of ['Sobre o imóvel', 'Tipologias disponíveis', 'Características', 'Comodidades do condomínio', 'Dados do empreendimento', 'Vídeo e tour virtual']) {
+      expect(titulo(nome)).toBeNull();
+    }
+    // Revenda: o mapa da região (sem pino).
+    expect(titulo('Localização')).toBeTruthy();
+    expect(screen.getByTitle('Mapa da região')).toBeTruthy();
+  });
+
+  it('Sobre o imóvel em parágrafos, com negrito', async () => {
+    await abrirFicha(MODERNO, { description: 'Casa **reformada**.\n\nPerto do metrô.' });
+    const sobre = titulo('Sobre o imóvel')!.closest('section')!;
+    expect(sobre.querySelectorAll('p')).toHaveLength(2);
+    expect(within(sobre).getByText('reformada').tagName).toBe('STRONG');
+  });
+
+  it('características e comodidades em lista', async () => {
+    await abrirFicha(MODERNO, { features: ['piscina'], condo_features: ['portaria_24h'] });
+    expect(titulo('Características')).toBeTruthy();
+    expect(titulo('Comodidades do condomínio')).toBeTruthy();
+  });
+
+  it('lançamento: dados do empreendimento, tipologias em tabela, mapa exato e o bloco do book', async () => {
+    const LIGADO = { ...MODERNO, property_page: { development: { book_button: true } } } as SiteInfo;
+    await abrirFicha(LIGADO, { has_book: true, towers: 2 }, EMPREENDIMENTO);
+    expect(titulo('Dados do empreendimento')).toBeTruthy();
+    const tipologias = titulo('Tipologias disponíveis')!.closest('section')!;
+    expect(within(tipologias).getByRole('table')).toBeTruthy();
+    expect(within(tipologias).getByText('Planta A')).toBeTruthy();
+    expect(screen.getByTitle('Mapa do empreendimento')).toBeTruthy();
+    const bloco = screen.getByTestId('bloco-do-book');
+    await userEvent.setup().click(within(bloco).getByRole('button', { name: 'Receber o book no WhatsApp' }));
+    expect(screen.getAllByText('Receba o book no WhatsApp').length).toBeGreaterThan(1);
+  });
+
+  it('Página do imóvel desligando mapa e tipologias: o Moderno respeita', async () => {
+    await abrirFicha({ ...MODERNO, property_page: { development: { typologies: false, map: false } } } as SiteInfo, {}, EMPREENDIMENTO);
+    expect(titulo('Tipologias disponíveis')).toBeNull();
+    expect(titulo('Localização')).toBeNull();
+  });
+
+  it('vídeo: seção própria, alvo do "Ver vídeo"', async () => {
+    await abrirFicha(MODERNO, { video_url: 'https://www.youtube.com/watch?v=abcdefghijk' });
+    const secao = titulo('Vídeo e tour virtual')!.closest('section')!;
+    expect(secao.id).toBe('video-e-tour');
+    expect(within(secao).getByTitle('Vídeo do imóvel')).toBeTruthy();
+  });
+
+  it('"Você também pode gostar" com o cartão claro', async () => {
+    vi.unstubAllGlobals();
+    const parecido = { id: 'p2', code: 'C2', title: 'Apartamento parecido', transaction_type: 'sale', property_type: 'apartment', address: { city: 'Campinas' } };
+    vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+      if (url.includes('/similar')) return resposta({ data: [parecido] });
+      if (url.includes('/site/properties/C1')) return resposta({ data: REVENDA });
+      if (/\/site(\?|$)/.test(url)) return resposta({ data: { name: 'Imob', ...MODERNO } });
+      return resposta({});
+    }));
+    render(
+      <MemoryRouter initialEntries={['/imovel/imob/C1']}>
+        <Routes><Route path="/imovel/:tenant/:code" element={<ImovelPublicPage />} /></Routes>
+      </MemoryRouter>,
+    );
+    expect(await screen.findByRole('heading', { level: 2, name: 'Você também pode gostar' })).toBeTruthy();
+    expect(screen.getByText('Apartamento · C2')).toBeTruthy();
+  });
+
+  it('celular: a barra fixa de contato continua (WhatsApp)', async () => {
+    await abrirFicha(MODERNO);
+    const barra = screen.getByTestId('barra-de-contato');
+    expect(barra.className).toContain('lg:hidden');
+    expect(barra.className).toContain('fixed');
+    expect(within(barra).getByRole('link', { name: /WhatsApp/ })).toBeTruthy();
+  });
+
+  it('celular sem WhatsApp do site: a barra leva ao cartão de interesse', async () => {
+    await abrirFicha({ ...MODERNO, contact: {} } as SiteInfo);
+    const barra = screen.getByTestId('barra-de-contato');
+    expect(within(barra).getByRole('link', { name: 'Tenho interesse' }).getAttribute('href')).toBe('#contato');
+  });
+});
