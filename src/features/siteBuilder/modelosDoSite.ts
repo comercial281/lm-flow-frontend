@@ -8,13 +8,19 @@ import type { HomeConfig } from './public/homeConfig';
 import { PASSOS_MCMV } from './public/homeConfig';
 import type { ListaConfig } from './public/listaConfig';
 
-export type ModeloDoSiteId = 'classico' | 'editorial' | 'popular';
+export type ModeloDoSiteId = 'classico' | 'editorial' | 'popular' | 'moderno';
 export interface ModeloDoSite { id: ModeloDoSiteId; nome: string; frase: string }
 
 export const MODELOS_DO_SITE: ModeloDoSite[] = [
   { id: 'classico', nome: 'Clássico', frase: 'Capa com foto, topo transparente e cartões em grade. O visual de sempre.' },
   { id: 'editorial', nome: 'Editorial', frase: 'Fundo escuro, título em fonte com serifa, capa dividida e cartões grandes.' },
   { id: 'popular', nome: 'Popular', frase: 'Topo na cor da marca, capa dividida e o passo a passo de como comprar.' },
+];
+
+/** Ids aceitos pelo `?modelo=` da prévia: os cartões da tela mais o Moderno (cartão ainda escondido). */
+export const MODELOS_DA_PREVIA: ModeloDoSite[] = [
+  ...MODELOS_DO_SITE,
+  { id: 'moderno', nome: 'Moderno', frase: 'Capa em cartão, cartões de foto inteira e rodapé em bloco. Visual atual, fonte única.' },
 ];
 
 export interface EstadoDoVisual {
@@ -25,19 +31,19 @@ export interface EstadoDoVisual {
 }
 
 type ChavesDaAparencia = 'heading_font' | 'background' | 'header_style' | 'top_bar' | 'hero_layout' | 'hero_height'
-  | 'menu_style' | 'card_style' | 'footer_layout';
+  | 'menu_style' | 'card_style' | 'footer_layout' | 'style';
 
 interface Receita {
   font_family: string;
-  appearance: Pick<Aparencia, ChavesDaAparencia>;
+  appearance: Pick<Aparencia, ChavesDaAparencia> & Partial<Pick<Aparencia, 'heading_highlight'>>;
   card_layout: ListaConfig['card_layout'];
   callouts: HomeConfig['callouts']['layout'];
   passos: boolean;
   atendimento: boolean;
 }
 
-const { heading_font, background, header_style, top_bar, hero_layout, hero_height, menu_style, card_style, footer_layout } = APARENCIA_FABRICA;
-const BASE = { heading_font, background, header_style, top_bar, hero_layout, hero_height, menu_style, card_style, footer_layout };
+const { heading_font, background, header_style, top_bar, hero_layout, hero_height, menu_style, card_style, footer_layout, style } = APARENCIA_FABRICA;
+const BASE = { heading_font, background, header_style, top_bar, hero_layout, hero_height, menu_style, card_style, footer_layout, style };
 
 const RECEITAS: Record<ModeloDoSiteId, Receita> = {
   classico: { font_family: 'Inter', appearance: { ...BASE }, card_layout: 'grid', callouts: 'band', passos: false, atendimento: false },
@@ -45,7 +51,7 @@ const RECEITAS: Record<ModeloDoSiteId, Receita> = {
     font_family: 'DM Sans',
     appearance: {
       heading_font: 'Playfair Display', background: 'dark', header_style: 'transparent', top_bar: 'hidden',
-      hero_layout: 'split', hero_height: 'full', menu_style: 'caps', card_style: 'large', footer_layout: 'compact',
+      hero_layout: 'split', hero_height: 'full', menu_style: 'caps', card_style: 'large', footer_layout: 'compact', style: 'classic',
     },
     card_layout: 'rows', callouts: 'cards', passos: false, atendimento: true,
   },
@@ -53,6 +59,15 @@ const RECEITAS: Record<ModeloDoSiteId, Receita> = {
     font_family: 'Poppins',
     appearance: { ...BASE, header_style: 'brand', hero_layout: 'split', hero_height: 'half' },
     card_layout: 'grid', callouts: 'cards', passos: true, atendimento: false,
+  },
+  moderno: {
+    font_family: 'DM Sans',
+    appearance: {
+      heading_font: null, style: 'modern', heading_highlight: 'accent', background: 'light', header_style: 'transparent',
+      top_bar: 'hidden', hero_layout: 'photo', hero_height: 'full', menu_style: 'normal', card_style: 'standard',
+      footer_layout: 'columns',
+    },
+    card_layout: 'grid', callouts: 'photo', passos: false, atendimento: true,
   },
 };
 
@@ -105,7 +120,7 @@ export function modeloAtual(atual: EstadoDoVisual): ModeloDoSiteId | null {
   const achado = (Object.keys(RECEITAS) as ModeloDoSiteId[]).find(id => {
     const r = RECEITAS[id];
     return atual.font_family === r.font_family
-      && (Object.keys(r.appearance) as ChavesDaAparencia[]).every(k => atual.appearance[k] === r.appearance[k])
+      && (Object.keys(r.appearance) as (keyof Receita['appearance'])[]).every(k => atual.appearance[k] === r.appearance[k])
       && atual.listing.card_layout === r.card_layout
       && atual.home.callouts.layout === r.callouts
       && atual.home.steps.enabled === r.passos

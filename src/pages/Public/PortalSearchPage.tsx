@@ -11,7 +11,7 @@ import { chaveDaLista, fetchListaDoSite, type ListaDoSite } from './portalProper
 import { caminhoDoSite } from '@/features/siteBuilder/public/dominioDoSite';
 import { opcaoDoTipo, opcoesDeTipo } from '@/features/siteBuilder/public/tiposDeImovel';
 import { opcoesDePreco, precoDaFaixa } from '@/features/siteBuilder/public/faixasDePreco';
-import { opcaoDoTexto } from '@/features/siteBuilder/public/filtros';
+import { abaDaBusca, filtrosDaUrl, opcaoDoTexto } from '@/features/siteBuilder/public/filtros';
 import { FASES_DO_PUBLICO } from '@/features/properties/listingKind';
 import { usePortalTracking } from './usePortalTracking';
 import { useIconeDaAba } from '@/features/siteBuilder/public/useIconeDaAba';
@@ -91,25 +91,10 @@ export default function PortalSearchPage() {
 
   // Só vale aba visível; a da URL que não é (desligada ou sem imóvel) cai na primeira visível.
   // Na lista, a aba vem do negócio do caminho (para-alugar e temporada = Alugar).
-  const tabDaUrl = params.get('tab') as PortalTab | null;
   const tabDaLista: PortalTab | null = chave ? (/^(para-alugar|temporada)(\/|$)/.test(chave) ? 'rent' : 'sale') : null;
-  const tab: PortalTab = tabDaUrl && abas.includes(tabDaUrl) ? tabDaUrl
-    : tabDaLista && abas.includes(tabDaLista) ? tabDaLista : (abas[0] ?? 'sale');
+  const tab: PortalTab = abaDaBusca(params.get('tab'), abas, tabDaLista);
 
-  const filters: PortalFilters = useMemo(() => ({
-    tab,
-    type: params.get('type') || '',
-    city: params.get('city') || '',
-    neighborhood: params.get('neighborhood') || '',
-    bedrooms: params.get('bedrooms') || '',
-    code: params.get('code') || '',
-    price_min: params.get('price_min') || '',
-    price_max: params.get('price_max') || '',
-    suites: params.get('suites') || '',
-    parking: params.get('parking') || '',
-    // Fase escondida em Alugar não filtra (um ?stage= velho na URL zeraria a lista).
-    stage: tab === 'rent' ? '' : params.get('stage') || '',
-  }), [params, tab]);
+  const filters: PortalFilters = useMemo(() => filtrosDaUrl(params, tab), [params, tab]);
 
   // Atualiza um ou mais filtros na URL. `replace` evita poluir o histórico
   // (usado na digitação do código); os controles discretos empurram histórico

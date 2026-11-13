@@ -1,4 +1,5 @@
 import { TITULO_PASSOS_FABRICA, type HomeConfig } from '@/features/siteBuilder/public/homeConfig';
+import { semAsteriscos } from '@/features/siteBuilder/public/destaqueNoTitulo';
 
 /* ────────────────────────────────────────────────────────────────────────────
    "Como funciona": o passo a passo numerado de como comprar. Opcional
@@ -15,7 +16,7 @@ export default function HomeComoFunciona({ home }: { home: HomeConfig }) {
   return (
     <section id="como-funciona" className="mx-auto max-w-6xl px-4 py-14 sm:px-6">
       <h2 className="text-center font-[var(--display)] text-3xl font-semibold text-[var(--ink)] sm:text-4xl">
-        {title.trim() || TITULO_PASSOS_FABRICA}
+        {semAsteriscos(title.trim() || TITULO_PASSOS_FABRICA)}
       </h2>
       <ol className={`mt-10 grid gap-8 ${colunas}`}>
         {items.map((p, i) => (

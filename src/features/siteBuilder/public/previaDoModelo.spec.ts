@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   CHAVE_DO_MODELO, comModeloDaPrevia, ehPreviaDoModelo, esquecerModeloDaPrevia, modeloDaPrevia, sairDaPreviaDoModelo,
-  urlSemModelo,
+  nomeDoModelo, urlSemModelo,
 } from './previaDoModelo';
 import { resolverAparencia } from './aparenciaConfig';
 import { resolverHome } from './homeConfig';
@@ -28,8 +28,16 @@ describe('prévia do modelo (?modelo= → sessionStorage)', () => {
   });
 
   it('valor fora da lista é null (e não é guardado)', () => {
-    expect(modeloDaPrevia({ search: '?modelo=moderno' })).toBeNull();
+    expect(modeloDaPrevia({ search: '?modelo=xpto' })).toBeNull();
     expect(sessionStorage.getItem(CHAVE_DO_MODELO)).toBeNull();
+  });
+
+  it('?modelo=moderno é aceito e aplica style modern', () => {
+    expect(modeloDaPrevia({ search: '?modelo=moderno' })).toBe('moderno');
+    const site = comModeloDaPrevia({ appearance: {}, home: {}, listing: {} });
+    expect(site.modelo_em_previa).toBe('moderno');
+    expect((site.appearance as { style: string }).style).toBe('modern');
+    expect(nomeDoModelo('moderno')).toBe('Moderno');
   });
 
   it('sem ?modelo= e sem nada guardado, null', () => {

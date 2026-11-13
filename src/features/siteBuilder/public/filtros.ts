@@ -87,6 +87,41 @@ export function opcoesSemRepetir(valores: (string | null | undefined)[]): string
   return [...grupos.values()].map(maisComum).sort((a, b) => a.localeCompare(b, 'pt-BR'));
 }
 
+const TODAS_AS_ABAS: PortalTab[] = ['sale', 'rent', 'launch'];
+
+/**
+ * Aba que a busca usa. Só vale aba visível (`abas`): a da URL que não é
+ * (desligada ou sem imóvel) cai na da lista (`tabDaLista`, pelo caminho) e
+ * depois na primeira visível. É a regra da página de busca; o mosaico dos Mais
+ * buscados usa a mesma pra contar o que a busca vai mostrar.
+ */
+export function abaDaBusca(tabDaUrl: string | null, abas: PortalTab[] = TODAS_AS_ABAS, tabDaLista: PortalTab | null = null): PortalTab {
+  const daUrl = abas.find(a => a === tabDaUrl);
+  return daUrl ?? (tabDaLista && abas.includes(tabDaLista) ? tabDaLista : (abas[0] ?? 'sale'));
+}
+
+/**
+ * Filtros da busca lidos da URL (`?type=…&city=…`), com a aba já decidida por
+ * quem chama. É o que a página de busca usa, e o mosaico dos Mais buscados lê
+ * o atalho do mesmo jeito: o bloco mostra o que a busca vai mostrar.
+ */
+export function filtrosDaUrl(params: URLSearchParams, tab: PortalTab): PortalFilters {
+  return {
+    tab,
+    type: params.get('type') || '',
+    city: params.get('city') || '',
+    neighborhood: params.get('neighborhood') || '',
+    bedrooms: params.get('bedrooms') || '',
+    code: params.get('code') || '',
+    price_min: params.get('price_min') || '',
+    price_max: params.get('price_max') || '',
+    suites: params.get('suites') || '',
+    parking: params.get('parking') || '',
+    // Fase escondida em Alugar não filtra (um ?stage= velho na URL zeraria a lista).
+    stage: tab === 'rent' ? '' : params.get('stage') || '',
+  };
+}
+
 export function filterProperties(items: PortalProperty[], f: PortalFilters): PortalProperty[] {
   const num = (v?: string) => (v && !Number.isNaN(Number(v)) ? Number(v) : null);
   const pMin = num(f.price_min), pMax = num(f.price_max);

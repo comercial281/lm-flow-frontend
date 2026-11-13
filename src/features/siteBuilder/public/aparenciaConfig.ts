@@ -16,6 +16,10 @@ export type EstiloDoMenu = 'normal' | 'caps';
 export type LayoutDaCapa = 'photo' | 'split';
 export type EstiloDoCartao = 'standard' | 'large';
 export type PosicaoDoLogo = 'header' | 'hero';
+/** Modelo visual do site: `modern` = o Moderno; `classic` = o de sempre. */
+export type EstiloDoSite = 'classic' | 'modern';
+/** Palavra marcada com asterisco nos títulos: cor de destaque, itálico serifado ou sem marca. */
+export type DestaqueDosTitulos = 'accent' | 'italic' | 'none';
 
 export const FUNDOS: Fundo[] = ['light', 'dark'];
 export const ESTILOS_DO_TOPO: EstiloDoTopo[] = ['transparent', 'brand', 'white'];
@@ -26,6 +30,8 @@ export const ESTILOS_DO_MENU: EstiloDoMenu[] = ['normal', 'caps'];
 export const LAYOUTS_DA_CAPA: LayoutDaCapa[] = ['photo', 'split'];
 export const ESTILOS_DO_CARTAO: EstiloDoCartao[] = ['standard', 'large'];
 export const POSICOES_DO_LOGO: PosicaoDoLogo[] = ['header', 'hero'];
+export const ESTILOS_DO_SITE: EstiloDoSite[] = ['classic', 'modern'];
+export const DESTAQUES_DOS_TITULOS: DestaqueDosTitulos[] = ['accent', 'italic', 'none'];
 
 export interface Aparencia {
   background: Fundo;
@@ -53,6 +59,10 @@ export interface Aparencia {
    * (`logoNaCapa`). `header` = no topo, o de sempre.
    */
   logo_position: PosicaoDoLogo;
+  /** Modelo visual do site (`classic` por padrão). */
+  style: EstiloDoSite;
+  /** Como a palavra entre asteriscos nos títulos é destacada (`accent` por padrão). */
+  heading_highlight: DestaqueDosTitulos;
 }
 
 export const FILTRO_FABRICA = 45;
@@ -82,6 +92,8 @@ export const APARENCIA_FABRICA: Aparencia = {
   hero_layout: 'photo',
   card_style: 'standard',
   logo_position: 'header',
+  style: 'classic',
+  heading_highlight: 'accent',
 };
 
 const umDe = <T extends string>(lista: T[], v: unknown, padrao: T): T =>
@@ -109,6 +121,8 @@ export function resolverAparencia(raw: unknown): Aparencia {
     hero_layout: umDe(LAYOUTS_DA_CAPA, r.hero_layout, APARENCIA_FABRICA.hero_layout),
     card_style: umDe(ESTILOS_DO_CARTAO, r.card_style, APARENCIA_FABRICA.card_style),
     logo_position: umDe(POSICOES_DO_LOGO, r.logo_position, APARENCIA_FABRICA.logo_position),
+    style: umDe(ESTILOS_DO_SITE, r.style, APARENCIA_FABRICA.style),
+    heading_highlight: umDe(DESTAQUES_DOS_TITULOS, r.heading_highlight, APARENCIA_FABRICA.heading_highlight),
   };
 }
 
@@ -141,6 +155,21 @@ export function filtroDaCapa(forca: number): string {
   const o = Math.min(FILTRO_MAXIMO, Math.max(0, Number.isFinite(forca) ? forca : FILTRO_FABRICA));
   if (o === FILTRO_FABRICA) return DEGRADE_DA_CAPA_FABRICA;
   return `linear-gradient(180deg, rgba(23,20,15,${alfa((o - 10) / 100)}) 0%, rgba(23,20,15,${alfa((o + 10) / 100)}) 55%, var(--paper) 100%)`;
+}
+
+/**
+ * Filtro da capa do Moderno (spec 6.4, protótipo `.hero-photo::after`): a foto
+ * fica num cartão e o filtro escurece de baixo pra cima e da esquerda, com o
+ * pé ESCURO dentro do cartão (nunca desbota pra cor de fundo do site). Com
+ * f = força / 100: em cima f × 0,7 (o topo que flutua), 0 aos 26%, f × 0,45
+ * aos 56% e f + 0,2 no pé; da esquerda, f × 0,6 até 0 aos 60%. Alfas presos
+ * entre 0 e 0,9, a força entre 0 e 80, como no Clássico.
+ */
+export function filtroDaCapaModerna(forca: number): string {
+  const f = Math.min(FILTRO_MAXIMO, Math.max(0, Number.isFinite(forca) ? forca : FILTRO_FABRICA)) / 100;
+  const c = (a: number) => `rgba(8,10,22,${alfa(a)})`;
+  return `linear-gradient(180deg, ${c(f * 0.7)} 0%, ${c(0)} 26%, ${c(f * 0.45)} 56%, ${c(f + 0.2)} 100%), `
+    + `linear-gradient(90deg, ${c(f * 0.6)} 0%, ${c(0)} 60%)`;
 }
 
 /* ── Cores ─────────────────────────────────────────────────────────────────── */
@@ -186,6 +215,17 @@ export function contrasteEntre(a: string, b: string): number | null {
 const hex = (rgb: number[]) => `#${rgb.map(v => Math.round(v).toString(16).padStart(2, '0')).join('').toUpperCase()}`;
 
 /**
+ * A cor misturada com `alvo` na proporção `t` (0 = a cor, 1 = o alvo), canal a
+ * canal, em hex `#RRGGBB`. Os tons derivados do Moderno saem daqui porque
+ * `color-mix` não roda em Chrome < 111. Cor ou alvo que não é hex volta como veio.
+ */
+export function misturarCom(cor: string, alvo: string, t: number): string {
+  const a = rgbDe(cor); const b = rgbDe(alvo);
+  if (!a || !b) return cor;
+  return hex(a.map((v, i) => v + (b[i] - v) * t));
+}
+
+/**
  * A cor clareada (misturada com branco, de 2 em 2%) até dar `minimo` de
  * contraste sobre `fundo`. Usada no texto na cor da marca do fundo escuro
  * (`--brand-text`): uma marca azul-marinho ou roxa some sobre o quase preto.
@@ -200,6 +240,23 @@ export function clarearAte(cor: string, fundo: string, minimo = CONTRASTE_MINIMO
     if ((contrasteEntre(c, fundo) ?? 0) >= minimo) return t === 0 ? cor : c;
   }
   return '#FFFFFF';
+}
+
+/**
+ * Espelho do `clarearAte`: a cor escurecida (misturada com preto, de 2 em 2%)
+ * até dar `minimo` de contraste sobre `fundo`. Usada no texto na cor da marca
+ * do Moderno claro (`--m-head`): uma marca amarela ou dourada some sobre o
+ * quase branco. Cor que já dá o contraste volta como está; cor que não é hex
+ * vira a tinta escura do fundo claro.
+ */
+export function escurecerAte(cor: string, fundo: string, minimo = CONTRASTE_MINIMO): string {
+  const rgb = rgbDe(cor);
+  if (!rgb || !rgbDe(fundo)) return CORES_DO_FUNDO.light.ink;
+  for (let t = 0; t <= 1.0001; t += 0.02) {
+    const c = hex(rgb.map(v => v * (1 - t)));
+    if ((contrasteEntre(c, fundo) ?? 0) >= minimo) return t === 0 ? cor : c;
+  }
+  return '#000000';
 }
 
 /**

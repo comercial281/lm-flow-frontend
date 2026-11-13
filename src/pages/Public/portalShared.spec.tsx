@@ -1,7 +1,8 @@
 import { cleanup, render, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it } from 'vitest';
-import { PropertyCard, PropertyRow, type PortalProperty } from './portalShared';
+import { PropertyCard, PropertyRow, tokensDoSite, type PortalProperty } from './portalShared';
+import { clarearAte, contrasteEntre, misturarCom, textoSobre } from '../../features/siteBuilder/public/aparenciaConfig';
 
 /* ────────────────────────────────────────────────────────────────────────────
    Linha larga da lista (Meu site › Lista de imóveis › cartões em linhas): diz
@@ -168,5 +169,73 @@ describe('cartão grande (Aparência › cartões grandes)', () => {
     const html = padrao.outerHTML;
     cleanup();
     expect(desenharCartao(false).outerHTML).toBe(html);
+  });
+});
+
+describe('tokensDoSite · tons do Moderno', () => {
+  const CLASSICO = ['--brand', '--accent', '--ink', '--paper', '--site-card', '--solid', '--accent-ink', '--brand-ink', '--brand-text', '--display', 'fontFamily'];
+  const M = ['--m-brand-2', '--m-brand-soft', '--m-head', '--m-head-2', '--m-ground', '--m-surface', '--m-line', '--m-text', '--m-muted'];
+  const site = (appearance?: Record<string, unknown>) => ({ branding: { primary_color: '#0E1A6B', accent_color: '#C8A24A' }, appearance } as never);
+
+  it('sem style (Clássico): as mesmas chaves de sempre, nenhuma --m-*', () => {
+    expect(Object.keys(tokensDoSite(site()).cssVars).sort()).toEqual([...CLASSICO].sort());
+    expect(Object.keys(tokensDoSite(site({ style: 'classic', background: 'dark' })).cssVars).sort()).toEqual([...CLASSICO].sort());
+  });
+
+  it('Moderno claro: as 9 chaves --m-* com os tons do protótipo', () => {
+    const v = tokensDoSite(site({ style: 'modern' })).cssVars as Record<string, string>;
+    for (const k of [...CLASSICO, ...M]) expect(v[k], k).toBeTruthy();
+    expect(v['--m-brand-2']).toBe(misturarCom('#0E1A6B', '#FFFFFF', 0.14));
+    expect(v['--m-brand-soft']).toBe(misturarCom('#0E1A6B', '#FFFFFF', 0.9));
+    expect(v['--m-head']).toBe('#0E1A6B');
+    expect(v['--m-head-2']).toBe(misturarCom('#0E1A6B', '#FFFFFF', 0.22));
+    expect([v['--m-ground'], v['--m-surface'], v['--m-line'], v['--m-text'], v['--m-muted']])
+      .toEqual(['#F2F3F6', '#FFFFFF', '#E2E4EB', '#4B5064', '#7C8195']);
+  });
+
+  it('Moderno escuro: neutros escuros, título clareado e tom suave rumo ao chão escuro (frio, como no protótipo)', () => {
+    const v = tokensDoSite(site({ style: 'modern', background: 'dark' })).cssVars as Record<string, string>;
+    expect([v['--m-ground'], v['--m-surface'], v['--m-line'], v['--m-text'], v['--m-muted']])
+      .toEqual(['#0E1016', '#171A22', '#272B36', '#B8BCCB', '#868B9C']);
+    expect(v['--m-head']).toBe(v['--brand-text']);
+    // Protótipo: color-mix(brand, #0E1016 62%). Nunca o card quente do Clássico (#1E1A15), que acinzenta a marca.
+    expect(v['--m-brand-soft']).toBe(misturarCom('#0E1A6B', '#0E1016', 0.62));
+    expect(v['--m-brand-soft']).not.toBe(misturarCom('#0E1A6B', v['--site-card'], 0.62));
+  });
+
+  it('Moderno escuro: o tom do itálico (--m-head-2) também passa pelo clarearAte e fica legível', () => {
+    const v = tokensDoSite({ branding: { primary_color: '#1B2A4A' }, appearance: { style: 'modern', background: 'dark' } } as never).cssVars as Record<string, string>;
+    expect(v['--m-head-2']).toBe(clarearAte(misturarCom('#1B2A4A', '#FFFFFF', 0.22), v['--site-card']));
+    for (const fundo of [v['--m-surface'], v['--m-ground']]) expect(contrasteEntre(v['--m-head-2'], fundo)!).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it('Moderno claro com marca clara: --m-head e --m-head-2 escurecem até 4,5:1 sobre o chão e o card; marca escura não muda', () => {
+    for (const cor of ['#FDE899', '#C9A227']) {
+      const v = tokensDoSite({ branding: { primary_color: cor }, appearance: { style: 'modern' } } as never).cssVars as Record<string, string>;
+      for (const k of ['--m-head', '--m-head-2']) {
+        for (const fundo of ['#FFFFFF', '#F2F3F6']) expect(contrasteEntre(v[k], fundo)!, `${cor} ${k} ${fundo}`).toBeGreaterThanOrEqual(4.5);
+      }
+      expect(v['--brand']).toBe(cor);
+    }
+    const d = tokensDoSite(site({ style: 'modern' })).cssVars as Record<string, string>;
+    expect(d['--m-head']).toBe('#0E1A6B');
+    expect(d['--m-head-2']).toBe(misturarCom('#0E1A6B', '#FFFFFF', 0.22));
+  });
+
+  it('--m-accent-on-brand: o destaque quando contrasta 3:1 com a marca; sem destaque salvo (accent = marca), o texto da marca', () => {
+    const v = (branding: Record<string, string>) => tokensDoSite({ branding, appearance: { style: 'modern' } } as never).cssVars as Record<string, string>;
+    expect(v({ primary_color: '#0E1A6B' })['--m-accent-on-brand']).toBe(textoSobre('#0E1A6B'));
+    expect(v({ primary_color: '#0E1A6B', accent_color: '#0E1A6B' })['--m-accent-on-brand']).toBe('#FFFFFF');
+    expect(v({ primary_color: '#0E1A6B', accent_color: '#C8A24A' })['--m-accent-on-brand']).toBe('#C8A24A');
+    expect(v({ primary_color: '#FDE899' })['--m-accent-on-brand']).toBe(textoSobre('#FDE899'));
+    expect(Object.keys(tokensDoSite(site()).cssVars)).not.toContain('--m-accent-on-brand');
+  });
+
+  it('Instrument Serif só com Moderno + destaque em itálico', () => {
+    const tem = (a?: Record<string, unknown>) => tokensDoSite(site(a)).fontHrefs.some(h => h.includes('Instrument+Serif'));
+    expect(tem({ style: 'modern', heading_highlight: 'italic' })).toBe(true);
+    expect(tem({ style: 'modern', heading_highlight: 'accent' })).toBe(false);
+    expect(tem({ style: 'classic', heading_highlight: 'italic' })).toBe(false);
+    expect(tem()).toBe(false);
   });
 });

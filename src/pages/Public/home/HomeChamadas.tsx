@@ -1,9 +1,10 @@
-import type { ReactNode } from 'react';
+import type { AnchorHTMLAttributes, ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { I, Ic, type SiteInfo } from '../portalShared';
 import type { HomeConfig } from '@/features/siteBuilder/public/homeConfig';
 import { chamadasVisiveis, type CartaoChamada } from '@/features/siteBuilder/public/vitrines';
 import { useCtxDoSite } from '@/features/siteBuilder/public/useTenantDoSite';
+import { semAsteriscos } from '@/features/siteBuilder/public/destaqueNoTitulo';
 
 /* ────────────────────────────────────────────────────────────────────────────
    Faixa de chamadas da home: os caminhos que não são "quero comprar"
@@ -20,14 +21,15 @@ import { useCtxDoSite } from '@/features/siteBuilder/public/useTenantDoSite';
    fundo claro com cartões brancos.
 ──────────────────────────────────────────────────────────────────────────── */
 
-const ICONE: Record<CartaoChamada['icone'], string> = {
+export const ICONE: Record<CartaoChamada['icone'], string> = {
   bank: I.bank, sign: I.sign, search: I.search, whatsapp: I.chat, link: I.link, page: I.page,
 };
 
-function Destino({ c, className, children }: { c: CartaoChamada; className: string; children: ReactNode }) {
-  if (c.externo) return <a href={c.to} target="_blank" rel="noopener noreferrer" className={className}>{children}</a>;
-  if (c.to.startsWith('#')) return <a href={c.to} className={className}>{children}</a>;
-  return <Link to={c.to} className={className}>{children}</Link>;
+/** Link da chamada (externo em outra aba, âncora da página ou rota do site). `resto` = atributos a mais (o Moderno marca o cartão principal). */
+export function Destino({ c, className, children, ...resto }: { c: CartaoChamada; className: string; children: ReactNode } & AnchorHTMLAttributes<HTMLAnchorElement>) {
+  if (c.externo) return <a {...resto} href={c.to} target="_blank" rel="noopener noreferrer" className={className}>{children}</a>;
+  if (c.to.startsWith('#')) return <a {...resto} href={c.to} className={className}>{children}</a>;
+  return <Link {...resto} to={c.to} className={className}>{children}</Link>;
 }
 
 interface Props { site: SiteInfo; tenant: string; home: HomeConfig }
@@ -48,7 +50,7 @@ export default function HomeChamadas({ site, tenant, home }: Props) {
             <Destino key={c.key} c={c}
               className="group flex flex-col items-start rounded-[20px] bg-white p-6 text-left ring-1 ring-black/[0.06] shadow-[0_8px_24px_-16px_rgba(0,0,0,0.25)] transition-shadow hover:shadow-[0_20px_40px_-16px_rgba(0,0,0,0.25)]">
               <span className="text-[var(--brand)]"><Ic d={ICONE[c.icone]} s={26} /></span>
-              <h3 className="mt-4 font-[var(--display)] text-[22px] font-semibold text-[var(--ink)]">{c.title}</h3>
+              <h3 className="mt-4 font-[var(--display)] text-[22px] font-semibold text-[var(--ink)]">{semAsteriscos(c.title)}</h3>
               {c.text && <p className="mt-2 max-w-xs text-[14px] leading-relaxed text-neutral-600">{c.text}</p>}
               <span className="mt-5 inline-flex items-center gap-2 text-[14px] font-semibold text-[var(--brand)]">
                 {c.button} <Ic d={I.arrow} s={16} />
@@ -74,7 +76,7 @@ export default function HomeChamadas({ site, tenant, home }: Props) {
         {cards.map(c => (
           <Destino key={c.key} c={c} className="group flex flex-col items-start text-left">
             <span className="text-white/80"><Ic d={ICONE[c.icone]} s={26} /></span>
-            <h3 className="mt-4 font-[var(--display)] text-[22px] font-semibold text-white">{c.title}</h3>
+            <h3 className="mt-4 font-[var(--display)] text-[22px] font-semibold text-white">{semAsteriscos(c.title)}</h3>
             {c.text && <p className="mt-2 max-w-xs text-[14px] leading-relaxed text-white/70">{c.text}</p>}
             <span className="mt-5 inline-flex items-center gap-2 border-b-2 border-white/60 pb-1 text-[14px] font-semibold text-white transition-colors group-hover:border-[var(--brand)]">
               {c.button} <Ic d={I.arrow} s={16} />

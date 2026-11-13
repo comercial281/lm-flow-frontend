@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import type { PortalProperty } from '@/pages/Public/portalShared';
 import { resolverHome } from './homeConfig';
-import { atalhosAutomaticos, atalhosDoSite } from './maisBuscados';
+import { atalhosAutomaticos, atalhosDoSite, fotoDoAtalho } from './maisBuscados';
 import { abasVisiveis } from './vitrines';
 import type { AbaId } from './homeConfig';
 
@@ -78,5 +78,55 @@ describe('mais buscados', () => {
       expect(atalhosDoSite(auto, items, [])).toEqual(atalhosAutomaticos(items));
       expect(atalhosDoSite(auto, items, []).length).toBeGreaterThan(0);
     });
+  });
+});
+
+describe('fotoDoAtalho (mosaico do Moderno)', () => {
+  const foto = (code: string, type: string, hood: string, created_at: string | null, cover_url: string | null, o: Partial<PortalProperty> = {}) =>
+    p(code, type, hood, { created_at, cover_url, ...o });
+
+  it('foto = capa do imóvel mais recente que bate com o atalho; total = todos que batem', () => {
+    const items = [
+      foto('1', 'apartment', 'Cambuí', '2026-01-01T00:00:00Z', 'https://x/1.jpg'),
+      foto('2', 'apartment', 'Cambuí', '2026-03-01T00:00:00Z', 'https://x/2.jpg'),
+      foto('3', 'apartment', 'Cambuí', '2026-05-01T00:00:00Z', null), // mais recente, mas sem foto
+      foto('4', 'house', 'Cambuí', '2026-09-01T00:00:00Z', 'https://x/4.jpg'), // outro tipo
+      foto('5', 'apartment', 'Centro', '2026-09-01T00:00:00Z', 'https://x/5.jpg'), // outro bairro
+    ];
+    expect(fotoDoAtalho({ label: 'Apartamentos em Cambuí', query: 'type=apartment&neighborhood=Cambu%C3%AD' }, items))
+      .toEqual({ url: 'https://x/2.jpg', total: 3 });
+  });
+
+  it('nenhum imóvel com foto: null', () => {
+    const items = [foto('1', 'house', 'Centro', '2026-01-01T00:00:00Z', null), foto('2', 'house', 'Centro', null, '')];
+    expect(fotoDoAtalho({ label: 'Casas', query: 'type=house' }, items)).toBeNull();
+  });
+
+  it('lê a busca do atalho como a página de busca: aluguel, preço máximo e cidade', () => {
+    const items = [
+      foto('V', 'house', 'Centro', '2026-09-01T00:00:00Z', 'https://x/v.jpg', { sale_price_from: 300000 }),
+      foto('L1', 'house', 'Centro', '2026-01-01T00:00:00Z', 'https://x/l1.jpg', { transaction_type: 'rent', rent_price_from: 2000 }),
+      foto('L2', 'house', 'Centro', '2026-02-01T00:00:00Z', 'https://x/l2.jpg', { transaction_type: 'rent', rent_price_from: 9000 }),
+    ];
+    expect(fotoDoAtalho({ label: 'Aluguel até 3 mil', query: 'tab=rent&type=house&city=campinas&price_max=3000' }, items))
+      .toEqual({ url: 'https://x/l1.jpg', total: 1 });
+  });
+
+  it('atalho sem aba segue a aba da busca: site só de aluguel lê como Alugar', () => {
+    const items = [
+      foto('L1', 'apartment', 'Cambuí', '2026-01-01T00:00:00Z', 'https://x/l1.jpg', { transaction_type: 'rent', rent_price_from: 2000 }),
+      foto('L2', 'apartment', 'Cambuí', '2026-04-01T00:00:00Z', 'https://x/l2.jpg', { transaction_type: 'rent', rent_price_from: 3000 }),
+      foto('L3', 'apartment', 'Cambuí', '2026-06-01T00:00:00Z', null, { transaction_type: 'season', rent_price_from: 500 }),
+    ];
+    const [atalho] = atalhosAutomaticos(items);
+    expect(atalho.query).not.toContain('tab=');
+    expect(fotoDoAtalho(atalho, items, ['rent'])).toEqual({ url: 'https://x/l2.jpg', total: 3 });
+    // Sem as abas, a regra de antes (Comprar) continua.
+    expect(fotoDoAtalho(atalho, items)).toBeNull();
+  });
+
+  it('aba da query que o site não mostra cai na primeira visível, como na busca', () => {
+    const items = [foto('L1', 'house', 'Centro', '2026-01-01T00:00:00Z', 'https://x/l1.jpg', { transaction_type: 'rent', rent_price_from: 2000 })];
+    expect(fotoDoAtalho({ label: 'Casas', query: 'tab=sale&type=house' }, items, ['rent'])).toEqual({ url: 'https://x/l1.jpg', total: 1 });
   });
 });

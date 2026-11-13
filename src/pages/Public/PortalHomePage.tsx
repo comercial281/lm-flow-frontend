@@ -19,6 +19,7 @@ import HomeComoFunciona from './home/HomeComoFunciona';
 import HomeChamadas from './home/HomeChamadas';
 import HomeAtendimento from './home/HomeAtendimento';
 import HomeMaisBuscados from './home/HomeMaisBuscados';
+import InicioModerno from './moderno/InicioModerno';
 
 /* ────────────────────────────────────────────────────────────────────────────
    Portal Imobiliário — HOME (Produto A do LM Flow)
@@ -94,6 +95,31 @@ export default function PortalHomePage() {
   // Seções liga/desliga (Site Builder). Ausência da flag = visível (retrocompat).
   const showStats = site.sections?.stats !== false;
   const showLeadCapture = site.sections?.lead_capture !== false;
+
+  // Moderno: o Início é outro desenho, com os mesmos dados; o contato continua daqui.
+  if (aparencia.style === 'modern') {
+    return (
+      <div style={cssVars} data-fundo={fundo} className="min-h-screen bg-[var(--m-ground)] text-[var(--m-text)] antialiased">
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        {fontHrefs.map(h => <link key={h} href={h} rel="stylesheet" />)}
+        <PortalHeader site={site} tenant={tenant!} onHome abas={abas} />
+        <InicioModerno
+          site={site} home={home} items={items} tenant={tenant!} abas={abas}
+          cities={cities} hoods={hoods} types={types} wa={wa}
+          captura={{
+            ligada: showLeadCapture,
+            nome: leadName, aoMudarNome: setLeadName,
+            telefone: leadPhone, aoMudarTelefone: v => { setLeadPhone(v); if (leadPhoneErr) setLeadPhoneErr(false); },
+            telefoneInvalido: leadPhoneErr,
+            finalidade: leadFinalidade, aoMudarFinalidade: setEscolhaFinalidade,
+            enviado: leadSent, enviadoNaPrevia, erro: erroEnvio,
+            enviar: submitLead,
+          }}
+        />
+        <PortalFooter site={site} tenant={tenant!} onHome abas={abas} />
+      </div>
+    );
+  }
 
   return (
     <div style={cssVars} data-fundo={fundo} className="min-h-screen bg-[var(--paper)] text-[var(--ink)] antialiased">

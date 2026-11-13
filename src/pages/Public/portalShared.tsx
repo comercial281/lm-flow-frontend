@@ -18,10 +18,13 @@ import { abasVisiveis } from '@/features/siteBuilder/public/vitrines';
 import { seloDaFase } from '@/features/properties/listingKind';
 import { ORDENS, ROTULO_ORDEM, ehOrdem, type Ordem } from '@/features/siteBuilder/public/listaConfig';
 import {
-  CORES_DO_FUNDO, TEXTO_RODAPE_FABRICA, clarearAte, fontesDoSite, logoNaCapa, logoNaSuperficie, resolverAparencia, textoSobre,
+  CORES_DO_FUNDO, TEXTO_RODAPE_FABRICA, clarearAte, contrasteEntre, escurecerAte, fontesDoSite, logoNaCapa, logoNaSuperficie, misturarCom, resolverAparencia, textoSobre,
   type Aparencia, type Superficie,
 } from '@/features/siteBuilder/public/aparenciaConfig';
 import { ATRIBUTO_DO_TOPO, useLogoPousado } from '@/features/siteBuilder/public/logoPousado';
+import { semAsteriscos } from '@/features/siteBuilder/public/destaqueNoTitulo';
+import TopoModerno from './moderno/TopoModerno';
+import RodapeModerno from './moderno/RodapeModerno';
 
 // Tipos e filtro moram em filtros.ts (sem ciclo com vitrines.ts); reexportados aqui.
 export { filterProperties };
@@ -220,6 +223,28 @@ export function tokensDoSite(site: SiteInfo) {
   // um `<link>` só, como sempre. Cada página põe um `<link>` por endereço.
   const { fontStack, displayStack, hrefs: fontHrefs } = fontesDoSite(site.branding?.font_family, aparencia.heading_font);
   const cores = CORES_DO_FUNDO[aparencia.background];
+  const escuro = aparencia.background === 'dark';
+  const moderno = aparencia.style === 'modern';
+  // Moderno: tons derivados em hex (sem color-mix) e o itálico do destaque.
+  if (moderno && aparencia.heading_highlight === 'italic') {
+    fontHrefs.push('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@1&display=swap');
+  }
+  const tonsModernos = moderno ? {
+    ['--m-brand-2' as string]: misturarCom(brand, '#FFFFFF', 0.14),
+    // No escuro, rumo ao chão escuro do Moderno (#0E1016, o --m-ground), como no protótipo: o card quente do Clássico acinzentava a marca.
+    ['--m-brand-soft' as string]: escuro ? misturarCom(brand, '#0E1016', 0.62) : misturarCom(brand, '#FFFFFF', 0.9),
+    // No claro, a marca escurece até 4,5:1 sobre o chão (#F2F3F6, o mais escuro dos dois claros; o card #FFFFFF então passa também).
+    ['--m-head' as string]: escuro ? clarearAte(brand, cores.card) : escurecerAte(brand, '#F2F3F6'),
+    // O tom do itálico do destaque é texto: no escuro passa pelo clarearAte, como o --m-head.
+    ['--m-head-2' as string]: escuro ? clarearAte(misturarCom(brand, '#FFFFFF', 0.22), cores.card) : escurecerAte(misturarCom(brand, '#FFFFFF', 0.22), '#F2F3F6'),
+    // Destaque sobre a cor principal (rodapé, faixa de chamadas): o accent só se contrasta 3:1 com a marca; senão (sem destaque salvo, accent = marca) o texto da marca.
+    ['--m-accent-on-brand' as string]: (contrasteEntre(accent, brand) ?? 0) >= 3 ? accent : textoSobre(brand),
+    ['--m-ground' as string]: escuro ? '#0E1016' : '#F2F3F6',
+    ['--m-surface' as string]: escuro ? '#171A22' : '#FFFFFF',
+    ['--m-line' as string]: escuro ? '#272B36' : '#E2E4EB',
+    ['--m-text' as string]: escuro ? '#B8BCCB' : '#4B5064',
+    ['--m-muted' as string]: escuro ? '#868B9C' : '#7C8195',
+  } : {};
   const cssVars = {
     ['--brand' as string]: brand,
     ['--accent' as string]: accent,
@@ -231,6 +256,7 @@ export function tokensDoSite(site: SiteInfo) {
     ['--brand-ink' as string]: textoSobre(brand),
     ['--brand-text' as string]: aparencia.background === 'dark' ? clarearAte(brand, cores.card) : brand,
     ['--display' as string]: displayStack,
+    ...tonsModernos,
     fontFamily: fontStack,
   } as CSSProperties;
   const fundo = aparencia.background === 'dark' ? 'escuro' as const : undefined;
@@ -338,14 +364,14 @@ export function usePublishedArticlesExist(tenant?: string): boolean {
 }
 
 /* ── Card de imóvel ──────────────────────────────────────────────────────── */
-interface PropsDoCartao {
+export interface PropsDoCartao {
   tenant: string; p: PortalProperty; wa?: string | null; tab?: PortalTab;
   /** Cartão grande (Aparência › cartões grandes, só nas vitrines): foto 3:2 maior e título de 24px. */
   grande?: boolean;
 }
 
 /** O que o cartão e a linha mostram: os dois formatos dizem a mesma coisa. */
-function dadosDoCartao({ p, wa, tab }: PropsDoCartao, ctx: CtxDoSite) {
+export function dadosDoCartao({ p, wa, tab }: PropsDoCartao, ctx: CtxDoSite) {
   // Empreendimento mostra a fase (e a entrega) no lugar de "Destaque" e, se for
   // exclusivo, os dois selos. Na revenda Exclusivo vence Destaque.
   const dev = p.listing_kind === 'development';
@@ -370,7 +396,7 @@ function dadosDoCartao({ p, wa, tab }: PropsDoCartao, ctx: CtxDoSite) {
  * Selo na foto do cartão. `destaque` (Destaque, Exclusivo) vai na cor de
  * destaque da Aparência; `fase` (a do empreendimento) segue na cor principal.
  */
-interface SeloDoCartao { texto: string; tipo: 'fase' | 'destaque' }
+export interface SeloDoCartao { texto: string; tipo: 'fase' | 'destaque' }
 
 /** Estilo do selo na cor de destaque, com o texto branco ou escuro pelo contraste. */
 export const ESTILO_SELO_DESTAQUE: CSSProperties = { background: 'var(--accent)', color: 'var(--accent-ink)' };
@@ -558,6 +584,23 @@ export function Select({ value, onChange, label, options }: { value: string; onC
     </div>
   );
 }
+/**
+ * Lista do site público sem moldura (a busca da capa do Moderno): a mesma
+ * lista nativa do `Select`, com o `id` pro rótulo de fora, a opção vazia
+ * escrita por quem chama (vazia = filtro fora da busca) e a aparência de quem
+ * chama. O `<select>` do site público mora só neste arquivo (conferir-padrao,
+ * decisão 3 da spec do Seletor).
+ */
+export function ListaDoSite({ id, value, onChange, vazio, options, className }: {
+  id: string; value: string; onChange: (v: string) => void; vazio: string; options: [string, string][]; className: string;
+}) {
+  return (
+    <select id={id} value={value} onChange={e => onChange(e.target.value)} className={className}>
+      <option value="">{vazio}</option>
+      {options.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+    </select>
+  );
+}
 export function Stat({ n, label }: { n: string; label: string }) {
   return (
     <div>
@@ -591,7 +634,7 @@ export function socialEntries(site: SiteInfo): { key: string; label: string; url
 }
 
 /** Ícone de cada rede na faixa de cima "só ícones"; rede sem ícone próprio usa o de link. */
-const ICONE_DA_REDE: Record<string, string> = {
+export const ICONE_DA_REDE: Record<string, string> = {
   instagram: I.instagram, facebook: I.facebook, youtube: I.youtube, linkedin: I.linkedin, tiktok: I.tiktok,
 };
 
@@ -610,7 +653,21 @@ const ICONE_DA_REDE: Record<string, string> = {
  * dentro do bloco que gruda no topo devolve o defeito de 17/09 — telefone e
  * e-mail numa faixa escura presa na tela durante a rolagem inteira.
  */
-function PortalTopBar({ site, ap }: { site: SiteInfo; ap: Aparencia }) {
+/** Classes da faixa: a do Clássico (escura) e a do Moderno (linha discreta, sem fundo). */
+const ROUPA_DA_FAIXA = {
+  classico: {
+    faixa: 'hidden border-b border-white/10 bg-[var(--ink)] text-white/75 sm:block',
+    linha: 'mx-auto flex h-9 max-w-6xl items-center justify-between gap-6 px-4 text-[12.5px] sm:px-6',
+    link: 'transition-colors hover:text-white',
+  },
+  moderno: {
+    faixa: 'hidden px-4 pt-2.5 text-[var(--m-muted)] sm:block',
+    linha: 'mx-auto flex max-w-[1120px] flex-wrap items-center justify-between gap-x-6 gap-y-1 text-[12.5px]',
+    link: 'transition-colors hover:text-[var(--m-head)]',
+  },
+} as const;
+
+export function PortalTopBar({ site, ap, moderno = false }: { site: SiteInfo; ap: Aparencia; moderno?: boolean }) {
   const modo = ap.top_bar;
   const phone = site.contact?.phone?.trim();
   const emailCadastrado = site.contact?.email?.trim();
@@ -619,18 +676,19 @@ function PortalTopBar({ site, ap }: { site: SiteInfo; ap: Aparencia }) {
   if (modo === 'hidden' || (!phone && !email && socials.length === 0)) return null;
   const soIcones = modo === 'icons';
   const dica = (rotulo: string) => (soIcones ? { 'aria-label': rotulo, title: rotulo } : {});
+  const roupa = ROUPA_DA_FAIXA[moderno ? 'moderno' : 'classico'];
 
   return (
-    <div className="hidden border-b border-white/10 bg-[var(--ink)] text-white/75 sm:block">
-      <div className="mx-auto flex h-9 max-w-6xl items-center justify-between gap-6 px-4 text-[12.5px] sm:px-6">
+    <div className={roupa.faixa}>
+      <div className={roupa.linha}>
         <div className="flex items-center gap-5">
           {phone && (
-            <a href={`tel:${onlyDigits(phone)}`} className="inline-flex items-center gap-1.5 transition-colors hover:text-white" {...dica(`Ligar para ${phone}`)}>
+            <a href={`tel:${onlyDigits(phone)}`} className={`inline-flex items-center gap-1.5 ${roupa.link}`} {...dica(`Ligar para ${phone}`)}>
               <Ic d={I.phone} s={13} />{soIcones ? null : <> {phone}</>}
             </a>
           )}
           {email && (
-            <a href={`mailto:${email}`} className="inline-flex items-center gap-1.5 transition-colors hover:text-white" {...dica(`E-mail: ${email}`)}>
+            <a href={`mailto:${email}`} className={`inline-flex items-center gap-1.5 ${roupa.link}`} {...dica(`E-mail: ${email}`)}>
               <Ic d={I.mail} s={13} />{soIcones ? null : <> {email}</>}
             </a>
           )}
@@ -638,7 +696,7 @@ function PortalTopBar({ site, ap }: { site: SiteInfo; ap: Aparencia }) {
         {socials.length > 0 && (
           <div className="flex items-center gap-4">
             {socials.map(sn => (
-              <a key={sn.key} href={sn.url} target="_blank" rel="noreferrer" className="transition-colors hover:text-white" {...dica(sn.label)}>
+              <a key={sn.key} href={sn.url} target="_blank" rel="noreferrer" className={roupa.link} {...dica(sn.label)}>
                 {soIcones ? <Ic d={ICONE_DA_REDE[sn.key] ?? I.link} s={14} /> : sn.label}
               </a>
             ))}
@@ -657,23 +715,23 @@ const abaVisivel = (abas?: AbaId[]) => (aba: AbaId) => !abas || abas.includes(ab
  * Um link do menu, no topo ou no rodapé: página do site pelo roteador, seção
  * da home por âncora simples e endereço de fora em outra aba.
  */
-function LinkDoMenuEl({ l, cls, onClick }: { l: LinkDoMenu; cls?: string; onClick?: () => void }) {
+export function LinkDoMenuEl({ l, cls, onClick }: { l: LinkDoMenu; cls?: string; onClick?: () => void }) {
   if (l.externo) return <a href={l.href} target="_blank" rel="noopener noreferrer" onClick={onClick} className={cls}>{l.rotulo}</a>;
   if (l.ancora) return <a href={l.href} onClick={onClick} className={cls}>{l.rotulo}</a>;
   return <Link to={l.href} onClick={onClick} className={cls}>{l.rotulo}</Link>;
 }
 
-interface PropsDaMoldura { site: SiteInfo; tenant: string; onHome?: boolean; abas?: AbaId[] }
+export interface PropsDaMoldura { site: SiteInfo; tenant: string; onHome?: boolean; abas?: AbaId[] }
 
 /** Logo (a normal ou a clara, já escolhida) ou o nome quando não há logo. */
-function MarcaDoSite({ site, logo, logoCls, nomeCls }: { site: SiteInfo; logo: string | null; logoCls: string; nomeCls: string }) {
+export function MarcaDoSite({ site, logo, logoCls, nomeCls }: { site: SiteInfo; logo: string | null; logoCls: string; nomeCls: string }) {
   return logo
     ? <img src={logo} alt={site.name || 'Portal'} className={logoCls} />
     : <span className={nomeCls}>{site.name || 'Imóveis'}</span>;
 }
 
 /** Botão verde do WhatsApp do topo e do rodapé. */
-function BotaoWhatsApp({ href, rotuloSempre = false }: { href: string; rotuloSempre?: boolean }) {
+export function BotaoWhatsApp({ href, rotuloSempre = false }: { href: string; rotuloSempre?: boolean }) {
   return (
     <a
       href={href} target="_blank" rel="noreferrer"
@@ -813,14 +871,16 @@ export function FaixaDePrevia({ site }: { site: SiteInfo }) {
   );
 }
 
-/** Topo do site. Em manutenção, o topo enxuto (só logo e WhatsApp). */
+/** Topo do site. Em manutenção, o topo enxuto (só logo e WhatsApp); no Moderno, o topo dele. */
 export function PortalHeader(props: PropsDaMoldura) {
-  return estaEmManutencao(props.site) ? <TopoEmManutencao {...props} /> : <TopoCompleto {...props} />;
+  if (estaEmManutencao(props.site)) return <TopoEmManutencao {...props} />;
+  return resolverAparencia(props.site.appearance).style === 'modern' ? <TopoModerno {...props} /> : <TopoCompleto {...props} />;
 }
 
-/** Rodapé do site. Em manutenção, o rodapé enxuto (só logo e WhatsApp). */
+/** Rodapé do site. Em manutenção, o rodapé enxuto (só logo e WhatsApp); no Moderno, o bloco dele. */
 export function PortalFooter(props: PropsDaMoldura) {
-  return estaEmManutencao(props.site) ? <RodapeEmManutencao {...props} /> : <RodapeCompleto {...props} />;
+  if (estaEmManutencao(props.site)) return <RodapeEmManutencao {...props} />;
+  return resolverAparencia(props.site.appearance).style === 'modern' ? <RodapeModerno {...props} /> : <RodapeCompleto {...props} />;
 }
 
 /**
@@ -830,9 +890,12 @@ export function PortalFooter(props: PropsDaMoldura) {
  * de volta apontando a seção. Nos estilos "na cor principal" e "branco" ele é
  * sólido sempre, inclusive sobre a capa.
  */
-function TopoCompleto({ site, tenant, onHome = false, abas }: PropsDaMoldura) {
+/**
+ * Menu do celular (topo Clássico e Moderno): aberto ou fechado; o Escape fecha
+ * e devolve o foco ao botão que o abriu (`botaoDoMenu` vai no sanduíche).
+ */
+export function useMenuDoCelular() {
   const [menuOpen, setMenuOpen] = useState(false);
-  // Escape fecha o menu do celular e devolve o foco ao botão que o abriu.
   const botaoDoMenu = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     if (!menuOpen) return;
@@ -844,14 +907,15 @@ function TopoCompleto({ site, tenant, onHome = false, abas }: PropsDaMoldura) {
     document.addEventListener('keydown', aoTeclar);
     return () => document.removeEventListener('keydown', aoTeclar);
   }, [menuOpen]);
-  // Só na home: antes de rolar, o cabeçalho flutua sobre a capa.
-  const [scrolled, setScrolled] = useState(!onHome);
-  const wa = site.contact?.whatsapp;
-  const waHref = wa ? `https://wa.me/${onlyDigits(wa)}` : null;
-  const hasBlog = usePublishedArticlesExist(tenant);
-  const ctx = useCtxDoSite(tenant);
-  const ap = resolverAparencia(site.appearance);
+  return { menuOpen, setMenuOpen, botaoDoMenu };
+}
 
+/**
+ * Rolou a home? Só na home: antes de rolar, o topo flutua sobre a capa. Fora
+ * dela é sempre "rolado" (o topo sólido desde o início).
+ */
+export function useRolouNaHome(onHome: boolean): boolean {
+  const [scrolled, setScrolled] = useState(!onHome);
   useEffect(() => {
     if (!onHome) { setScrolled(true); return; }
     const onScroll = () => setScrolled(window.scrollY > 24);
@@ -859,6 +923,48 @@ function TopoCompleto({ site, tenant, onHome = false, abas }: PropsDaMoldura) {
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
   }, [onHome]);
+  return scrolled;
+}
+
+/** Classes do menu do celular: as do Clássico (de fábrica) ou as do Moderno. */
+export interface RoupaDoMenuDoCelular { nav: string; link: string; contatos: string }
+const MENU_DO_CELULAR_CLASSICO: RoupaDoMenuDoCelular = {
+  nav: 'border-t border-black/[0.06] bg-[var(--paper)] px-4 py-3 lg:hidden',
+  link: 'block py-2.5 text-[15px] font-medium text-neutral-700',
+  contatos: 'mt-2 border-t border-black/[0.06] pt-2 text-[13px] text-neutral-500',
+};
+
+/** O menu que o sanduíche abre no celular: os links do topo e, embaixo, telefone e e-mail. */
+export function MenuDoCelular({ site, nav, fechar, roupa = MENU_DO_CELULAR_CLASSICO }: {
+  site: SiteInfo; nav: LinkDoMenu[]; fechar: () => void; roupa?: RoupaDoMenuDoCelular;
+}) {
+  return (
+    <nav id="menu-do-celular" aria-label="Menu principal" className={roupa.nav}>
+      {nav.map(l => <LinkDoMenuEl key={l.chave} l={l} cls={roupa.link} onClick={fechar} />)}
+      {(site.contact?.phone || site.contact?.email) && (
+        <div className={roupa.contatos}>
+          {site.contact?.phone && (
+            <a href={`tel:${onlyDigits(site.contact.phone)}`} className="block py-1.5">{site.contact.phone}</a>
+          )}
+          {site.contact?.email && (
+            <a href={`mailto:${site.contact.email}`} className="block py-1.5">{site.contact.email}</a>
+          )}
+        </div>
+      )}
+    </nav>
+  );
+}
+
+function TopoCompleto({ site, tenant, onHome = false, abas }: PropsDaMoldura) {
+  // Escape fecha o menu do celular e devolve o foco ao botão que o abriu.
+  const { menuOpen, setMenuOpen, botaoDoMenu } = useMenuDoCelular();
+  // Só na home: antes de rolar, o cabeçalho flutua sobre a capa.
+  const scrolled = useRolouNaHome(onHome);
+  const wa = site.contact?.whatsapp;
+  const waHref = wa ? `https://wa.me/${onlyDigits(wa)}` : null;
+  const hasBlog = usePublishedArticlesExist(tenant);
+  const ctx = useCtxDoSite(tenant);
+  const ap = resolverAparencia(site.appearance);
 
   // O menu (tela Menus): sem menu_config ou com o de fábrica, os links de
   // antes do C3, na mesma ordem (abas, Sobre, Contato, Financiamento, Anuncie,
@@ -888,7 +994,6 @@ function TopoCompleto({ site, tenant, onHome = false, abas }: PropsDaMoldura) {
 
   // Menu em maiúsculas (Aparência): caixa alta, espaçado e 13px no lugar dos 14px.
   const desktopCls = ap.menu_style === 'caps' ? roupa.link.replace('text-[14px]', 'text-[13px] uppercase tracking-[0.14em]') : roupa.link;
-  const mobileCls = 'block py-2.5 text-[15px] font-medium text-neutral-700';
 
   return (
     <>
@@ -958,21 +1063,7 @@ function TopoCompleto({ site, tenant, onHome = false, abas }: PropsDaMoldura) {
             </div>
           </div>
 
-          {menuOpen && (
-            <nav id="menu-do-celular" aria-label="Menu principal" className="border-t border-black/[0.06] bg-[var(--paper)] px-4 py-3 lg:hidden">
-              {nav.map(l => <LinkDoMenuEl key={l.chave} l={l} cls={mobileCls} onClick={() => setMenuOpen(false)} />)}
-              {(site.contact?.phone || site.contact?.email) && (
-                <div className="mt-2 border-t border-black/[0.06] pt-2 text-[13px] text-neutral-500">
-                  {site.contact?.phone && (
-                    <a href={`tel:${onlyDigits(site.contact.phone)}`} className="block py-1.5">{site.contact.phone}</a>
-                  )}
-                  {site.contact?.email && (
-                    <a href={`mailto:${site.contact.email}`} className="block py-1.5">{site.contact.email}</a>
-                  )}
-                </div>
-              )}
-            </nav>
-          )}
+          {menuOpen && <MenuDoCelular site={site} nav={nav} fechar={() => setMenuOpen(false)} />}
         </header>
       </div>
     </>
@@ -999,7 +1090,7 @@ function LinkDoRodapeEl({ l }: { l: LinkDoMenu }) {
  * lista própria (Sobre nós, Blog, Contato, Anuncie, Financiamento), sem as
  * páginas criadas. Vale enquanto o menu é o de fábrica (`menuPersonalizado`).
  */
-function linksDoRodapeDeAntes(site: SiteInfo, abas: AbaId[] | undefined, hasBlog: boolean, ctx: CtxDoSite, onHome: boolean) {
+export function linksDoRodapeDeAntes(site: SiteInfo, abas: AbaId[] | undefined, hasBlog: boolean, ctx: CtxDoSite, onHome: boolean) {
   const showStats = site.sections?.stats !== false;
   const showLeadCapture = site.sections?.lead_capture !== false;
   const sectionHref = (id: string) => (onHome ? `#${id}` : caminhoDoSite(ctx, `/#${id}`));
@@ -1025,7 +1116,7 @@ function linksDoRodapeDeAntes(site: SiteInfo, abas: AbaId[] | undefined, hasBlog
  * Contato, Financiamento, Anuncie, páginas, Blog e os externos), cada coluna
  * na ordem do menu. No compacto, o menu inteiro na ordem dele.
  */
-function linksDoRodapeDoMenu(menu: LinkDoMenu[]) {
+export function linksDoRodapeDoMenu(menu: LinkDoMenu[]) {
   return {
     imoveis: menu.filter(l => ehAba(l.chave)),
     institucional: menu.filter(l => !ehAba(l.chave)),
@@ -1037,7 +1128,7 @@ function linksDoRodapeDoMenu(menu: LinkDoMenu[]) {
  * "feito com LM Flow": fica sempre, discreto, com o link pro site do LM Flow.
  * O cliente não tira (não há opção na Aparência).
  */
-function CreditoDoRodape({ nome, creci }: { nome?: string; creci?: string | null }) {
+export function CreditoDoRodape({ nome, creci }: { nome?: string; creci?: string | null }) {
   const linha = linhaDoCreci(creci);
   return (
     <>
@@ -1085,7 +1176,7 @@ function RodapeCompleto({ site, tenant, onHome = false, abas }: PropsDaMoldura) 
         </div>
         <div className="border-t border-black/[0.06]">
           <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-6 gap-y-1 px-4 py-4 text-[12px] text-neutral-400 sm:px-6">
-            <p className="whitespace-pre-line text-neutral-500">{frase}</p>
+            <p className="whitespace-pre-line text-neutral-500">{semAsteriscos(frase)}</p>
             <p><CreditoDoRodape nome={site.name} creci={site.creci} /></p>
           </div>
         </div>
@@ -1100,7 +1191,7 @@ function RodapeCompleto({ site, tenant, onHome = false, abas }: PropsDaMoldura) 
           {logo.url
             ? <img src={logo.url} alt={site.name || ''} className="h-9 w-auto max-w-[150px] object-contain" />
             : <span className="font-[var(--display)] text-lg font-semibold">{site.name || 'Imóveis'}</span>}
-          <p className={`mt-3 max-w-xs text-[13px] leading-relaxed text-neutral-500${ap.footer_text ? ' whitespace-pre-line' : ''}`}>{frase}</p>
+          <p className={`mt-3 max-w-xs text-[13px] leading-relaxed text-neutral-500${ap.footer_text ? ' whitespace-pre-line' : ''}`}>{semAsteriscos(frase)}</p>
         </div>
         {imoveis.length > 0 && (
           <FooterCol title="Imóveis">

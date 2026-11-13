@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   APARENCIA_FABRICA, DEGRADE_DA_CAPA_FABRICA, FONTES_DO_SITE, TINTA_ESCURA,
-  clarearAte, contrasteEntre, filtroDaCapa, fonteDoSite, fontesDoSite, logoNaCapa, logoNaSuperficie, resolverAparencia, textoSobre,
+  clarearAte, escurecerAte, contrasteEntre, filtroDaCapa, filtroDaCapaModerna, fonteDoSite, fontesDoSite, logoNaCapa, logoNaSuperficie, misturarCom, resolverAparencia, textoSobre,
 } from './aparenciaConfig';
 
 describe('resolverAparencia', () => {
@@ -13,6 +13,7 @@ describe('resolverAparencia', () => {
       background: 'light', header_style: 'transparent', logo_light_url: null, top_bar: 'two_phones',
       hero_height: 'half', hero_overlay: 45, footer_layout: 'columns', footer_text: null,
       heading_font: null, menu_style: 'normal', hero_layout: 'photo', card_style: 'standard', logo_position: 'header',
+      style: 'classic', heading_highlight: 'accent',
     });
   });
 
@@ -22,6 +23,18 @@ describe('resolverAparencia', () => {
     expect(resolverAparencia({ heading_font: 'Comic Sans', menu_style: 'small', hero_layout: 'video', card_style: 'huge', logo_position: 'HERO' }))
       .toEqual(APARENCIA_FABRICA);
     expect(resolverAparencia({ heading_font: 42 }).heading_font).toBeNull();
+  });
+
+  it('style e heading_highlight: fábrica classic/accent, válidos ficam, o resto volta', () => {
+    expect(resolverAparencia({}).style).toBe('classic');
+    expect(resolverAparencia({}).heading_highlight).toBe('accent');
+    const ap = resolverAparencia({ style: 'modern', heading_highlight: 'italic' });
+    expect(ap.style).toBe('modern');
+    expect(ap.heading_highlight).toBe('italic');
+    expect(resolverAparencia({ heading_highlight: 'none' }).heading_highlight).toBe('none');
+    for (const lixo of ['MODERN', ['modern'], 1, 'bold']) {
+      expect(resolverAparencia({ style: lixo, heading_highlight: lixo })).toEqual(APARENCIA_FABRICA);
+    }
   });
 
   it('aceita cada opção válida', () => {
@@ -34,6 +47,7 @@ describe('resolverAparencia', () => {
       background: 'dark', header_style: 'brand', logo_light_url: 'https://cdn.x/clara.png', top_bar: 'icons',
       hero_height: 'full', hero_overlay: 60, footer_layout: 'compact', footer_text: 'Imóveis em Campinas desde 1990.',
       heading_font: 'Playfair Display', menu_style: 'caps', hero_layout: 'split', card_style: 'large', logo_position: 'hero',
+      style: 'classic', heading_highlight: 'accent',
     });
   });
 
@@ -68,6 +82,24 @@ describe('resolverAparencia', () => {
     const comEmoji = resolverAparencia({ footer_text: `${'a'.repeat(199)}🏠🏠` }).footer_text!;
     expect(comEmoji).toBe(`${'a'.repeat(199)}🏠`);
     expect([...comEmoji]).toHaveLength(200);
+  });
+});
+
+describe('filtroDaCapaModerna', () => {
+  const filtro = (t: string, m: string, p: string, e: string) =>
+    `linear-gradient(180deg, rgba(8,10,22,${t}) 0%, rgba(8,10,22,0) 26%, rgba(8,10,22,${m}) 56%, rgba(8,10,22,${p}) 100%), `
+    + `linear-gradient(90deg, rgba(8,10,22,${e}) 0%, rgba(8,10,22,0) 60%)`;
+
+  it('45 (fábrica): o degradê do protótipo, com o pé escuro e nunca o fundo do site', () => {
+    expect(filtroDaCapaModerna(45)).toBe(filtro('0.315', '0.203', '0.65', '0.27'));
+    expect(filtroDaCapaModerna(45)).not.toContain('var(--');
+  });
+
+  it('0 ainda escurece o pé (0,2); 80 prende o pé em 0,9; lixo vale a fábrica', () => {
+    expect(filtroDaCapaModerna(0)).toBe(filtro('0', '0', '0.2', '0'));
+    expect(filtroDaCapaModerna(80)).toBe(filtro('0.56', '0.36', '0.9', '0.48'));
+    expect(filtroDaCapaModerna(200)).toBe(filtroDaCapaModerna(80));
+    expect(filtroDaCapaModerna(Number.NaN)).toBe(filtroDaCapaModerna(45));
   });
 });
 
@@ -184,10 +216,36 @@ describe('clarearAte', () => {
   });
 });
 
+describe('escurecerAte', () => {
+  it.each(['#FDE899', '#C9A227', '#FACC15'])('%s escurece até 4,5:1 sobre o fundo claro', cor => {
+    const c = escurecerAte(cor, '#F2F3F6');
+    expect(contrasteEntre(c, '#F2F3F6')).toBeGreaterThanOrEqual(4.5);
+    expect(c).not.toBe(cor);
+  });
+  it('cor que já dá o contraste volta como está; cor que não é hex vira a tinta escura', () => {
+    expect(escurecerAte('#0E1A6B', '#FFFFFF')).toBe('#0E1A6B');
+    expect(escurecerAte('rebeccapurple', '#FFFFFF')).toBe('#17140F');
+  });
+});
+
 describe('logoNaSuperficie na cor principal', () => {
   const comClara = { ...APARENCIA_FABRICA, logo_light_url: 'https://cdn.x/clara.png' };
   it('a clara só quando a cor principal é escura (texto branco)', () => {
     expect(logoNaSuperficie('https://cdn.x/logo.png', comClara, 'marca', '#0E7C5A').clara).toBe(true);
     expect(logoNaSuperficie('https://cdn.x/logo.png', comClara, 'marca', '#FACC15')).toEqual({ url: 'https://cdn.x/logo.png', clara: false });
+  });
+});
+
+describe('misturarCom', () => {
+  const canal = (c: number, alvo: number, t: number) => Math.round(c + (alvo - c) * t).toString(16).padStart(2, '0');
+  it('mistura canal a canal em direção ao alvo e devolve #RRGGBB maiúsculo', () => {
+    const esperado = `#${[0x0E, 0x1A, 0x6B].map(c => canal(c, 255, 0.14)).join('')}`.toUpperCase();
+    expect(misturarCom('#0E1A6B', '#FFFFFF', 0.14)).toBe(esperado);
+    expect(misturarCom('#0E1A6B', '#FFFFFF', 0)).toBe('#0E1A6B');
+    expect(misturarCom('#0E1A6B', '#FFFFFF', 1)).toBe('#FFFFFF');
+  });
+  it('cor ou alvo que não é hex volta a cor como veio', () => {
+    expect(misturarCom('rgb(1,2,3)', '#FFFFFF', 0.5)).toBe('rgb(1,2,3)');
+    expect(misturarCom('#0E1A6B', 'red', 0.5)).toBe('#0E1A6B');
   });
 });
