@@ -7,11 +7,14 @@ import { ROTULO_ABA, type BuscaDaCapa, type CampoDeEscolha } from '../home/useBu
    Busca da capa do Moderno (protótipo `.search`, `.s-tabs`, `.field`): abas e
    código na linha de cima, um campo por filtro com ícone e rótulo, e "Buscar"
    na cor principal. Estado e destino são os do Clássico (`useBuscaDaCapa`).
-   Os campos são caixinhas iguais numa grade (0 a 8 campos, ver
-   `gradeDaBusca`); o "Buscar" tem a altura de uma caixinha e fica no fim da
-   última linha. Celular: um por linha e o botão largo no fim. Sobre a foto:
-   bloco na superfície do site com sombra. Capa dividida: com borda, 2 por
-   linha e o botão embaixo, largo.
+   Sobre a foto (o padrão do protótipo): uma barra só na superfície do site,
+   com sombra. Campos lado a lado numa linha, separados por linhas finas
+   (--m-line), cada um com ícone redondo, rótulo pequeno e valor em negrito
+   (corta com reticências, nunca quebra), e "Buscar" no fim da mesma linha,
+   da altura dela. Até 1023px: 3 por linha (linhas só entre campos da mesma
+   linha, e uma linha entre as fileiras) e o botão largo no fim; no celular,
+   um por linha com linha entre eles e o botão largo no fim. Capa dividida:
+   com borda, campos em caixinhas 2 por linha e o botão embaixo, largo.
 ──────────────────────────────────────────────────────────────────────────── */
 
 const CASA = 'M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1Z';
@@ -24,28 +27,15 @@ const ICONE: Record<CampoDeEscolha, string> = {
 
 const juntar = (...cls: (string | false)[]) => cls.filter(Boolean).join(' ');
 
-/** Altura única de campo e botão: o "Buscar" tem a altura de um campo. */
-const ALTURA = 'min-h-[60px]';
-/** Cada campo é uma caixinha igual (fundo e borda do site, cantos redondos): sem linha solta entre campos. */
-const CAIXA = `flex ${ALTURA} min-w-0 items-center gap-3 rounded-[14px] border border-[var(--m-line)] bg-[var(--m-ground)] px-3 py-2 transition-colors focus-within:border-[var(--brand)]`;
-/** 2 por linha (tablet; e a capa dividida sempre): o último campo que sobra sozinho ocupa a linha inteira. */
-const SOBRA_EM_DUAS = 'sm:[&:nth-child(odd):last-child]:col-span-2';
-const SOBRA_SO_NO_TABLET = `${SOBRA_EM_DUAS} lg:[&:nth-child(odd):last-child]:col-span-1`;
-/** Classes fixas (o Tailwind só gera o que está escrito). */
-const COLUNAS_NO_COMPUTADOR = ['', 'lg:grid-cols-1', 'lg:grid-cols-2', 'lg:grid-cols-3', 'lg:grid-cols-4'];
-
-/**
- * Colunas no computador: até 4 por linha, linhas equilibradas (6 campos = 3 + 3,
- * 5 = 3 + 2, 7 = 4 + 3, 8 = 4 + 4). Com a última linha cheia, o "Buscar" fica
- * numa coluna própria à direita: numa linha só, ao lado dos campos; com mais
- * de uma, da altura de todas elas (sem caixa vazia em cima dele). Com uma vaga
- * sobrando, ele ocupa a vaga (no fim da última linha). Nunca fica solto entre linhas.
- */
-function gradeDaBusca(n: number): { colunas: number; botaoNaGrade: boolean } {
-  if (n <= 0) return { colunas: 0, botaoNaGrade: false };
-  const colunas = Math.ceil(n / Math.ceil(n / 4));
-  return { colunas, botaoNaGrade: n % colunas !== 0 };
-}
+/** Divisórias da barra: só entre campos da mesma linha (e entre as linhas, até 1023px). */
+const DIVISORIAS = [
+  'border-[var(--m-line)]',
+  'max-sm:[&:not(:first-child)]:border-t',
+  'sm:max-lg:[&:not(:nth-child(3n+1))]:border-l sm:max-lg:[&:nth-child(n+4)]:border-t',
+  'lg:[&:not(:first-child)]:border-l',
+].join(' ');
+/** Colunas até 1023px: até 3 (classes fixas: o Tailwind só gera o que está escrito). */
+const COLUNAS_NO_TABLET = ['', 'sm:grid-cols-1', 'sm:grid-cols-2', 'sm:grid-cols-3'];
 
 export default function BuscaModerna({ busca, abas, dividida = false }: { busca: BuscaDaCapa; abas: AbaId[]; dividida?: boolean }) {
   const id = useId();
@@ -53,23 +43,6 @@ export default function BuscaModerna({ busca, abas, dividida = false }: { busca:
   // Uma aba só não é escolha: a fileira some (como no Clássico).
   const comAbas = abas.length > 1;
   const n = selects.length;
-  // Capa dividida (coluna estreita): 2 por linha e o botão largo embaixo.
-  const { colunas, botaoNaGrade: naGrade } = gradeDaBusca(n);
-  // Coluna própria com mais de uma linha de campos: o botão estica pela altura toda.
-  const ocupaAsLinhas = !dividida && !naGrade && n > colunas;
-  const botaoNaGrade = !dividida && naGrade;
-  const botao = (cls: string) => (
-    <button
-      type="submit"
-      className={juntar(
-        `inline-flex ${ALTURA} items-center justify-center gap-2 rounded-[14px] bg-[var(--brand)] px-6 text-[14px] font-semibold text-[var(--brand-ink)] transition-transform hover:-translate-y-px`,
-        cls,
-      )}
-    >
-      <Ic d={I.search} s={16} /> Buscar
-    </button>
-  );
-
   return (
     <form
       role="search" onSubmit={runSearch}
@@ -108,37 +81,45 @@ export default function BuscaModerna({ busca, abas, dividida = false }: { busca:
         </div>
       )}
 
-      <div className={juntar('flex flex-col gap-2', !dividida && 'lg:flex-row')}>
-        {n > 0 && (
-          <div
-            data-campos-da-busca
-            className={juntar('grid min-w-0 flex-1 grid-cols-1 gap-2 sm:grid-cols-2', !dividida && COLUNAS_NO_COMPUTADOR[colunas])}
-          >
-            {selects.map(c => {
-              const o = opcoes[c];
-              const campoId = `${id}-${c}`;
-              return (
-                <div key={c} data-campo-da-busca className={`${CAIXA} ${dividida ? SOBRA_EM_DUAS : SOBRA_SO_NO_TABLET}`}>
-                  <span className="grid h-[34px] w-[34px] flex-none place-items-center rounded-full bg-[var(--m-brand-soft)] text-[var(--m-head)]">
-                    <Ic d={ICONE[c]} s={16} />
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <label htmlFor={campoId} className="block text-[11.5px] leading-[1.2] text-[var(--m-muted)]">{o.label}</label>
-                    <ListaDoSite
-                      id={campoId} value={valores[c] ?? ''} onChange={set(c)} vazio="Qualquer" options={o.options}
-                      className="w-full min-w-0 appearance-none truncate border-0 bg-transparent pt-0.5 text-[14px] font-semibold text-[var(--m-head)] outline-none [&_option]:text-[#17140F]"
-                    />
-                  </div>
-                </div>
-              );
-            })}
-            {botaoNaGrade && botao('w-full')}
-          </div>
+      <div
+        data-campos-da-busca
+        className={juntar(
+          'grid min-w-0 grid-cols-1',
+          dividida ? 'gap-2 sm:grid-cols-2' : `${COLUNAS_NO_TABLET[Math.min(n, 3)] ?? ''} lg:flex lg:items-stretch`,
         )}
-        {!botaoNaGrade && botao(juntar(
-          dividida ? 'w-full' : `w-full lg:w-auto lg:px-7 ${ocupaAsLinhas ? 'lg:self-stretch' : 'lg:self-end'}`,
-          !dividida && n === 0 && 'lg:ml-auto',
-        ))}
+      >
+        {selects.map(c => {
+          const o = opcoes[c];
+          const campoId = `${id}-${c}`;
+          return (
+            <div key={c} data-campo-da-busca className={juntar(
+              'flex min-w-0 items-center px-3 py-2',
+              // Na barra, 2,5 de vão: 6 campos cabem a partir de 1100px com o rótulo inteiro.
+              dividida ? 'gap-3 rounded-[14px] border border-[var(--m-line)]' : `gap-2.5 lg:min-w-0 lg:flex-1 lg:basis-0 ${DIVISORIAS}`,
+            )}>
+              <span className="grid h-[34px] w-[34px] flex-none place-items-center rounded-full bg-[var(--m-brand-soft)] text-[var(--m-head)]">
+                <Ic d={ICONE[c]} s={16} />
+              </span>
+              <div className="min-w-0 flex-1">
+                <label htmlFor={campoId} className="block truncate text-[11.5px] leading-[1.2] text-[var(--m-muted)]">{o.label}</label>
+                <ListaDoSite
+                  id={campoId} value={valores[c] ?? ''} onChange={set(c)} vazio="Qualquer" options={o.options}
+                  className="w-full min-w-0 appearance-none truncate border-0 bg-transparent pt-0.5 text-[14px] font-semibold text-[var(--m-head)] outline-none [&_option]:text-[#17140F]"
+                />
+              </div>
+            </div>
+          );
+        })}
+        <button
+          type="submit"
+          className={juntar(
+            'inline-flex items-center justify-center gap-2 rounded-2xl bg-[var(--brand)] px-6 py-[15px] text-[14px] font-semibold text-[var(--brand-ink)] transition-transform hover:-translate-y-px sm:col-span-full',
+            !dividida && 'mt-2 lg:ml-1 lg:mt-0 lg:flex-none',
+            !dividida && n === 0 && 'lg:ml-auto',
+          )}
+        >
+          <Ic d={I.search} s={16} /> Buscar
+        </button>
       </div>
     </form>
   );

@@ -212,48 +212,43 @@ describe('Início do Moderno', () => {
     expect(fileira.firstElementChild!.querySelector('h1')).not.toBeNull();
   });
 
-  it('busca com 6 campos: 6 caixinhas iguais em 3 colunas, e o Buscar numa coluna própria da altura das 2 linhas', async () => {
+  it('busca com 6 campos: uma barra só, 6 campos lado a lado (largura igual, sem caixinha) e o Buscar no fim da mesma linha', async () => {
     await abrirHome(
       moderno({ home: { search: { fields: ['type', 'city', 'neighborhood', 'price', 'bedrooms', 'parking', 'code'] } } } as SiteInfo),
       [imovel('R1')],
     );
-    const grade = document.querySelector<HTMLElement>('[data-campos-da-busca]')!;
-    const caixas = grade.querySelectorAll('[data-campo-da-busca]');
-    expect(caixas).toHaveLength(6);
-    expect(grade.className.split(/\s+/)).toContain('lg:grid-cols-3');
-    // Toda caixinha com a mesma classe (sem linha solta entre campos).
-    expect(new Set(Array.from(caixas, c => c.className)).size).toBe(1);
-    expect(caixas[0].className).not.toMatch(/border-l/);
+    const linha = document.querySelector<HTMLElement>('[data-campos-da-busca]')!;
+    const campos = linha.querySelectorAll('[data-campo-da-busca]');
+    expect(campos).toHaveLength(6);
+    // Computador: uma linha (flex), cada campo com a mesma parte da largura e podendo encolher.
+    expect(linha.className.split(/\s+/)).toEqual(expect.arrayContaining(['lg:flex', 'sm:grid-cols-3', 'grid-cols-1']));
+    expect(new Set(Array.from(campos, c => c.className)).size).toBe(1);
+    const cls = campos[0].className.split(/\s+/);
+    expect(cls).toEqual(expect.arrayContaining(['lg:flex-1', 'lg:basis-0', 'min-w-0', 'lg:[&:not(:first-child)]:border-l', 'sm:max-lg:[&:not(:nth-child(3n+1))]:border-l', 'max-sm:[&:not(:first-child)]:border-t']));
+    // Padrão do protótipo: campo sem fundo nem caixinha arredondada.
+    expect(campos[0].className).not.toMatch(/rounded|bg-\[var\(--m-ground\)\]/);
+    // Rótulo e valor cortam com reticências.
+    expect(campos[0].querySelector('label')!.className).toContain('truncate');
 
     const buscar = screen.getByRole('button', { name: /Buscar/ });
-    expect(grade.contains(buscar)).toBe(false);
-    expect(grade.nextElementSibling).toBe(buscar);
-    // Grade fechada cheia em 2 linhas: o botão estica pelas duas (sem caixa vazia em cima dele).
-    expect(buscar.className.split(/\s+/)).toEqual(expect.arrayContaining(['lg:self-stretch', 'min-h-[60px]', 'w-full', 'items-center']));
-    expect(buscar.className.split(/\s+/)).not.toContain('lg:self-end');
-    expect(buscar.parentElement!.className.split(/\s+/)).toContain('lg:flex-row');
-    expect(caixas[0].className.split(/\s+/)).toContain('min-h-[60px]');
-    // Código continua na fileira das abas.
+    expect(linha.lastElementChild).toBe(buscar);
+    expect(buscar.className.split(/\s+/)).toEqual(expect.arrayContaining(['lg:flex-none', 'sm:col-span-full', 'bg-[var(--brand)]', 'text-[var(--brand-ink)]']));
     expect(screen.getByLabelText('Código do imóvel')).toBeTruthy();
   });
 
-  it('busca com 4 campos: 4 caixinhas numa linha só e o Buscar ao lado; com 5, o Buscar ocupa a vaga no fim da última linha', async () => {
+  it('busca com 4 e com 2 campos: todos na mesma linha com o Buscar no fim; até 1023px, no máximo 3 por linha', async () => {
     await abrirHome(moderno({ home: { search: { fields: ['type', 'city', 'price', 'bedrooms', 'code'] } } } as SiteInfo), [imovel('R1')]);
-    let grade = document.querySelector<HTMLElement>('[data-campos-da-busca]')!;
-    expect(grade.querySelectorAll('[data-campo-da-busca]')).toHaveLength(4);
-    expect(grade.className.split(/\s+/)).toContain('lg:grid-cols-4');
-    const buscar4 = screen.getByRole('button', { name: /Buscar/ });
-    expect(grade.nextElementSibling).toBe(buscar4);
-    // Uma linha só: altura de uma caixinha, no pé.
-    expect(buscar4.className.split(/\s+/)).toContain('lg:self-end');
-    expect(buscar4.className.split(/\s+/)).not.toContain('lg:self-stretch');
+    let linha = document.querySelector<HTMLElement>('[data-campos-da-busca]')!;
+    expect(linha.querySelectorAll('[data-campo-da-busca]')).toHaveLength(4);
+    expect(linha.className.split(/\s+/)).toContain('sm:grid-cols-3');
+    expect(linha.lastElementChild).toBe(screen.getByRole('button', { name: /Buscar/ }));
     cleanup();
 
-    await abrirHome(moderno({ home: { search: { fields: ['type', 'city', 'neighborhood', 'price', 'bedrooms'] } } } as SiteInfo), [imovel('R1')]);
-    grade = document.querySelector<HTMLElement>('[data-campos-da-busca]')!;
-    expect(grade.querySelectorAll('[data-campo-da-busca]')).toHaveLength(5);
-    expect(grade.className.split(/\s+/)).toContain('lg:grid-cols-3');
-    expect(grade.lastElementChild).toBe(screen.getByRole('button', { name: /Buscar/ }));
+    await abrirHome(moderno({ home: { search: { fields: ['type', 'city'] } } } as SiteInfo), [imovel('R1')]);
+    linha = document.querySelector<HTMLElement>('[data-campos-da-busca]')!;
+    expect(linha.querySelectorAll('[data-campo-da-busca]')).toHaveLength(2);
+    expect(linha.className.split(/\s+/)).toContain('sm:grid-cols-2');
+    expect(linha.lastElementChild).toBe(screen.getByRole('button', { name: /Buscar/ }));
   });
 
   it('capa sobre a foto de ponta a ponta: sem recuo nem cantos, com a altura da tela em Tela cheia; o conteúdo na coluna da página', async () => {
