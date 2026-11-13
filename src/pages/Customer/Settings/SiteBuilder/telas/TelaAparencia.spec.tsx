@@ -114,7 +114,7 @@ describe('TelaAparencia · visual do site (C3)', () => {
     expect(enviado).toMatchObject(esperado);
     // O objeto inteiro: as outras chaves continuam na fábrica.
     expect(Object.keys(enviado).sort()).toEqual(['background', 'card_style', 'footer_layout', 'footer_text', 'header_style',
-      'heading_font', 'hero_height', 'hero_layout', 'hero_overlay', 'logo_light_url', 'logo_position', 'menu_style', 'top_bar']);
+      'heading_font', 'heading_highlight', 'hero_height', 'hero_layout', 'hero_overlay', 'logo_light_url', 'logo_position', 'menu_style', 'style', 'top_bar']);
     expect(botao.getAttribute('aria-pressed')).toBe('true');
   });
 
