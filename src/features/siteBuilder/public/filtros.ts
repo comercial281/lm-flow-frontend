@@ -14,7 +14,7 @@ export interface PortalProperty {
   transaction_type: string;
   property_type: string;
   display_price?: string;
-  icon_summary?: { bedrooms?: number; bathrooms?: number; suites?: number; parking?: number; useful_area_m2?: number };
+  icon_summary?: { bedrooms?: number; bathrooms?: number; suites?: number; parking?: number; useful_area_m2?: number; total_area_m2?: number };
   address?: { city?: string; neighborhood?: string };
   cover_url?: string | null;
   featured?: boolean;
@@ -30,6 +30,8 @@ export interface PortalProperty {
   created_at?: string | null;
   /** Minha Casa Minha Vida: só `true` conta (selo no cartão, regra da vitrine). Servidor velho não manda. */
   mcmv?: boolean | null;
+  /** Nome do condomínio, só quando o imóvel está ligado a um. Ausente = sem condomínio. */
+  condominium_name?: string | null;
 }
 
 /* Filtros aplicados na busca (dirigidos pela URL na página de busca). */
@@ -45,6 +47,12 @@ export interface PortalFilters {
   suites?: string;
   parking?: string;
   stage?: string;
+  /** Texto livre: procura no condomínio, no bairro e na cidade. */
+  place?: string;
+  /** Condomínio exato (sem diferença de maiúscula e acento). */
+  condominium?: string;
+  /** Área mínima em m² (útil; cai na total). */
+  area?: string;
 }
 
 const RENT_TX = ['rent', 'season', 'sale_rent'];
@@ -119,13 +127,26 @@ export function filtrosDaUrl(params: URLSearchParams, tab: PortalTab): PortalFil
     parking: params.get('parking') || '',
     // Fase escondida em Alugar não filtra (um ?stage= velho na URL zeraria a lista).
     stage: tab === 'rent' ? '' : params.get('stage') || '',
+    place: params.get('place') || '',
+    condominium: params.get('condominium') || '',
+    area: params.get('area') || '',
   };
+}
+
+/** Área do imóvel em m²: a útil se houver, senão a total; `null` se nenhuma foi preenchida. */
+export function areaDoImovel(p: PortalProperty): number | null {
+  const util = p.icon_summary?.useful_area_m2 ?? 0;
+  if (util > 0) return util;
+  const total = p.icon_summary?.total_area_m2 ?? 0;
+  return total > 0 ? total : null;
 }
 
 export function filterProperties(items: PortalProperty[], f: PortalFilters): PortalProperty[] {
   const num = (v?: string) => (v && !Number.isNaN(Number(v)) ? Number(v) : null);
   const pMin = num(f.price_min), pMax = num(f.price_max);
   const cidade = normalizarTexto(f.city), bairro = normalizarTexto(f.neighborhood);
+  const condominio = normalizarTexto(f.condominium), lugar = normalizarTexto(f.place);
+  const areaMin = num(f.area);
   return items.filter(p => {
     // Lançamentos = só empreendimento. Alugar = revenda de Locação, Temporada e
     // Venda + Locação; Comprar = tudo que não é só de aluguel (inclui
@@ -138,6 +159,12 @@ export function filterProperties(items: PortalProperty[], f: PortalFilters): Por
     if (f.type && p.property_type !== f.type && rotuloTipo(p.property_type) !== rotuloTipo(f.type)) return false;
     if (cidade && normalizarTexto(p.address?.city) !== cidade) return false;
     if (bairro && normalizarTexto(p.address?.neighborhood) !== bairro) return false;
+    if (condominio && normalizarTexto(p.condominium_name) !== condominio) return false;
+    if (lugar && ![p.condominium_name, p.address?.neighborhood, p.address?.city].some(t => normalizarTexto(t).includes(lugar))) return false;
+    if (areaMin != null) {
+      const area = areaDoImovel(p);
+      if (area == null || area < areaMin) return false;
+    }
     if (f.bedrooms && (p.icon_summary?.bedrooms ?? 0) < Number(f.bedrooms)) return false;
     if (f.suites && (p.icon_summary?.suites ?? 0) < Number(f.suites)) return false;
     if (f.parking && (p.icon_summary?.parking ?? 0) < Number(f.parking)) return false;
