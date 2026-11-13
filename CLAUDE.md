@@ -6823,7 +6823,8 @@ Quarto modelo do site, **Moderno** (spec `LM FLOW/specs/2026-11-13-modelo-site-m
 5. **Rodapé "Compacto" mantém os links do menu** numa linha, como o compacto do Clássico: a opção muda o arranjo, não tira navegação.
 6. **Chamadas no jeito Foto sem foto própria usam a foto da capa** (`fotoDaCapa`), não a faixa escura do Clássico: o Moderno nasce em Foto e quase ninguém tem foto de chamada. Custo: a mesma foto duas vezes no Início.
 7. A busca da capa usa `ListaDoSite` (lista nativa do site público, que mora só no `portalShared`, exceção do `conferir-padrao`).
-8. As decisões das seções 10 e 11 da spec (nome, cor de destaque como padrão, fonte única, site inteiro, cartão de foto inteira nas vitrines, Chamadas em Foto e Como funciona desligado, faixa de números de hoje, "Não achou?" com os campos de hoje).
+8. **Conferência visual de 13/11:** o menu do celular aberto segue a cor da barra (branco no topo branco, cor principal no topo na cor, mesmo no fundo escuro); as setas da vitrine só aparecem quando os cartões não cabem na largura; o Atendimento sem foto e sem selo vira uma coluna só; o rodapé sem nenhum contato não mostra a coluna Atendimento; o tom suave do escuro (`--m-brand-soft`) mistura a principal com `#0E1016`, como no protótipo.
+9. As decisões das seções 10 e 11 da spec (nome, cor de destaque como padrão, fonte única, site inteiro, cartão de foto inteira nas vitrines, Chamadas em Foto e Como funciona desligado, faixa de números de hoje, "Não achou?" com os campos de hoje).
 
 **Volta de versão:** voltar a tela é seguro (ninguém está no Moderno; com `style: classic` nada muda, e o asterisco volta a aparecer no Clássico só se alguém já tiver escrito um).
 
