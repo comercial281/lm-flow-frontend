@@ -118,19 +118,22 @@ export default function RodapeModerno({ site, tenant, onHome = false, abas }: Pr
               )}
             </nav>
           )}
-          <Coluna titulo="Atendimento">
-            {site.contact?.address && <li className="whitespace-pre-line">{site.contact.address}</li>}
-            {waHref && (
-              <li>
-                <a href={waHref} target="_blank" rel="noreferrer" aria-label="Falar no WhatsApp"
-                  className="inline-flex items-center gap-2 rounded-full px-3.5 py-2 text-[13px] font-semibold text-white" style={{ background: '#25D366' }}>
-                  <Ic d={I.wa} s={15} /> WhatsApp
-                </a>
-              </li>
-            )}
-            {site.contact?.phone && <li><a href={`tel:${onlyDigits(site.contact.phone)}`} className={LINK}>{site.contact.phone}</a></li>}
-            {site.contact?.email && <li><a href={`mailto:${site.contact.email}`} className={`${LINK} break-all`}>{site.contact.email}</a></li>}
-          </Coluna>
+          {/* Sem nenhum contato, a coluna não sai (o título sozinho ficaria vazio). */}
+          {(site.contact?.address || waHref || site.contact?.phone || site.contact?.email) && (
+            <Coluna titulo="Atendimento">
+              {site.contact?.address && <li className="whitespace-pre-line">{site.contact.address}</li>}
+              {waHref && (
+                <li>
+                  <a href={waHref} target="_blank" rel="noreferrer" aria-label="Falar no WhatsApp"
+                    className="inline-flex items-center gap-2 rounded-full px-3.5 py-2 text-[13px] font-semibold text-white" style={{ background: '#25D366' }}>
+                    <Ic d={I.wa} s={15} /> WhatsApp
+                  </a>
+                </li>
+              )}
+              {site.contact?.phone && <li><a href={`tel:${onlyDigits(site.contact.phone)}`} className={LINK}>{site.contact.phone}</a></li>}
+              {site.contact?.email && <li><a href={`mailto:${site.contact.email}`} className={`${LINK} break-all`}>{site.contact.email}</a></li>}
+            </Coluna>
+          )}
         </div>
       )}
 

@@ -90,6 +90,14 @@ describe('RodapeModerno', () => {
     expect(raiz(clara)!.querySelector('p')!.className).not.toContain('text-white');
   });
 
+  it('sem endereço, WhatsApp, telefone nem e-mail: sem a coluna Atendimento vazia', async () => {
+    const c = await rodape(moderno({}, { contact: { whatsapp: '', phone: '', email: '', address: '' } }));
+    expect(within(raiz(c)!).queryByText('Atendimento')).toBeNull();
+    cleanup();
+    const comTelefone = await rodape(moderno({}, { contact: { phone: '(11) 3333-4444' } }));
+    expect(within(raiz(comTelefone)!).getByText('Atendimento')).toBeInTheDocument();
+  });
+
   it('Clássico e manutenção: sem o rodapé do Moderno', async () => {
     expect(raiz(await rodape({ ...base, appearance: { ...APARENCIA_FABRICA } }))).toBeNull();
     cleanup();
