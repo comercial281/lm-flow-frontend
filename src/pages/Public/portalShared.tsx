@@ -561,7 +561,7 @@ const ROUPA_DO_ORDENAR = {
   // Moderno (protótipo `.sort`): só as variáveis do Moderno; a opção da lista nativa em escuro fixo.
   moderno: {
     rotulo: 'flex items-center gap-2 text-[13px] text-[var(--m-muted)]',
-    lista: 'appearance-none rounded-full border border-[var(--m-line)] bg-[var(--m-surface)] py-2 pl-3.5 pr-8 text-[13px] font-semibold text-[var(--m-head)] outline-none focus:border-[var(--brand)] [&_option]:text-[#17140F]',
+    lista: 'appearance-none rounded-full border border-[var(--m-line)] bg-[var(--m-surface)] py-2 pl-3.5 pr-8 text-[13px] font-semibold text-[var(--m-head)] outline-none focus:border-[var(--brand)] [&_option]:bg-[#FFFFFF] [&_option]:text-[#17140F]',
     seta: 'pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[var(--m-muted)]',
   },
 };

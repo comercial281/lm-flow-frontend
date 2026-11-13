@@ -18,7 +18,7 @@ const ROTULO_ABA: Record<PortalTab, string> = { sale: 'Comprar', rent: 'Alugar',
 export const DORMITORIOS: [string, string][] = [['1', '1+'], ['2', '2+'], ['3', '3+'], ['4', '4+']];
 export const MAIS_DE: [string, string][] = [['1', '1+'], ['2', '2+'], ['3', '3+']];
 
-const LISTA = 'w-full min-w-0 appearance-none truncate border-0 bg-transparent pt-0.5 text-[13.5px] font-semibold text-[var(--m-head)] outline-none [&_option]:text-[#17140F]';
+const LISTA = 'w-full min-w-0 appearance-none truncate border-0 bg-transparent pt-0.5 text-[13.5px] font-semibold text-[var(--m-head)] outline-none [&_option]:bg-[#FFFFFF] [&_option]:text-[#17140F]';
 
 function Campo({ rotulo, value, onChange, options }: { rotulo: string; value: string; onChange: (v: string) => void; options: [string, string][] }) {
   const id = useId();

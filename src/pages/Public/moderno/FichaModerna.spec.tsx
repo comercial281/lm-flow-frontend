@@ -263,3 +263,19 @@ describe('Ficha no Moderno: alvos de rolagem', () => {
     expect(document.getElementById('video-e-tour')!.className).toContain('scroll-mt-[140px]');
   });
 });
+
+describe('Ficha no Moderno: achados da revisão', () => {
+  it('vídeo sozinho ocupa a coluna (sem o teto do Clássico, que conta a página inteira)', async () => {
+    await abrirFicha(MODERNO, { video_url: 'https://www.youtube.com/watch?v=abcdefghijk' });
+    const player = screen.getByTitle('Vídeo do imóvel').parentElement!;
+    expect(player.className).not.toContain('max-w-[calc(100%-400px)]');
+  });
+
+  it('faixa de números sem célula vazia: a última linha estica (flex-wrap)', async () => {
+    await abrirFicha(MODERNO, { bathrooms: 2 });
+    const faixa = screen.getByText('dormitórios').closest('dl')!;
+    expect(faixa.className).toContain('flex-wrap');
+    expect(faixa.className).not.toContain('grid-cols');
+    for (const cel of Array.from(faixa.children)) expect(cel.className).toContain('flex-1');
+  });
+});

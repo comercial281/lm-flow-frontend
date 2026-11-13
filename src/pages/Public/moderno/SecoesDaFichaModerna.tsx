@@ -153,7 +153,7 @@ export default function SecoesDaFichaModerna({ prop, d, mostraBook, pedirBook }:
 
       {temMidia && (
         <Secao titulo="Vídeo e tour virtual" id={ID_DA_MIDIA}>
-          <div className="-mt-4"><MidiaDoImovel videoUrl={prop.video_url} tourUrl={prop.virtual_tour_url} /></div>
+          <div className="-mt-4"><MidiaDoImovel videoUrl={prop.video_url} tourUrl={prop.virtual_tour_url} naColuna /></div>
         </Secao>
       )}
 

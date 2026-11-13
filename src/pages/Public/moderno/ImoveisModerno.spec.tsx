@@ -128,3 +128,11 @@ describe('Imóveis no Moderno', () => {
     expect(urlAtual().get('code')).toBeNull();
   });
 });
+
+describe('Imóveis no Moderno: lista de opções no fundo escuro', () => {
+  it('as opções têm fundo branco próprio (o color-scheme escuro não deixa o texto escuro sobre escuro)', async () => {
+    await abrir([imovel('A1'), imovel('A2')]);
+    expect(lista('Tipo').className).toContain('[&_option]:bg-[#FFFFFF]');
+    expect((screen.getByLabelText('Ordenar por') as HTMLSelectElement).className).toContain('[&_option]:bg-[#FFFFFF]');
+  });
+});

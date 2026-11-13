@@ -9,7 +9,11 @@ import { embedDoTour, embedDoVideo, type MidiaDoImovel as Midia } from '@/featur
 
 interface Item { midia: NonNullable<Midia>; titulo: string; botao: string; allow: string }
 
-export default function MidiaDoImovel({ videoUrl, tourUrl }: { videoUrl?: string | null; tourUrl?: string | null }) {
+/**
+ * `naColuna`: a mídia já mora na coluna de conteúdo (ficha do Moderno), então o
+ * player sozinho não leva o teto do Clássico, que conta a página inteira.
+ */
+export default function MidiaDoImovel({ videoUrl, tourUrl, naColuna = false }: { videoUrl?: string | null; tourUrl?: string | null; naColuna?: boolean }) {
   const video = embedDoVideo(videoUrl);
   const tour = embedDoTour(tourUrl);
   const itens: Item[] = [];
@@ -24,7 +28,7 @@ export default function MidiaDoImovel({ videoUrl, tourUrl }: { videoUrl?: string
   // coluna de conteúdo da ficha (a página é `1fr 360px` com 40 px de vão) e
   // alinhado à esquerda, pra não empurrar título e preço meia tela pra baixo.
   // Com os dois, duas colunas.
-  const sozinho = players.length === 1 ? ' sm:col-span-2 lg:max-w-[calc(100%-400px)]' : '';
+  const sozinho = players.length === 1 ? (naColuna ? ' sm:col-span-2' : ' sm:col-span-2 lg:max-w-[calc(100%-400px)]') : '';
 
   return (
     <div className="mt-4 space-y-3">

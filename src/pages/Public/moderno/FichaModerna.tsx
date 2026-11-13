@@ -27,7 +27,10 @@ interface NumeroDaFaixa { n: string; rotulo: string }
 
 const plural = (n: number, um: string, varios: string) => (n > 1 ? varios : um);
 
-/** A faixa única de números do imóvel: só os que existem. */
+/**
+ * A faixa única de números do imóvel: só os que existem. Em flex-wrap, a última
+ * linha estica pra fechar (em grade, a célula vazia mostrava a cor da linha).
+ */
 function numerosDaFaixa(p: PropertyDTO): NumeroDaFaixa[] {
   return [
     p.bedrooms ? { n: String(p.bedrooms), rotulo: plural(p.bedrooms, 'dormitório', 'dormitórios') } : null,
@@ -39,8 +42,6 @@ function numerosDaFaixa(p: PropertyDTO): NumeroDaFaixa[] {
   ].filter((x): x is NumeroDaFaixa => !!x);
 }
 
-/** Colunas da faixa no computador (classes fixas: o Tailwind só gera o que está escrito). */
-const COLUNAS_DA_FAIXA = ['', 'lg:grid-cols-1', 'lg:grid-cols-2', 'lg:grid-cols-3', 'lg:grid-cols-4', 'lg:grid-cols-5', 'lg:grid-cols-6'];
 
 export default function FichaModerna({ f, prop, ficha }: { f: Ficha; prop: PropertyDTO; ficha: FichaDoImovel }) {
   const { tenant, ctx, site, manutencao, active, setActive, lightbox, setLightbox, suggestions, fontHrefs, cssVars, fundo, wa, abas, waHref, mostraBook, contato } = f;
@@ -106,9 +107,9 @@ export default function FichaModerna({ f, prop, ficha }: { f: Ficha; prop: Prope
               {prop.condominium_name && <p className="mt-1 text-[14px] text-[var(--m-muted)]">{linhaDoCondominio(prop.condominium_name)}</p>}
 
               {numeros.length > 0 && (
-                <dl className={`mt-[22px] grid grid-cols-2 gap-px overflow-hidden rounded-[20px] border border-[var(--m-line)] bg-[var(--m-line)] sm:grid-cols-3 ${COLUNAS_DA_FAIXA[numeros.length]}`}>
+                <dl className="mt-[22px] flex flex-wrap gap-px overflow-hidden rounded-[20px] border border-[var(--m-line)] bg-[var(--m-line)]">
                   {numeros.map(n => (
-                    <div key={n.rotulo} className="flex min-w-0 flex-col-reverse bg-[var(--m-surface)] px-[18px] py-4">
+                    <div key={n.rotulo} className="flex min-w-0 flex-1 basis-[120px] flex-col-reverse bg-[var(--m-surface)] px-[18px] py-4">
                       <dt className="text-[12.5px] text-[var(--m-muted)]">{n.rotulo}</dt>
                       <dd className="font-[var(--display)] text-[26px] font-semibold leading-[1.1] text-[var(--m-head)] tabular-nums">{n.n}</dd>
                     </div>
