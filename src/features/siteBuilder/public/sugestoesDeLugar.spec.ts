@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buscarNoIndice, indiceDeLugar, sugestoesDeLugar, type GrupoDeLugar } from './sugestoesDeLugar';
+import { abaDoCodigo, buscarNoIndice, indiceDeLugar, sugestoesDeLugar, type GrupoDeLugar } from './sugestoesDeLugar';
 import type { PortalProperty } from './filtros';
 
 const ORDEM: GrupoDeLugar[] = ['condominium', 'neighborhood', 'city'];
@@ -90,5 +90,34 @@ describe('indiceDeLugar', () => {
     // O teto folgado (500 ms) segura a volta ao caminho lento sem falhar com a máquina carregada.
     expect(performance.now() - inicio).toBeLessThan(500);
     expect(buscarNoIndice(indice, 'con')).toHaveLength(8);
+  });
+});
+
+/* A regra única de "é código?" da caixa de busca (capa do Moderno, capa do Clássico com o
+   lugar ligado e página de Imóveis): o texto igual ao código de um imóvel publicado. */
+describe('abaDoCodigo', () => {
+  const cat: PortalProperty[] = [
+    imovel('AP0632', { city: 'Campinas' }),
+    imovel('L77', { transaction_type: 'rent', city: 'Campinas' }),
+  ];
+
+  it('código igual (sem maiúscula, acento nem espaço sobrando) devolve a aba de agora', () => {
+    expect(abaDoCodigo(cat, 'AP0632', 'sale', ['sale', 'rent'])).toBe('sale');
+    expect(abaDoCodigo(cat, '  ap0632 ', 'sale', ['sale', 'rent'])).toBe('sale');
+  });
+
+  it('pedaço de código, nome de lugar e texto vazio não são código', () => {
+    expect(abaDoCodigo(cat, 'AP06', 'sale', ['sale', 'rent'])).toBeNull();
+    expect(abaDoCodigo(cat, 'Campinas', 'sale', ['sale', 'rent'])).toBeNull();
+    expect(abaDoCodigo(cat, '', 'sale', ['sale', 'rent'])).toBeNull();
+    expect(abaDoCodigo(cat, '   ', 'sale', ['sale', 'rent'])).toBeNull();
+  });
+
+  it('código de outra aba devolve a aba dele (entre as do site)', () => {
+    expect(abaDoCodigo(cat, 'l77', 'sale', ['sale', 'rent'])).toBe('rent');
+  });
+
+  it('a aba dele não está entre as do site: fica na de agora (o código ainda vale)', () => {
+    expect(abaDoCodigo(cat, 'l77', 'sale', ['sale'])).toBe('sale');
   });
 });

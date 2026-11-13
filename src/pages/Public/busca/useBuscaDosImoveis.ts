@@ -9,7 +9,7 @@ import { usePortalTracking } from '../usePortalTracking';
 import { useIconeDaAba } from '@/features/siteBuilder/public/useIconeDaAba';
 import { ehOrdem, resolverLista, type Ordem } from '@/features/siteBuilder/public/listaConfig';
 import { ordenarImoveis } from '@/features/siteBuilder/public/ordenar';
-import type { SugestaoDeLugar } from '@/features/siteBuilder/public/sugestoesDeLugar';
+import { abaDoCodigo, type SugestaoDeLugar } from '@/features/siteBuilder/public/sugestoesDeLugar';
 
 /* ────────────────────────────────────────────────────────────────────────────
    Lógica da página de Imóveis (busca), a mesma pros dois desenhos (Clássico e
@@ -91,7 +91,7 @@ export function useBuscaDosImoveis(tenant: string | undefined) {
   const filters: PortalFilters = useMemo(() => filtrosDaUrl(params, tab), [params, tab]);
 
   // Atualiza um ou mais filtros na URL. `replace` evita poluir o histórico
-  // (usado na digitação do código); os controles discretos empurram histórico
+  // (usado no texto do campo de lugar); os controles discretos empurram histórico
   // para o botão "voltar" restaurar o filtro anterior.
   const update = (patch: PatchDaBusca, replace = false) => {
     const next = new URLSearchParams(params);
@@ -101,9 +101,20 @@ export function useBuscaDosImoveis(tenant: string | undefined) {
     setParams(next, { replace });
   };
 
-  // Campo "Condomínio, bairro ou cidade": o texto é local enquanto se digita; Enter ou sair do
-  // campo grava `place`. Só condomínio e place da URL preenchem o campo (bairro/cidade ficam nos selects).
-  const [textoDoLugar, setTextoDoLugar] = useState(filters.condominium || filters.place || '');
+  // Aluguel tem faixas de preço próprias: trocar de/para Alugar zera o preço.
+  // Alugar não tem empreendimento: a fase escolhida sai junto.
+  const patchDaAba = (k: PortalTab): PatchDaBusca => ({
+    tab: k === 'sale' ? '' : k,
+    ...((k === 'rent') !== (filters.tab === 'rent') ? { price_min: '', price_max: '' } : {}),
+    ...(k === 'rent' ? { stage: '' } : {}),
+  });
+
+  // Campo "Condomínio, bairro, cidade ou código" (uma caixa de texto só, decisão do Tony em 13/11):
+  // o texto é local enquanto se digita; Enter ou sair do campo grava `code` quando o texto é o código
+  // de um imóvel publicado (`abaDoCodigo`, a mesma regra das capas) e `place` no resto. Só condomínio,
+  // place e código da URL preenchem o campo (bairro/cidade ficam nos selects). `?code=` de link antigo
+  // continua filtrando por pedaço do código (`filterProperties`).
+  const [textoDoLugar, setTextoDoLugar] = useState(filters.condominium || filters.place || filters.code || '');
   const escolhida = useRef<SugestaoDeLugar | null>(null);
   // O que o campo mostra pela URL: o rótulo da sugestão escolhida enquanto a URL ainda é a dela
   // (qualquer grupo); mudou o select, o campo volta a só condomínio/place.
@@ -114,15 +125,15 @@ export function useBuscaDosImoveis(tenant: string | undefined) {
       && (e.filtros.neighborhood ?? '') === filters.neighborhood
       && (e.filtros.city ?? '') === filters.city;
   };
-  const textoDaUrl = () => (escolhidaNaUrl() ? escolhida.current!.rotulo : (filters.condominium || filters.place || ''));
+  const textoDaUrl = () => (escolhidaNaUrl() ? escolhida.current!.rotulo : (filters.condominium || filters.place || filters.code || ''));
   useEffect(() => {
     setTextoDoLugar(textoDaUrl());
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters.condominium, filters.place, filters.neighborhood, filters.city]);
+  }, [filters.condominium, filters.place, filters.code, filters.neighborhood, filters.city]);
   const escolherLugar = (s: SugestaoDeLugar) => {
     escolhida.current = s;
     setTextoDoLugar(s.rotulo);
-    update({ place: '', condominium: '', neighborhood: '', city: '', ...s.filtros });
+    update({ place: '', condominium: '', neighborhood: '', city: '', code: '', ...s.filtros });
   };
   // Os filtros da sugestão escolhida que ainda estão na URL (bairro, cidade): saem junto com o texto dela.
   const filtrosDaEscolhida = (): PatchDaBusca => (escolhidaNaUrl()
@@ -131,19 +142,25 @@ export function useBuscaDosImoveis(tenant: string | undefined) {
   const confirmarLugar = () => {
     const t = textoDoLugar.trim();
     if (t === textoDaUrl().trim()) return;
-    if (!t && (filters.neighborhood || filters.city) && !filters.condominium && !filters.place) return;
+    if (!t && (filters.neighborhood || filters.city) && !filters.condominium && !filters.place && !filters.code) return;
     // Mexeu no texto de uma sugestão que ainda está na URL: os filtros dela (bairro, cidade) saem junto,
     // senão "Granja" ficaria preso ao bairro "Centro" e a lista viria vazia.
     const daEscolhida = filtrosDaEscolhida();
     escolhida.current = null;
-    update({ ...daEscolhida, place: t, condominium: '' }, true);
+    // Código de imóvel de outra aba vai pra aba dele; na lista (/imoveis/a-venda/...) a aba é a do caminho.
+    const abaDoImovel = t ? abaDoCodigo(items, t, filters.tab, listaOk ? [] : abas) : null;
+    if (abaDoImovel) {
+      update({ ...daEscolhida, place: '', condominium: '', code: t, ...(abaDoImovel !== filters.tab ? patchDaAba(abaDoImovel) : {}) }, true);
+    } else {
+      update({ ...daEscolhida, place: t, condominium: '', code: '' }, true);
+    }
   };
-  // O "×" do campo: tira o texto e o lugar da URL (com o bairro/cidade da sugestão escolhida).
+  // O "×" do campo: tira o texto, o lugar e o código da URL (com o bairro/cidade da sugestão escolhida).
   const limparLugar = () => {
     const daEscolhida = filtrosDaEscolhida();
     escolhida.current = null;
     setTextoDoLugar('');
-    update({ ...daEscolhida, place: '', condominium: '' });
+    update({ ...daEscolhida, place: '', condominium: '', code: '' });
   };
 
   // Ordem não é filtro: "Limpar filtros" mantém a escolhida.
@@ -172,12 +189,7 @@ export function useBuscaDosImoveis(tenant: string | undefined) {
     || filters.price_min || filters.price_max || filters.suites || filters.parking || filters.stage
     || filters.place || filters.condominium || filters.area);
 
-  // Aluguel tem faixas de preço próprias: trocar de/para Alugar zera o preço.
-  // Alugar não tem empreendimento: a fase escolhida sai junto.
-  const trocarAba = (k: PortalTab) => {
-    const zerarPreco = (k === 'rent') !== (filters.tab === 'rent') ? { price_min: '', price_max: '' } : {};
-    update({ tab: k === 'sale' ? '' : k, ...zerarPreco, ...(k === 'rent' ? { stage: '' } : {}) });
-  };
+  const trocarAba = (k: PortalTab) => update(patchDaAba(k));
   const cidade = opcoesDeTexto(cities, filters.city);
   const bairro = opcoesDeTexto(hoods, filters.neighborhood);
   const preco = opcoesDePreco(filters.tab, filters.price_min, filters.price_max);

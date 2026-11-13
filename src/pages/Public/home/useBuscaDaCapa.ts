@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import type { PortalProperty, SiteInfo } from '../portalShared';
 import { opcoesDeTipo } from '@/features/siteBuilder/public/tiposDeImovel';
 import { CAMPOS_BUSCA, TITULO_CAPA_FABRICA, type AbaId, type CampoBusca, type HomeConfig } from '@/features/siteBuilder/public/homeConfig';
-import { AREAS_MINIMAS, filterProperties, normalizarTexto } from '@/features/siteBuilder/public/filtros';
-import type { SugestaoDeLugar } from '@/features/siteBuilder/public/sugestoesDeLugar';
+import { AREAS_MINIMAS } from '@/features/siteBuilder/public/filtros';
+import { abaDoCodigo, type SugestaoDeLugar } from '@/features/siteBuilder/public/sugestoesDeLugar';
 import { faixasDePreco, precoDaFaixa } from '@/features/siteBuilder/public/faixasDePreco';
 import { FASES_DO_PUBLICO } from '@/features/properties/listingKind';
 import { caminhoDoSite } from '@/features/siteBuilder/public/dominioDoSite';
@@ -59,20 +59,6 @@ export function lugarLargo(primeira: CampoDeEscolha[], mais: CampoDeEscolha[]): 
   return mais.length > 0 && primeira.length === 3 && primeira.includes('place');
 }
 
-/**
- * O texto é o código de um imóvel do catálogo (sem acento nem maiúscula)? Devolve a aba em que
- * ele aparece: a de agora, se ele está nela; senão a primeira das abas do site que o mostra
- * (um código de aluguel digitado em Comprar vai pra Alugar, senão a lista viria vazia).
- * `null` = não é código de imóvel publicado.
- */
-export function abaDoCodigo(items: PortalProperty[], texto: string, tab: AbaId, abas: AbaId[]): AbaId | null {
-  const alvo = normalizarTexto(texto);
-  const achados = alvo ? items.filter(p => normalizarTexto(p.code) === alvo) : [];
-  if (!achados.length) return null;
-  const mostra = (t: AbaId) => filterProperties(achados, { tab: t, type: '', city: '', neighborhood: '', bedrooms: '', code: '' }).length > 0;
-  return [tab, ...abas].find(mostra) ?? tab;
-}
-
 /** Título e subtítulo da capa, com os de fábrica quando o cliente não escreveu. */
 export function textosDaCapa(site: SiteInfo, home: HomeConfig) {
   return {
@@ -108,7 +94,11 @@ export function useBuscaDaCapa({ home, tenant, abas, cities, hoods, types, items
   // No Moderno o lugar não é célula de filtro: a barra grande é o campo (sempre visível), e ela não conta pro "Mais filtros".
   const selects = campos.filter((c): c is CampoDeEscolha => c !== 'code' && !(modelo === 'moderno' && c === 'place'));
   const { primeira, mais } = dividirCampos(selects, modelo);
-  const temCodigo = campos.includes('code');
+  // Uma caixa de texto só (decisão do Tony em 13/11): onde o campo de lugar aparece, ele também
+  // aceita o código, e a caixa de código some. Moderno: sempre (a barra grande). Clássico: com o
+  // lugar ligado no Personalizar; desligado, a caixa de código fica como sempre.
+  const lugarComCodigo = modelo === 'moderno' || campos.includes('place');
+  const temCodigo = campos.includes('code') && !lugarComCodigo;
   const escolherLugar = (s: SugestaoDeLugar) => { setLugar(s); setValores(v => ({ ...v, place: s.rotulo })); };
   const alternarMais = () => setAbertos(a => !a);
 
@@ -124,16 +114,17 @@ export function useBuscaDaCapa({ home, tenant, abas, cities, hoods, types, items
 
   /**
    * Vai pra `/imoveis` com a aba e os campos de hoje, na ordem de `CAMPOS_BUSCA`.
-   * No Moderno, a barra grande vale mesmo sem o campo de lugar ligado: a sugestão
-   * escolhida vai com os filtros dela; o texto livre que é o código de um imóvel
-   * publicado vira `code`, e o resto vira `place` (condomínio, bairro ou cidade).
+   * Campo de lugar que aceita código (a barra do Moderno, que vale mesmo sem o lugar
+   * ligado, e o lugar ligado do Clássico): a sugestão escolhida vai com os filtros dela;
+   * o texto livre que é o código de um imóvel publicado (`abaDoCodigo`) vira `code`, e o
+   * resto vira `place` (condomínio, bairro ou cidade).
    */
   const runSearch = (e: FormEvent) => {
     e.preventDefault();
     const juntos: Partial<Record<CampoBusca, string>> = { ...valores };
     let incluir: CampoBusca[] = campos;
     let abaDoEndereco = tab;
-    if (modelo === 'moderno') {
+    if (lugarComCodigo) {
       incluir = [...campos.filter(c => c !== 'code'), 'place', 'code'];
       juntos.code = '';
       const t = (valores.place ?? '').trim();

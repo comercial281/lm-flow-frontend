@@ -1,7 +1,7 @@
 import { useId } from 'react';
 import { I, Ic, ListaDoSite } from '../portalShared';
 import type { AbaId } from '@/features/siteBuilder/public/homeConfig';
-import CampoDeLugar from '../CampoDeLugar';
+import CampoDeLugar, { EXEMPLO_DA_CAIXA, ROTULO_DA_CAIXA } from '../CampoDeLugar';
 import { ROTULO_ABA, type BuscaDaCapa, type CampoDeEscolha } from '../home/useBuscaDaCapa';
 
 /* ────────────────────────────────────────────────────────────────────────────
@@ -124,7 +124,7 @@ export default function BuscaModerna({ busca, abas, dividida = false }: { busca:
       <div data-barra-da-busca className="flex flex-col gap-2 sm:flex-row">
         <CampoDeLugar
           items={items} tab={tab} texto={valores.place ?? ''} onTexto={set('place')} onEscolher={escolherLugar}
-          rotulo="Condomínio, bairro, cidade ou código" placeholder="Digite condomínio, bairro, cidade ou código"
+          rotulo={ROTULO_DA_CAIXA} placeholder={EXEMPLO_DA_CAIXA}
           className={BARRA_GRANDE}
         />
         <button

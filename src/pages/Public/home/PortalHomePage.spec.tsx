@@ -329,7 +329,7 @@ describe('PortalHomePage · rodapé', () => {
       { home: { search: { fields: ['type', 'place', 'city', 'price', 'bedrooms', 'area'] } } },
       [imovel('R1')],
     );
-    expect(screen.getByRole('combobox', { name: 'Condomínio, bairro ou cidade' }).parentElement!.className).toContain('md:col-span-2');
+    expect(screen.getByRole('combobox', { name: 'Condomínio, bairro, cidade ou código' }).parentElement!.className).toContain('md:col-span-2');
     expect(screen.queryByDisplayValue('Faixa de preço')).toBeNull();
   });
 
@@ -338,7 +338,7 @@ describe('PortalHomePage · rodapé', () => {
       { home: { search: { fields: ['place'] } } },
       [imovel('R1', { condominium_name: 'Collina' })],
     );
-    fireEvent.change(screen.getByRole('combobox', { name: 'Condomínio, bairro ou cidade' }), { target: { value: 'coll' } });
+    fireEvent.change(screen.getByRole('combobox', { name: 'Condomínio, bairro, cidade ou código' }), { target: { value: 'coll' } });
     fireEvent.click(await screen.findByRole('option', { name: /Collina/ }));
     fireEvent.click(screen.getByRole('button', { name: /Buscar/ }));
     expect((await screen.findByTestId('busca')).textContent).toBe('?condominium=Collina');
@@ -346,7 +346,7 @@ describe('PortalHomePage · rodapé', () => {
 
   it('Enter no campo de lugar, só com texto digitado, faz a busca (place=…)', async () => {
     await abrirHome({ home: { search: { fields: ['place'] } } }, [imovel('R1')]);
-    const campo = screen.getByRole('combobox', { name: 'Condomínio, bairro ou cidade' });
+    const campo = screen.getByRole('combobox', { name: 'Condomínio, bairro, cidade ou código' });
     await userEvent.type(campo, 'Centro{Enter}');
     expect((await screen.findByTestId('busca')).textContent).toBe('?place=Centro');
   });
@@ -356,7 +356,7 @@ describe('PortalHomePage · rodapé', () => {
       { home: { search: { fields: ['place'] } } },
       [imovel('R1', { condominium_name: 'Collina' }), imovel('L1', { transaction_type: 'rent', rent_price_from: 2000, sale_price_from: null })],
     );
-    const campo = screen.getByRole('combobox', { name: 'Condomínio, bairro ou cidade' }) as HTMLInputElement;
+    const campo = screen.getByRole('combobox', { name: 'Condomínio, bairro, cidade ou código' }) as HTMLInputElement;
     fireEvent.change(campo, { target: { value: 'coll' } });
     fireEvent.click(await screen.findByRole('option', { name: /Collina/ }));
     fireEvent.click(screen.getByRole('button', { name: 'Alugar' }));
@@ -367,3 +367,58 @@ describe('PortalHomePage · rodapé', () => {
   });
 });
 
+/* Uma caixa de texto só (decisão do Tony em 13/11): com o lugar ligado, ele também aceita o
+   código e a caixa "Buscar por código do imóvel" some; com o lugar desligado, tudo como antes. */
+describe('Capa do Clássico: uma caixa de texto só', () => {
+  const caixaDeLugar = () => screen.getByRole('combobox', { name: 'Condomínio, bairro, cidade ou código' });
+
+  it('lugar e código ligados: a caixa de código some e o código digitado no lugar vai como code', async () => {
+    await abrirHome({ home: { search: { fields: ['type', 'place', 'code'] } } }, [imovel('R1'), imovel('AP0632')]);
+    expect(screen.queryByPlaceholderText('Buscar por código do imóvel')).toBeNull();
+    // Na busca da capa, a caixa de lugar é o único campo de texto (o resto são listas).
+    expect(within(caixaDeLugar().closest('form')!).queryAllByRole('textbox')).toHaveLength(0);
+    fireEvent.change(caixaDeLugar(), { target: { value: 'ap0632' } });
+    fireEvent.click(screen.getByRole('button', { name: /Buscar/ }));
+    expect((await screen.findByTestId('busca')).textContent).toBe('?code=ap0632');
+  });
+
+  it('só o lugar ligado (sem o Código no Personalizar): o código no lugar também vai como code, com a aba dele', async () => {
+    await abrirHome(
+      { home: { search: { fields: ['place'] } } },
+      [imovel('R1'), imovel('L77', { transaction_type: 'rent', rent_price_from: 2000, sale_price_from: null })],
+    );
+    fireEvent.change(caixaDeLugar(), { target: { value: 'L77' } });
+    fireEvent.click(screen.getByRole('button', { name: /Buscar/ }));
+    expect((await screen.findByTestId('busca')).textContent).toBe('?tab=rent&code=L77');
+  });
+
+  it('lugar ligado e texto que não é código: vai como place', async () => {
+    await abrirHome({ home: { search: { fields: ['place', 'code'] } } }, [imovel('R1')]);
+    fireEvent.change(caixaDeLugar(), { target: { value: 'R' } });
+    fireEvent.click(screen.getByRole('button', { name: /Buscar/ }));
+    expect((await screen.findByTestId('busca')).textContent).toBe('?place=R');
+  });
+
+  it('lugar desligado: a caixa de código fica como sempre', async () => {
+    await abrirHome({ home: { search: { fields: ['type', 'code'] } } }, [imovel('R1')]);
+    expect(screen.queryByRole('combobox', { name: /Condomínio/ })).toBeNull();
+    fireEvent.change(screen.getByPlaceholderText('Buscar por código do imóvel'), { target: { value: 'ZZ9' } });
+    fireEvent.click(screen.getByRole('button', { name: /Buscar/ }));
+    expect((await screen.findByTestId('busca')).textContent).toBe('?code=ZZ9');
+  });
+
+  it('celular: o lugar vem primeiro e largo (com e sem Mais filtros); no computador, a ordem de hoje', async () => {
+    await abrirHome({ home: { search: { fields: ['type', 'place', 'city'] } } }, [imovel('R1')]);
+    const cls = caixaDeLugar().parentElement!.classList;
+    expect(cls).toContain('max-md:order-first');
+    expect(cls).toContain('max-md:col-span-2');
+    expect(cls).not.toContain('md:col-span-2');
+    cleanup();
+    vi.unstubAllGlobals();
+    await abrirHome({ home: { search: { fields: ['type', 'place', 'city', 'price', 'bedrooms', 'area'] } } }, [imovel('R1')]);
+    const largo = caixaDeLugar().parentElement!.classList;
+    expect(largo).toContain('max-md:order-first');
+    expect(largo).toContain('max-md:col-span-2');
+    expect(largo).toContain('md:col-span-2');
+  });
+});

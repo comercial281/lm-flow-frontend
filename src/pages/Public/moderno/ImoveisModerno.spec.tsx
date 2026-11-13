@@ -98,10 +98,36 @@ describe('Imóveis no Moderno', () => {
     expect(screen.getByLabelText('Suítes')).toBeTruthy();
   });
 
-  it('código vai pra URL', async () => {
+  it('uma caixa de texto só: o código digitado no campo de lugar + Enter vai pra URL como code', async () => {
+    await abrir([imovel('A1'), imovel('A2')]);
+    expect(screen.queryByPlaceholderText(/Código do imóvel/i)).toBeNull();
+    expect(screen.queryAllByRole('textbox')).toHaveLength(0);
+    const caixa = screen.getByRole('combobox', { name: 'Condomínio, bairro, cidade ou código' }) as HTMLInputElement;
+    expect(caixa.getAttribute('placeholder')).toBe('Digite condomínio, bairro, cidade ou código');
+    fireEvent.change(caixa, { target: { value: 'a1' } });
+    fireEvent.keyDown(caixa, { key: 'Enter' });
+    expect(urlAtual().get('code')).toBe('a1');
+    expect(urlAtual().get('place')).toBeNull();
+    expect(screen.getAllByRole('article')).toHaveLength(1);
+  });
+
+  it('texto que não é código + Enter vai como place', async () => {
     await abrir([imovel('A1')]);
-    fireEvent.change(screen.getByPlaceholderText('Código do imóvel'), { target: { value: 'A1' } });
-    expect(urlAtual().get('code')).toBe('A1');
+    const caixa = screen.getByRole('combobox', { name: 'Condomínio, bairro, cidade ou código' });
+    fireEvent.change(caixa, { target: { value: 'Campinas' } });
+    fireEvent.keyDown(caixa, { key: 'Enter' });
+    expect(urlAtual().get('place')).toBe('Campinas');
+    expect(urlAtual().get('code')).toBeNull();
+  });
+
+  it('?code=AP0632 ao abrir: o campo mostra o código e o × tira', async () => {
+    await abrir([imovel('AP0632'), imovel('A2')], '/portal/imob/imoveis?code=AP0632');
+    const caixa = screen.getByRole('combobox', { name: 'Condomínio, bairro, cidade ou código' }) as HTMLInputElement;
+    expect(caixa.value).toBe('AP0632');
+    fireEvent.click(screen.getByRole('button', { name: 'Limpar condomínio, bairro ou cidade' }));
+    expect(urlAtual().get('code')).toBeNull();
+    expect(caixa.value).toBe('');
+    expect(screen.getAllByRole('article')).toHaveLength(2);
   });
 
   it('em linhas: cartão claro deitado', async () => {
@@ -142,7 +168,7 @@ describe('Imóveis no Moderno: condomínio, bairro ou cidade e Área', () => {
     imovel('C1', { condominium_name: 'Collina Parque dos Príncipes', icon_summary: { useful_area_m2: 120 } }),
     imovel('C2', { address: { city: 'Cotia', neighborhood: 'Granja' }, icon_summary: { useful_area_m2: 60 } }),
   ];
-  const campo = () => screen.getByRole('combobox', { name: 'Condomínio, bairro ou cidade' }) as HTMLInputElement;
+  const campo = () => screen.getByRole('combobox', { name: 'Condomínio, bairro, cidade ou código' }) as HTMLInputElement;
   const titulosDosCartoes = () => screen.queryAllByRole('article').length;
 
   it('vindo da capa com ?place=co: o campo mostra o texto, a pílula aparece e o × tira', async () => {

@@ -125,3 +125,18 @@ export function sugestoesDeLugar(items: PortalProperty[], tab: PortalTab, texto:
   if (normalizarTexto(texto).length < 2) return [];
   return buscarNoIndice(indiceDeLugar(items, tab), texto, limite);
 }
+
+/**
+ * A regra única de "é código?" da caixa de busca (barra da capa do Moderno, campo de lugar da
+ * capa do Clássico e da página de Imóveis): o texto é o código de um imóvel do catálogo, sem
+ * acento nem maiúscula? Devolve a aba em que ele aparece: a de agora, se ele está nela; senão a
+ * primeira das abas do site que o mostra (um código de aluguel digitado em Comprar vai pra
+ * Alugar, senão a lista viria vazia). `null` = não é código de imóvel publicado (vai como lugar).
+ */
+export function abaDoCodigo(items: PortalProperty[], texto: string, tab: PortalTab, abas: PortalTab[]): PortalTab | null {
+  const alvo = normalizarTexto(texto);
+  const achados = alvo ? items.filter(p => normalizarTexto(p.code) === alvo) : [];
+  if (!achados.length) return null;
+  const mostra = (t: PortalTab) => filterProperties(achados, { tab: t, type: '', city: '', neighborhood: '', bedrooms: '', code: '' }).length > 0;
+  return [tab, ...abas].find(mostra) ?? tab;
+}

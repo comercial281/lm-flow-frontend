@@ -3,7 +3,7 @@ import type { AbaId, HomeConfig } from '@/features/siteBuilder/public/homeConfig
 import { filtroDaCapa, logoNaCapa, logoNaSuperficie, resolverAparencia } from '@/features/siteBuilder/public/aparenciaConfig';
 import { ATRIBUTO_DO_LOGO_DA_CAPA, useLogoPousado } from '@/features/siteBuilder/public/logoPousado';
 import { semAsteriscos } from '@/features/siteBuilder/public/destaqueNoTitulo';
-import CampoDeLugar from '../CampoDeLugar';
+import CampoDeLugar, { ROTULO_DA_CAIXA } from '../CampoDeLugar';
 import FundoDaCapa from './FundoDaCapa';
 import { ROTULO_ABA, fotosDaCapa, lugarLargo, textosDaCapa, useBuscaDaCapa, type CampoDeEscolha } from './useBuscaDaCapa';
 
@@ -69,11 +69,15 @@ export default function HomeCapa({ site, home, items, tenant, abas, cities, hood
   // O lugar é texto com sugestões; os outros campos são listas. Sobre a foto a capa corta o que sai da
   // borda (overflow-hidden; o markup dela é trava de teste), então a lista abre pra cima, sobre o título.
   // Com "Mais filtros" e o lugar entre os 3 primeiros, ele ocupa 2 colunas: a linha fecha as 4 sem buraco.
+  // Uma caixa de texto só (13/11): o lugar também aceita o código (a caixa de código some, `temCodigo`).
+  // No celular ele vem primeiro e largo, acima dos outros; a ordem da URL não muda (é a de `CAMPOS_BUSCA`).
   const largo = lugarLargo(primeira, mais);
   const campo = (c: CampoDeEscolha) => {
     if (c === 'place') {
       return <CampoDeLugar key={c} items={items} tab={tab} texto={valores.place ?? ''} onTexto={set('place')} onEscolher={escolherLugar}
-        abrirPara={ap.hero_layout === 'split' ? 'baixo' : 'cima'} className={largo && primeira.includes(c) ? 'md:col-span-2' : ''} />;
+        rotulo={ROTULO_DA_CAIXA}
+        abrirPara={ap.hero_layout === 'split' ? 'baixo' : 'cima'}
+        className={`max-md:order-first max-md:col-span-2${largo && primeira.includes(c) ? ' md:col-span-2' : ''}`} />;
     }
     const o = opcoes[c];
     return <Select key={c} value={valores[c] ?? ''} onChange={set(c)} label={o.label} options={o.options} />;

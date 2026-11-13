@@ -2,6 +2,10 @@ import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { I, Ic, type PortalProperty, type PortalTab } from './portalShared';
 import { ROTULO_DO_GRUPO, buscarNoIndice, indiceDeLugar, type SugestaoDeLugar } from '@/features/siteBuilder/public/sugestoesDeLugar';
 
+/** O campo quando também aceita o código do imóvel (uma caixa de texto só, decisão do Tony em 13/11). */
+export const ROTULO_DA_CAIXA = 'Condomínio, bairro, cidade ou código';
+export const EXEMPLO_DA_CAIXA = 'Digite condomínio, bairro, cidade ou código';
+
 interface Props {
   items: PortalProperty[];
   tab: PortalTab;
