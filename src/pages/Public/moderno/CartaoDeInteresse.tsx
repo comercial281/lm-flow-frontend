@@ -81,7 +81,7 @@ function Formulario({ contato, mostraBook, waHref }: Pick<PropsDoCartaoDeInteres
 export default function CartaoDeInteresse(props: PropsDoCartaoDeInteresse) {
   const { price, priceSuffix, aPartirDe, fase, linhaDoCodigo, money, atendimento, id } = props;
   return (
-    <div id={id} data-testid="cartao-de-interesse" className="rounded-[28px] border border-[var(--m-line)] bg-[var(--m-surface)] p-6 shadow-[0_20px_40px_-28px_rgba(8,10,22,0.35)]">
+    <div id={id} data-testid="cartao-de-interesse" className="scroll-mt-[140px] rounded-[28px] border border-[var(--m-line)] bg-[var(--m-surface)] p-6 shadow-[0_20px_40px_-28px_rgba(8,10,22,0.35)]">
       {price && (
         <>
           {aPartirDe && <span className="block text-[12.5px] text-[var(--m-muted)]">a partir de</span>}

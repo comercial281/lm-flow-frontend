@@ -21,7 +21,7 @@ const TITULO = 'mb-3.5 font-[var(--display)] text-[clamp(22px,2.4vw,28px)] font-
 
 function Secao({ titulo, id, children }: { titulo: string; id?: string; children: ReactNode }) {
   return (
-    <section id={id} className="scroll-mt-24 pt-11">
+    <section id={id} className="scroll-mt-[140px] pt-11">
       <h2 className={TITULO}>{titulo}</h2>
       {children}
     </section>

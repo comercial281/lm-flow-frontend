@@ -255,3 +255,11 @@ describe('Ficha no Moderno: conteúdo', () => {
     expect(within(barra).getByRole('link', { name: 'Tenho interesse' }).getAttribute('href')).toBe('#contato');
   });
 });
+
+describe('Ficha no Moderno: alvos de rolagem', () => {
+  it('o cartão do celular e a seção de vídeo não ficam embaixo do topo grudado', async () => {
+    await abrirFicha(MODERNO, { video_url: 'https://www.youtube.com/watch?v=abcdefghijk' });
+    expect(document.getElementById('contato')!.className).toContain('scroll-mt-[140px]');
+    expect(document.getElementById('video-e-tour')!.className).toContain('scroll-mt-[140px]');
+  });
+});
