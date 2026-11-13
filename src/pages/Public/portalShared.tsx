@@ -23,6 +23,7 @@ import {
 } from '@/features/siteBuilder/public/aparenciaConfig';
 import { ATRIBUTO_DO_TOPO, useLogoPousado } from '@/features/siteBuilder/public/logoPousado';
 import { semAsteriscos } from '@/features/siteBuilder/public/destaqueNoTitulo';
+import TopoModerno from './moderno/TopoModerno';
 
 // Tipos e filtro moram em filtros.ts (sem ciclo com vitrines.ts); reexportados aqui.
 export { filterProperties };
@@ -629,7 +630,21 @@ const ICONE_DA_REDE: Record<string, string> = {
  * dentro do bloco que gruda no topo devolve o defeito de 17/09 — telefone e
  * e-mail numa faixa escura presa na tela durante a rolagem inteira.
  */
-function PortalTopBar({ site, ap }: { site: SiteInfo; ap: Aparencia }) {
+/** Classes da faixa: a do Clássico (escura) e a do Moderno (linha discreta, sem fundo). */
+const ROUPA_DA_FAIXA = {
+  classico: {
+    faixa: 'hidden border-b border-white/10 bg-[var(--ink)] text-white/75 sm:block',
+    linha: 'mx-auto flex h-9 max-w-6xl items-center justify-between gap-6 px-4 text-[12.5px] sm:px-6',
+    link: 'transition-colors hover:text-white',
+  },
+  moderno: {
+    faixa: 'hidden px-4 pt-2.5 text-[var(--m-muted)] sm:block',
+    linha: 'mx-auto flex max-w-[1120px] flex-wrap items-center justify-between gap-x-6 gap-y-1 text-[12.5px]',
+    link: 'transition-colors hover:text-[var(--m-head)]',
+  },
+} as const;
+
+export function PortalTopBar({ site, ap, moderno = false }: { site: SiteInfo; ap: Aparencia; moderno?: boolean }) {
   const modo = ap.top_bar;
   const phone = site.contact?.phone?.trim();
   const emailCadastrado = site.contact?.email?.trim();
@@ -638,18 +653,19 @@ function PortalTopBar({ site, ap }: { site: SiteInfo; ap: Aparencia }) {
   if (modo === 'hidden' || (!phone && !email && socials.length === 0)) return null;
   const soIcones = modo === 'icons';
   const dica = (rotulo: string) => (soIcones ? { 'aria-label': rotulo, title: rotulo } : {});
+  const roupa = ROUPA_DA_FAIXA[moderno ? 'moderno' : 'classico'];
 
   return (
-    <div className="hidden border-b border-white/10 bg-[var(--ink)] text-white/75 sm:block">
-      <div className="mx-auto flex h-9 max-w-6xl items-center justify-between gap-6 px-4 text-[12.5px] sm:px-6">
+    <div className={roupa.faixa}>
+      <div className={roupa.linha}>
         <div className="flex items-center gap-5">
           {phone && (
-            <a href={`tel:${onlyDigits(phone)}`} className="inline-flex items-center gap-1.5 transition-colors hover:text-white" {...dica(`Ligar para ${phone}`)}>
+            <a href={`tel:${onlyDigits(phone)}`} className={`inline-flex items-center gap-1.5 ${roupa.link}`} {...dica(`Ligar para ${phone}`)}>
               <Ic d={I.phone} s={13} />{soIcones ? null : <> {phone}</>}
             </a>
           )}
           {email && (
-            <a href={`mailto:${email}`} className="inline-flex items-center gap-1.5 transition-colors hover:text-white" {...dica(`E-mail: ${email}`)}>
+            <a href={`mailto:${email}`} className={`inline-flex items-center gap-1.5 ${roupa.link}`} {...dica(`E-mail: ${email}`)}>
               <Ic d={I.mail} s={13} />{soIcones ? null : <> {email}</>}
             </a>
           )}
@@ -657,7 +673,7 @@ function PortalTopBar({ site, ap }: { site: SiteInfo; ap: Aparencia }) {
         {socials.length > 0 && (
           <div className="flex items-center gap-4">
             {socials.map(sn => (
-              <a key={sn.key} href={sn.url} target="_blank" rel="noreferrer" className="transition-colors hover:text-white" {...dica(sn.label)}>
+              <a key={sn.key} href={sn.url} target="_blank" rel="noreferrer" className={roupa.link} {...dica(sn.label)}>
                 {soIcones ? <Ic d={ICONE_DA_REDE[sn.key] ?? I.link} s={14} /> : sn.label}
               </a>
             ))}
@@ -676,23 +692,23 @@ const abaVisivel = (abas?: AbaId[]) => (aba: AbaId) => !abas || abas.includes(ab
  * Um link do menu, no topo ou no rodapé: página do site pelo roteador, seção
  * da home por âncora simples e endereço de fora em outra aba.
  */
-function LinkDoMenuEl({ l, cls, onClick }: { l: LinkDoMenu; cls?: string; onClick?: () => void }) {
+export function LinkDoMenuEl({ l, cls, onClick }: { l: LinkDoMenu; cls?: string; onClick?: () => void }) {
   if (l.externo) return <a href={l.href} target="_blank" rel="noopener noreferrer" onClick={onClick} className={cls}>{l.rotulo}</a>;
   if (l.ancora) return <a href={l.href} onClick={onClick} className={cls}>{l.rotulo}</a>;
   return <Link to={l.href} onClick={onClick} className={cls}>{l.rotulo}</Link>;
 }
 
-interface PropsDaMoldura { site: SiteInfo; tenant: string; onHome?: boolean; abas?: AbaId[] }
+export interface PropsDaMoldura { site: SiteInfo; tenant: string; onHome?: boolean; abas?: AbaId[] }
 
 /** Logo (a normal ou a clara, já escolhida) ou o nome quando não há logo. */
-function MarcaDoSite({ site, logo, logoCls, nomeCls }: { site: SiteInfo; logo: string | null; logoCls: string; nomeCls: string }) {
+export function MarcaDoSite({ site, logo, logoCls, nomeCls }: { site: SiteInfo; logo: string | null; logoCls: string; nomeCls: string }) {
   return logo
     ? <img src={logo} alt={site.name || 'Portal'} className={logoCls} />
     : <span className={nomeCls}>{site.name || 'Imóveis'}</span>;
 }
 
 /** Botão verde do WhatsApp do topo e do rodapé. */
-function BotaoWhatsApp({ href, rotuloSempre = false }: { href: string; rotuloSempre?: boolean }) {
+export function BotaoWhatsApp({ href, rotuloSempre = false }: { href: string; rotuloSempre?: boolean }) {
   return (
     <a
       href={href} target="_blank" rel="noreferrer"
@@ -832,9 +848,10 @@ export function FaixaDePrevia({ site }: { site: SiteInfo }) {
   );
 }
 
-/** Topo do site. Em manutenção, o topo enxuto (só logo e WhatsApp). */
+/** Topo do site. Em manutenção, o topo enxuto (só logo e WhatsApp); no Moderno, o topo dele. */
 export function PortalHeader(props: PropsDaMoldura) {
-  return estaEmManutencao(props.site) ? <TopoEmManutencao {...props} /> : <TopoCompleto {...props} />;
+  if (estaEmManutencao(props.site)) return <TopoEmManutencao {...props} />;
+  return resolverAparencia(props.site.appearance).style === 'modern' ? <TopoModerno {...props} /> : <TopoCompleto {...props} />;
 }
 
 /** Rodapé do site. Em manutenção, o rodapé enxuto (só logo e WhatsApp). */
@@ -849,9 +866,12 @@ export function PortalFooter(props: PropsDaMoldura) {
  * de volta apontando a seção. Nos estilos "na cor principal" e "branco" ele é
  * sólido sempre, inclusive sobre a capa.
  */
-function TopoCompleto({ site, tenant, onHome = false, abas }: PropsDaMoldura) {
+/**
+ * Menu do celular (topo Clássico e Moderno): aberto ou fechado; o Escape fecha
+ * e devolve o foco ao botão que o abriu (`botaoDoMenu` vai no sanduíche).
+ */
+export function useMenuDoCelular() {
   const [menuOpen, setMenuOpen] = useState(false);
-  // Escape fecha o menu do celular e devolve o foco ao botão que o abriu.
   const botaoDoMenu = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     if (!menuOpen) return;
@@ -863,14 +883,15 @@ function TopoCompleto({ site, tenant, onHome = false, abas }: PropsDaMoldura) {
     document.addEventListener('keydown', aoTeclar);
     return () => document.removeEventListener('keydown', aoTeclar);
   }, [menuOpen]);
-  // Só na home: antes de rolar, o cabeçalho flutua sobre a capa.
-  const [scrolled, setScrolled] = useState(!onHome);
-  const wa = site.contact?.whatsapp;
-  const waHref = wa ? `https://wa.me/${onlyDigits(wa)}` : null;
-  const hasBlog = usePublishedArticlesExist(tenant);
-  const ctx = useCtxDoSite(tenant);
-  const ap = resolverAparencia(site.appearance);
+  return { menuOpen, setMenuOpen, botaoDoMenu };
+}
 
+/**
+ * Rolou a home? Só na home: antes de rolar, o topo flutua sobre a capa. Fora
+ * dela é sempre "rolado" (o topo sólido desde o início).
+ */
+export function useRolouNaHome(onHome: boolean): boolean {
+  const [scrolled, setScrolled] = useState(!onHome);
   useEffect(() => {
     if (!onHome) { setScrolled(true); return; }
     const onScroll = () => setScrolled(window.scrollY > 24);
@@ -878,6 +899,48 @@ function TopoCompleto({ site, tenant, onHome = false, abas }: PropsDaMoldura) {
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
   }, [onHome]);
+  return scrolled;
+}
+
+/** Classes do menu do celular: as do Clássico (de fábrica) ou as do Moderno. */
+export interface RoupaDoMenuDoCelular { nav: string; link: string; contatos: string }
+const MENU_DO_CELULAR_CLASSICO: RoupaDoMenuDoCelular = {
+  nav: 'border-t border-black/[0.06] bg-[var(--paper)] px-4 py-3 lg:hidden',
+  link: 'block py-2.5 text-[15px] font-medium text-neutral-700',
+  contatos: 'mt-2 border-t border-black/[0.06] pt-2 text-[13px] text-neutral-500',
+};
+
+/** O menu que o sanduíche abre no celular: os links do topo e, embaixo, telefone e e-mail. */
+export function MenuDoCelular({ site, nav, fechar, roupa = MENU_DO_CELULAR_CLASSICO }: {
+  site: SiteInfo; nav: LinkDoMenu[]; fechar: () => void; roupa?: RoupaDoMenuDoCelular;
+}) {
+  return (
+    <nav id="menu-do-celular" aria-label="Menu principal" className={roupa.nav}>
+      {nav.map(l => <LinkDoMenuEl key={l.chave} l={l} cls={roupa.link} onClick={fechar} />)}
+      {(site.contact?.phone || site.contact?.email) && (
+        <div className={roupa.contatos}>
+          {site.contact?.phone && (
+            <a href={`tel:${onlyDigits(site.contact.phone)}`} className="block py-1.5">{site.contact.phone}</a>
+          )}
+          {site.contact?.email && (
+            <a href={`mailto:${site.contact.email}`} className="block py-1.5">{site.contact.email}</a>
+          )}
+        </div>
+      )}
+    </nav>
+  );
+}
+
+function TopoCompleto({ site, tenant, onHome = false, abas }: PropsDaMoldura) {
+  // Escape fecha o menu do celular e devolve o foco ao botão que o abriu.
+  const { menuOpen, setMenuOpen, botaoDoMenu } = useMenuDoCelular();
+  // Só na home: antes de rolar, o cabeçalho flutua sobre a capa.
+  const scrolled = useRolouNaHome(onHome);
+  const wa = site.contact?.whatsapp;
+  const waHref = wa ? `https://wa.me/${onlyDigits(wa)}` : null;
+  const hasBlog = usePublishedArticlesExist(tenant);
+  const ctx = useCtxDoSite(tenant);
+  const ap = resolverAparencia(site.appearance);
 
   // O menu (tela Menus): sem menu_config ou com o de fábrica, os links de
   // antes do C3, na mesma ordem (abas, Sobre, Contato, Financiamento, Anuncie,
@@ -907,7 +970,6 @@ function TopoCompleto({ site, tenant, onHome = false, abas }: PropsDaMoldura) {
 
   // Menu em maiúsculas (Aparência): caixa alta, espaçado e 13px no lugar dos 14px.
   const desktopCls = ap.menu_style === 'caps' ? roupa.link.replace('text-[14px]', 'text-[13px] uppercase tracking-[0.14em]') : roupa.link;
-  const mobileCls = 'block py-2.5 text-[15px] font-medium text-neutral-700';
 
   return (
     <>
@@ -977,21 +1039,7 @@ function TopoCompleto({ site, tenant, onHome = false, abas }: PropsDaMoldura) {
             </div>
           </div>
 
-          {menuOpen && (
-            <nav id="menu-do-celular" aria-label="Menu principal" className="border-t border-black/[0.06] bg-[var(--paper)] px-4 py-3 lg:hidden">
-              {nav.map(l => <LinkDoMenuEl key={l.chave} l={l} cls={mobileCls} onClick={() => setMenuOpen(false)} />)}
-              {(site.contact?.phone || site.contact?.email) && (
-                <div className="mt-2 border-t border-black/[0.06] pt-2 text-[13px] text-neutral-500">
-                  {site.contact?.phone && (
-                    <a href={`tel:${onlyDigits(site.contact.phone)}`} className="block py-1.5">{site.contact.phone}</a>
-                  )}
-                  {site.contact?.email && (
-                    <a href={`mailto:${site.contact.email}`} className="block py-1.5">{site.contact.email}</a>
-                  )}
-                </div>
-              )}
-            </nav>
-          )}
+          {menuOpen && <MenuDoCelular site={site} nav={nav} fechar={() => setMenuOpen(false)} />}
         </header>
       </div>
     </>
