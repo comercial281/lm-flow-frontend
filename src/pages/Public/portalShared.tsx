@@ -359,14 +359,14 @@ export function usePublishedArticlesExist(tenant?: string): boolean {
 }
 
 /* ── Card de imóvel ──────────────────────────────────────────────────────── */
-interface PropsDoCartao {
+export interface PropsDoCartao {
   tenant: string; p: PortalProperty; wa?: string | null; tab?: PortalTab;
   /** Cartão grande (Aparência › cartões grandes, só nas vitrines): foto 3:2 maior e título de 24px. */
   grande?: boolean;
 }
 
 /** O que o cartão e a linha mostram: os dois formatos dizem a mesma coisa. */
-function dadosDoCartao({ p, wa, tab }: PropsDoCartao, ctx: CtxDoSite) {
+export function dadosDoCartao({ p, wa, tab }: PropsDoCartao, ctx: CtxDoSite) {
   // Empreendimento mostra a fase (e a entrega) no lugar de "Destaque" e, se for
   // exclusivo, os dois selos. Na revenda Exclusivo vence Destaque.
   const dev = p.listing_kind === 'development';
@@ -391,7 +391,7 @@ function dadosDoCartao({ p, wa, tab }: PropsDoCartao, ctx: CtxDoSite) {
  * Selo na foto do cartão. `destaque` (Destaque, Exclusivo) vai na cor de
  * destaque da Aparência; `fase` (a do empreendimento) segue na cor principal.
  */
-interface SeloDoCartao { texto: string; tipo: 'fase' | 'destaque' }
+export interface SeloDoCartao { texto: string; tipo: 'fase' | 'destaque' }
 
 /** Estilo do selo na cor de destaque, com o texto branco ou escuro pelo contraste. */
 export const ESTILO_SELO_DESTAQUE: CSSProperties = { background: 'var(--accent)', color: 'var(--accent-ink)' };

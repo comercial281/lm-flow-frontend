@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   APARENCIA_FABRICA, DEGRADE_DA_CAPA_FABRICA, FONTES_DO_SITE, TINTA_ESCURA,
-  clarearAte, contrasteEntre, filtroDaCapa, fonteDoSite, fontesDoSite, logoNaCapa, logoNaSuperficie, misturarCom, resolverAparencia, textoSobre,
+  clarearAte, contrasteEntre, filtroDaCapa, filtroDaCapaModerna, fonteDoSite, fontesDoSite, logoNaCapa, logoNaSuperficie, misturarCom, resolverAparencia, textoSobre,
 } from './aparenciaConfig';
 
 describe('resolverAparencia', () => {
@@ -82,6 +82,24 @@ describe('resolverAparencia', () => {
     const comEmoji = resolverAparencia({ footer_text: `${'a'.repeat(199)}🏠🏠` }).footer_text!;
     expect(comEmoji).toBe(`${'a'.repeat(199)}🏠`);
     expect([...comEmoji]).toHaveLength(200);
+  });
+});
+
+describe('filtroDaCapaModerna', () => {
+  const filtro = (t: string, m: string, p: string, e: string) =>
+    `linear-gradient(180deg, rgba(8,10,22,${t}) 0%, rgba(8,10,22,0) 26%, rgba(8,10,22,${m}) 56%, rgba(8,10,22,${p}) 100%), `
+    + `linear-gradient(90deg, rgba(8,10,22,${e}) 0%, rgba(8,10,22,0) 60%)`;
+
+  it('45 (fábrica): o degradê do protótipo, com o pé escuro e nunca o fundo do site', () => {
+    expect(filtroDaCapaModerna(45)).toBe(filtro('0.315', '0.203', '0.65', '0.27'));
+    expect(filtroDaCapaModerna(45)).not.toContain('var(--');
+  });
+
+  it('0 ainda escurece o pé (0,2); 80 prende o pé em 0,9; lixo vale a fábrica', () => {
+    expect(filtroDaCapaModerna(0)).toBe(filtro('0', '0', '0.2', '0'));
+    expect(filtroDaCapaModerna(80)).toBe(filtro('0.56', '0.36', '0.9', '0.48'));
+    expect(filtroDaCapaModerna(200)).toBe(filtroDaCapaModerna(80));
+    expect(filtroDaCapaModerna(Number.NaN)).toBe(filtroDaCapaModerna(45));
   });
 });
 

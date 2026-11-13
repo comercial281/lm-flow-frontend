@@ -157,6 +157,21 @@ export function filtroDaCapa(forca: number): string {
   return `linear-gradient(180deg, rgba(23,20,15,${alfa((o - 10) / 100)}) 0%, rgba(23,20,15,${alfa((o + 10) / 100)}) 55%, var(--paper) 100%)`;
 }
 
+/**
+ * Filtro da capa do Moderno (spec 6.4, protótipo `.hero-photo::after`): a foto
+ * fica num cartão e o filtro escurece de baixo pra cima e da esquerda, com o
+ * pé ESCURO dentro do cartão (nunca desbota pra cor de fundo do site). Com
+ * f = força / 100: em cima f × 0,7 (o topo que flutua), 0 aos 26%, f × 0,45
+ * aos 56% e f + 0,2 no pé; da esquerda, f × 0,6 até 0 aos 60%. Alfas presos
+ * entre 0 e 0,9, a força entre 0 e 80, como no Clássico.
+ */
+export function filtroDaCapaModerna(forca: number): string {
+  const f = Math.min(FILTRO_MAXIMO, Math.max(0, Number.isFinite(forca) ? forca : FILTRO_FABRICA)) / 100;
+  const c = (a: number) => `rgba(8,10,22,${alfa(a)})`;
+  return `linear-gradient(180deg, ${c(f * 0.7)} 0%, ${c(0)} 26%, ${c(f * 0.45)} 56%, ${c(f + 0.2)} 100%), `
+    + `linear-gradient(90deg, ${c(f * 0.6)} 0%, ${c(0)} 60%)`;
+}
+
 /* ── Cores ─────────────────────────────────────────────────────────────────── */
 
 /** Tinta escura fixa (não troca com o fundo): texto sobre cor clara. */

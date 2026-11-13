@@ -1,5 +1,5 @@
 import type { SiteInfo } from '@/pages/Public/portalShared';
-import { filterProperties, normalizarTexto, type PortalProperty } from './filtros';
+import { filterProperties, normalizarTexto, type PortalProperty, type PortalTab } from './filtros';
 import { rotuloTipo } from './tiposDeImovel';
 import { caminhoDoSite, type CtxDoSite } from './dominioDoSite';
 import { resolverHome, TEXTO_FABRICA, type AbaId, type HomeConfig, type RegrasVitrine, type Vitrine } from './homeConfig';
@@ -111,4 +111,34 @@ export function chamadasVisiveis(site: SiteInfo, ctx: CtxDoSite): CartaoChamada[
     }),
   ];
   return cards.filter((c): c is CartaoChamada => c !== null);
+}
+
+/** Aba que o cartão leva para a página do imóvel. */
+export function abaDaVitrine(v: Vitrine): PortalTab {
+  if (v.kind === 'launches') return 'launch';
+  if (v.kind === 'custom' && v.rules?.transaction === 'rent') return 'rent';
+  return 'sale';
+}
+
+/** Query string do "Ver todos": a busca que traz o mesmo recorte; null = sem o link. */
+function buscaDaVitrine(v: Vitrine): string | null {
+  if (v.kind === 'launches') return 'tab=launch';
+  // Destaques não têm filtro na busca: o botão diz que leva a todos os imóveis.
+  if (v.kind === 'featured') return '';
+  return v.rules ? buscaDaRegra(v.rules) : null;
+}
+
+/**
+ * O "Ver todos" da vitrine (endereço e rótulo), ou null. Regra que não cabe na
+ * busca, ou "Ver todos" que cai numa aba escondida, levaria a uma busca que não
+ * é a da vitrine: sem o link. Clássico e Moderno usam este mesmo.
+ */
+export function verTodosDaVitrine(v: Vitrine, abas: AbaId[], ctx: CtxDoSite): { href: string; rotulo: string } | null {
+  const q = buscaDaVitrine(v);
+  const abaDoLink = new URLSearchParams(q ?? '').get('tab');
+  if (q === null || !abas.includes((abaDoLink ?? 'sale') as AbaId)) return null;
+  return {
+    href: caminhoDoSite(ctx, `/imoveis${q ? `?${q}` : ''}`),
+    rotulo: v.kind === 'featured' ? 'Ver todos os imóveis' : 'Ver todos',
+  };
 }

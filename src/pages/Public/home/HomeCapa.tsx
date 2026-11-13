@@ -1,27 +1,16 @@
-import { useState, type FormEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { I, Ic, Select, type PortalProperty, type SiteInfo } from '../portalShared';
-import { opcoesDeTipo } from '@/features/siteBuilder/public/tiposDeImovel';
-import { CAMPOS_BUSCA, TITULO_CAPA_FABRICA, type AbaId, type CampoBusca, type HomeConfig } from '@/features/siteBuilder/public/homeConfig';
-import { faixasDePreco, precoDaFaixa } from '@/features/siteBuilder/public/faixasDePreco';
-import { FASES_DO_PUBLICO } from '@/features/properties/listingKind';
-import { caminhoDoSite } from '@/features/siteBuilder/public/dominioDoSite';
-import { useCtxDoSite } from '@/features/siteBuilder/public/useTenantDoSite';
+import type { AbaId, HomeConfig } from '@/features/siteBuilder/public/homeConfig';
 import { filtroDaCapa, logoNaCapa, logoNaSuperficie, resolverAparencia } from '@/features/siteBuilder/public/aparenciaConfig';
 import { ATRIBUTO_DO_LOGO_DA_CAPA, useLogoPousado } from '@/features/siteBuilder/public/logoPousado';
 import { semAsteriscos } from '@/features/siteBuilder/public/destaqueNoTitulo';
+import { ROTULO_ABA, fotoDaCapa, textosDaCapa, useBuscaDaCapa } from './useBuscaDaCapa';
 
 /* ────────────────────────────────────────────────────────────────────────────
    Capa da página inicial: foto/vídeo, título, subtítulo e a busca rápida.
    Abas e campos vêm do Personalizar (home.search); a busca é só a ENTRADA —
    ela leva à página dedicada (`/portal/:tenant/imoveis`) com os filtros na URL.
+   O estado e a ida da busca moram em `useBuscaDaCapa` (o mesmo da capa do Moderno).
 ──────────────────────────────────────────────────────────────────────────── */
-
-const ROTULO_ABA: Record<AbaId, string> = { sale: 'Comprar', rent: 'Alugar', launch: 'Lançamentos' };
-const SUBTITULO_PADRAO = 'Apartamentos, casas e lançamentos com curadoria, fotos reais e atendimento humano de verdade.';
-const CAPA_PADRAO = 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1600&q=80';
-const ATE_4: [string, string][] = [['1', '1+'], ['2', '2+'], ['3', '3+'], ['4', '4+']];
-const ATE_3: [string, string][] = [['1', '1+'], ['2', '2+'], ['3', '3+']];
 
 interface Props {
   site: SiteInfo;
@@ -37,56 +26,9 @@ interface Props {
 }
 
 export default function HomeCapa({ site, home, items, tenant, abas, cities, hoods, types, onTab }: Props) {
-  const navigate = useNavigate();
-  const ctx = useCtxDoSite(tenant);
-  // Sem aba visível (catálogo vazio ou todas desligadas), a busca cai em Comprar.
-  const [tab, setTab] = useState<AbaId>(abas[0] ?? 'sale');
-  const [valores, setValores] = useState<Partial<Record<CampoBusca, string>>>({});
-  const set = (k: CampoBusca) => (v: string) => setValores(s => ({ ...s, [k]: v }));
-
-  // Fase é de empreendimento, e Alugar não tem empreendimento: o campo some nessa aba.
-  const campos = CAMPOS_BUSCA.filter(c => home.search.fields.includes(c) && !(c === 'stage' && tab === 'rent'));
-  const selects = campos.filter(c => c !== 'code');
-  const temCodigo = campos.includes('code');
-
-  const trocarAba = (k: AbaId) => {
-    // As faixas de preço do aluguel são outras: a faixa marcada não vale mais.
-    if (faixasDePreco(k) !== faixasDePreco(tab)) setValores(s => ({ ...s, price: '' }));
-    if (k === 'rent') setValores(s => ({ ...s, stage: '' }));
-    setTab(k);
-    onTab?.(k);
-  };
-
-  const runSearch = (e: FormEvent) => {
-    e.preventDefault();
-    const params = new URLSearchParams();
-    if (tab !== 'sale') params.set('tab', tab);
-    for (const c of campos) {
-      const v = valores[c];
-      if (!v) continue;
-      if (c === 'price') {
-        for (const [k, n] of Object.entries(precoDaFaixa(tab, v))) params.set(k, n);
-      } else {
-        params.set(c, v);
-      }
-    }
-    const qs = params.toString();
-    navigate(caminhoDoSite(ctx, `/imoveis${qs ? `?${qs}` : ''}`));
-  };
-
-  const opcoes: Record<Exclude<CampoBusca, 'code'>, { label: string; options: [string, string][] }> = {
-    type: { label: 'Tipo', options: opcoesDeTipo(types) },
-    city: { label: 'Cidade', options: cities.map(c => [c, c]) },
-    neighborhood: { label: 'Bairro', options: hoods.map(h => [h, h]) },
-    price: { label: 'Faixa de preço', options: faixasDePreco(tab).map(f => [f.valor, f.rotulo]) },
-    bedrooms: { label: 'Dormitórios', options: ATE_4 },
-    suites: { label: 'Suítes', options: ATE_3 },
-    parking: { label: 'Vagas', options: ATE_3 },
-    stage: { label: 'Fase', options: FASES_DO_PUBLICO.map(f => [f.valor, f.rotulo]) },
-  };
-
-  const titulo = home.search.title?.trim() || TITULO_CAPA_FABRICA;
-  const subtitulo = home.search.subtitle?.trim() || site.seo?.description || SUBTITULO_PADRAO;
+  const { tab, trocarAba, valores, set, selects, temCodigo, runSearch, opcoes } =
+    useBuscaDaCapa({ home, tenant, abas, cities, hoods, types, onTab });
+  const { titulo, subtitulo } = textosDaCapa(site, home);
 
   // Aparência: "Tela cheia" ocupa a altura da tela e centra o conteúdo; "Meia
   // tela" (fábrica) é a de sempre, com a altura vinda só do respiro. O filtro
@@ -119,7 +61,7 @@ export default function HomeCapa({ site, home, items, tenant, abas, cities, hood
   ) : (
     // Foto escolhida no Site Builder (de um imóvel ou enviada); sem ela,
     // a capa do primeiro imóvel da lista, como sempre foi.
-    <img src={site.hero?.image_url || items[0]?.cover_url || CAPA_PADRAO} alt="" className="h-full w-full object-cover" />
+    <img src={fotoDaCapa(site, items)} alt="" className="h-full w-full object-cover" />
   );
 
   // Busca (entrada → página dedicada de filtros)
@@ -141,7 +83,7 @@ export default function HomeCapa({ site, home, items, tenant, abas, cities, hood
       {selects.length > 0 && (
         <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
           {selects.map(c => {
-            const o = opcoes[c as Exclude<CampoBusca, 'code'>];
+            const o = opcoes[c];
             return <Select key={c} value={valores[c] ?? ''} onChange={set(c)} label={o.label} options={o.options} />;
           })}
         </div>
