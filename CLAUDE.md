@@ -11373,3 +11373,17 @@ Por quê: o formulário é anônimo; com o telefone de um lead, qualquer pessoa 
 Junto: a IA Vendedora e a Mensagem com IA não mandam chave Pix, CPF/CNPJ, conta, telefone, e-mail ou link que a imobiliária não deu (o link do imóvel e o que está no cadastro, nos documentos e na conversa passam). A IA refaz a resposta uma vez e, se insistir, a frase sai; na Mensagem com IA, sem frase sobrando, sai a mensagem reserva com o motivo "trazia um dado que não está na instrução".
 
 Não reabrir sem o dono pedir.
+
+## Fotos do imóvel: foto sem a marca d'água (13/11/2026, backend #PR_BACK)
+
+Pedido do Tony (Moeda Forte): as fotos baixadas do site antigo já vieram com o logo da imobiliária no meio, e a marca d'água do Meu site caía em cima dele (logo duplo).
+
+**O que aparece na tela:** em Fotos e vídeos do imóvel, cada foto ganha o botão de carimbo "Tirar a marca d'água" / "Pôr a marca d'água" (rodapé do cartão e foto ampliada) e a seleção ganha as duas ações em lote. Foto marcada mostra o selo "Sem marca d'água" no cartão e " · sem marca d'água" na foto ampliada. Quem pode ocultar foto pode mexer nisso.
+
+**Regras:**
+1. Vale só pro site e página de anúncio (onde a marca existe). Portal, CRM e WhatsApp já saem com a original.
+2. Só foto de imóvel. Foto de condomínio não tem a escolha (o servidor nem tem rota pra editar foto de condomínio).
+3. A escolha é da foto, não do site: com a marca do site desligada, ela não muda nada; ao religar, a foto marcada continua sem.
+4. Na Moeda Forte as 4.062 fotos com o logo antigo foram marcadas por script (lista fechada, achada por comparação com o logo), e a marca do site foi religada depois.
+
+Não reabrir sem o dono pedir.

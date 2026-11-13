@@ -4,7 +4,7 @@ import {
 } from '@dnd-kit/core';
 import { SortableContext, rectSortingStrategy, sortableKeyboardCoordinates, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Check, Crown, Eye, EyeOff, GripVertical, Trash2 } from 'lucide-react';
+import { Check, Crown, Eye, EyeOff, GripVertical, Stamp, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/ds';
 import { cn } from '@/lib/utils';
 import type { PropertyPhoto } from '@/services/propertyPhotos/propertyPhotosService';
@@ -41,6 +41,8 @@ interface Props {
   aoMover: (deId: string, paraId: string) => void;
   aoUsarComoCapa: (id: string) => void;
   aoAlternarVisivel: (id: string) => void;
+  /** Só foto de imóvel: sem isto (condomínio), o botão da marca d'água não aparece. */
+  aoAlternarMarca?: (id: string) => void;
   aoExcluir: (id: string) => void;
 }
 
@@ -86,6 +88,9 @@ function Cartao({ foto, posicao, ehCapa, props }: { foto: PropertyPhoto; posicao
             </span>
           )}
           {!foto.published && <span className="rounded bg-black/75 px-1.5 py-0.5 text-xs font-semibold text-white">Oculta</span>}
+          {props.aoAlternarMarca && foto.skip_watermark && (
+            <span className="rounded bg-black/75 px-1.5 py-0.5 text-xs font-semibold text-white">Sem marca d'água</span>
+          )}
         </span>
       </button>
 
@@ -143,6 +148,18 @@ function Cartao({ foto, posicao, ehCapa, props }: { foto: PropertyPhoto; posicao
               className="opacity-70 group-hover:opacity-100"
             >
               {foto.published ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </Button>
+          )}
+          {props.aoAlternarMarca && (
+            <Button
+              type="button" variant="ghost" size="icon"
+              onClick={() => props.aoAlternarMarca?.(foto.id)}
+              aria-label={foto.skip_watermark ? "Pôr a marca d'água" : "Tirar a marca d'água"}
+              aria-pressed={!!foto.skip_watermark}
+              title={foto.skip_watermark ? "Voltar a sair no site com a marca d'água" : "Sair no site sem a marca d'água (para foto que já tem o logo da imobiliária)"}
+              className={cn('opacity-70 group-hover:opacity-100', foto.skip_watermark && 'text-muted-foreground line-through')}
+            >
+              <Stamp className="h-4 w-4" />
             </Button>
           )}
           {pode.excluir && (

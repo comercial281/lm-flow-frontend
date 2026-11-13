@@ -173,6 +173,25 @@ describe('useFotosDoImovel', () => {
     expect(h.result.current.fotos.map(p => p.id)).toEqual(['a', 'b']);
   });
 
+  it('alternar a marca grava skip_watermark e atualiza a foto', async () => {
+    const h = await montar([foto('a'), foto('b')]);
+    svc.update.mockResolvedValue(foto('b', { skip_watermark: true }));
+    await act(() => h.result.current.alternarMarca('b'));
+    expect(svc.update).toHaveBeenCalledWith('p1', 'b', { skip_watermark: true });
+    expect(h.result.current.fotos.find(p => p.id === 'b')?.skip_watermark).toBe(true);
+  });
+
+  it('emLote sem_marca marca todas, inclusive a capa', async () => {
+    const h = await montar([foto('a'), foto('b')]);
+    svc.update.mockResolvedValue(foto('x'));
+    svc.list.mockResolvedValue([foto('a'), foto('b')]);
+    let r: Awaited<ReturnType<typeof h.result.current.emLote>> | undefined;
+    await act(async () => { r = await h.result.current.emLote(['a', 'b'], 'sem_marca'); });
+    expect(svc.update).toHaveBeenCalledWith('p1', 'a', { skip_watermark: true });
+    expect(svc.update).toHaveBeenCalledWith('p1', 'b', { skip_watermark: true });
+    expect(r).toEqual({ feitos: 2, falhas: 0, pulouCapa: false });
+  });
+
   it('usar como capa leva pra frente', async () => {
     const h = await montar([foto('a'), foto('b')]);
     svc.setAsCover.mockResolvedValue(foto('b', { is_cover: true }));
