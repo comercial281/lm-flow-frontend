@@ -86,8 +86,9 @@ describe('indiceDeLugar', () => {
     const indice = indiceDeLugar(grande, 'sale');
     const inicio = performance.now();
     for (const t of ['co', 'con', 'cond', 'condo', 'condominio 4']) buscarNoIndice(indice, t);
-    // Antes do índice, "con" levava ~600 ms num Mac; aqui as cinco teclas juntas ficam bem abaixo disso.
-    expect(performance.now() - inicio).toBeLessThan(100);
+    // Antes do índice, "con" levava ~600 ms num Mac (as cinco teclas, ~3 s); com o índice, poucos ms.
+    // O teto folgado (500 ms) segura a volta ao caminho lento sem falhar com a máquina carregada.
+    expect(performance.now() - inicio).toBeLessThan(500);
     expect(buscarNoIndice(indice, 'con')).toHaveLength(8);
   });
 });
