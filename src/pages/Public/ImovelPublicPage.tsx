@@ -16,6 +16,7 @@ import SelosDoImovel from './ficha/SelosDoImovel';
 import MidiaDoImovel from './ficha/MidiaDoImovel';
 import DadosDoEmpreendimento from './ficha/DadosDoEmpreendimento';
 import GaleriaEmTelaCheia from './ficha/GaleriaEmTelaCheia';
+import TextoComNegrito from './ficha/TextoComNegrito';
 import { I, Ic } from './ficha/iconesDaFicha';
 import { derivadosDaFicha, useFichaDoImovel } from './ficha/useFichaDoImovel';
 import { resolverAparencia } from '@/features/siteBuilder/public/aparenciaConfig';
@@ -217,7 +218,7 @@ function FichaDoImovel() {
             {prop.description && (
               <section className="mt-9">
                 <h2 className="font-[var(--display)] text-2xl font-semibold">Sobre o imóvel</h2>
-                <p className="mt-3 whitespace-pre-line text-[15px] leading-relaxed text-neutral-700">{prop.description}</p>
+                <p className="mt-3 whitespace-pre-line text-[15px] leading-relaxed text-neutral-700"><TextoComNegrito texto={prop.description} classeDoNegrito="font-semibold text-[var(--ink)]" /></p>
               </section>
             )}
 
