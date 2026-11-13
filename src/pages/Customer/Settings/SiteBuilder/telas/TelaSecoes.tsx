@@ -11,6 +11,7 @@ import { Secao, Secoes } from '@/components/base/Secao';
 import { CLASSE_DO_CAMPO, CampoTexto, CampoTextoLongo } from '@/components/base/Campo';
 import EnvioDeImagem from '../ui/EnvioDeImagem';
 import type { FormProps } from './tipos';
+import { AJUDA_DO_DESTAQUE } from '@/features/siteBuilder/public/destaqueNoTitulo';
 
 const LINK_VALIDO = /^https?:\/\/\S+$/i;
 const ERRO_LINK = 'Use um endereço que comece com https://';
@@ -63,7 +64,7 @@ export default function TelaSecoes({ siteForm, setF }: FormProps) {
         {(
           <>
             <CampoTexto id="passos-titulo" rotulo="Título da seção" maxLength={LIMITES_SECOES.tituloSecao} valor={passos.title}
-              placeholder={TITULO_PASSOS_FABRICA} aoMudar={v => mudarPassos({ title: v })} />
+              placeholder={TITULO_PASSOS_FABRICA} ajuda={AJUDA_DO_DESTAQUE} aoMudar={v => mudarPassos({ title: v })} />
             {passos.items.map((p, i) => (
               <fieldset key={i} className="space-y-4 rounded-lg border border-border p-4">
                 <legend className="px-1 text-sm font-medium">Passo {i + 1}</legend>
@@ -107,7 +108,7 @@ export default function TelaSecoes({ siteForm, setF }: FormProps) {
               <CampoTexto id="atendimento-selo" rotulo="Selo (texto pequeno em cima)" maxLength={LIMITES_SECOES.selo}
                 valor={a.eyebrow ?? ''} aoMudar={v => mudarAtendimento({ eyebrow: texto(v) })} />
               <CampoTexto id="atendimento-titulo" rotulo="Título do Atendimento" maxLength={LIMITES_SECOES.tituloAtendimento}
-                valor={a.title ?? ''} aoMudar={v => mudarAtendimento({ title: texto(v) })} />
+                valor={a.title ?? ''} ajuda={AJUDA_DO_DESTAQUE} aoMudar={v => mudarAtendimento({ title: texto(v) })} />
               <CampoTextoLongo id="atendimento-texto" rotulo="Texto do Atendimento" maxLength={LIMITES_SECOES.textoAtendimento} rows={4}
                 valor={a.text ?? ''} aoMudar={v => mudarAtendimento({ text: texto(v) })} className="sm:col-span-2" />
               <CampoTexto id="atendimento-botao" rotulo="Texto do botão" maxLength={LIMITES_SECOES.botao}

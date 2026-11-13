@@ -21,7 +21,7 @@ const personalizado = (): EstadoDoVisual => ({
 
 describe('modelosDoSite', () => {
   it('tem os três modelos, com nome e frase', () => {
-    expect(MODELOS_DO_SITE.map(m => m.id)).toEqual(['classico', 'editorial', 'popular']);
+    expect(MODELOS_DO_SITE.map(m => m.id)).toEqual(['classico', 'editorial', 'popular', 'moderno']);
     MODELOS_DO_SITE.forEach(m => { expect(m.nome).toBeTruthy(); expect(m.frase).toBeTruthy(); });
   });
 
@@ -118,10 +118,16 @@ describe('modelosDoSite', () => {
   });
 
   describe('Moderno', () => {
-    it('MODELOS_DO_SITE segue com 3; a prévia tem 4', () => {
-      expect(MODELOS_DO_SITE).toHaveLength(3);
+    it('o Moderno é cartão na tela (parte c) e a prévia aceita os mesmos 4', () => {
+      expect(MODELOS_DO_SITE).toHaveLength(4);
       expect(MODELOS_DA_PREVIA.map(m => m.id)).toEqual(['classico', 'editorial', 'popular', 'moderno']);
-      expect(MODELOS_DA_PREVIA[3].nome).toBe('Moderno');
+      expect(MODELOS_DO_SITE[3].nome).toBe('Moderno');
+      expect(MODELOS_DO_SITE[3].frase).toBe('Capa de ponta a ponta, cartões de foto inteira e rodapé em bloco. Visual atual, fonte única.');
+    });
+
+    it('trocar só o Destaque nos títulos não tira o "Em uso" do Moderno', () => {
+      const m = aplicarModelo('moderno', personalizado());
+      expect(modeloAtual({ ...m, appearance: { ...m.appearance, heading_highlight: 'italic' } })).toBe('moderno');
     });
 
     it('grava a receita e preserva cores e textos', () => {

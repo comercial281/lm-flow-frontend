@@ -13,7 +13,7 @@ import { APARENCIA_FABRICA, FONTES_DO_SITE, type Aparencia } from '@/features/si
 import { Secao, Secoes } from '@/components/base/Secao';
 import { CLASSE_DO_CAMPO, Campo } from '@/components/base/Campo';
 import EnvioDeImagem from '../ui/EnvioDeImagem';
-import { BlocoCapa, BlocoFaixaDeCima, BlocoFundo, BlocoLogoNaCapa, BlocoRodape, BlocoTopo } from './BlocosDoVisual';
+import { BlocoCapa, BlocoFaixaDeCima, BlocoDestaqueNosTitulos, BlocoFundo, BlocoLogoNaCapa, BlocoRodape, BlocoTopo } from './BlocosDoVisual';
 import type { FormProps } from './tipos';
 
 // As 10 fontes do site (Google Fonts): a lista mora junto da regra que as carrega no site.
@@ -229,6 +229,7 @@ export default function TelaAparencia({ site, siteForm, setF, heroPickPreview, s
       <BlocoTopo ap={ap} mudar={mudarAp} corPrincipal={siteForm.primary_color || '#7C3AED'} />
       <BlocoLogoNaCapa ap={ap} mudar={mudarAp} temLogo={!!siteForm.logo_url} />
       <BlocoFaixaDeCima ap={ap} mudar={mudarAp} />
+      {ap.style === 'modern' && <BlocoDestaqueNosTitulos ap={ap} mudar={mudarAp} corDeDestaque={siteForm.accent_color || '#9333EA'} />}
 
       {/* Banner da home: a FOTO (automática, de um imóvel ou enviada) e o vídeo,
           que quando preenchido passa por cima da foto. */}

@@ -338,3 +338,20 @@ describe('TelaAparencia · Mais fotos do banner', () => {
     expect(reordenarExtras(lista, ['a', 'b', 'c'], 'a', 'zz')).toBe(lista);
   });
 });
+
+describe('TelaAparencia · Destaque nos títulos', () => {
+  it('só aparece no Moderno e grava heading_highlight', async () => {
+    const espiao = vi.fn();
+    const { unmount } = render(<Montar espiao={espiao} />);
+    expect(screen.queryByRole('heading', { name: 'Destaque nos títulos' })).toBeNull();
+    unmount();
+    render(<Montar espiao={espiao} inicial={{ appearance: { ...APARENCIA_FABRICA, style: 'modern' } }} />);
+    expect(screen.getByRole('heading', { name: 'Destaque nos títulos' })).toBeTruthy();
+    const grupo = screen.getByRole('group', { name: 'Destaque nos títulos' });
+    expect(within(grupo).getByRole('button', { name: /Cor de destaque/ }).getAttribute('aria-pressed')).toBe('true');
+    await userEvent.click(within(grupo).getByRole('button', { name: /Itálico/ }));
+    expect(espiao.mock.calls.at(-1)![0].appearance.heading_highlight).toBe('italic');
+    await userEvent.click(within(grupo).getByRole('button', { name: /Nenhum/ }));
+    expect(espiao.mock.calls.at(-1)![0].appearance.heading_highlight).toBe('none');
+  });
+});

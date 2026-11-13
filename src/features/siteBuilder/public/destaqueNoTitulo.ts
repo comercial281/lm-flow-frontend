@@ -13,3 +13,6 @@ export function semAsteriscos(texto: string): string {
   const p = partesDoTitulo(texto);
   return p ? p.antes + p.marcado + p.depois : texto;
 }
+
+/** Ajuda dos campos de título onde o asterisco vale (spec 6.1). */
+export const AJUDA_DO_DESTAQUE = 'Coloque uma palavra entre asteriscos pra destacar (vale no modelo Moderno).';

@@ -5,6 +5,7 @@ import {
 import { Secao, Secoes } from '@/components/base/Secao';
 import { CampoTexto } from '@/components/base/Campo';
 import type { FormProps } from './tipos';
+import { AJUDA_DO_DESTAQUE } from '@/features/siteBuilder/public/destaqueNoTitulo';
 
 const ABAS: { id: AbaId; rotulo: string }[] = [
   { id: 'sale', rotulo: 'Comprar' },
@@ -30,7 +31,7 @@ export default function TelaBusca({ siteForm, setF }: FormProps) {
     <Secoes>
       <Secao titulo="Capa" descricao="O texto grande no topo da página inicial, logo acima da busca.">
         <CampoTexto id="busca-titulo" rotulo="Título" valor={search.title ?? ''} placeholder={TITULO_CAPA_FABRICA}
-          ajuda="Em branco, o site usa o texto que aparece de exemplo no campo."
+          ajuda={`Em branco, o site usa o texto que aparece de exemplo no campo. ${AJUDA_DO_DESTAQUE}`}
           aoMudar={v => mudar({ title: v || null })} />
         <CampoTexto id="busca-subtitulo" rotulo="Subtítulo" valor={search.subtitle ?? ''}
           placeholder="Usa a descrição de Aparecer no Google"

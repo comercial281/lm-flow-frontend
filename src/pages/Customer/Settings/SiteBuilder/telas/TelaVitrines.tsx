@@ -9,6 +9,7 @@ import { FASES_DO_PUBLICO } from '@/features/properties/listingKind';
 import { Secao, Secoes } from '@/components/base/Secao';
 import { CLASSE_DO_CAMPO, CampoTexto } from '@/components/base/Campo';
 import type { FormProps } from './tipos';
+import { AJUDA_DO_DESTAQUE } from '@/features/siteBuilder/public/destaqueNoTitulo';
 
 // Teto do servidor (Sites::HomeConfig::MAX_SHOWCASES), contando as 2 de fábrica.
 const MAX_VITRINES = 6;
@@ -64,7 +65,7 @@ export default function TelaVitrines({ siteForm, setF }: FormProps) {
     <Secoes>
       <Secao
         titulo="Faixas de imóveis"
-        descricao="Cada vitrine é uma faixa de imóveis na página inicial, com até 6, os mais recentes primeiro. Vitrine sem imóvel some sozinha do site. Arraste pela alça ou use as setas para mudar a ordem."
+        descricao={`Cada vitrine é uma faixa de imóveis na página inicial, com até 6, os mais recentes primeiro. Vitrine sem imóvel some sozinha do site. Arraste pela alça ou use as setas para mudar a ordem. No título da vitrine: ${AJUDA_DO_DESTAQUE.charAt(0).toLowerCase()}${AJUDA_DO_DESTAQUE.slice(1)}`}
       >
       <Reorder.Group axis="y" values={lista} onReorder={gravar} className="space-y-3">
         {lista.map((v, i) => (
