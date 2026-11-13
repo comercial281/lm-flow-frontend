@@ -43,12 +43,13 @@ export function heroImageWarning(resolved?: SiteHeroImage | null, outrasNoBanner
   if (!resolved || resolved.mode !== 'property') return null;
   const nome = resolved.property?.title ? `«${resolved.property.title}»` : 'escolhido';
   if (outrasNoBanner) {
-    const motivo = {
+    const motivos: Record<NonNullable<SiteHeroImage['reason']>, string> = {
       imovel_removido: 'o imóvel escolhido foi excluído',
       imovel_despublicado: `o imóvel ${nome} não está mais publicado no site`,
       imovel_sem_foto: `o imóvel ${nome} não tem foto publicada`,
       erro: 'não consegui carregar a foto do imóvel escolhido',
-    }[resolved.reason ?? ''];
+    };
+    const motivo = resolved.reason ? motivos[resolved.reason] : null;
     return motivo ? `A foto principal saiu do banner: ${motivo}. O banner segue com as outras fotos.` : null;
   }
   switch (resolved.reason) {

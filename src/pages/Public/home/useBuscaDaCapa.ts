@@ -35,6 +35,8 @@ export interface PropsDaBusca {
   items: PortalProperty[];
   /** Avisado quando a pessoa troca de aba (a captura de contato acompanha). */
   onTab?: (tab: AbaId) => void;
+  /** Quem desenha: muda quantos campos cabem na primeira linha (`dividirCampos`). */
+  modelo: ModeloDaCapa;
 }
 
 export type ModeloDaCapa = 'classico' | 'moderno';

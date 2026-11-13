@@ -5,7 +5,7 @@ import { ATRIBUTO_DO_LOGO_DA_CAPA, useLogoPousado } from '@/features/siteBuilder
 import { semAsteriscos } from '@/features/siteBuilder/public/destaqueNoTitulo';
 import CampoDeLugar from '../CampoDeLugar';
 import FundoDaCapa from './FundoDaCapa';
-import { ROTULO_ABA, fotosDaCapa, lugarLargo, textosDaCapa, useBuscaDaCapa } from './useBuscaDaCapa';
+import { ROTULO_ABA, fotosDaCapa, lugarLargo, textosDaCapa, useBuscaDaCapa, type CampoDeEscolha } from './useBuscaDaCapa';
 
 /* ────────────────────────────────────────────────────────────────────────────
    Capa da página inicial: foto/vídeo, título, subtítulo e a busca rápida.
@@ -28,7 +28,7 @@ interface Props {
 }
 
 export default function HomeCapa({ site, home, items, tenant, abas, cities, hoods, types, onTab }: Props) {
-  const { tab, trocarAba, valores, set, selects, primeira, mais, abertos, alternarMais, escolherLugar, temCodigo, runSearch, opcoes } =
+  const { tab, trocarAba, valores, set, primeira, mais, abertos, alternarMais, escolherLugar, temCodigo, runSearch, opcoes } =
     useBuscaDaCapa({ home, tenant, abas, cities, hoods, types, items, onTab, modelo: 'classico' });
   const { titulo, subtitulo } = textosDaCapa(site, home);
 
@@ -70,7 +70,7 @@ export default function HomeCapa({ site, home, items, tenant, abas, cities, hood
   // borda (overflow-hidden; o markup dela é trava de teste), então a lista abre pra cima, sobre o título.
   // Com "Mais filtros" e o lugar entre os 3 primeiros, ele ocupa 2 colunas: a linha fecha as 4 sem buraco.
   const largo = lugarLargo(primeira, mais);
-  const campo = (c: (typeof selects)[number]) => {
+  const campo = (c: CampoDeEscolha) => {
     if (c === 'place') {
       return <CampoDeLugar key={c} items={items} tab={tab} texto={valores.place ?? ''} onTexto={set('place')} onEscolher={escolherLugar}
         abrirPara={ap.hero_layout === 'split' ? 'baixo' : 'cima'} className={largo && primeira.includes(c) ? 'md:col-span-2' : ''} />;

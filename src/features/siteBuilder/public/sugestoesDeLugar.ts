@@ -57,7 +57,7 @@ function agrupar(daAba: PortalProperty[], nome: (p: PortalProperty) => string | 
     const valor = nome(p);
     const chave = normalizarTexto(valor);
     if (!chave) continue;
-    const g = grupos.get(chave) ?? { grafias: new Map(), cidades: [] };
+    const g: Grupo = grupos.get(chave) ?? { grafias: new Map(), cidades: [] };
     contar(g.grafias, valor);
     g.cidades.push(p.address?.city);
     grupos.set(chave, g);
