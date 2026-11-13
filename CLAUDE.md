@@ -11289,3 +11289,17 @@ O **Entrar** do painel raiz abre o cliente em `/sso?code=<código>`. O código v
 - Quem usa: clicar em Entrar continua abrindo o cliente direto; se a aba demorar mais de 1 minuto pra abrir (ou o link for reaberto), cai no login e é só clicar em Entrar de novo.
 
 Não reabrir sem o dono pedir: a sessão não volta pra URL, nem no `#fragmento`.
+
+## Segurança: o que mudou pra quem usa em 12/11/2026 (backend #612, #614, #625, #626)
+
+Regras de servidor que a tela precisa respeitar. Não reabrir sem o dono pedir.
+
+- **Super-admin dentro de um cliente só pelo Entrar do painel** (#612). Login com senha direto no endereço do cliente, mesmo com o e-mail do super-admin, é admin comum daquele cliente: o `whoami` responde `is_admin: false` e as rotas de plataforma dão 403. Equipe e chaves do MCP só no painel raiz (`app`). A conta "Atendimento" (o fantasma) não tem senha, e-mail nem link de acesso mexidos por ninguém pela tela: o servidor recusa com "Este cadastro é da equipe da Leal Mídia." Pessoa nova na Equipe nasce sem acesso ao admin.
+- **Corretor isolado só alcança o lead dele** (#614): o que é dele, o do contato dele sem responsável e o que a roleta ofertou pra ele. Lead sem dono nenhum e lead em oferta pra colega somem da busca de Conversas (conversas e mensagens) e do tempo real. Conversa alheia responde **404** ("não encontrada"), nunca 401. **Iniciar conversa** com contato sem dono faz do corretor o responsável (conversa e funil). Corretor não liga nem para automação em lead sem dono; o gestor sim. Cliente com isolamento desligado: quem só ganhou acesso automático a um número (por ter virado dono de um lead ali) vê só esse lead; quem foi liberado na tela da Instância vê a caixa.
+- **Recusa por cargo é 403, não 401** (#626). 401 é só sessão inválida (a tela sai); 403 não derruba o login: leitura recusada fica quieta, clique recusado mostra o aviso de cargo.
+- **Quem deixou de ser responsável** para de receber os avisos de mensagem nova daquele lead (#626).
+- **Oferta da roleta**: o balão do lead mostra o nome sem o telefone pro corretor ofertado (`offer_name`) (#626).
+- **"Chamar uma API" de automação da equipe**: quem não pode editar vê o domínio e o nome dos cabeçalhos, sem valor, corpo nem caminho (#626).
+- **"Enviar teste" do Disparo** só vai pro WhatsApp de alguém da equipe (o do perfil ou um número conectado do cliente; 55 e nono dígito tanto faz), até 20 por hora por pessoa. Fora disso: *"O teste só vai pro WhatsApp de alguém da equipe. Use o seu número (cadastre no seu perfil) ou o de um colega."* (#626).
+- **Login** (#625): errar a senha trava quem errou naquele IP, não a conta pra todo mundo. Ataque à conta vindo de muitos IPs: aparelho novo espera alguns minutos ("Muitas tentativas nesta conta"); quem já entrou daquele IP segue entrando.
+- **Upload**: a porta padrão de upload direto sem login não existe mais (404). Anexo de Conversas e do widget: até 100 MB e só os tipos do anexo de mensagem (#622).
