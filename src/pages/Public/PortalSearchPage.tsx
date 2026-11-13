@@ -14,6 +14,7 @@ import { AREAS_MINIMAS } from '@/features/siteBuilder/public/filtros';
 import { useBuscaDosImoveis } from './busca/useBuscaDosImoveis';
 import { resolverAparencia } from '@/features/siteBuilder/public/aparenciaConfig';
 import ImoveisModerno from './moderno/ImoveisModerno';
+import NaoEncontradaModerna from './moderno/NaoEncontradaModerna';
 
 /* ────────────────────────────────────────────────────────────────────────────
    Portal Imobiliário — página dedicada de BUSCA / FILTROS (Produto A).
@@ -42,7 +43,11 @@ export default function PortalSearchPage() {
   if (state === 'error' || listaDoServidor === 'erro') {
     return <div className="flex min-h-screen items-center justify-center px-6 text-center text-neutral-500" style={{ fontFamily: 'system-ui' }}>Portal indisponível.</div>;
   }
-  if (listaDoServidor === null && chave) return <PaginaNaoEncontrada inicio={caminhoDoSite(ctx, '/')} imoveis={caminhoDoSite(ctx, '/imoveis')} site={site} />;
+  if (listaDoServidor === null && chave) {
+    return resolverAparencia(site.appearance).style === 'modern'
+      ? <NaoEncontradaModerna inicio={caminhoDoSite(ctx, '/')} imoveis={caminhoDoSite(ctx, '/imoveis')} cssVars={cssVars as CSSProperties} fontHrefs={fontHrefs} fundo={fundo} />
+      : <PaginaNaoEncontrada inicio={caminhoDoSite(ctx, '/')} imoveis={caminhoDoSite(ctx, '/imoveis')} />;
+  }
 
   // Moderno: outro desenho, com a mesma busca (URL, ordem, visita).
   if (resolverAparencia(site.appearance).style === 'modern') {

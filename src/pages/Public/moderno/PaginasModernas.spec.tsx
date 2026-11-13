@@ -253,3 +253,13 @@ describe('Manutenção no Moderno', () => {
     expect(screen.getByRole('link', { name: /Falar no WhatsApp/ })).toBeTruthy();
   });
 });
+
+describe('404 do domínio sem peso extra', () => {
+  it('PaginaNaoEncontrada não importa nada do site (o domínio carrega ela logo de cara, inclusive nas landings)', async () => {
+    const { readFileSync } = await import('node:fs');
+    const { join } = await import('node:path');
+    const fonte = readFileSync(join(process.cwd(), 'src/pages/Public/PaginaNaoEncontrada.tsx'), 'utf8');
+    const imports = fonte.split('\n').filter(l => l.startsWith('import '));
+    expect(imports).toEqual(["import { useEffect } from 'react';"]);
+  });
+});
