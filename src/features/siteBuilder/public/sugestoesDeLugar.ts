@@ -18,58 +18,110 @@ export const ROTULO_DO_GRUPO: Record<GrupoDeLugar, string> = {
 
 const porRotulo = (a: SugestaoDeLugar, b: SugestaoDeLugar) => a.rotulo.localeCompare(b.rotulo, 'pt-BR');
 
-/** Começo de qualquer palavra do nome ("parque dos" casa; "arque" não). */
-const casa = (nome: string, texto: string) => (' ' + normalizarTexto(nome)).includes(' ' + texto);
-
-/** Grafia que mais aparece entre os imóveis (no empate, a primeira). */
-function grafiaMaisComum(valores: (string | null | undefined)[]): string {
-  const contagem = new Map<string, number>();
-  for (const v of valores) {
-    const g = (v ?? '').trim();
-    if (g) contagem.set(g, (contagem.get(g) ?? 0) + 1);
-  }
+/** Grafia que mais aparece (no empate, a primeira). */
+function grafiaMaisComum(contagem: Map<string, number>): string {
   return [...contagem].reduce((m, a) => (a[1] > m[1] ? a : m), ['', 0] as [string, number])[0];
 }
 
-export function sugestoesDeLugar(items: PortalProperty[], tab: PortalTab, texto: string, limite = 8): SugestaoDeLugar[] {
-  const alvo = normalizarTexto(texto);
-  if (alvo.length < 2) return [];
+function contar(mapa: Map<string, number>, valor: string | null | undefined) {
+  const g = (valor ?? '').trim();
+  if (g) mapa.set(g, (mapa.get(g) ?? 0) + 1);
+}
+
+/** Uma sugestão pronta, com o nome já normalizado e um espaço na frente (casa pelo começo de palavra). */
+interface EntradaDeLugar {
+  busca: string;
+  sugestao: SugestaoDeLugar;
+}
+
+/**
+ * Tudo que o campo pode sugerir numa aba, já normalizado e em ordem. Monta uma
+ * vez por catálogo e aba (O(catálogo)); a cada tecla `buscarNoIndice` só
+ * percorre as entradas, sem voltar ao catálogo.
+ */
+export interface IndiceDeLugar {
+  condominios: EntradaDeLugar[];
+  bairros: EntradaDeLugar[];
+  cidades: EntradaDeLugar[];
+}
+
+interface Grupo {
+  grafias: Map<string, number>;
+  /** Condomínio: grafias da cidade (a mais comum vai no rótulo). Bairro: as cidades dele. */
+  cidades: (string | null | undefined)[];
+}
+
+function agrupar(daAba: PortalProperty[], nome: (p: PortalProperty) => string | null | undefined): Map<string, Grupo> {
+  const grupos = new Map<string, Grupo>();
+  for (const p of daAba) {
+    const valor = nome(p);
+    const chave = normalizarTexto(valor);
+    if (!chave) continue;
+    const g = grupos.get(chave) ?? { grafias: new Map(), cidades: [] };
+    contar(g.grafias, valor);
+    g.cidades.push(p.address?.city);
+    grupos.set(chave, g);
+  }
+  return grupos;
+}
+
+const ordenar = (entradas: EntradaDeLugar[]) => entradas.sort((a, b) => porRotulo(a.sugestao, b.sugestao));
+
+export function indiceDeLugar(items: PortalProperty[], tab: PortalTab): IndiceDeLugar {
   const daAba = filterProperties(items, { tab, type: '', city: '', neighborhood: '', bedrooms: '', code: '' });
 
-  const condominios: SugestaoDeLugar[] = opcoesSemRepetir(daAba.map(p => p.condominium_name))
-    .filter(nome => casa(nome, alvo))
-    .map(nome => {
-      const chave = normalizarTexto(nome);
-      const cidade = grafiaMaisComum(
-        daAba.filter(p => normalizarTexto(p.condominium_name) === chave).map(p => p.address?.city),
-      );
-      return {
-        grupo: 'condominium' as const,
-        rotulo: cidade ? `${nome} (${cidade})` : nome,
-        filtros: { condominium: nome },
-      };
-    })
-    .sort(porRotulo);
+  const condominios: EntradaDeLugar[] = [];
+  for (const [chave, g] of agrupar(daAba, p => p.condominium_name)) {
+    const nome = grafiaMaisComum(g.grafias);
+    const contagem = new Map<string, number>();
+    for (const c of g.cidades) contar(contagem, c);
+    const cidade = grafiaMaisComum(contagem);
+    condominios.push({
+      busca: ' ' + chave,
+      sugestao: { grupo: 'condominium', rotulo: cidade ? `${nome} (${cidade})` : nome, filtros: { condominium: nome } },
+    });
+  }
 
-  const bairros: SugestaoDeLugar[] = opcoesSemRepetir(daAba.map(p => p.address?.neighborhood))
-    .filter(nome => casa(nome, alvo))
-    .flatMap<SugestaoDeLugar>(nome => {
-      const chave = normalizarTexto(nome);
-      const doBairro = daAba.filter(p => normalizarTexto(p.address?.neighborhood) === chave);
-      const cidades = opcoesSemRepetir(doBairro.map(p => p.address?.city));
-      if (cidades.length < 2) return [{ grupo: 'neighborhood', rotulo: nome, filtros: { neighborhood: nome } }];
-      return cidades.map(cidade => ({
-        grupo: 'neighborhood' as const,
-        rotulo: `${nome} · ${cidade}`,
-        filtros: { neighborhood: nome, city: cidade },
-      }));
-    })
-    .sort(porRotulo);
+  const bairros: EntradaDeLugar[] = [];
+  for (const [chave, g] of agrupar(daAba, p => p.address?.neighborhood)) {
+    const nome = grafiaMaisComum(g.grafias);
+    const cidades = opcoesSemRepetir(g.cidades);
+    if (cidades.length < 2) {
+      bairros.push({ busca: ' ' + chave, sugestao: { grupo: 'neighborhood', rotulo: nome, filtros: { neighborhood: nome } } });
+    } else {
+      for (const cidade of cidades) {
+        bairros.push({
+          busca: ' ' + chave,
+          sugestao: { grupo: 'neighborhood', rotulo: `${nome} · ${cidade}`, filtros: { neighborhood: nome, city: cidade } },
+        });
+      }
+    }
+  }
 
-  const cidades: SugestaoDeLugar[] = opcoesSemRepetir(daAba.map(p => p.address?.city))
-    .filter(nome => casa(nome, alvo))
-    .map(nome => ({ grupo: 'city' as const, rotulo: nome, filtros: { city: nome } }))
-    .sort(porRotulo);
+  const cidades: EntradaDeLugar[] = opcoesSemRepetir(daAba.map(p => p.address?.city)).map(nome => ({
+    busca: ' ' + normalizarTexto(nome),
+    sugestao: { grupo: 'city', rotulo: nome, filtros: { city: nome } },
+  }));
 
-  return [...condominios, ...bairros, ...cidades].slice(0, limite);
+  return { condominios: ordenar(condominios), bairros: ordenar(bairros), cidades: ordenar(cidades) };
+}
+
+/** Sugestões de um texto no índice: começo de qualquer palavra, sem acento ("parque dos" casa; "arque" não). */
+export function buscarNoIndice(indice: IndiceDeLugar, texto: string, limite = 8): SugestaoDeLugar[] {
+  const alvo = normalizarTexto(texto);
+  if (alvo.length < 2) return [];
+  const procura = ' ' + alvo;
+  const achadas: SugestaoDeLugar[] = [];
+  for (const grupo of [indice.condominios, indice.bairros, indice.cidades]) {
+    for (const e of grupo) {
+      if (achadas.length >= limite) return achadas;
+      if (e.busca.includes(procura)) achadas.push(e.sugestao);
+    }
+  }
+  return achadas;
+}
+
+export function sugestoesDeLugar(items: PortalProperty[], tab: PortalTab, texto: string, limite = 8): SugestaoDeLugar[] {
+  if (normalizarTexto(texto).length < 2) return [];
+  return buscarNoIndice(indiceDeLugar(items, tab), texto, limite);
 }

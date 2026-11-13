@@ -1,6 +1,6 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { I, Ic, type PortalProperty, type PortalTab } from './portalShared';
-import { ROTULO_DO_GRUPO, sugestoesDeLugar, type SugestaoDeLugar } from '@/features/siteBuilder/public/sugestoesDeLugar';
+import { ROTULO_DO_GRUPO, buscarNoIndice, indiceDeLugar, type SugestaoDeLugar } from '@/features/siteBuilder/public/sugestoesDeLugar';
 
 interface Props {
   items: PortalProperty[];
@@ -24,7 +24,9 @@ export default function CampoDeLugar({ items, tab, texto, onTexto, onEscolher, o
   const raiz = useRef<HTMLDivElement>(null);
   const [aberto, setAberto] = useState(false);
   const [ativo, setAtivo] = useState(-1);
-  const sugestoes = useMemo(() => sugestoesDeLugar(items, tab, texto), [items, tab, texto]);
+  // O índice sai do catálogo uma vez por aba; cada tecla só filtra o que já está normalizado.
+  const indice = useMemo(() => indiceDeLugar(items, tab), [items, tab]);
+  const sugestoes = useMemo(() => buscarNoIndice(indice, texto), [indice, texto]);
   const mostrando = aberto && sugestoes.length > 0;
 
   useEffect(() => { setAtivo(-1); }, [texto]);
