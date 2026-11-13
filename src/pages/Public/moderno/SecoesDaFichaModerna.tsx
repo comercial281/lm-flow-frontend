@@ -86,7 +86,7 @@ function Tipologias({ lista }: { lista: PropertyTypology[] }) {
                   const v = c.valor(t);
                   const ultima = j === colunas.length - 1 && c.rotulo === 'A partir de';
                   return (
-                    <td key={c.rotulo} className="px-4 py-3.5 align-top tabular-nums text-[var(--m-text)]">
+                    <td key={c.rotulo} className={`px-4 py-3.5 align-top tabular-nums text-[var(--m-text)] ${c.rotulo === "Dormitórios" ? "" : "whitespace-nowrap"}`}>
                       {v ? (ultima ? <b className="whitespace-nowrap font-semibold text-[var(--m-head)]">{v}</b> : v) : '—'}
                     </td>
                   );
