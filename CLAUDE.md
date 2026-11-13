@@ -6833,6 +6833,36 @@ Quarto modelo do site, **Moderno** (spec `LM FLOW/specs/2026-11-13-modelo-site-m
 
 Testes: `src/pages/Public/moderno/*.spec.tsx` (Início, topo, rodapé), `portalShared.spec.tsx`, `aparenciaConfig.spec.ts`, `destaqueNoTitulo.spec.ts`, `maisBuscados.spec.ts`, `modelosDoSite.spec.ts`, `previaDoModelo.spec.ts`.
 
+## Modelo Moderno, parte (b) (13/11/2026)
+
+Segunda parte do Moderno (spec `LM FLOW/specs/2026-11-13-modelo-site-moderno-design.md`, seção 7; plano `...-plano-frontend-b.md`): **Imóveis (busca), ficha do imóvel e ficha de lançamento**. Continua só na prévia (`?modelo=moderno`); o cartão na tela entra na parte (c).
+
+**O que aparece pra quem visita:**
+
+- **Imóveis:** título da página, painel claro com as abas e o campo de código em cima, 5 filtros à vista (Tipo, Cidade, Bairro, Dormitórios, Faixa de preço) e "Mais filtros" (Suítes, Vagas e Fase; Fase some em Alugar). Os filtros valem na hora, como no Clássico (sem botão Buscar). Com Suítes, Vagas ou Fase na URL, "Mais filtros" já vem aberto e não fecha (a pílula tira o filtro). Barra de resultados: "N imóveis encontrados", **pílulas dos filtros ativos** (cada uma tira só o filtro dela; preço tira mínimo e máximo juntos) e o "Ordenar por". Grade de **cartão claro** (foto 4:3 com o preço em vidro escuro, selos, tipo · código, título em 2 linhas, local, dorm./suítes/vagas/m², "Ver detalhes" e WhatsApp redondo; sem foto, "Fotos em breve"). Com Lista de imóveis › em linhas, o mesmo cartão deitado a partir do md. "Mostrar mais" de 30 em 30.
+- **Ficha:** "Voltar aos imóveis", **galeria em mosaico** sem buraco (1 foto larga; 2 lado a lado; 3 = grande + 2; 4 = grande + larga + 2; 5+ = grande + 4 com "+N fotos"; no celular só a grande, com "1 / N"), "Ver vídeo"/"Tour virtual" na foto grande levando à seção de vídeo; clicar em qualquer foto abre a tela cheia de hoje. Tipo · código, título, selos (o de destaque na cor de destaque), região e condomínio, **faixa única de números** (dormitórios, suítes, banheiros, vagas, área útil, área total: só os que existem), custos em pílulas. À direita, **cartão de interesse grudado** (preço, "a partir de" no lançamento, fase, código e CRECI, custos, nome, WhatsApp, Tenho interesse, Chamar no WhatsApp e, com o book, Receber o book no WhatsApp). No celular o cartão vem depois dos números e **a barra fixa de contato continua** (preço + WhatsApp, ou "Tenho interesse" sem WhatsApp do site).
+- **Seções** (cada uma some sem dado, nunca título solto; ordem do protótipo): Dados do empreendimento (blocos, construtora primeiro), Tipologias em tabela (colunas só as que alguma planta preenche; rola dentro dela no celular), Sobre o imóvel (parágrafos pela linha em branco, com negrito), Características, Comodidades do condomínio, Vídeo e tour virtual (o `MidiaDoImovel` de hoje), Localização (o mapa de hoje em moldura arredondada; revenda sem pino, lançamento no ponto), bloco "Receba o book no WhatsApp" na cor principal e "Você também pode gostar" com o cartão claro.
+
+**Como está montado:**
+
+- A lógica das duas páginas saiu pra hooks, **sem mudar o Clássico**: `busca/useBuscaDosImoveis.ts` (filtros na URL, lista do servidor, ordem, "Mostrar mais", visita, rastreamento) e `ficha/useFichaDoImovel.ts` (carga, SEO, visita, galeria e teclado, parecidos, contato com prévia e trava de duplo envio) + `derivadosDaFicha` (preço, custos, números, mapa, selos). Também saíram `ficha/iconesDaFicha.tsx` e `ficha/GaleriaEmTelaCheia.tsx`. `PortalSearchPage` e `ImovelPublicPage` escolhem o desenho por `resolverAparencia(site.appearance).style`; os specs deles passaram sem mudar asserção.
+- Moderno em `moderno/`: `ImoveisModerno`, `FiltrosModernos`, `CartaoClaro` (+ `CartaoClaroDeitado`), `FichaModerna`, `GaleriaModerna`, `CartaoDeInteresse`, `SecoesDaFichaModerna`. O "Ordenar por" ganhou `moderno` no `portalShared` (a lista nativa só pode morar lá).
+- O cartão do celular (`#contato`) e a seção de vídeo têm `scroll-mt-[140px]`: o pulo da barra fixa não deixa o preço embaixo do topo grudado.
+
+**Negrito na descrição (Clássico e Moderno):** `**trecho**` escrito no cadastro (ou vindo da Kenlo) vira negrito (`negritoNaDescricao.ts` + `ficha/TextoComNegrito.tsx`). Só negrito: asterisco sem par, par vazio e `*itálico*` ficam como estão, e HTML sai como texto (quem desenha é o React). **É a única mudança visível no Clássico** (corrige os asteriscos crus da Moeda Forte). A descrição de SEO (`meta description`) continua com o texto cru.
+
+**Decisões (não reabrir sem o dono pedir):**
+
+1. Lista com cartão claro e "em linhas" com o cartão claro deitado (spec 11).
+2. Sem o coração de favorito do protótipo (o site não tem favoritos) e sem botão Buscar no painel.
+3. O bloco do book não tem formulário próprio: o botão põe o cartão de interesse em modo book (mesmo envio `imovel_book`) e, no celular, desce até ele.
+4. "A partir de" na barra fixa do celular segue o Clássico (aparece em todo imóvel que não é aluguel).
+5. Os filtros "Condomínio, bairro ou cidade" e "Área" do PR #692 não estão aqui: quem entrar depois porta pro `useBuscaDosImoveis` e pro `FiltrosModernos`.
+
+**Volta de versão:** voltar a tela é seguro (ninguém está no Moderno). O Clássico volta a mostrar os `**` crus na descrição.
+
+Testes: `moderno/CartaoClaro.spec.tsx`, `moderno/ImoveisModerno.spec.tsx`, `moderno/FichaModerna.spec.tsx`, `busca/useBuscaDosImoveis.spec.tsx`, `negritoNaDescricao.spec.ts`, e os de sempre (`PortalSearchPage.spec.tsx`, `ImovelPublicPage.spec.tsx`).
+
 ## IA Vendedora · Configurar virou passo a passo (desde 2026-10-05)
 
 > Entrega 2 da refatoração da IA Vendedora. Spec: `LM FLOW/specs/2026-10-05-ia-vendedora-refatoracao-design.md`. Plano: `LM FLOW/plans/2026-10-05-ia-vendedora-entrega-2-passo-a-passo.md`. Servidor: PR #410 (`comercial281/lm-flow`, migration 303).
