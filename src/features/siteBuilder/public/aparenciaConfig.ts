@@ -16,6 +16,10 @@ export type EstiloDoMenu = 'normal' | 'caps';
 export type LayoutDaCapa = 'photo' | 'split';
 export type EstiloDoCartao = 'standard' | 'large';
 export type PosicaoDoLogo = 'header' | 'hero';
+/** Modelo visual do site: `modern` = o Moderno; `classic` = o de sempre. */
+export type EstiloDoSite = 'classic' | 'modern';
+/** Palavra marcada com asterisco nos títulos: cor de destaque, itálico serifado ou sem marca. */
+export type DestaqueDosTitulos = 'accent' | 'italic' | 'none';
 
 export const FUNDOS: Fundo[] = ['light', 'dark'];
 export const ESTILOS_DO_TOPO: EstiloDoTopo[] = ['transparent', 'brand', 'white'];
@@ -26,6 +30,8 @@ export const ESTILOS_DO_MENU: EstiloDoMenu[] = ['normal', 'caps'];
 export const LAYOUTS_DA_CAPA: LayoutDaCapa[] = ['photo', 'split'];
 export const ESTILOS_DO_CARTAO: EstiloDoCartao[] = ['standard', 'large'];
 export const POSICOES_DO_LOGO: PosicaoDoLogo[] = ['header', 'hero'];
+export const ESTILOS_DO_SITE: EstiloDoSite[] = ['classic', 'modern'];
+export const DESTAQUES_DOS_TITULOS: DestaqueDosTitulos[] = ['accent', 'italic', 'none'];
 
 export interface Aparencia {
   background: Fundo;
@@ -53,6 +59,10 @@ export interface Aparencia {
    * (`logoNaCapa`). `header` = no topo, o de sempre.
    */
   logo_position: PosicaoDoLogo;
+  /** Modelo visual do site (`classic` por padrão). */
+  style: EstiloDoSite;
+  /** Como a palavra entre asteriscos nos títulos é destacada (`accent` por padrão). */
+  heading_highlight: DestaqueDosTitulos;
 }
 
 export const FILTRO_FABRICA = 45;
@@ -82,6 +92,8 @@ export const APARENCIA_FABRICA: Aparencia = {
   hero_layout: 'photo',
   card_style: 'standard',
   logo_position: 'header',
+  style: 'classic',
+  heading_highlight: 'accent',
 };
 
 const umDe = <T extends string>(lista: T[], v: unknown, padrao: T): T =>
@@ -109,6 +121,8 @@ export function resolverAparencia(raw: unknown): Aparencia {
     hero_layout: umDe(LAYOUTS_DA_CAPA, r.hero_layout, APARENCIA_FABRICA.hero_layout),
     card_style: umDe(ESTILOS_DO_CARTAO, r.card_style, APARENCIA_FABRICA.card_style),
     logo_position: umDe(POSICOES_DO_LOGO, r.logo_position, APARENCIA_FABRICA.logo_position),
+    style: umDe(ESTILOS_DO_SITE, r.style, APARENCIA_FABRICA.style),
+    heading_highlight: umDe(DESTAQUES_DOS_TITULOS, r.heading_highlight, APARENCIA_FABRICA.heading_highlight),
   };
 }
 

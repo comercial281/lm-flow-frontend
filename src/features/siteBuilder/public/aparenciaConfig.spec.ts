@@ -13,6 +13,7 @@ describe('resolverAparencia', () => {
       background: 'light', header_style: 'transparent', logo_light_url: null, top_bar: 'two_phones',
       hero_height: 'half', hero_overlay: 45, footer_layout: 'columns', footer_text: null,
       heading_font: null, menu_style: 'normal', hero_layout: 'photo', card_style: 'standard', logo_position: 'header',
+      style: 'classic', heading_highlight: 'accent',
     });
   });
 
@@ -22,6 +23,18 @@ describe('resolverAparencia', () => {
     expect(resolverAparencia({ heading_font: 'Comic Sans', menu_style: 'small', hero_layout: 'video', card_style: 'huge', logo_position: 'HERO' }))
       .toEqual(APARENCIA_FABRICA);
     expect(resolverAparencia({ heading_font: 42 }).heading_font).toBeNull();
+  });
+
+  it('style e heading_highlight: fábrica classic/accent, válidos ficam, o resto volta', () => {
+    expect(resolverAparencia({}).style).toBe('classic');
+    expect(resolverAparencia({}).heading_highlight).toBe('accent');
+    const ap = resolverAparencia({ style: 'modern', heading_highlight: 'italic' });
+    expect(ap.style).toBe('modern');
+    expect(ap.heading_highlight).toBe('italic');
+    expect(resolverAparencia({ heading_highlight: 'none' }).heading_highlight).toBe('none');
+    for (const lixo of ['MODERN', ['modern'], 1, 'bold']) {
+      expect(resolverAparencia({ style: lixo, heading_highlight: lixo })).toEqual(APARENCIA_FABRICA);
+    }
   });
 
   it('aceita cada opção válida', () => {
@@ -34,6 +47,7 @@ describe('resolverAparencia', () => {
       background: 'dark', header_style: 'brand', logo_light_url: 'https://cdn.x/clara.png', top_bar: 'icons',
       hero_height: 'full', hero_overlay: 60, footer_layout: 'compact', footer_text: 'Imóveis em Campinas desde 1990.',
       heading_font: 'Playfair Display', menu_style: 'caps', hero_layout: 'split', card_style: 'large', logo_position: 'hero',
+      style: 'classic', heading_highlight: 'accent',
     });
   });
 
