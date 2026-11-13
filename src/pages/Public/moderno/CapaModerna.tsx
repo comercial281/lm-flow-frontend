@@ -18,8 +18,10 @@ import { MIOLO } from './estilos';
      dentro do cartão, nunca desbota pro fundo do site. Título, subtítulo e a
      busca no pé do cartão. Quando o topo flutua por cima do cartão
      (`topoSobreACapa`), o cartão deixa o espaço dele em cima.
-   - Logo em destaque (`logoNaCapa`): grande à direita do título no
-     computador, em cima dele no celular; pousa no topo ao rolar (#685).
+   - Logo em destaque (`logoNaCapa`): com os tamanhos do Clássico (126px no
+     computador, 80/96px no celular). No computador à direita do título,
+     centrado no bloco título + subtítulo e na mesma borda direita da busca;
+     no celular em cima do título. Pousa no topo ao rolar (#685).
    - Dividida: texto e busca à esquerda, a foto num cartão à direita (no
      celular, depois do texto, com 240px). Sem filtro: o texto não fica sobre
      a foto.
@@ -91,15 +93,21 @@ export default function CapaModerna({ site, home, items, tenant, abas, cities, h
 
         {/* O topo flutua por cima do cartão (fixo, 12px + 72px): o espaço dele fica aqui. */}
         <div className={`flex min-w-0 flex-1 flex-col justify-end ${topoSobreACapa(ap, true) ? 'pt-[96px]' : 'pt-12'}`}>
-          <div className="grid items-end gap-8 px-[clamp(22px,5vw,64px)] pb-7 lg:grid-cols-[minmax(0,1fr)_auto]">
+          {/* Título e subtítulo à esquerda; no computador o logo à direita, centrado
+              no bloco do texto e encostado na mesma borda direita da busca (o
+              recuo da direita é o da busca). Tamanhos do logo da capa do Clássico. */}
+          <div
+            data-capa-texto
+            className="grid items-center gap-8 pb-6 pl-[clamp(22px,5vw,64px)] pr-[clamp(22px,5vw,64px)] lg:grid-cols-[minmax(0,1fr)_auto] lg:pr-[clamp(12px,3vw,32px)]"
+          >
             <div className="min-w-0">
-              {logoEl('mb-6 h-16 w-auto max-w-[70%] object-left lg:hidden')}
+              {logoEl('mb-6 h-20 w-auto max-w-[75%] object-left sm:h-24 lg:hidden')}
               <h1 className={`${TITULO} text-white ${DESTAQUE_SOBRE_A_FOTO}`}>
                 <TituloComDestaque texto={titulo} modo={ap.heading_highlight} sobreEscuro />
               </h1>
-              <p className="mb-6 mt-[18px] max-w-[46ch] text-[16px] leading-relaxed text-[rgba(255,255,255,0.86)]">{subtitulo}</p>
+              <p className="mt-[18px] max-w-[46ch] text-[16px] leading-relaxed text-[rgba(255,255,255,0.86)]">{subtitulo}</p>
             </div>
-            {logoEl('hidden h-[96px] w-auto max-w-[360px] shrink-0 object-right lg:block')}
+            {logoEl('hidden h-[126px] w-auto max-w-[420px] shrink-0 self-center object-right lg:block')}
           </div>
           <BuscaModerna busca={busca} abas={abas} />
         </div>

@@ -190,6 +190,62 @@ describe('Início do Moderno', () => {
     expect(capa.querySelectorAll('img[data-logo-da-capa]').length).toBeGreaterThan(0);
   });
 
+  it('logo em destaque: os tamanhos do Clássico, e no computador centrado no bloco do título, na borda direita da busca', async () => {
+    await abrirHome(moderno({ branding: { logo_url: 'https://cdn.x/logo.png' } }, { logo_position: 'hero' }), [imovel('R1')]);
+    const [celular, computador] = Array.from(document.querySelectorAll<HTMLImageElement>('#topo img[data-logo-da-capa]'));
+    const cls = (el: Element) => el.className.split(/\s+/);
+
+    expect(cls(celular)).toEqual(expect.arrayContaining(['h-20', 'sm:h-24', 'max-w-[75%]', 'lg:hidden']));
+    expect(cls(computador)).toEqual(expect.arrayContaining(['h-[126px]', 'max-w-[420px]', 'object-right', 'hidden', 'lg:block', 'self-center']));
+    // A fileira do texto centra o logo no bloco título + subtítulo (não no pé dele)…
+    const fileira = computador.parentElement!;
+    expect(fileira.hasAttribute('data-capa-texto')).toBe(true);
+    expect(cls(fileira)).toContain('items-center');
+    expect(cls(fileira)).not.toContain('items-end');
+    // …e o recuo da direita no computador é o mesmo da margem da busca.
+    expect(cls(fileira)).toContain('lg:pr-[clamp(12px,3vw,32px)]');
+    expect(cls(document.querySelector('form[role="search"]')!)).toContain('mx-[clamp(12px,3vw,32px)]');
+    // O título e o subtítulo ficam juntos na coluna da esquerda.
+    expect(fileira.firstElementChild!.querySelector('h1')).not.toBeNull();
+  });
+
+  it('busca com 6 campos: 6 caixinhas iguais em 3 colunas, e o Buscar numa coluna própria no pé da última linha', async () => {
+    await abrirHome(
+      moderno({ home: { search: { fields: ['type', 'city', 'neighborhood', 'price', 'bedrooms', 'parking', 'code'] } } } as SiteInfo),
+      [imovel('R1')],
+    );
+    const grade = document.querySelector<HTMLElement>('[data-campos-da-busca]')!;
+    const caixas = grade.querySelectorAll('[data-campo-da-busca]');
+    expect(caixas).toHaveLength(6);
+    expect(grade.className.split(/\s+/)).toContain('lg:grid-cols-3');
+    // Toda caixinha com a mesma classe (sem linha solta entre campos).
+    expect(new Set(Array.from(caixas, c => c.className)).size).toBe(1);
+    expect(caixas[0].className).not.toMatch(/border-l/);
+
+    const buscar = screen.getByRole('button', { name: /Buscar/ });
+    expect(grade.contains(buscar)).toBe(false);
+    expect(grade.nextElementSibling).toBe(buscar);
+    expect(buscar.className.split(/\s+/)).toEqual(expect.arrayContaining(['lg:self-end', 'min-h-[60px]', 'w-full']));
+    expect(caixas[0].className.split(/\s+/)).toContain('min-h-[60px]');
+    // Código continua na fileira das abas.
+    expect(screen.getByLabelText('Código do imóvel')).toBeTruthy();
+  });
+
+  it('busca com 4 campos: 4 caixinhas numa linha só e o Buscar ao lado; com 5, o Buscar ocupa a vaga no fim da última linha', async () => {
+    await abrirHome(moderno({ home: { search: { fields: ['type', 'city', 'price', 'bedrooms', 'code'] } } } as SiteInfo), [imovel('R1')]);
+    let grade = document.querySelector<HTMLElement>('[data-campos-da-busca]')!;
+    expect(grade.querySelectorAll('[data-campo-da-busca]')).toHaveLength(4);
+    expect(grade.className.split(/\s+/)).toContain('lg:grid-cols-4');
+    expect(grade.nextElementSibling).toBe(screen.getByRole('button', { name: /Buscar/ }));
+    cleanup();
+
+    await abrirHome(moderno({ home: { search: { fields: ['type', 'city', 'neighborhood', 'price', 'bedrooms'] } } } as SiteInfo), [imovel('R1')]);
+    grade = document.querySelector<HTMLElement>('[data-campos-da-busca]')!;
+    expect(grade.querySelectorAll('[data-campo-da-busca]')).toHaveLength(5);
+    expect(grade.className.split(/\s+/)).toContain('lg:grid-cols-3');
+    expect(grade.lastElementChild).toBe(screen.getByRole('button', { name: /Buscar/ }));
+  });
+
   it('topo transparente flutua sobre o cartão da capa: o cartão deixa o espaço dele em cima; topo branco não', async () => {
     const respiro = () => document.querySelector('[data-capa-moderna] > div:nth-child(2)')!.className;
     await abrirHome(moderno({}, { header_style: 'transparent' }), [imovel('R1')]);
