@@ -3,12 +3,14 @@ import { useTenantDoSite } from '@/features/siteBuilder/public/useTenantDoSite';
 import {
   I, Ic, OrdenarPor, PortalFooter, PortalHeader, PropertyCard, PropertyRow, Select, type PortalTab,
 } from './portalShared';
+import CampoDeLugar from './CampoDeLugar';
 import PaginaManutencao from './PaginaManutencao';
 import PaginaNaoEncontrada from './PaginaNaoEncontrada';
 import { caminhoDoSite } from '@/features/siteBuilder/public/dominioDoSite';
 import { opcaoDoTipo, opcoesDeTipo } from '@/features/siteBuilder/public/tiposDeImovel';
 import { precoDaFaixa } from '@/features/siteBuilder/public/faixasDePreco';
 import { FASES_DO_PUBLICO } from '@/features/properties/listingKind';
+import { AREAS_MINIMAS } from '@/features/siteBuilder/public/filtros';
 import { useBuscaDosImoveis } from './busca/useBuscaDosImoveis';
 import { resolverAparencia } from '@/features/siteBuilder/public/aparenciaConfig';
 import ImoveisModerno from './moderno/ImoveisModerno';
@@ -29,6 +31,7 @@ export default function PortalSearchPage() {
     state, site, fontHrefs, wa, types, abas, cssVars, fundo, manutencao, ctx, chave, listaDoServidor, listaOk,
     filters, update, clearAll, hasActiveFilters, trocarAba, lista, ordem, trocarOrdem,
     filtered, shown, remaining, mostrarMais, cidade, bairro, preco,
+    items, textoDoLugar, setTextoDoLugar, escolherLugar, confirmarLugar, limparLugar,
   } = busca;
 
   if (state === 'loading' || listaDoServidor === undefined) {
@@ -78,6 +81,9 @@ export default function PortalSearchPage() {
               ))}
             </div>}
 
+            <CampoDeLugar className="mb-2" items={items} tab={filters.tab} texto={textoDoLugar}
+              onTexto={setTextoDoLugar} onEscolher={escolherLugar} onConfirmar={confirmarLugar} onLimpar={limparLugar} />
+
             <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
               <Select value={opcaoDoTipo(types, filters.type)} onChange={v => update({ type: v })} label="Tipo" options={opcoesDeTipo(types)} />
               <Select value={cidade.valor} onChange={v => update({ city: v })} label="Cidade" options={cidade.opcoes} />
@@ -86,6 +92,7 @@ export default function PortalSearchPage() {
               <Select value={preco.valor}
                 onChange={v => update({ price_min: '', price_max: '', ...precoDaFaixa(filters.tab, v) })}
                 label="Faixa de preço" options={preco.opcoes} />
+              <Select value={filters.area ?? ''} onChange={v => update({ area: v })} label="Área" options={AREAS_MINIMAS} />
               <Select value={filters.suites ?? ''} onChange={v => update({ suites: v })} label="Suítes" options={MAIS_DE} />
               <Select value={filters.parking ?? ''} onChange={v => update({ parking: v })} label="Vagas" options={MAIS_DE} />
               {/* Fase é de empreendimento, e Alugar não tem empreendimento. */}

@@ -136,3 +136,55 @@ describe('Imóveis no Moderno: lista de opções no fundo escuro', () => {
     expect((screen.getByLabelText('Ordenar por') as HTMLSelectElement).className).toContain('[&_option]:bg-[#FFFFFF]');
   });
 });
+
+describe('Imóveis no Moderno: condomínio, bairro ou cidade e Área', () => {
+  const base = () => [
+    imovel('C1', { condominium_name: 'Collina Parque dos Príncipes', icon_summary: { useful_area_m2: 120 } }),
+    imovel('C2', { address: { city: 'Cotia', neighborhood: 'Granja' }, icon_summary: { useful_area_m2: 60 } }),
+  ];
+  const campo = () => screen.getByRole('combobox', { name: 'Condomínio, bairro ou cidade' }) as HTMLInputElement;
+  const titulosDosCartoes = () => screen.queryAllByRole('article').length;
+
+  it('vindo da capa com ?place=co: o campo mostra o texto, a pílula aparece e o × tira', async () => {
+    await abrir(base(), '/portal/imob/imoveis?place=co');
+    expect(campo().value).toBe('co');
+    expect(titulosDosCartoes()).toBe(2);
+    expect(within(screen.getByRole('list', { name: 'Filtros ativos' })).getByText('“co”')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Limpar condomínio, bairro ou cidade' }));
+    expect(urlAtual().get('place')).toBeNull();
+    expect(campo().value).toBe('');
+  });
+
+  it('vindo da capa com ?condominium=…: o campo mostra o nome, filtra, e a pílula tira', async () => {
+    await abrir(base(), '/portal/imob/imoveis?condominium=Collina%20Parque%20dos%20Pr%C3%ADncipes');
+    expect(campo().value).toBe('Collina Parque dos Príncipes');
+    expect(titulosDosCartoes()).toBe(1);
+    fireEvent.click(screen.getByRole('button', { name: 'Tirar o filtro Condomínio Collina Parque dos Príncipes' }));
+    expect(urlAtual().get('condominium')).toBeNull();
+    expect(campo().value).toBe('');
+    expect(titulosDosCartoes()).toBe(2);
+  });
+
+  it('escolher uma sugestão no painel grava o condomínio na URL', async () => {
+    await abrir(base());
+    fireEvent.change(campo(), { target: { value: 'colli' } });
+    fireEvent.click(await screen.findByRole('option', { name: /Collina Parque dos Príncipes/ }));
+    expect(urlAtual().get('condominium')).toBe('Collina Parque dos Príncipes');
+    expect(titulosDosCartoes()).toBe(1);
+  });
+
+  it('Área fica no Mais filtros, abre sozinho com ?area= e vira pílula', async () => {
+    await abrir(base());
+    expect(screen.queryByLabelText('Área')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /Mais filtros/ }));
+    fireEvent.change(lista('Área'), { target: { value: '100' } });
+    expect(urlAtual().get('area')).toBe('100');
+    expect(titulosDosCartoes()).toBe(1);
+    expect(within(screen.getByRole('list', { name: 'Filtros ativos' })).getByText('100 m²+')).toBeTruthy();
+  });
+
+  it('?area= abre o Mais filtros com a Área marcada', async () => {
+    await abrir(base(), '/portal/imob/imoveis?area=100');
+    expect(lista('Área').value).toBe('100');
+  });
+});

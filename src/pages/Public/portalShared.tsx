@@ -99,7 +99,7 @@ export interface SiteInfo {
   name?: string;
   branding?: Branding;
   /** Banner da home: vídeo tem prioridade; sem os dois, a capa do primeiro imóvel. */
-  hero?: { video_url?: string | null; image_url?: string | null };
+  hero?: { video_url?: string | null; image_url?: string | null; image_urls?: string[] };
   sections?: { stats?: boolean; lead_capture?: boolean };
   contact?: { whatsapp?: string | null; phone?: string | null; email?: string | null; address?: string | null };
   social_links?: Record<string, string> | null;

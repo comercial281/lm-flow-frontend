@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useSearchParams } from 'react-router-dom';
 import { useCtxDoSite } from '@/features/siteBuilder/public/useTenantDoSite';
 import { API, filterProperties, usePortalData, type PortalFilters, type PortalTab } from '../portalShared';
@@ -9,6 +9,7 @@ import { usePortalTracking } from '../usePortalTracking';
 import { useIconeDaAba } from '@/features/siteBuilder/public/useIconeDaAba';
 import { ehOrdem, resolverLista, type Ordem } from '@/features/siteBuilder/public/listaConfig';
 import { ordenarImoveis } from '@/features/siteBuilder/public/ordenar';
+import type { SugestaoDeLugar } from '@/features/siteBuilder/public/sugestoesDeLugar';
 
 /* ────────────────────────────────────────────────────────────────────────────
    Lógica da página de Imóveis (busca), a mesma pros dois desenhos (Clássico e
@@ -100,11 +101,58 @@ export function useBuscaDosImoveis(tenant: string | undefined) {
     setParams(next, { replace });
   };
 
+  // Campo "Condomínio, bairro ou cidade": o texto é local enquanto se digita; Enter ou sair do
+  // campo grava `place`. Só condomínio e place da URL preenchem o campo (bairro/cidade ficam nos selects).
+  const [textoDoLugar, setTextoDoLugar] = useState(filters.condominium || filters.place || '');
+  const escolhida = useRef<SugestaoDeLugar | null>(null);
+  // O que o campo mostra pela URL: o rótulo da sugestão escolhida enquanto a URL ainda é a dela
+  // (qualquer grupo); mudou o select, o campo volta a só condomínio/place.
+  const escolhidaNaUrl = () => {
+    const e = escolhida.current;
+    return !!e && !filters.place
+      && (e.filtros.condominium ?? '') === filters.condominium
+      && (e.filtros.neighborhood ?? '') === filters.neighborhood
+      && (e.filtros.city ?? '') === filters.city;
+  };
+  const textoDaUrl = () => (escolhidaNaUrl() ? escolhida.current!.rotulo : (filters.condominium || filters.place || ''));
+  useEffect(() => {
+    setTextoDoLugar(textoDaUrl());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters.condominium, filters.place, filters.neighborhood, filters.city]);
+  const escolherLugar = (s: SugestaoDeLugar) => {
+    escolhida.current = s;
+    setTextoDoLugar(s.rotulo);
+    update({ place: '', condominium: '', neighborhood: '', city: '', ...s.filtros });
+  };
+  // Os filtros da sugestão escolhida que ainda estão na URL (bairro, cidade): saem junto com o texto dela.
+  const filtrosDaEscolhida = (): PatchDaBusca => (escolhidaNaUrl()
+    ? Object.fromEntries(Object.keys(escolhida.current!.filtros).map(k => [k, '']))
+    : {});
+  const confirmarLugar = () => {
+    const t = textoDoLugar.trim();
+    if (t === textoDaUrl().trim()) return;
+    if (!t && (filters.neighborhood || filters.city) && !filters.condominium && !filters.place) return;
+    // Mexeu no texto de uma sugestão que ainda está na URL: os filtros dela (bairro, cidade) saem junto,
+    // senão "Granja" ficaria preso ao bairro "Centro" e a lista viria vazia.
+    const daEscolhida = filtrosDaEscolhida();
+    escolhida.current = null;
+    update({ ...daEscolhida, place: t, condominium: '' }, true);
+  };
+  // O "×" do campo: tira o texto e o lugar da URL (com o bairro/cidade da sugestão escolhida).
+  const limparLugar = () => {
+    const daEscolhida = filtrosDaEscolhida();
+    escolhida.current = null;
+    setTextoDoLugar('');
+    update({ ...daEscolhida, place: '', condominium: '' });
+  };
+
   // Ordem não é filtro: "Limpar filtros" mantém a escolhida.
   const clearAll = () => {
     const next = new URLSearchParams(filters.tab === 'sale' ? {} : { tab: filters.tab });
     const sort = params.get('sort');
     if (sort) next.set('sort', sort);
+    escolhida.current = null;
+    setTextoDoLugar('');
     setParams(next, { replace: true });
   };
 
@@ -121,7 +169,8 @@ export function useBuscaDosImoveis(tenant: string | undefined) {
   const filtered = useMemo(() => filterProperties(daLista, filters), [daLista, filters]);
   const ordenados = useMemo(() => ordenarImoveis(filtered, ordem, filters.tab), [filtered, ordem, filters.tab]);
   const hasActiveFilters = !!(filters.type || filters.city || filters.neighborhood || filters.bedrooms || filters.code
-    || filters.price_min || filters.price_max || filters.suites || filters.parking || filters.stage);
+    || filters.price_min || filters.price_max || filters.suites || filters.parking || filters.stage
+    || filters.place || filters.condominium || filters.area);
 
   // Aluguel tem faixas de preço próprias: trocar de/para Alugar zera o preço.
   // Alugar não tem empreendimento: a fase escolhida sai junto.
@@ -146,6 +195,7 @@ export function useBuscaDosImoveis(tenant: string | undefined) {
     lista, ordem, trocarOrdem,
     filtered, shown, remaining, mostrarMais,
     cidade, bairro, preco,
+    textoDoLugar, setTextoDoLugar, escolherLugar, confirmarLugar, limparLugar,
   };
 }
 

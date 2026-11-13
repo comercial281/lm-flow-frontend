@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import PortalSearchPage from './PortalSearchPage';
@@ -376,5 +376,111 @@ describe('PortalSearchPage — lista do servidor (/imoveis/a-venda/casa/campinas
     abrir('/portal/imob/imoveis/a-venda');
     await screen.findByText('Portal indisponível.');
     expect(screen.queryByRole('heading', { name: 'Página não encontrada' })).toBeNull();
+  });
+});
+
+const campoDeLugar = () => screen.getByRole('combobox', { name: 'Condomínio, bairro ou cidade' }) as HTMLInputElement;
+
+describe('condomínio, bairro ou cidade e Área', () => {
+  const base = () => [
+    imovel('C1', { condominium_name: 'Collina Parque dos Príncipes', icon_summary: { useful_area_m2: 120 } }),
+    imovel('C2', { icon_summary: { useful_area_m2: 60 } }),
+  ];
+
+  it('?condominium= filtra e o campo mostra o nome', async () => {
+    await abrirBusca(base(), '/portal/imob/imoveis?condominium=Collina%20Parque%20dos%20Pr%C3%ADncipes');
+    expect(await screen.findByDisplayValue(/Collina Parque dos Príncipes/)).toBeInTheDocument();
+    expect(titulos()).toEqual(['Imóvel C1']);
+  });
+
+  it('?neighborhood= não preenche o campo de texto', async () => {
+    await abrirBusca(base(), '/portal/imob/imoveis?neighborhood=Centro');
+    expect(campoDeLugar().value).toBe('');
+  });
+
+  it('Área 100 m²+ tira o imóvel pequeno e grava area na URL', async () => {
+    await abrirBusca(base());
+    expect(titulos()).toHaveLength(2);
+    selecionar('Área', '100');
+    expect(titulos()).toEqual(['Imóvel C1']);
+    expect(urlAtual().get('area')).toBe('100');
+  });
+
+  it('escolher uma sugestão grava o condomínio e mostra o rótulo', async () => {
+    await abrirBusca(base());
+    const campo = campoDeLugar() as HTMLInputElement;
+    fireEvent.change(campo, { target: { value: 'colli' } });
+    fireEvent.click(await screen.findByRole('option', { name: /Collina Parque dos Príncipes/ }));
+    expect(urlAtual().get('condominium')).toBe('Collina Parque dos Príncipes');
+    expect(titulos()).toEqual(['Imóvel C1']);
+    expect(campoDeLugar().value).toMatch(/Collina/);
+  });
+
+  it('Enter grava o texto digitado como place e Limpar filtros esvazia o campo', async () => {
+    await abrirBusca(base());
+    const campo = campoDeLugar() as HTMLInputElement;
+    fireEvent.change(campo, { target: { value: 'zzz' } });
+    fireEvent.keyDown(campo, { key: 'Enter' });
+    expect(urlAtual().get('place')).toBe('zzz');
+    fireEvent.click(screen.getAllByRole('button', { name: 'Limpar filtros' })[0]);
+    expect(urlAtual().get('place')).toBeNull();
+    expect(campoDeLugar().value).toBe('');
+  });
+
+  const comBairro = () => [
+    imovel('B1', { address: { city: 'Campinas', neighborhood: 'Centro' } }),
+    imovel('B2', { address: { city: 'Campinas', neighborhood: 'Cambuí' } }),
+  ];
+  const escolherCentro = async () => {
+    const campo = campoDeLugar();
+    fireEvent.change(campo, { target: { value: 'cent' } });
+    fireEvent.click(within(await screen.findByRole('listbox')).getByRole('option', { name: 'Centro' }));
+  };
+
+  it('o × do campo tira o lugar escolhido (o bairro da sugestão sai junto)', async () => {
+    await abrirBusca(comBairro());
+    await escolherCentro();
+    expect(urlAtual().get('neighborhood')).toBe('Centro');
+    fireEvent.click(screen.getByRole('button', { name: 'Limpar condomínio, bairro ou cidade' }));
+    expect(urlAtual().get('neighborhood')).toBeNull();
+    expect(campoDeLugar().value).toBe('');
+    expect(titulos()).toHaveLength(2);
+    expect(screen.queryByRole('button', { name: 'Limpar condomínio, bairro ou cidade' })).toBeNull();
+  });
+
+  it('escolher bairro e voltar ao campo + Enter não soma place', async () => {
+    await abrirBusca(comBairro());
+    await escolherCentro();
+    expect(urlAtual().get('neighborhood')).toBe('Centro');
+    expect(campoDeLugar().value).toBe('Centro');
+    fireEvent.focus(campoDeLugar());
+    fireEvent.keyDown(campoDeLugar(), { key: 'Enter' });
+    expect(urlAtual().get('place')).toBeNull();
+  });
+
+  it('trocar o select de Bairro depois de escolher limpa o campo', async () => {
+    await abrirBusca(comBairro());
+    await escolherCentro();
+    selecionar('Cambuí', 'Cambuí');
+    expect(urlAtual().get('neighborhood')).toBe('Cambuí');
+    expect(campoDeLugar().value).toBe('');
+    expect(titulos()).toEqual(['Imóvel B2']);
+  });
+
+  it('escolher bairro e trocar o texto: o bairro sai e fica só o texto', async () => {
+    await abrirBusca(comBairro());
+    await escolherCentro();
+    fireEvent.change(campoDeLugar(), { target: { value: 'Cambuí' } });
+    fireEvent.keyDown(campoDeLugar(), { key: 'Enter' });
+    expect(urlAtual().get('place')).toBe('Cambuí');
+    expect(urlAtual().get('neighborhood')).toBeNull();
+    expect(titulos()).toEqual(['Imóvel B2']);
+  });
+
+  it('sair do campo com Tab grava o texto digitado', async () => {
+    await abrirBusca(comBairro());
+    fireEvent.change(campoDeLugar(), { target: { value: 'zzz' } });
+    fireEvent.blur(campoDeLugar());
+    expect(urlAtual().get('place')).toBe('zzz');
   });
 });

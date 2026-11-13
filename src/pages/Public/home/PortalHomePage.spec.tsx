@@ -1,4 +1,5 @@
 import { cleanup, fireEvent, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { SiteInfo } from '../portalShared';
 import { abrirHome, empreendimento, imovel } from './servidorDeTeste';
@@ -296,4 +297,73 @@ describe('PortalHomePage · rodapé', () => {
       }
     });
   });
+
+  it('capa de fábrica não mostra Mais filtros', async () => {
+    await abrirHome({}, [imovel('R1')]);
+    expect(screen.queryByRole('button', { name: /Mais filtros/ })).toBeNull();
+  });
+
+  it('6 campos: Mais filtros abre a segunda linha e Menos filtros fecha', async () => {
+    await abrirHome(
+      { home: { search: { fields: ['type', 'city', 'neighborhood', 'price', 'bedrooms', 'area'] } } },
+      [imovel('R1')],
+    );
+    expect(screen.queryByDisplayValue('Área')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Mais filtros' }));
+    fireEvent.change(screen.getByDisplayValue('Área'), { target: { value: '100' } });
+    fireEvent.click(screen.getByRole('button', { name: /Buscar/ }));
+    expect((await screen.findByTestId('busca')).textContent).toBe('?area=100');
+  });
+
+  it('Clássico com 6 campos e sem o texto: 4 campos na primeira linha, sem buraco', async () => {
+    await abrirHome(
+      { home: { search: { fields: ['type', 'city', 'neighborhood', 'price', 'bedrooms', 'area'] } } },
+      [imovel('R1')],
+    );
+    expect(screen.getByDisplayValue('Faixa de preço')).toBeInTheDocument();
+    expect(screen.queryByDisplayValue('Dormitórios')).toBeNull();
+  });
+
+  it('Clássico com 6 campos e o texto entre os 3 primeiros: o texto ocupa 2 colunas', async () => {
+    await abrirHome(
+      { home: { search: { fields: ['type', 'place', 'city', 'price', 'bedrooms', 'area'] } } },
+      [imovel('R1')],
+    );
+    expect(screen.getByRole('combobox', { name: 'Condomínio, bairro ou cidade' }).parentElement!.className).toContain('md:col-span-2');
+    expect(screen.queryByDisplayValue('Faixa de preço')).toBeNull();
+  });
+
+  it('escolher o Collina e buscar vai para /imoveis?condominium=…', async () => {
+    await abrirHome(
+      { home: { search: { fields: ['place'] } } },
+      [imovel('R1', { condominium_name: 'Collina' })],
+    );
+    fireEvent.change(screen.getByRole('combobox', { name: 'Condomínio, bairro ou cidade' }), { target: { value: 'coll' } });
+    fireEvent.click(await screen.findByRole('option', { name: /Collina/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Buscar/ }));
+    expect((await screen.findByTestId('busca')).textContent).toBe('?condominium=Collina');
+  });
+
+  it('Enter no campo de lugar, só com texto digitado, faz a busca (place=…)', async () => {
+    await abrirHome({ home: { search: { fields: ['place'] } } }, [imovel('R1')]);
+    const campo = screen.getByRole('combobox', { name: 'Condomínio, bairro ou cidade' });
+    await userEvent.type(campo, 'Centro{Enter}');
+    expect((await screen.findByTestId('busca')).textContent).toBe('?place=Centro');
+  });
+
+  it('texto só digitado vai como place; trocar de aba limpa o lugar escolhido', async () => {
+    await abrirHome(
+      { home: { search: { fields: ['place'] } } },
+      [imovel('R1', { condominium_name: 'Collina' }), imovel('L1', { transaction_type: 'rent', rent_price_from: 2000, sale_price_from: null })],
+    );
+    const campo = screen.getByRole('combobox', { name: 'Condomínio, bairro ou cidade' }) as HTMLInputElement;
+    fireEvent.change(campo, { target: { value: 'coll' } });
+    fireEvent.click(await screen.findByRole('option', { name: /Collina/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Alugar' }));
+    expect(campo.value).toBe('');
+    fireEvent.change(campo, { target: { value: 'Centro' } });
+    fireEvent.click(screen.getByRole('button', { name: /Buscar/ }));
+    expect((await screen.findByTestId('busca')).textContent).toBe('?tab=rent&place=Centro');
+  });
 });
+

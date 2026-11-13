@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import type { PortalProperty, SiteInfo } from '../portalShared';
 import { opcoesDeTipo } from '@/features/siteBuilder/public/tiposDeImovel';
 import { CAMPOS_BUSCA, TITULO_CAPA_FABRICA, type AbaId, type CampoBusca, type HomeConfig } from '@/features/siteBuilder/public/homeConfig';
+import { AREAS_MINIMAS, filterProperties, normalizarTexto } from '@/features/siteBuilder/public/filtros';
+import type { SugestaoDeLugar } from '@/features/siteBuilder/public/sugestoesDeLugar';
 import { faixasDePreco, precoDaFaixa } from '@/features/siteBuilder/public/faixasDePreco';
 import { FASES_DO_PUBLICO } from '@/features/properties/listingKind';
 import { caminhoDoSite } from '@/features/siteBuilder/public/dominioDoSite';
@@ -29,8 +31,46 @@ export interface PropsDaBusca {
   cities: string[];
   hoods: string[];
   types: string[];
+  /** O catálogo: de onde saem as sugestões do campo de lugar. */
+  items: PortalProperty[];
   /** Avisado quando a pessoa troca de aba (a captura de contato acompanha). */
   onTab?: (tab: AbaId) => void;
+  /** Quem desenha: muda quantos campos cabem na primeira linha (`dividirCampos`). */
+  modelo: ModeloDaCapa;
+}
+
+export type ModeloDaCapa = 'classico' | 'moderno';
+
+/**
+ * Até 4 campos de escolha cabem na primeira linha; com mais, o resto vai pra "Mais filtros".
+ * Moderno: 3 (a linha de filtros tem 3 colunas no tablet; o lugar não entra, ele é a barra
+ * grande). Clássico: a linha tem 4 colunas, então
+ * fica com 4 campos; se o texto de lugar estiver entre os 3 primeiros, ele ocupa 2 colunas e
+ * a linha fecha com 3 (ver `lugarLargo`).
+ */
+export function dividirCampos(selects: CampoDeEscolha[], modelo: ModeloDaCapa): { primeira: CampoDeEscolha[]; mais: CampoDeEscolha[] } {
+  if (selects.length <= 4) return { primeira: selects, mais: [] };
+  const n = modelo === 'classico' && !selects.slice(0, 3).includes('place') ? 4 : 3;
+  return { primeira: selects.slice(0, n), mais: selects.slice(n) };
+}
+
+/** Clássico com "Mais filtros": o lugar na primeira linha de 3 ocupa 2 das 4 colunas. */
+export function lugarLargo(primeira: CampoDeEscolha[], mais: CampoDeEscolha[]): boolean {
+  return mais.length > 0 && primeira.length === 3 && primeira.includes('place');
+}
+
+/**
+ * O texto é o código de um imóvel do catálogo (sem acento nem maiúscula)? Devolve a aba em que
+ * ele aparece: a de agora, se ele está nela; senão a primeira das abas do site que o mostra
+ * (um código de aluguel digitado em Comprar vai pra Alugar, senão a lista viria vazia).
+ * `null` = não é código de imóvel publicado.
+ */
+export function abaDoCodigo(items: PortalProperty[], texto: string, tab: AbaId, abas: AbaId[]): AbaId | null {
+  const alvo = normalizarTexto(texto);
+  const achados = alvo ? items.filter(p => normalizarTexto(p.code) === alvo) : [];
+  if (!achados.length) return null;
+  const mostra = (t: AbaId) => filterProperties(achados, { tab: t, type: '', city: '', neighborhood: '', bedrooms: '', code: '' }).length > 0;
+  return [tab, ...abas].find(mostra) ?? tab;
 }
 
 /** Título e subtítulo da capa, com os de fábrica quando o cliente não escreveu. */
@@ -46,54 +86,85 @@ export function fotoDaCapa(site: SiteInfo, items: PortalProperty[]): string {
   return site.hero?.image_url || items[0]?.cover_url || CAPA_PADRAO;
 }
 
-export function useBuscaDaCapa({ home, tenant, abas, cities, hoods, types, onTab }: PropsDaBusca) {
+/** Fotos do fundo da capa: a lista do servidor (1 a 6); sem ela, a foto única de `fotoDaCapa`. */
+export function fotosDaCapa(site: SiteInfo, items: PortalProperty[]): string[] {
+  const lista = (site.hero?.image_urls ?? []).filter(Boolean);
+  return lista.length ? lista : [fotoDaCapa(site, items)];
+}
+
+export function useBuscaDaCapa({ home, tenant, abas, cities, hoods, types, items, onTab, modelo }: PropsDaBusca) {
   const navigate = useNavigate();
   const ctx = useCtxDoSite(tenant);
   // Sem aba visível (catálogo vazio ou todas desligadas), a busca cai em Comprar.
   const [tab, setTab] = useState<AbaId>(abas[0] ?? 'sale');
   const [valores, setValores] = useState<Partial<Record<CampoBusca, string>>>({});
+  // Lugar escolhido numa sugestão (condomínio, bairro ou cidade); `valores.place` é o texto do campo.
+  const [lugar, setLugar] = useState<SugestaoDeLugar | null>(null);
+  const [abertos, setAbertos] = useState(false);
   const set = (k: CampoBusca) => (v: string) => setValores(s => ({ ...s, [k]: v }));
 
   // Fase é de empreendimento, e Alugar não tem empreendimento: o campo some nessa aba.
   const campos = CAMPOS_BUSCA.filter(c => home.search.fields.includes(c) && !(c === 'stage' && tab === 'rent'));
-  const selects = campos.filter((c): c is CampoDeEscolha => c !== 'code');
+  // No Moderno o lugar não é célula de filtro: a barra grande é o campo (sempre visível), e ela não conta pro "Mais filtros".
+  const selects = campos.filter((c): c is CampoDeEscolha => c !== 'code' && !(modelo === 'moderno' && c === 'place'));
+  const { primeira, mais } = dividirCampos(selects, modelo);
   const temCodigo = campos.includes('code');
+  const escolherLugar = (s: SugestaoDeLugar) => { setLugar(s); setValores(v => ({ ...v, place: s.rotulo })); };
+  const alternarMais = () => setAbertos(a => !a);
 
   const trocarAba = (k: AbaId) => {
     // As faixas de preço do aluguel são outras: a faixa marcada não vale mais.
     if (faixasDePreco(k) !== faixasDePreco(tab)) setValores(s => ({ ...s, price: '' }));
     if (k === 'rent') setValores(s => ({ ...s, stage: '' }));
+    // As sugestões são da aba: o lugar escolhido (e o texto dele) não vale na outra.
+    if (lugar) { setLugar(null); setValores(s => ({ ...s, place: '' })); }
     setTab(k);
     onTab?.(k);
   };
 
   /**
-   * Vai pra `/imoveis` com a aba e os campos de hoje. `extra` (a busca por
-   * texto da capa do Moderno: bairro, cidade ou código) vale por cima dos
-   * campos, mesmo de um campo que o site não mostra. Sem `extra`, é a busca
-   * de sempre (a do Clássico).
+   * Vai pra `/imoveis` com a aba e os campos de hoje, na ordem de `CAMPOS_BUSCA`.
+   * No Moderno, a barra grande vale mesmo sem o campo de lugar ligado: a sugestão
+   * escolhida vai com os filtros dela; o texto livre que é o código de um imóvel
+   * publicado vira `code`, e o resto vira `place` (condomínio, bairro ou cidade).
    */
-  const irParaBusca = (extra: Partial<Record<'city' | 'neighborhood' | 'code', string>> = {}) => {
+  const runSearch = (e: FormEvent) => {
+    e.preventDefault();
+    const juntos: Partial<Record<CampoBusca, string>> = { ...valores };
+    let incluir: CampoBusca[] = campos;
+    let abaDoEndereco = tab;
+    if (modelo === 'moderno') {
+      incluir = [...campos.filter(c => c !== 'code'), 'place', 'code'];
+      juntos.code = '';
+      const t = (valores.place ?? '').trim();
+      const daSugestao = lugar && lugar.rotulo === valores.place;
+      const abaDoImovel = t && !daSugestao ? abaDoCodigo(items, t, tab, abas) : null;
+      if (abaDoImovel) {
+        juntos.code = t; juntos.place = '';
+        // O imóvel é de outra aba: vai pra ela, sem a faixa de preço e a fase (são da aba de antes).
+        if (abaDoImovel !== tab) { abaDoEndereco = abaDoImovel; juntos.price = ''; juntos.stage = ''; }
+      }
+    }
     const params = new URLSearchParams();
-    if (tab !== 'sale') params.set('tab', tab);
-    // Na ordem dos campos de sempre: o endereço sai igual ao do Clássico com os mesmos valores.
-    const juntos: Partial<Record<CampoBusca, string>> = { ...valores, ...extra };
-    for (const c of CAMPOS_BUSCA.filter(k => campos.includes(k) || extra[k as keyof typeof extra])) {
+    if (abaDoEndereco !== 'sale') params.set('tab', abaDoEndereco);
+    for (const c of CAMPOS_BUSCA.filter(k => incluir.includes(k))) {
       const v = juntos[c];
       if (!v) continue;
-      if (c === 'price') {
-        for (const [k, n] of Object.entries(precoDaFaixa(tab, v))) params.set(k, n);
+      if (c === 'place') {
+        // Texto que ainda é o da sugestão escolhida vai com os filtros dela; mexeu no texto, é texto livre.
+        if (lugar && lugar.rotulo === v) {
+          for (const [k, n] of Object.entries(lugar.filtros)) if (n) params.set(k, n);
+        } else if (v.trim()) {
+          params.set('place', v.trim());
+        }
+      } else if (c === 'price') {
+        for (const [k, n] of Object.entries(precoDaFaixa(abaDoEndereco, v))) params.set(k, n);
       } else {
         params.set(c, v);
       }
     }
     const qs = params.toString();
     navigate(caminhoDoSite(ctx, `/imoveis${qs ? `?${qs}` : ''}`));
-  };
-
-  const runSearch = (e: FormEvent) => {
-    e.preventDefault();
-    irParaBusca();
   };
 
   const opcoes: Record<CampoDeEscolha, { label: string; options: [string, string][] }> = {
@@ -104,10 +175,12 @@ export function useBuscaDaCapa({ home, tenant, abas, cities, hoods, types, onTab
     bedrooms: { label: 'Dormitórios', options: ATE_4 },
     suites: { label: 'Suítes', options: ATE_3 },
     parking: { label: 'Vagas', options: ATE_3 },
+    area: { label: 'Área', options: AREAS_MINIMAS },
+    place: { label: 'Condomínio, bairro ou cidade', options: [] },
     stage: { label: 'Fase', options: FASES_DO_PUBLICO.map(f => [f.valor, f.rotulo]) },
   };
 
-  return { tab, trocarAba, valores, set, selects, temCodigo, runSearch, irParaBusca, opcoes, cities, hoods };
+  return { tab, trocarAba, valores, set, selects, primeira, mais, abertos, alternarMais, escolherLugar, items, temCodigo, runSearch, opcoes };
 }
 
 /** O que a busca da capa entrega pra quem desenha o formulário. */

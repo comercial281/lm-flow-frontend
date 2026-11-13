@@ -34,12 +34,24 @@ export function heroImageChoiceFrom(resolved?: SiteHeroImage | null): SiteHeroIm
 }
 
 /**
- * Quando a escolha de imóvel deixou de valer, o site já caiu no automático.
- * A tela avisa com o motivo, em vez de mostrar uma prévia vazia.
+ * Quando a escolha de imóvel deixou de valer, a foto 1 sai do banner. Sem
+ * extras válidas o site cai no automático; com extras, o servidor segue
+ * girando só elas (`hero.image_urls`). A tela avisa com o motivo, em vez de
+ * mostrar uma prévia vazia.
  */
-export function heroImageWarning(resolved?: SiteHeroImage | null): string | null {
+export function heroImageWarning(resolved?: SiteHeroImage | null, outrasNoBanner = false): string | null {
   if (!resolved || resolved.mode !== 'property') return null;
   const nome = resolved.property?.title ? `«${resolved.property.title}»` : 'escolhido';
+  if (outrasNoBanner) {
+    const motivos: Record<NonNullable<SiteHeroImage['reason']>, string> = {
+      imovel_removido: 'o imóvel escolhido foi excluído',
+      imovel_despublicado: `o imóvel ${nome} não está mais publicado no site`,
+      imovel_sem_foto: `o imóvel ${nome} não tem foto publicada`,
+      erro: 'não consegui carregar a foto do imóvel escolhido',
+    };
+    const motivo = resolved.reason ? motivos[resolved.reason] : null;
+    return motivo ? `A foto principal saiu do banner: ${motivo}. O banner segue com as outras fotos.` : null;
+  }
   switch (resolved.reason) {
     case 'imovel_removido':
       return 'O imóvel escolhido foi excluído. O site está usando o banner automático até você escolher outra foto.';
@@ -49,6 +61,42 @@ export function heroImageWarning(resolved?: SiteHeroImage | null): string | null
       return `O imóvel ${nome} não tem foto publicada. O banner voltou ao automático até ele ganhar uma foto.`;
     case 'erro':
       return 'Não consegui carregar a foto do imóvel escolhido. O site está usando o banner automático.';
+    default:
+      return null;
+  }
+}
+
+/** Alguma foto extra que o servidor ainda serve (com imagem): sem a foto 1, o banner gira só elas. */
+export function temExtraNoBanner(extras?: SiteHeroImage[] | null): boolean {
+  return (extras ?? []).some(e => !!e.url);
+}
+
+/** O banner troca entre a foto 1 e até 5 extras (6 no total). */
+export const MAX_FOTOS_EXTRAS = 5;
+
+/** As extras gravadas (como o servidor as serve) viram o campo do formulário. */
+export function extrasFrom(resolved?: SiteHeroImage[] | null): SiteHeroImageChoice[] {
+  return (resolved ?? [])
+    .map(heroImageChoiceFrom)
+    .filter(c => c.mode !== 'auto')
+    .slice(0, MAX_FOTOS_EXTRAS);
+}
+
+/**
+ * Aviso de uma foto EXTRA que deixou de valer. Diferente da foto 1, aqui o site
+ * não cai no automático: a foto só sai da rotação do banner.
+ */
+export function extraPhotoWarning(resolved?: SiteHeroImage | null): string | null {
+  if (!resolved || resolved.mode !== 'property') return null;
+  switch (resolved.reason) {
+    case 'imovel_removido':
+      return 'Esta foto saiu do banner: o imóvel foi excluído.';
+    case 'imovel_despublicado':
+      return 'Esta foto saiu do banner: o imóvel foi despublicado.';
+    case 'imovel_sem_foto':
+      return 'Esta foto saiu do banner: a foto não está mais publicada.';
+    case 'erro':
+      return 'Esta foto saiu do banner: não deu para carregar.';
     default:
       return null;
   }

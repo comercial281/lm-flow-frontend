@@ -2,21 +2,27 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useState } from 'react';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import type { SiteFormData } from '@/services/siteBuilder/siteBuilderService';
+import type { Site, SiteFormData } from '@/services/siteBuilder/siteBuilderService';
 import { APARENCIA_FABRICA } from '@/features/siteBuilder/public/aparenciaConfig';
 
 const mocks = vi.hoisted(() => ({ uploadAsset: vi.fn(), extractLogoColors: vi.fn() }));
 vi.mock('@/services/siteBuilder/siteBuilderService', () => ({ siteBuilderService: { uploadAsset: mocks.uploadAsset } }));
 vi.mock('@/utils/logoColors', () => ({ extractLogoColors: mocks.extractLogoColors }));
-vi.mock('@/features/siteBuilder/HeroImagePicker', () => ({ default: () => null }));
+vi.mock('@/features/siteBuilder/HeroImagePicker', () => ({
+  default: ({ open, onPick }: { open: boolean; onPick: (p: unknown) => void }) => open
+    ? <button type="button" onClick={() => onPick({ property_id: 'im-7', photo_id: 'ft-7', url: 'https://cdn/im7.jpg', property_title: 'Collina' })}>Escolher no seletor</button>
+    : null,
+}));
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
 import TelaAparencia from './TelaAparencia';
+import { reordenarExtras } from './MaisFotosDoBanner';
+import { toast } from 'sonner';
 
-function Montar({ espiao, inicial = {} }: { espiao: (f: Partial<SiteFormData>) => void; inicial?: Partial<SiteFormData> }) {
+function Montar({ espiao, inicial = {}, site = null }: { espiao: (f: Partial<SiteFormData>) => void; inicial?: Partial<SiteFormData>; site?: Site | null }) {
   const [form, setForm] = useState<SiteFormData>({ name: 'Imobiliária Horizonte Azul', ...inicial });
   const setF = (f: Partial<SiteFormData>) => { espiao(f); setForm(prev => ({ ...prev, ...f })); };
-  return <TelaAparencia site={null} siteForm={form} setF={setF} heroPickPreview={null} setHeroPickPreview={vi.fn()} />;
+  return <TelaAparencia site={site} siteForm={form} setF={setF} heroPickPreview={null} setHeroPickPreview={vi.fn()} />;
 }
 
 const png = (nome: string) => new File(['x'], nome, { type: 'image/png' });
@@ -241,5 +247,94 @@ describe('TelaAparencia · logo na página inicial', () => {
   it('em destaque sem logo enviado: pede o logo', () => {
     render(<Montar espiao={vi.fn()} inicial={{ appearance: ap({ logo_position: 'hero' }) }} />);
     expect(screen.getByText(/Envie o logo em Logotipos/)).toBeTruthy();
+  });
+});
+
+describe('TelaAparencia · Mais fotos do banner', () => {
+  beforeEach(() => { vi.clearAllMocks(); });
+
+  const upload = (n: number) => ({ mode: 'upload' as const, url: `https://cdn/${n}.jpg` });
+
+  it('no automático não mostra Mais fotos', () => {
+    render(<Montar espiao={vi.fn()} inicial={{ hero_image: { mode: 'auto' }, hero_image_extras: [upload(1)] }} />);
+    expect(screen.queryByText('Mais fotos')).toBeNull();
+  });
+
+  it('adicionar foto enviada entra em hero_image_extras', async () => {
+    mocks.uploadAsset.mockResolvedValue({ url: 'https://cdn/extra.jpg' });
+    const espiao = vi.fn();
+    render(<Montar espiao={espiao} inicial={{ hero_image: { mode: 'upload', url: 'https://cdn/1.jpg' }, hero_image_extras: [] }} />);
+    expect(screen.getByText('Mais fotos')).toBeTruthy();
+    expect(screen.getByText('Com 2 fotos ou mais, o banner troca de foto a cada 6 segundos.')).toBeTruthy();
+    await userEvent.upload(screen.getByLabelText('Escolher arquivo: mais fotos do banner'), png('extra.png'));
+    await waitFor(() => expect(espiao).toHaveBeenCalledWith({ hero_image_extras: [{ mode: 'upload', url: 'https://cdn/extra.jpg' }] }));
+  });
+
+  it('com 5 extras os botões de adicionar somem', () => {
+    render(<Montar espiao={vi.fn()} inicial={{ hero_image: { mode: 'upload', url: 'https://cdn/1.jpg' }, hero_image_extras: [1, 2, 3, 4, 5].map(upload) }} />);
+    const bloco = screen.getByRole('group', { name: 'Mais fotos' });
+    expect(within(bloco).queryByRole('button', { name: 'Enviar foto' })).toBeNull();
+    expect(within(bloco).queryByRole('button', { name: 'Foto de um imóvel' })).toBeNull();
+    expect(within(bloco).getAllByRole('button', { name: /^Remover a \d/ })).toHaveLength(5);
+  });
+
+  it('remover tira a foto da lista', async () => {
+    const espiao = vi.fn();
+    render(<Montar espiao={espiao} inicial={{ hero_image: { mode: 'upload', url: 'https://cdn/1.jpg' }, hero_image_extras: [upload(1), upload(2)] }} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Remover a 1ª foto extra' }));
+    expect(espiao).toHaveBeenCalledWith({ hero_image_extras: [upload(2)] });
+  });
+
+  it('extra de imóvel despublicado mostra o aviso', () => {
+    const site = { hero_image_extras: [{
+      mode: 'property', property_id: 'im-9', photo_id: 'ft-9', url: null,
+      property: { id: 'im-9', title: 'Collina', code: 'AP9' }, reason: 'imovel_despublicado',
+    }] } as unknown as Site;
+    render(<Montar espiao={vi.fn()} site={site}
+      inicial={{ hero_image: { mode: 'upload', url: 'https://cdn/1.jpg' }, hero_image_extras: [{ mode: 'property', property_id: 'im-9', photo_id: 'ft-9' }] }} />);
+    expect(screen.getByText('Esta foto saiu do banner: o imóvel foi despublicado.')).toBeTruthy();
+    expect(screen.queryByText(/voltou ao automático/)).toBeNull();
+  });
+
+  it('foto 1 despublicada com extra válida: o aviso diz que o banner segue com as outras fotos', () => {
+    const site = {
+      hero_image: {
+        mode: 'property', property_id: 'im-1', photo_id: null, url: null,
+        property: { id: 'im-1', title: 'Collina', code: 'AP1' }, reason: 'imovel_despublicado',
+      },
+      hero_image_extras: [{ mode: 'upload', url: 'https://cdn/2.jpg' }],
+    } as unknown as Site;
+    render(<Montar espiao={vi.fn()} site={site}
+      inicial={{ hero_image: { mode: 'property', property_id: 'im-1', photo_id: null }, hero_image_extras: [{ mode: 'upload', url: 'https://cdn/2.jpg' }] }} />);
+    expect(screen.getByText('A foto principal saiu do banner: o imóvel «Collina» não está mais publicado no site. O banner segue com as outras fotos.')).toBeTruthy();
+    expect(screen.queryByText(/voltou ao automático/)).toBeNull();
+  });
+
+  it('escolher a foto de um imóvel entra em hero_image_extras e mostra a prévia', async () => {
+    const espiao = vi.fn();
+    render(<Montar espiao={espiao} inicial={{ hero_image: { mode: 'upload', url: 'https://cdn/1.jpg' }, hero_image_extras: [] }} />);
+    const bloco = screen.getByRole('group', { name: 'Mais fotos' });
+    await userEvent.click(within(bloco).getByRole('button', { name: 'Foto de um imóvel' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Escolher no seletor' }));
+    expect(espiao).toHaveBeenCalledWith({ hero_image_extras: [{ mode: 'property', property_id: 'im-7', photo_id: 'ft-7' }] });
+    expect((bloco.querySelector('img') as HTMLImageElement).src).toBe('https://cdn/im7.jpg');
+    expect(within(bloco).getByText('Collina')).toBeTruthy();
+  });
+
+  it('falha no envio mostra erro e não adiciona a foto', async () => {
+    mocks.uploadAsset.mockRejectedValue(new Error('boom'));
+    const espiao = vi.fn();
+    render(<Montar espiao={espiao} inicial={{ hero_image: { mode: 'upload', url: 'https://cdn/1.jpg' }, hero_image_extras: [] }} />);
+    await userEvent.upload(screen.getByLabelText('Escolher arquivo: mais fotos do banner'), png('x.png'));
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith('Falha no upload da foto.'));
+    expect(espiao).not.toHaveBeenCalledWith(expect.objectContaining({ hero_image_extras: expect.anything() }));
+  });
+
+  it('reordenar move a foto para o lugar da outra', () => {
+    const lista = ['a', 'b', 'c'];
+    expect(reordenarExtras(lista, ['a', 'b', 'c'], 'a', 'c')).toEqual(['b', 'c', 'a']);
+    expect(reordenarExtras(lista, ['a', 'b', 'c'], 'c', 'a')).toEqual(['c', 'a', 'b']);
+    expect(reordenarExtras(lista, ['a', 'b', 'c'], 'a', 'a')).toBe(lista);
+    expect(reordenarExtras(lista, ['a', 'b', 'c'], 'a', 'zz')).toBe(lista);
   });
 });

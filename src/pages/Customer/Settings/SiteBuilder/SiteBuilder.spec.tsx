@@ -522,6 +522,28 @@ describe('SiteBuilder (casca do Meu site)', () => {
       expect(mocks.updateSite.mock.calls[0][1]).not.toHaveProperty('menu');
     });
 
+    it('as fotos extras do banner vão no payload do Salvar, na ordem gravada menos a removida', async () => {
+      const site = { ...SITE,
+        hero_image: { mode: 'upload', url: 'https://cdn/1.jpg' },
+        hero_image_extras: [
+          { mode: 'upload', url: 'https://cdn/2.jpg' },
+          { mode: 'property', property_id: 'im-3', photo_id: 'ft-3', url: 'https://cdn/3.jpg', property: { id: 'im-3', title: 'Collina', code: 'AP3' } },
+          { mode: 'upload', url: 'https://cdn/4.jpg' },
+        ],
+      } as unknown as Site;
+      mocks.listSites.mockResolvedValue([site]);
+      mocks.updateSite.mockResolvedValue(site);
+      abrir('/settings/site-builder?tela=aparencia');
+      await screen.findByRole('heading', { name: 'Aparência' });
+      fireEvent.click(await screen.findByRole('button', { name: 'Remover a 1ª foto extra' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+      await waitFor(() => expect(mocks.updateSite).toHaveBeenCalled());
+      expect(mocks.updateSite.mock.calls[0][1].hero_image_extras).toEqual([
+        { mode: 'property', property_id: 'im-3', photo_id: 'ft-3' },
+        { mode: 'upload', url: 'https://cdn/4.jpg' },
+      ]);
+    });
+
     it('uma miniatura da Aparência leva a aparência inteira; depois de salvar, a tela relê o gravado', async () => {
       mocks.updateSite.mockResolvedValue({ ...SITE, appearance: { background: 'dark', hero_overlay: 70 } });
       abrir('/settings/site-builder?tela=aparencia');

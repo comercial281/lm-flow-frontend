@@ -45,10 +45,10 @@ describe('Início do Moderno', () => {
     expect((await screen.findByTestId('busca')).textContent).toBe('?tab=rent&price_min=1500.01&price_max=3000&suites=2');
   });
 
-  it('busca por código: o código digitado na barra grande vai pra URL', async () => {
-    await abrirHome(moderno({ home: { search: { fields: ['code'] } } } as SiteInfo), [imovel('R1')]);
+  it('busca por código: o código de um imóvel publicado digitado na barra grande vai pra URL', async () => {
+    await abrirHome(moderno({ home: { search: { fields: ['code'] } } } as SiteInfo), [imovel('R1'), imovel('AP0566')]);
 
-    fireEvent.change(screen.getByRole('combobox', { name: 'Cidade, bairro ou código do imóvel' }), { target: { value: 'AP0566' } });
+    fireEvent.change(screen.getByRole('combobox', { name: 'Condomínio, bairro, cidade ou código' }), { target: { value: 'AP0566' } });
     fireEvent.click(screen.getByRole('button', { name: /Buscar/ }));
     expect((await screen.findByTestId('busca')).textContent).toBe('?code=AP0566');
   });
@@ -227,18 +227,20 @@ describe('Início do Moderno', () => {
     expect(fileira.firstElementChild!.querySelector('h1')).not.toBeNull();
   });
 
-  it('busca com 6 campos: abas em cima (sem o código pequeno), a barra grande com o Buscar e os 6 filtros numa linha embaixo', async () => {
+  it('busca com 4 campos e Código: abas em cima (sem o código pequeno), a barra grande com o Buscar e os 4 filtros numa linha embaixo', async () => {
     await abrirHome(
-      moderno({ home: { search: { fields: ['type', 'city', 'neighborhood', 'price', 'bedrooms', 'parking', 'code'] } } } as SiteInfo),
+      moderno({ home: { search: { fields: ['type', 'city', 'neighborhood', 'bedrooms', 'code'] } } } as SiteInfo),
       [imovel('R1'), imovel('L1', { transaction_type: 'rent', rent_price_from: 2000, sale_price_from: null })],
     );
     const form = document.querySelector<HTMLElement>('form[role="search"]')!;
     expect(within(form).queryByLabelText('Código do imóvel')).toBeNull();
 
     const barra = form.querySelector<HTMLElement>('[data-barra-da-busca]')!;
-    const campo = within(barra).getByRole('combobox', { name: 'Cidade, bairro ou código do imóvel' });
-    expect(campo.getAttribute('placeholder')).toBe('Digite cidade, bairro ou código do imóvel');
-    expect(campo.className.split(/\s+/)).toEqual(expect.arrayContaining(['h-[62px]', 'w-full']));
+    const campo = within(barra).getByRole('combobox', { name: 'Condomínio, bairro, cidade ou código' });
+    expect(campo.getAttribute('placeholder')).toBe('Digite condomínio, bairro, cidade ou código');
+    // O campo de lugar de sempre, crescido pela barra (altura 62px por cima do visual dele).
+    expect(campo.className.split(/\s+/)).toContain('w-full');
+    expect(campo.parentElement!.className.split(/\s+/)).toEqual(expect.arrayContaining(['[&_input]:h-[62px]', 'flex-1']));
     const buscar = within(barra).getByRole('button', { name: /Buscar/ });
     expect(buscar.className.split(/\s+/)).toEqual(expect.arrayContaining(['h-[62px]', 'bg-[var(--brand)]', 'text-[var(--brand-ink)]']));
     // Celular: o botão largo embaixo da barra; a partir de 640px, ao lado.
@@ -249,8 +251,9 @@ describe('Início do Moderno', () => {
     const linha = form.querySelector<HTMLElement>('[data-campos-da-busca]')!;
     expect(barra.compareDocumentPosition(linha) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     const campos = linha.querySelectorAll('[data-campo-da-busca]');
-    expect(campos).toHaveLength(6);
+    expect(campos).toHaveLength(4);
     expect(within(linha).queryByRole('button')).toBeNull();
+    // Computador: uma linha (flex), cada campo com a mesma parte da largura e podendo encolher.
     expect(linha.className.split(/\s+/)).toEqual(expect.arrayContaining(['lg:flex', 'sm:grid-cols-3', 'grid-cols-1']));
     expect(new Set(Array.from(campos, c => c.className)).size).toBe(1);
     expect(campos[0].className.split(/\s+/)).toEqual(expect.arrayContaining(['lg:flex-1', 'lg:basis-0', 'min-w-0', 'lg:[&:not(:first-child)]:border-l', 'max-sm:[&:not(:first-child)]:border-t']));
@@ -262,6 +265,61 @@ describe('Início do Moderno', () => {
     const linha = document.querySelector<HTMLElement>('[data-campos-da-busca]')!;
     expect(linha.querySelectorAll('[data-campo-da-busca]')).toHaveLength(2);
     expect(linha.className.split(/\s+/)).toContain('sm:grid-cols-2');
+  });
+
+  it('capa de fábrica não mostra Mais filtros', async () => {
+    await abrirHome(moderno(), [imovel('R1')]);
+    expect(screen.queryByRole('button', { name: /Mais filtros/ })).toBeNull();
+  });
+
+  it('6 campos: 3 na barra, e Mais filtros abre a segunda linha com Área', async () => {
+    await abrirHome(
+      moderno({ home: { search: { fields: ['type', 'city', 'neighborhood', 'price', 'bedrooms', 'area'] } } } as SiteInfo),
+      [imovel('R1')],
+    );
+    expect(document.querySelector('[data-campos-da-busca]')!.querySelectorAll('[data-campo-da-busca]')).toHaveLength(3);
+    expect(screen.queryByLabelText('Área')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Mais filtros' }));
+    expect(document.querySelector('[data-campos-da-busca-mais]')!.querySelectorAll('[data-campo-da-busca]')).toHaveLength(3);
+    fireEvent.change(screen.getByLabelText('Área'), { target: { value: '100' } });
+    fireEvent.click(screen.getByRole('button', { name: /Buscar/ }));
+    expect((await screen.findByTestId('busca')).textContent).toBe('?area=100');
+  });
+
+  it('escolher o Collina na barra grande e buscar vai para /imoveis?condominium=…', async () => {
+    await abrirHome(
+      moderno({ home: { search: { fields: ['place'] } } } as SiteInfo),
+      [imovel('R1', { condominium_name: 'Collina' })],
+    );
+    fireEvent.change(screen.getByRole('combobox', { name: 'Condomínio, bairro, cidade ou código' }), { target: { value: 'coll' } });
+    fireEvent.click(await screen.findByRole('option', { name: /Collina/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Buscar/ }));
+    expect((await screen.findByTestId('busca')).textContent).toBe('?condominium=Collina');
+  });
+
+  it('Enter na barra grande, só com texto digitado, faz a busca (place=…)', async () => {
+    await abrirHome(moderno({ home: { search: { fields: ['place'] } } } as SiteInfo), [imovel('R1')]);
+    const campo = screen.getByRole('combobox', { name: 'Condomínio, bairro, cidade ou código' });
+    await userEvent.type(campo, 'Centro{Enter}');
+    expect((await screen.findByTestId('busca')).textContent).toBe('?place=Centro');
+  });
+
+  it('lugar ligado no Personalizar: a barra é ele (sem célula de lugar) e ele não conta pro Mais filtros', async () => {
+    await abrirHome(
+      moderno({ home: { search: { fields: ['type', 'place', 'city', 'neighborhood', 'price'] } } } as SiteInfo),
+      [imovel('R1')],
+    );
+    const linha = document.querySelector<HTMLElement>('[data-campos-da-busca]')!;
+    expect(Array.from(linha.querySelectorAll('[data-campo-da-busca] label'), l => l.textContent))
+      .toEqual(['Tipo', 'Cidade', 'Bairro', 'Faixa de preço']);
+    expect(screen.queryByRole('button', { name: /Mais filtros/ })).toBeNull();
+    expect(screen.getAllByRole('combobox', { name: /Condomínio, bairro/ })).toHaveLength(1);
+  });
+
+  it('a barra grande aparece mesmo sem nenhum campo ligado', async () => {
+    await abrirHome(moderno({ home: { search: { fields: [] } } } as SiteInfo), [imovel('R1')]);
+    expect(screen.getByRole('combobox', { name: 'Condomínio, bairro, cidade ou código' })).toBeInTheDocument();
+    expect(document.querySelector('[data-campos-da-busca]')).toBeNull();
   });
 
   it('capa sobre a foto de ponta a ponta: sem recuo nem cantos, com a altura da tela em Tela cheia; o conteúdo na coluna da página', async () => {
@@ -530,8 +588,11 @@ describe('Início do Moderno: "Não achou?"', () => {
 });
 
 /* ────────────────────────────────────────────────────────────────────────────
-   Barra de pesquisa grande da capa do Moderno: sugestões de cidade e bairro
-   do site enquanto digita, e o texto livre vira bairro, cidade ou código.
+   Barra de pesquisa grande da capa do Moderno: é o campo de lugar do site
+   (decisão do Tony em 13/11: um campo só). Sugestões agrupadas em Condomínio,
+   Bairro e Cidade enquanto digita; escolher não busca; no Buscar, a sugestão
+   vai com os filtros dela, o código de um imóvel publicado vira `code` e o
+   resto vira `place`.
 ──────────────────────────────────────────────────────────────────────────── */
 
 describe('Início do Moderno: barra de pesquisa grande', () => {
@@ -541,40 +602,52 @@ describe('Início do Moderno: barra de pesquisa grande', () => {
     imovel('R1', { address: { city: 'Santos', neighborhood: 'Gonzaga' } }),
     imovel('R2', { address: { city: 'Santo André', neighborhood: 'Santa Teresinha' } }),
     imovel('R3', { address: { city: 'São Paulo', neighborhood: 'Santana' } }),
+    imovel('R4', { condominium_name: 'Residencial Santorini', address: { city: 'Santos', neighborhood: 'Gonzaga' } }),
   ];
   const abrir = (fields: string[] = ['city', 'neighborhood']) =>
     abrirHome(moderno({ home: { search: { fields } } } as SiteInfo), itens());
-  const barra = () => screen.getByRole('combobox', { name: 'Cidade, bairro ou código do imóvel' });
+  const barra = () => screen.getByRole('combobox', { name: 'Condomínio, bairro, cidade ou código' });
   const digitar = (v: string) => { fireEvent.focus(barra()); fireEvent.change(barra(), { target: { value: v } }); };
   const opcoesDaLista = () => within(screen.getByRole('listbox')).getAllByRole('option');
 
-  it('digitando "san": cidades e bairros do site que casam (sem acento), cada um com Cidade ou Bairro', async () => {
+  it('digitando "san": condomínios, bairros e cidades do site que casam (sem acento), agrupados', async () => {
     await abrir();
     expect(screen.queryByRole('listbox')).toBeNull();
     digitar('san');
     expect(barra()).toHaveAttribute('aria-expanded', 'true');
     expect(barra().getAttribute('aria-controls')).toBe(screen.getByRole('listbox').id);
-    expect(opcoesDaLista().map(o => o.textContent)).toEqual(['Santo AndréCidade', 'SantosCidade', 'Santa TeresinhaBairro', 'SantanaBairro']);
+    expect(opcoesDaLista().map(o => o.textContent))
+      .toEqual(['Residencial Santorini (Santos)', 'Santa Teresinha', 'Santana', 'Santo André', 'Santos']);
+    const lista = screen.getByRole('listbox');
+    for (const g of ['Condomínio', 'Bairro', 'Cidade']) expect(within(lista).getByText(g)).toBeInTheDocument();
     // Sem acento: "sao" acha São Paulo.
     digitar('SAO');
-    expect(opcoesDaLista().map(o => o.textContent)).toEqual(['São PauloCidade']);
+    expect(opcoesDaLista().map(o => o.textContent)).toEqual(['São Paulo']);
   });
 
-  it('escolher uma sugestão preenche o campo Bairro embaixo e não busca sozinho; o Buscar leva o bairro', async () => {
+  it('escolher uma sugestão guarda a escolha e não busca sozinho; o Buscar leva os filtros dela', async () => {
     await abrir();
     digitar('teres');
-    fireEvent.mouseDown(within(screen.getByRole('listbox')).getByRole('option', { name: /Santa Teresinha/ }));
+    fireEvent.click(within(screen.getByRole('listbox')).getByRole('option', { name: /Santa Teresinha/ }));
 
     expect(screen.queryByRole('listbox')).toBeNull();
     expect(barra()).toHaveValue('Santa Teresinha');
-    expect(screen.getByLabelText('Bairro')).toHaveValue('Santa Teresinha');
     expect(screen.queryByTestId('busca')).toBeNull();
 
     fireEvent.click(screen.getByRole('button', { name: /Buscar/ }));
     expect((await screen.findByTestId('busca')).textContent).toBe('?neighborhood=Santa+Teresinha');
   });
 
-  it('teclado: ↓ e ↑ andam pela lista (aria-activedescendant), Enter escolhe, Esc fecha', async () => {
+  it('condomínio aparece em "co" e vai pro Buscar como condomínio', async () => {
+    await abrirHome(moderno(), [imovel('R1', { condominium_name: 'Collina' })]);
+    digitar('co');
+    fireEvent.click(within(screen.getByRole('listbox')).getByRole('option', { name: /Collina/ }));
+    expect(screen.queryByTestId('busca')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /Buscar/ }));
+    expect((await screen.findByTestId('busca')).textContent).toBe('?condominium=Collina');
+  });
+
+  it('teclado: ↓ e ↑ andam pela lista (aria-activedescendant), Enter escolhe sem buscar, Esc fecha', async () => {
     await abrir();
     digitar('san');
     fireEvent.keyDown(barra(), { key: 'ArrowDown' });
@@ -585,10 +658,10 @@ describe('Início do Moderno: barra de pesquisa grande', () => {
     fireEvent.keyDown(barra(), { key: 'ArrowUp' });
     fireEvent.keyDown(barra(), { key: 'ArrowUp' });
     // Do primeiro, ↑ volta pro último.
-    expect(barra().getAttribute('aria-activedescendant')).toBe(opcoesDaLista()[3].id);
+    expect(barra().getAttribute('aria-activedescendant')).toBe(opcoesDaLista()[4].id);
     fireEvent.keyDown(barra(), { key: 'ArrowDown' });
     fireEvent.keyDown(barra(), { key: 'Enter' });
-    expect(screen.getByLabelText('Cidade')).toHaveValue('Santo André');
+    expect(barra()).toHaveValue('Residencial Santorini (Santos)');
     expect(screen.queryByTestId('busca')).toBeNull();
 
     digitar('gon');
@@ -599,42 +672,67 @@ describe('Início do Moderno: barra de pesquisa grande', () => {
     expect(barra()).toHaveValue('gon');
   });
 
-  it('texto livre no Buscar: bairro do site vira bairro, cidade vira cidade, o resto vira código', async () => {
+  it('texto livre no Buscar: código de imóvel publicado vira código (sem acento nem maiúscula); o resto vira place', async () => {
+    await abrir();
+    digitar('r2');
+    fireEvent.click(screen.getByRole('button', { name: /Buscar/ }));
+    expect((await screen.findByTestId('busca')).textContent).toBe('?code=r2');
+    cleanup();
+
     await abrir();
     digitar('GONZAGA');
     fireEvent.click(screen.getByRole('button', { name: /Buscar/ }));
-    expect((await screen.findByTestId('busca')).textContent).toBe('?neighborhood=Gonzaga');
+    expect((await screen.findByTestId('busca')).textContent).toBe('?place=GONZAGA');
     cleanup();
 
-    await abrir();
-    digitar('santo andre');
-    fireEvent.click(screen.getByRole('button', { name: /Buscar/ }));
-    expect((await screen.findByTestId('busca')).textContent).toBe('?city=Santo+Andr%C3%A9');
-    cleanup();
-
-    // Campo que o site não mostra também vale (o código não está nos campos aqui).
+    // Parece código, mas nenhum imóvel publicado tem: vai como texto (a página procura em condomínio, bairro e cidade).
     await abrir();
     digitar('AP0566');
     fireEvent.click(screen.getByRole('button', { name: /Buscar/ }));
-    expect((await screen.findByTestId('busca')).textContent).toBe('?code=AP0566');
+    expect((await screen.findByTestId('busca')).textContent).toBe('?place=AP0566');
   });
 
-  it('o endereço sai na mesma ordem do Clássico: cidade do campo e bairro do texto', async () => {
+  it('código de um imóvel de outra aba: vai com o código e a aba dele', async () => {
+    await abrirHome(moderno(), [
+      imovel('R1'),
+      imovel('L77', { transaction_type: 'rent', rent_price_from: 2000, sale_price_from: null }),
+    ]);
+    digitar('l77');
+    fireEvent.click(screen.getByRole('button', { name: /Buscar/ }));
+    expect((await screen.findByTestId('busca')).textContent).toBe('?tab=rent&code=l77');
+  });
+
+  it('sugestão de bairro e a célula Bairro: a sugestão vale com a célula vazia; com a célula preenchida, vale a célula', async () => {
+    await abrir();
+    digitar('teres');
+    fireEvent.click(within(screen.getByRole('listbox')).getByRole('option', { name: /Santa Teresinha/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Buscar/ }));
+    expect((await screen.findByTestId('busca')).textContent).toBe('?neighborhood=Santa+Teresinha');
+    cleanup();
+
+    await abrir();
+    digitar('teres');
+    fireEvent.click(within(screen.getByRole('listbox')).getByRole('option', { name: /Santa Teresinha/ }));
+    fireEvent.change(screen.getByLabelText('Bairro'), { target: { value: 'Gonzaga' } });
+    fireEvent.click(screen.getByRole('button', { name: /Buscar/ }));
+    expect((await screen.findByTestId('busca')).textContent).toBe('?neighborhood=Gonzaga');
+  });
+
+  it('sugestão escolhida e depois editada vira texto livre', async () => {
+    await abrir();
+    digitar('teres');
+    fireEvent.click(within(screen.getByRole('listbox')).getByRole('option', { name: /Santa Teresinha/ }));
+    fireEvent.change(barra(), { target: { value: 'Santa Teresinha 2' } });
+    fireEvent.click(screen.getByRole('button', { name: /Buscar/ }));
+    expect((await screen.findByTestId('busca')).textContent).toBe('?place=Santa+Teresinha+2');
+  });
+
+  it('o endereço sai na ordem dos campos de sempre: o texto da barra e os filtros embaixo', async () => {
     await abrir(['type', 'city', 'neighborhood', 'bedrooms']);
     fireEvent.change(screen.getByLabelText('Dormitórios'), { target: { value: '2' } });
     fireEvent.change(screen.getByLabelText('Cidade'), { target: { value: 'Santos' } });
     digitar('gonzaga');
     fireEvent.click(screen.getByRole('button', { name: /Buscar/ }));
-    expect((await screen.findByTestId('busca')).textContent).toBe('?city=Santos&neighborhood=Gonzaga&bedrooms=2');
-  });
-
-  it('trocar embaixo o campo que a sugestão preencheu apaga o texto da barra (ele não vence o campo no Buscar)', async () => {
-    await abrir();
-    digitar('teres');
-    fireEvent.mouseDown(within(screen.getByRole('listbox')).getByRole('option', { name: /Santa Teresinha/ }));
-    fireEvent.change(screen.getByLabelText('Bairro'), { target: { value: 'Gonzaga' } });
-    expect(barra()).toHaveValue('');
-    fireEvent.click(screen.getByRole('button', { name: /Buscar/ }));
-    expect((await screen.findByTestId('busca')).textContent).toBe('?neighborhood=Gonzaga');
+    expect((await screen.findByTestId('busca')).textContent).toBe('?place=gonzaga&city=Santos&bedrooms=2');
   });
 });

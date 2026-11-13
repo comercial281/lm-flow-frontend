@@ -3,7 +3,9 @@ import type { AbaId, HomeConfig } from '@/features/siteBuilder/public/homeConfig
 import { filtroDaCapa, logoNaCapa, logoNaSuperficie, resolverAparencia } from '@/features/siteBuilder/public/aparenciaConfig';
 import { ATRIBUTO_DO_LOGO_DA_CAPA, useLogoPousado } from '@/features/siteBuilder/public/logoPousado';
 import { semAsteriscos } from '@/features/siteBuilder/public/destaqueNoTitulo';
-import { ROTULO_ABA, fotoDaCapa, textosDaCapa, useBuscaDaCapa } from './useBuscaDaCapa';
+import CampoDeLugar from '../CampoDeLugar';
+import FundoDaCapa from './FundoDaCapa';
+import { ROTULO_ABA, fotosDaCapa, lugarLargo, textosDaCapa, useBuscaDaCapa, type CampoDeEscolha } from './useBuscaDaCapa';
 
 /* ────────────────────────────────────────────────────────────────────────────
    Capa da página inicial: foto/vídeo, título, subtítulo e a busca rápida.
@@ -26,8 +28,8 @@ interface Props {
 }
 
 export default function HomeCapa({ site, home, items, tenant, abas, cities, hoods, types, onTab }: Props) {
-  const { tab, trocarAba, valores, set, selects, temCodigo, runSearch, opcoes } =
-    useBuscaDaCapa({ home, tenant, abas, cities, hoods, types, onTab });
+  const { tab, trocarAba, valores, set, primeira, mais, abertos, alternarMais, escolherLugar, temCodigo, runSearch, opcoes } =
+    useBuscaDaCapa({ home, tenant, abas, cities, hoods, types, items, onTab, modelo: 'classico' });
   const { titulo, subtitulo } = textosDaCapa(site, home);
 
   // Aparência: "Tela cheia" ocupa a altura da tela e centra o conteúdo; "Meia
@@ -61,8 +63,21 @@ export default function HomeCapa({ site, home, items, tenant, abas, cities, hood
   ) : (
     // Foto escolhida no Site Builder (de um imóvel ou enviada); sem ela,
     // a capa do primeiro imóvel da lista, como sempre foi.
-    <img src={fotoDaCapa(site, items)} alt="" className="h-full w-full object-cover" />
+    <FundoDaCapa fotos={fotosDaCapa(site, items)} />
   );
+
+  // O lugar é texto com sugestões; os outros campos são listas. Sobre a foto a capa corta o que sai da
+  // borda (overflow-hidden; o markup dela é trava de teste), então a lista abre pra cima, sobre o título.
+  // Com "Mais filtros" e o lugar entre os 3 primeiros, ele ocupa 2 colunas: a linha fecha as 4 sem buraco.
+  const largo = lugarLargo(primeira, mais);
+  const campo = (c: CampoDeEscolha) => {
+    if (c === 'place') {
+      return <CampoDeLugar key={c} items={items} tab={tab} texto={valores.place ?? ''} onTexto={set('place')} onEscolher={escolherLugar}
+        abrirPara={ap.hero_layout === 'split' ? 'baixo' : 'cima'} className={largo && primeira.includes(c) ? 'md:col-span-2' : ''} />;
+    }
+    const o = opcoes[c];
+    return <Select key={c} value={valores[c] ?? ''} onChange={set(c)} label={o.label} options={o.options} />;
+  };
 
   // Busca (entrada → página dedicada de filtros)
   const busca = (
@@ -80,16 +95,10 @@ export default function HomeCapa({ site, home, items, tenant, abas, cities, hood
         </div>
       )}
 
-      {selects.length > 0 && (
-        <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
-          {selects.map(c => {
-            const o = opcoes[c];
-            return <Select key={c} value={valores[c] ?? ''} onChange={set(c)} label={o.label} options={o.options} />;
-          })}
-        </div>
-      )}
+      {primeira.length > 0 && <div className="grid grid-cols-2 gap-2 md:grid-cols-4">{primeira.map(campo)}</div>}
+      {abertos && mais.length > 0 && <div className="mt-2 grid grid-cols-2 gap-2 md:grid-cols-4">{mais.map(campo)}</div>}
 
-      <div className={`flex flex-col gap-2 sm:flex-row ${selects.length > 0 ? 'mt-2' : ''}`}>
+      <div className={`flex flex-col gap-2 sm:flex-row ${primeira.length > 0 ? 'mt-2' : ''}`}>
         {temCodigo && (
           <div className="relative flex-1">
             <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400"><Ic d={I.search} s={17} /></span>
@@ -97,7 +106,13 @@ export default function HomeCapa({ site, home, items, tenant, abas, cities, hood
               className="w-full rounded-xl border border-black/[0.08] bg-white py-3 pl-10 pr-3 text-[14px] outline-none focus:border-[var(--brand)]" />
           </div>
         )}
-        <button type="submit" className={`inline-flex items-center justify-center gap-2 rounded-xl px-7 py-3 text-[14px] font-semibold text-white transition-opacity hover:opacity-90 ${temCodigo ? '' : 'sm:ml-auto'}`} style={{ background: 'var(--brand)' }}>
+        {mais.length > 0 && (
+          <button type="button" onClick={alternarMais} aria-expanded={abertos}
+            className={`inline-flex items-center justify-center rounded-xl border border-black/[0.08] px-5 py-3 text-[14px] font-semibold text-neutral-700 transition-colors hover:bg-black/[0.04] ${temCodigo ? '' : 'sm:ml-auto'}`}>
+            {abertos ? 'Menos filtros' : 'Mais filtros'}
+          </button>
+        )}
+        <button type="submit" className={`inline-flex items-center justify-center gap-2 rounded-xl px-7 py-3 text-[14px] font-semibold text-white transition-opacity hover:opacity-90 ${temCodigo || mais.length > 0 ? '' : 'sm:ml-auto'}`} style={{ background: 'var(--brand)' }}>
           <Ic d={I.search} s={17} /> Buscar
         </button>
       </div>

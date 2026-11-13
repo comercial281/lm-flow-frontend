@@ -1,4 +1,5 @@
 import { OrdenarPor, type PortalFilters } from '../portalShared';
+import { AREAS_MINIMAS } from '@/features/siteBuilder/public/filtros';
 import { opcoesDeTipo } from '@/features/siteBuilder/public/tiposDeImovel';
 import { rotuloDaFase } from '@/features/properties/listingKind';
 import type { BuscaDosImoveis, PatchDaBusca } from '../busca/useBuscaDosImoveis';
@@ -22,6 +23,8 @@ const mais = (n: string, um: string, varios: string) => `${n}+ ${n === '1' ? um 
 function pilulasDosFiltros(f: PortalFilters, busca: BuscaDosImoveis): Pilula[] {
   const { types, cidade, bairro, preco } = busca;
   const p: (Pilula | null)[] = [
+    f.condominium ? { chave: 'condominium', texto: `Condomínio ${f.condominium}`, tirar: { condominium: '' } } : null,
+    f.place ? { chave: 'place', texto: `“${f.place}”`, tirar: { place: '' } } : null,
     f.type ? { chave: 'type', texto: opcoesDeTipo(types).find(([v]) => v === f.type)?.[1] ?? opcoesDeTipo([f.type])[0][1], tirar: { type: '' } } : null,
     f.city ? { chave: 'city', texto: cidade.valor || f.city, tirar: { city: '' } } : null,
     f.neighborhood ? { chave: 'neighborhood', texto: bairro.valor || f.neighborhood, tirar: { neighborhood: '' } } : null,
@@ -29,6 +32,7 @@ function pilulasDosFiltros(f: PortalFilters, busca: BuscaDosImoveis): Pilula[] {
     f.price_min || f.price_max
       ? { chave: 'price', texto: preco.opcoes.find(([v]) => v === preco.valor)?.[1] ?? 'Faixa de preço', tirar: { price_min: '', price_max: '' } }
       : null,
+    f.area ? { chave: 'area', texto: AREAS_MINIMAS.find(([v]) => v === f.area)?.[1] ?? `${f.area} m²+`, tirar: { area: '' } } : null,
     f.suites ? { chave: 'suites', texto: mais(f.suites, 'suíte', 'suítes'), tirar: { suites: '' } } : null,
     f.parking ? { chave: 'parking', texto: mais(f.parking, 'vaga', 'vagas'), tirar: { parking: '' } } : null,
     f.stage ? { chave: 'stage', texto: rotuloDaFase(f.stage), tirar: { stage: '' } } : null,

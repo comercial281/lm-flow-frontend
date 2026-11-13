@@ -4,12 +4,16 @@ import { opcaoDoTipo, opcoesDeTipo } from '@/features/siteBuilder/public/tiposDe
 import { precoDaFaixa } from '@/features/siteBuilder/public/faixasDePreco';
 import { FASES_DO_PUBLICO } from '@/features/properties/listingKind';
 import type { BuscaDosImoveis } from '../busca/useBuscaDosImoveis';
+import { AREAS_MINIMAS } from '@/features/siteBuilder/public/filtros';
+import CampoDeLugar from '../CampoDeLugar';
 
 /* ────────────────────────────────────────────────────────────────────────────
    Painel de filtros da página de Imóveis do Moderno (protótipo `.filters`,
-   `.f-row`, `.f-more`, `.sel`): abas e código em cima; 5 filtros à vista
-   (Tipo, Cidade, Bairro, Dormitórios, Faixa de preço); "Mais filtros" abre
-   Suítes, Vagas e Fase (Fase só fora de Alugar). Os filtros valem na hora,
+   `.f-row`, `.f-more`, `.sel`): abas e código em cima; o campo
+   "Condomínio, bairro ou cidade" (o mesmo do Clássico e da capa, com o "×"
+   que tira o lugar); 5 filtros à vista (Tipo, Cidade, Bairro, Dormitórios,
+   Faixa de preço); "Mais filtros" abre Área, Suítes, Vagas e Fase (Fase só
+   fora de Alugar). Os filtros valem na hora,
    como no Clássico: não há botão Buscar. Valores e destinos são os do
    `useBuscaDosImoveis` (mesma URL do Clássico).
 ──────────────────────────────────────────────────────────────────────────── */
@@ -19,6 +23,14 @@ export const DORMITORIOS: [string, string][] = [['1', '1+'], ['2', '2+'], ['3', 
 export const MAIS_DE: [string, string][] = [['1', '1+'], ['2', '2+'], ['3', '3+']];
 
 const LISTA = 'w-full min-w-0 appearance-none truncate border-0 bg-transparent pt-0.5 text-[13.5px] font-semibold text-[var(--m-head)] outline-none [&_option]:bg-[#FFFFFF] [&_option]:text-[#17140F]';
+
+/** O campo de lugar no visual do Moderno (moldura, fundo e cores do painel). */
+const LUGAR = [
+  '[&>span]:text-[var(--m-muted)]',
+  '[&_input]:h-12 [&_input]:rounded-[14px] [&_input]:border-[var(--m-line)] [&_input]:bg-[var(--m-ground)]',
+  '[&_input]:text-[14px] [&_input]:text-[var(--m-head)] [&_input]:placeholder:text-[var(--m-muted)]',
+  '[&_[role=listbox]]:text-[#17140F]',
+].join(' ');
 
 function Campo({ rotulo, value, onChange, options }: { rotulo: string; value: string; onChange: (v: string) => void; options: [string, string][] }) {
   const id = useId();
@@ -34,9 +46,12 @@ function Campo({ rotulo, value, onChange, options }: { rotulo: string; value: st
 }
 
 export default function FiltrosModernos({ busca }: { busca: BuscaDosImoveis }) {
-  const { abas, listaOk, filters, update, trocarAba, types, cidade, bairro, preco } = busca;
+  const {
+    abas, listaOk, filters, update, trocarAba, types, cidade, bairro, preco,
+    items, textoDoLugar, setTextoDoLugar, escolherLugar, confirmarLugar, limparLugar,
+  } = busca;
   // Abre sozinho quando um dos filtros de dentro já está na URL (link colado, voltar do navegador).
-  const algumDeDentro = !!(filters.suites || filters.parking || filters.stage);
+  const algumDeDentro = !!(filters.area || filters.suites || filters.parking || filters.stage);
   const [aberto, setAberto] = useState(algumDeDentro);
   const maisAberto = aberto || algumDeDentro;
   const maisId = useId();
@@ -68,6 +83,12 @@ export default function FiltrosModernos({ busca }: { busca: BuscaDosImoveis }) {
         </label>
       </div>
 
+      <CampoDeLugar
+        items={items} tab={filters.tab} texto={textoDoLugar}
+        onTexto={setTextoDoLugar} onEscolher={escolherLugar} onConfirmar={confirmarLugar} onLimpar={limparLugar}
+        className={LUGAR}
+      />
+
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-5">
         <Campo rotulo="Tipo" value={opcaoDoTipo(types, filters.type)} onChange={v => update({ type: v })} options={opcoesDeTipo(types)} />
         <Campo rotulo="Cidade" value={cidade.valor} onChange={v => update({ city: v })} options={cidade.opcoes} />
@@ -81,6 +102,7 @@ export default function FiltrosModernos({ busca }: { busca: BuscaDosImoveis }) {
 
       {maisAberto && (
         <div id={maisId} className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
+          <Campo rotulo="Área" value={filters.area ?? ''} onChange={v => update({ area: v })} options={AREAS_MINIMAS} />
           <Campo rotulo="Suítes" value={filters.suites ?? ''} onChange={v => update({ suites: v })} options={MAIS_DE} />
           <Campo rotulo="Vagas" value={filters.parking ?? ''} onChange={v => update({ parking: v })} options={MAIS_DE} />
           {/* Fase é de empreendimento, e Alugar não tem empreendimento. */}

@@ -5,7 +5,8 @@ import { Globe, Image as ImageIcon, Loader2, Trash2, Upload, X } from 'lucide-re
 import { extractLogoColors } from '@/utils/logoColors';
 import { siteBuilderService } from '@/services/siteBuilder/siteBuilderService';
 import HeroImagePicker, { type HeroImagePick } from '@/features/siteBuilder/HeroImagePicker';
-import { EMPTY_HERO_IMAGE, HERO_IMAGE_MODE_LABELS, heroImageChoiceFrom, heroImageWarning } from '@/features/siteBuilder/heroImage';
+import MaisFotosDoBanner, { chaveDaExtra, type PreviaDaExtra } from './MaisFotosDoBanner';
+import { EMPTY_HERO_IMAGE, MAX_FOTOS_EXTRAS, HERO_IMAGE_MODE_LABELS, heroImageChoiceFrom, heroImageWarning, temExtraNoBanner } from '@/features/siteBuilder/heroImage';
 import { Seletor } from '@/components/base/Seletor';
 import { tituloDaAba } from '@/features/siteBuilder/public/tituloDaAba';
 import { APARENCIA_FABRICA, FONTES_DO_SITE, type Aparencia } from '@/features/siteBuilder/public/aparenciaConfig';
@@ -35,6 +36,13 @@ export default function TelaAparencia({ site, siteForm, setF, heroPickPreview, s
   const heroImageInputRef = useRef<HTMLInputElement | null>(null);
   const [heroImageUploading, setHeroImageUploading] = useState(false);
   const [heroPickerOpen, setHeroPickerOpen] = useState(false);
+
+  // Mais fotos do banner (até 5): prévia das de imóvel ainda não salvas fica aqui.
+  const extraInputRef = useRef<HTMLInputElement | null>(null);
+  const [extraUploading, setExtraUploading] = useState(false);
+  const [extraPickerOpen, setExtraPickerOpen] = useState(false);
+  const [extraPreviews, setExtraPreviews] = useState<Record<string, PreviaDaExtra>>({});
+  const extras = siteForm.hero_image_extras ?? [];
 
   // Sobe a logo E extrai as cores dela (canvas local, sem IA): preenche
   // logo_url + cor primária/destaque de uma vez. Usuário revisa e salva.
@@ -97,6 +105,31 @@ export default function TelaAparencia({ site, siteForm, setF, heroPickPreview, s
     } finally {
       setHeroImageUploading(false);
     }
+  };
+
+  const handleExtraFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (extraInputRef.current) extraInputRef.current.value = '';
+    if (!file) return;
+    if (!file.type.startsWith('image/')) { toast.error('Envie um arquivo de imagem (JPG, PNG ou WebP).'); return; }
+    if (file.size > 8 * 1024 * 1024) { toast.error('Imagem muito grande (máx 8MB). Comprima antes de enviar.'); return; }
+    setExtraUploading(true);
+    try {
+      const { url } = await siteBuilderService.uploadAsset(file);
+      setF({ hero_image_extras: [...extras, { mode: 'upload' as const, url }].slice(0, MAX_FOTOS_EXTRAS) });
+      toast.success('Foto enviada. Clique em Salvar para ir pro site.');
+    } catch {
+      toast.error('Falha no upload da foto.');
+    } finally {
+      setExtraUploading(false);
+    }
+  };
+
+  const handleExtraPick = (pick: HeroImagePick) => {
+    const escolha = { mode: 'property' as const, property_id: pick.property_id, photo_id: pick.photo_id };
+    setExtraPreviews(prev => ({ ...prev, [chaveDaExtra(escolha)]: { url: pick.url, titulo: pick.property_title } }));
+    setF({ hero_image_extras: [...extras, escolha].slice(0, MAX_FOTOS_EXTRAS) });
+    setExtraPickerOpen(false);
   };
 
   // Aparência do site (C3): a tela edita o resolvido e manda o objeto INTEIRO
@@ -212,7 +245,7 @@ export default function TelaAparencia({ site, siteForm, setF, heroPickPreview, s
           // Prévia: a foto recém-escolhida (ainda não salva) ou a que o servidor serve hoje.
           const propertyPreviewUrl = heroPickPreview?.url ?? (savedMatches ? resolved?.url : null);
           const propertyTitle = heroPickPreview?.property_title ?? (savedMatches ? resolved?.property?.title : null);
-          const warning = !heroPickPreview && savedMatches ? heroImageWarning(resolved) : null;
+          const warning = !heroPickPreview && savedMatches ? heroImageWarning(resolved, temExtraNoBanner(site?.hero_image_extras)) : null;
           const setMode = (mode: typeof choice.mode) => {
             setHeroPickPreview(null);
             if (mode === 'auto') setF({ hero_image: { mode: 'auto' } });
@@ -280,6 +313,18 @@ export default function TelaAparencia({ site, siteForm, setF, heroPickPreview, s
                     : <p className="text-sm text-amber-700">Sem foto enviada, o site continua no automático.</p>}
                 </div>
               )}
+              {choice.mode !== 'auto' && (
+                <MaisFotosDoBanner
+                  extras={extras}
+                  resolvidas={site?.hero_image_extras ?? []}
+                  previas={extraPreviews}
+                  enviando={extraUploading}
+                  aoMudar={lista => setF({ hero_image_extras: lista })}
+                  aoEscolherImovel={() => setExtraPickerOpen(true)}
+                  aoEnviarArquivo={handleExtraFile}
+                  inputRef={extraInputRef}
+                />
+              )}
             </fieldset>
           );
         })()}
@@ -290,6 +335,12 @@ export default function TelaAparencia({ site, siteForm, setF, heroPickPreview, s
           onPick={handleHeroPick}
           currentPropertyId={siteForm.hero_image?.property_id}
           currentPhotoId={siteForm.hero_image?.photo_id}
+        />
+
+        <HeroImagePicker
+          open={extraPickerOpen}
+          onClose={() => setExtraPickerOpen(false)}
+          onPick={handleExtraPick}
         />
 
         <Campo id="aparencia-video" rotulo="Vídeo (opcional)"
