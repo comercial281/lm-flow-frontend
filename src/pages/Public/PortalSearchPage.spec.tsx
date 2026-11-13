@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import PortalSearchPage from './PortalSearchPage';
@@ -425,5 +425,41 @@ describe('condomínio, bairro ou cidade e Área', () => {
     fireEvent.click(screen.getAllByRole('button', { name: 'Limpar filtros' })[0]);
     expect(urlAtual().get('place')).toBeNull();
     expect(campoDeLugar().value).toBe('');
+  });
+
+  const comBairro = () => [
+    imovel('B1', { address: { city: 'Campinas', neighborhood: 'Centro' } }),
+    imovel('B2', { address: { city: 'Campinas', neighborhood: 'Cambuí' } }),
+  ];
+  const escolherCentro = async () => {
+    const campo = campoDeLugar();
+    fireEvent.change(campo, { target: { value: 'cent' } });
+    fireEvent.click(within(await screen.findByRole('listbox')).getByRole('option', { name: 'Centro' }));
+  };
+
+  it('escolher bairro e voltar ao campo + Enter não soma place', async () => {
+    await abrirBusca(comBairro());
+    await escolherCentro();
+    expect(urlAtual().get('neighborhood')).toBe('Centro');
+    expect(campoDeLugar().value).toBe('Centro');
+    fireEvent.focus(campoDeLugar());
+    fireEvent.keyDown(campoDeLugar(), { key: 'Enter' });
+    expect(urlAtual().get('place')).toBeNull();
+  });
+
+  it('trocar o select de Bairro depois de escolher limpa o campo', async () => {
+    await abrirBusca(comBairro());
+    await escolherCentro();
+    selecionar('Cambuí', 'Cambuí');
+    expect(urlAtual().get('neighborhood')).toBe('Cambuí');
+    expect(campoDeLugar().value).toBe('');
+    expect(titulos()).toEqual(['Imóvel B2']);
+  });
+
+  it('sair do campo com Tab grava o texto digitado', async () => {
+    await abrirBusca(comBairro());
+    fireEvent.change(campoDeLugar(), { target: { value: 'zzz' } });
+    fireEvent.blur(campoDeLugar());
+    expect(urlAtual().get('place')).toBe('zzz');
   });
 });

@@ -112,23 +112,31 @@ export default function PortalSearchPage() {
   // Campo "Condomínio, bairro ou cidade": o texto é local enquanto se digita; Enter ou sair do
   // campo grava `place`. Só condomínio e place da URL preenchem o campo (bairro/cidade ficam nos selects).
   const [textoDoLugar, setTextoDoLugar] = useState(filters.condominium || filters.place || '');
-  const rotuloEscolhido = useRef<{ condominium: string; rotulo: string } | null>(null);
+  const escolhida = useRef<SugestaoDeLugar | null>(null);
+  // O que o campo mostra pela URL: o rótulo da sugestão escolhida enquanto a URL ainda é a dela
+  // (qualquer grupo); mudou o select, o campo volta a só condomínio/place.
+  const textoDaUrl = () => {
+    const e = escolhida.current;
+    const bate = !!e && !filters.place
+      && (e.filtros.condominium ?? '') === filters.condominium
+      && (e.filtros.neighborhood ?? '') === filters.neighborhood
+      && (e.filtros.city ?? '') === filters.city;
+    return bate ? e!.rotulo : (filters.condominium || filters.place || '');
+  };
   useEffect(() => {
-    const e = rotuloEscolhido.current;
-    setTextoDoLugar(e && e.condominium === filters.condominium ? e.rotulo : (filters.condominium || filters.place || ''));
-  }, [filters.condominium, filters.place]);
+    setTextoDoLugar(textoDaUrl());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters.condominium, filters.place, filters.neighborhood, filters.city]);
   const escolherLugar = (s: SugestaoDeLugar) => {
-    rotuloEscolhido.current = { condominium: s.filtros.condominium ?? '', rotulo: s.rotulo };
+    escolhida.current = s;
     setTextoDoLugar(s.rotulo);
     update({ place: '', condominium: '', neighborhood: '', city: '', ...s.filtros });
   };
   const confirmarLugar = () => {
     const t = textoDoLugar.trim();
-    const mostrado = rotuloEscolhido.current && rotuloEscolhido.current.condominium === filters.condominium
-      ? rotuloEscolhido.current.rotulo : (filters.condominium || filters.place || '');
-    if (t === mostrado.trim()) return;
+    if (t === textoDaUrl().trim()) return;
     if (!t && (filters.neighborhood || filters.city) && !filters.condominium && !filters.place) return;
-    rotuloEscolhido.current = null;
+    escolhida.current = null;
     update({ place: t, condominium: '' }, true);
   };
 
@@ -137,7 +145,7 @@ export default function PortalSearchPage() {
     const next = new URLSearchParams(filters.tab === 'sale' ? {} : { tab: filters.tab });
     const sort = params.get('sort');
     if (sort) next.set('sort', sort);
-    rotuloEscolhido.current = null;
+    escolhida.current = null;
     setTextoDoLugar('');
     setParams(next, { replace: true });
   };

@@ -50,4 +50,14 @@ describe('CampoDeLugar', () => {
     await user.click(screen.getByRole('button', { name: 'fora' }));
     expect(screen.queryByRole('listbox')).toBeNull();
   });
+
+  it('Tab sai do campo, fecha a lista e confirma', async () => {
+    const user = userEvent.setup();
+    const confirmar = vi.fn();
+    render(<div><CampoDeLugar items={itens} tab="sale" texto="col" onTexto={vi.fn()} onEscolher={vi.fn()} onConfirmar={confirmar} /><select><option>x</option></select></div>);
+    await user.click(screen.getByRole('combobox', { name: 'Condomínio, bairro ou cidade' }));
+    await user.keyboard('{Escape}{Tab}');
+    expect(screen.queryByRole('listbox')).toBeNull();
+    expect(confirmar).toHaveBeenCalled();
+  });
 });

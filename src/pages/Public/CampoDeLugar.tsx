@@ -57,7 +57,11 @@ export default function CampoDeLugar({ items, tab, texto, onTexto, onEscolher, o
 
   let grupoAnterior = '';
   return (
-    <div ref={raiz} className={`relative ${className}`}>
+    <div ref={raiz} className={`relative ${className}`}
+      onBlur={e => {
+        if (e.relatedTarget && raiz.current?.contains(e.relatedTarget as Node)) return;
+        setAberto(false); onConfirmar?.();
+      }}>
       <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400"><Ic d={I.search} s={17} /></span>
       <input
         type="text" role="combobox" aria-expanded={mostrando} aria-controls={`${id}-lista`} aria-autocomplete="list"
