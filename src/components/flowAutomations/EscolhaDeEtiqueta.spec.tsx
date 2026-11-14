@@ -149,6 +149,12 @@ describe('EscolhaDeEtiqueta', () => {
     });
   });
 
+  it('etiqueta sem contagem não mostra número (nem "0 leads")', () => {
+    render(<EscolhaDeEtiqueta {...base} etiquetas={[et('sem-numero', { contacts_count: undefined })]} />);
+    expect(screen.getByRole('checkbox', { name: /sem-numero/ })).toBeTruthy();
+    expect(screen.queryByText(/leads?$/)).toBeNull();
+  });
+
   it('semNome não repete o rótulo e usa o idBusca', () => {
     render(<EscolhaDeEtiqueta {...base} semNome idBusca="busca-do-disparo" />);
     expect(screen.queryByText('Etiquetas')).toBeNull();

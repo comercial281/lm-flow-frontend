@@ -36,6 +36,8 @@ interface Linha {
   nome: string;
   cor?: string;
   leads: number;
+  /** Sem contagem (não veio ou falhou): a linha não mostra número, em vez de um "0 leads" falso. */
+  semContagem?: boolean;
   sumiu?: boolean;
 }
 
@@ -49,6 +51,7 @@ const paraLinha = (l: Label): Linha => ({
   nome: l.display_name || l.title,
   cor: l.color,
   leads: l.contacts_count ?? 0,
+  semContagem: l.contacts_count == null,
 });
 
 export function EscolhaDeEtiqueta({
@@ -163,7 +166,7 @@ export function EscolhaDeEtiqueta({
         <span className="min-w-0 flex-1 truncate">{l.nome}</span>
         {l.sumiu ? (
           <span className="text-xs text-destructive">não existe mais</span>
-        ) : (
+        ) : l.semContagem ? null : (
           <span className="text-xs text-muted-foreground">{textoLeads(l.leads)}</span>
         )}
         <span

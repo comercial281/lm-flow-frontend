@@ -5,7 +5,7 @@ import { MemoryRouter } from 'react-router-dom';
 import BulkDispatchModal from './BulkDispatchModal';
 import { broadcastsService } from '@/services/broadcasts/broadcastsService';
 
-const s = vi.hoisted(() => ({ etiquetas: vi.fn(), canais: vi.fn() }));
+const s = vi.hoisted(() => ({ etiquetas: vi.fn(), canais: vi.fn(), contagem: vi.fn() }));
 vi.mock('@/services/broadcasts/broadcastsService', async orig => {
   const real = await orig<typeof import('@/services/broadcasts/broadcastsService')>();
   return {
@@ -18,6 +18,7 @@ vi.mock('@/services/broadcasts/broadcastsService', async orig => {
       }),
       audiencePreviewFull: vi.fn().mockResolvedValue({ count: 3, excluded: { opt_out: 0, frequency: 0, other_owner: 0, busy: 0 }, eta: {} }),
       whatsappCloudOptions: s.canais,
+      labelCounts: s.contagem,
       uploadMedia: vi.fn(),
     },
   };
@@ -49,6 +50,7 @@ beforeEach(() => {
   Element.prototype.scrollIntoView = Element.prototype.scrollIntoView ?? (() => {});
   s.etiquetas.mockReset();
   s.canais.mockReset().mockResolvedValue([]);
+  s.contagem.mockReset().mockResolvedValue({});
 });
 
 const escolherPorEtiqueta = async () => {
@@ -95,23 +97,43 @@ describe('BulkDispatchModal · erro de carga', () => {
 });
 
 describe('BulkDispatchModal · etiqueta com busca', () => {
-  it('pede as etiquetas com a contagem de leads', async () => {
-    s.etiquetas.mockResolvedValue({ data: [] });
+  it('o número de cada etiqueta vem da contagem do funil, não do total da conta', async () => {
+    s.etiquetas.mockResolvedValue({ data: [{ id: 1, title: 'quente', color: '#f00', category: 'own', contacts_count: 999 }] });
+    s.contagem.mockResolvedValue({ quente: 40 });
     abrir();
-    await waitFor(() => expect(s.etiquetas).toHaveBeenCalledWith({ withCounts: true }));
+    await escolherPorEtiqueta();
+    expect(await screen.findByText('40 leads')).toBeInTheDocument();
+    expect(screen.queryByText('999 leads')).toBeNull();
+    expect(s.etiquetas).toHaveBeenCalledWith();
+    expect(s.contagem).toHaveBeenCalledWith('p1');
+  });
+
+  it('etiqueta sem lead no funil mostra 0; contagem que falha não mostra número', async () => {
+    s.etiquetas.mockResolvedValue({ data: [{ id: 1, title: 'quente', color: '#f00', category: 'own' }] });
+    s.contagem.mockResolvedValue({});
+    const { unmount } = abrir();
+    await escolherPorEtiqueta();
+    expect(await screen.findByText('0 leads')).toBeInTheDocument();
+    unmount();
+    s.contagem.mockRejectedValue(new Error('rede'));
+    abrir();
+    await escolherPorEtiqueta();
+    expect(await screen.findByRole('checkbox', { name: /quente/ })).toBeInTheDocument();
+    expect(screen.queryByText(/leads?$/)).toBeNull();
   });
 
   it('busca, marca e a contagem sai com a etiqueta; sem o "Criar etiqueta"', async () => {
     s.etiquetas.mockResolvedValue({
       data: [
-        { id: 1, title: 'quente', color: '#f00', category: 'own', contacts_count: 12 },
-        { id: 2, title: 'frio', color: '#00f', category: 'own', contacts_count: 4 },
+        { id: 1, title: 'quente', color: '#f00', category: 'own' },
+        { id: 2, title: 'frio', color: '#00f', category: 'own' },
       ],
     });
+    s.contagem.mockResolvedValue({ quente: 12, frio: 4 });
     abrir();
     await escolherPorEtiqueta();
     const busca = await screen.findByRole('textbox', { name: 'Etiquetas' });
-    expect(screen.getByText('12 leads')).toBeInTheDocument();
+    expect(await screen.findByText('12 leads')).toBeInTheDocument();
     await userEvent.type(busca, 'que');
     expect(screen.queryByRole('checkbox', { name: /frio/ })).toBeNull();
     await userEvent.click(screen.getByRole('checkbox', { name: /quente/ }));
