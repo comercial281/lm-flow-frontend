@@ -129,4 +129,36 @@ describe('EscolhaDeEtiqueta', () => {
     render(<EscolhaDeEtiqueta {...base} modo="uma" />);
     expect(screen.getByText('Etiqueta')).toBeTruthy();
   });
+
+  describe('sem criar (Disparo)', () => {
+    it('busca sem resultado avisa e Enter não cria', () => {
+      render(<EscolhaDeEtiqueta {...base} semCriar />);
+      const campo = screen.getByPlaceholderText('Buscar etiqueta');
+      fireEvent.change(campo, { target: { value: 'nadaaver' } });
+      expect(screen.getByText('Nenhuma etiqueta com esse nome.')).toBeTruthy();
+      expect(screen.queryByRole('button', { name: /Criar etiqueta/ })).toBeNull();
+      fireEvent.keyDown(campo, { key: 'Enter' });
+      expect(mocks.createLabel).not.toHaveBeenCalled();
+      expect(base.aoMudar).not.toHaveBeenCalled();
+    });
+
+    it('conta sem etiqueta mostra "Nenhuma etiqueta cadastrada ainda."', () => {
+      render(<EscolhaDeEtiqueta {...base} etiquetas={[]} semCriar />);
+      expect(screen.getByText('Nenhuma etiqueta cadastrada ainda.')).toBeTruthy();
+      expect(screen.queryByText(/Digite um nome pra criar/)).toBeNull();
+    });
+  });
+
+  it('etiqueta sem contagem não mostra número (nem "0 leads")', () => {
+    render(<EscolhaDeEtiqueta {...base} etiquetas={[et('sem-numero', { contacts_count: undefined })]} />);
+    expect(screen.getByRole('checkbox', { name: /sem-numero/ })).toBeTruthy();
+    expect(screen.queryByText(/leads?$/)).toBeNull();
+  });
+
+  it('semNome não repete o rótulo e usa o idBusca', () => {
+    render(<EscolhaDeEtiqueta {...base} semNome idBusca="busca-do-disparo" />);
+    expect(screen.queryByText('Etiquetas')).toBeNull();
+    expect(screen.getByText('Nenhuma marcada')).toBeTruthy();
+    expect(screen.getByRole('textbox').id).toBe('busca-do-disparo');
+  });
 });

@@ -364,6 +364,12 @@ class BroadcastsService {
   }
 
   // Lista paginada (20 por página) pra marcar lead a lead. Corretor: o servidor recorta os dele.
+  /** Quantos leads deste funil têm cada etiqueta, pela régua do disparo (contato ou conversa, com telefone). */
+  async labelCounts(pipelineId: string): Promise<Record<string, number>> {
+    const body = (await api.get(`${this.base}/label_counts`, { params: { pipeline_id: pipelineId } }))?.data ?? {};
+    return body.data && typeof body.data === 'object' ? (body.data as Record<string, number>) : {};
+  }
+
   async leadOptions(params: LeadOptionsParams): Promise<{
     data: LeadOption[];
     meta: { total: number; page: number; per_page: number };

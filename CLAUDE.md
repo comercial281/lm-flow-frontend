@@ -11479,3 +11479,12 @@ Pedido do Tony: o lead chegava no WhatsApp sem o link do imóvel que estava vend
 - **O servidor lê as duas frases** (`Whatsapp::SiteReferral`): a do imóvel já era lida (em qualquer posição, então o link na frente não atrapalha); a "Vim pelo site X" vira lead do site (origem Site, card no destino de venda do site, Só campanha, gatilho da IA "Veio do site, LP ou portal") quando X é domínio ATIVO do cliente ou o nome de um site ativo dele. Mudou a frase aqui, muda a expressão lá.
 - As **chamadas do Início com destino WhatsApp** (Personalizar › chamadas livres) mandam a mesma frase do site, não mais só o título da chamada (decisão do Tony, 13/11).
 - Fora, de propósito: as frases de Financiamento e Anuncie seguem como estavam (não são reconhecidas como lead do site).
+
+## Disparo: etiqueta com busca (13/11/2026)
+
+O Tony achou a parede de etiquetas do Disparo ("Enviar para" › "Por etiqueta") grande demais e pediu caixa compacta com busca. Escolheu reusar a lista do construtor (versão B de 22/10), sem o "Criar etiqueta".
+
+- **Mesma `EscolhaDeEtiqueta` do construtor**, com `semCriar` e `semNome`: busca no topo ("Buscar etiqueta"), "N marcadas" com Limpar, Marcadas fixas no alto, Da equipe, Do sistema recolhido, contagem de leads por linha, altura fixa com rolagem. Conta com mais de 200 etiquetas mostra as 30 com mais leads até digitar.
+- **Disparo não cria etiqueta:** busca sem resultado mostra "Nenhuma etiqueta com esse nome." e o Enter não faz nada. Conta sem etiqueta: "Nenhuma etiqueta cadastrada ainda.".
+- A regra de quem recebe não mudou: casa pelo título, "qualquer uma das marcadas". Erro de carga segue com Tentar de novo.
+- **O "N leads" de cada etiqueta conta igual ao disparo** (decisão do Tony, 14/11: "como o cara vai saber?"). Vem de `GET /broadcasts/label_counts?pipeline_id=` (backend `Broadcasts::LabelCounts`): leads **deste funil**, com telefone, com a etiqueta no contato ou na conversa, um por contato; corretor vê só os dele. Não desconta as travas anti-spam: quem diz quantos saem é o "Vai para N". Etiqueta sem lead no funil mostra "0 leads"; contagem carregando ou que falhou não mostra número (nunca o total da conta, que vinha de `/labels?with_counts`).

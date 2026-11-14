@@ -40,6 +40,7 @@ vi.mock('@/services/broadcasts/broadcastsService', async orig => {
       testSendSequence: s.testar,
       automationOptions: s.automacoes,
       leadOptions: s.leads,
+      labelCounts: vi.fn().mockResolvedValue({}),
       uploadMedia: vi.fn(),
     },
   };

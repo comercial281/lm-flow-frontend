@@ -168,6 +168,9 @@ export default function BulkDispatchModal({
   // Os números oficiais ainda estão chegando: não é o mesmo que "não tem".
   const [carregandoCanais, setCarregandoCanais] = useState(true);
   const ultimaCargaEtiquetas = useRef(0);
+  // Quantos leads DESTE funil têm cada etiqueta, pela régua do disparo (contato ou
+  // conversa, com telefone). Null enquanto carrega ou se falhar: a lista fica sem número.
+  const [contagemDoFunil, setContagemDoFunil] = useState<Record<string, number> | null>(null);
   const ultimaCargaCanais = useRef(0);
   const [audiencePreview, setAudiencePreview] = useState<AudiencePreviewFull | null>(null);
   const [erroPrevia, setErroPrevia] = useState(false);
@@ -368,6 +371,33 @@ export default function BulkDispatchModal({
     carregarCanais();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- só zera ao abrir (funis/props mudam de identidade sem ser reabertura)
   }, [open, resetWizard, carregarNumeros, carregarEtiquetas, carregarCanais]);
+
+  useEffect(() => {
+    if (!open || !pipelineId) return;
+    let valendo = true;
+    setContagemDoFunil(null);
+    broadcastsService
+      .labelCounts(pipelineId)
+      .then(contagem => {
+        if (valendo) setContagemDoFunil(contagem);
+      })
+      .catch(() => {
+        if (valendo) setContagemDoFunil(null);
+      });
+    return () => {
+      valendo = false;
+    };
+  }, [open, pipelineId]);
+
+  // O número ao lado da etiqueta é o do funil (não o total da conta que vem em /labels).
+  const etiquetasDoDisparo = useMemo(
+    () =>
+      availableLabels.map(l => ({
+        ...l,
+        contacts_count: contagemDoFunil ? (contagemDoFunil[l.title] ?? 0) : undefined,
+      })),
+    [availableLabels, contagemDoFunil],
+  );
 
   const cloudMode = channelKind === 'whatsapp_cloud';
   const selectedCloudInbox = useMemo(
@@ -666,13 +696,11 @@ export default function BulkDispatchModal({
             stages={stages}
             stageId={stageId}
             aoEscolherEtapa={setStageId}
-            etiquetas={availableLabels}
+            etiquetas={etiquetasDoDisparo}
             erroEtiquetas={erroEtiquetas}
             aoTentarEtiquetas={carregarEtiquetas}
             etiquetasMarcadas={selectedLabels}
-            aoMarcarEtiqueta={titulo =>
-              setSelectedLabels(prev => (prev.includes(titulo) ? prev.filter(t => t !== titulo) : [...prev, titulo]))
-            }
+            aoMudarEtiquetas={setSelectedLabels}
             leadsEscolhidos={contactIds.length}
             aoAbrirLeads={() => setPainelDeLeads(true)}
             previa={audiencePreview}
