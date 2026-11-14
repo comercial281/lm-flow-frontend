@@ -1,4 +1,4 @@
-import { useId } from 'react';
+import { useEffect, useId, useState } from 'react';
 import { I, Ic, ListaDoSite } from '../portalShared';
 import type { AbaId } from '@/features/siteBuilder/public/homeConfig';
 import CampoDeLugar from '../CampoDeLugar';
@@ -7,7 +7,10 @@ import { ROTULO_ABA, type BuscaDaCapa, type CampoDeEscolha } from '../home/useBu
 /* ────────────────────────────────────────────────────────────────────────────
    Busca da capa do Moderno (protótipo `.search`, `.s-tabs`, `.field`), com a
    barra de pesquisa grande que o Tony pediu em 13/11:
-   1. Abas (Comprar, Alugar, Lançamentos) e, quando há, "Mais filtros".
+   1. Abas (Comprar, Alugar, Lançamentos) e, quando há, "Mais filtros". Ele
+      abre um painel flutuante logo abaixo da busca, por cima da seção de
+      baixo (a capa não cresce): desce com sombra e, no "Menos filtros",
+      sobe antes de sumir. Esc fecha; clique fora não fecha (Tony, 13/11).
    2. A barra grande, sempre visível: "Digite condomínio, bairro, cidade ou
       código" e o "Buscar" ao lado (no celular, largo embaixo). É o mesmo
       campo de lugar do Clássico (`CampoDeLugar`, sugestões agrupadas em
@@ -31,6 +34,20 @@ const ICONE: Record<CampoDeEscolha, string> = {
   type: CASA, city: I.pin, neighborhood: I.pin, place: I.search, area: I.search, price: CARTEIRA,
   bedrooms: I.bed, suites: I.bath, parking: I.car, stage: I.sign,
 };
+
+/** Duração da descida e da subida do painel do "Mais filtros" (a classe duration-200 acompanha). */
+const SAIDA_MS = 200;
+
+/** Mantém o painel montado durante a subida; reabrir no meio cancela a saída. */
+function usePainelComSaida(aberto: boolean, ms = SAIDA_MS): { montado: boolean; saindo: boolean } {
+  const [montado, setMontado] = useState(aberto);
+  useEffect(() => {
+    if (aberto) { setMontado(true); return; }
+    const t = setTimeout(() => setMontado(false), ms);
+    return () => clearTimeout(t);
+  }, [aberto, ms]);
+  return { montado: aberto || montado, saindo: !aberto && montado };
+}
 
 const juntar = (...cls: (string | false)[]) => cls.filter(Boolean).join(' ');
 
@@ -62,6 +79,15 @@ export default function BuscaModerna({ busca, abas, dividida = false }: { busca:
   // Uma aba só não é escolha: a fileira some (como no Clássico).
   const comAbas = abas.length > 1;
   const n = primeira.length;
+  const painel = usePainelComSaida(abertos);
+
+  // Esc fecha o painel (clique fora não fecha: decisão do Tony em 13/11).
+  useEffect(() => {
+    if (!abertos) return;
+    const aoTeclar = (e: KeyboardEvent) => { if (e.key === 'Escape') alternarMais(); };
+    document.addEventListener('keydown', aoTeclar);
+    return () => document.removeEventListener('keydown', aoTeclar);
+  }, [abertos, alternarMais]);
   const celula = (c: CampoDeEscolha, caixinha: boolean) => {
     const o = opcoes[c];
     const campoId = `${id}-${c}`;
@@ -88,7 +114,7 @@ export default function BuscaModerna({ busca, abas, dividida = false }: { busca:
     <form
       role="search" onSubmit={runSearch}
       className={juntar(
-        'rounded-[22px] bg-[var(--m-surface)] p-2.5 text-[var(--m-head)]',
+        'relative rounded-[22px] bg-[var(--m-surface)] p-2.5 text-[var(--m-head)]',
         dividida ? 'border border-[var(--m-line)]' : 'mb-[clamp(16px,3vw,32px)] shadow-[0_18px_40px_-18px_rgba(8,10,22,0.5)]',
       )}
     >
@@ -147,8 +173,18 @@ export default function BuscaModerna({ busca, abas, dividida = false }: { busca:
         </div>
       )}
 
-      {abertos && mais.length > 0 && (
-        <div data-campos-da-busca-mais className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+      {/* O painel do "Mais filtros": solto embaixo da busca, por cima da seção seguinte.
+          Entra por @starting-style (navegador sem suporte só mostra) e sai pelo `saindo`. */}
+      {painel.montado && mais.length > 0 && (
+        <div
+          data-campos-da-busca-mais aria-hidden={painel.saindo || undefined}
+          className={juntar(
+            'absolute left-0 right-0 top-full z-20 mt-2 grid grid-cols-1 gap-2 rounded-[22px] bg-[var(--m-surface)] p-2.5 sm:grid-cols-3 lg:grid-cols-4',
+            'shadow-[0_28px_60px_-20px_rgba(8,10,22,0.55)]',
+            'transition-[opacity,translate] duration-200 ease-out motion-reduce:transition-none starting:opacity-0 starting:-translate-y-2',
+            painel.saindo && 'pointer-events-none -translate-y-2 opacity-0',
+          )}
+        >
           {mais.map(c => celula(c, true))}
         </div>
       )}

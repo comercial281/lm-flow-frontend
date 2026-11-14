@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { SiteInfo } from '../portalShared';
@@ -284,6 +284,62 @@ describe('Início do Moderno', () => {
     fireEvent.change(screen.getByLabelText('Área'), { target: { value: '100' } });
     fireEvent.click(screen.getByRole('button', { name: /Buscar/ }));
     expect((await screen.findByTestId('busca')).textContent).toBe('?area=100');
+  });
+
+  const abrirComMais = () => abrirHome(
+    moderno({ home: { search: { fields: ['type', 'city', 'neighborhood', 'price', 'bedrooms', 'area'] } } } as SiteInfo),
+    [imovel('R1')],
+  );
+  const painel = () => document.querySelector('[data-campos-da-busca-mais]');
+  const classes = (el: Element | null) => el!.className.split(/\s+/);
+
+  it('Mais filtros abre um painel flutuante por cima da seção de baixo (a capa não cresce)', async () => {
+    await abrirComMais();
+    fireEvent.click(screen.getByRole('button', { name: 'Mais filtros' }));
+    expect(classes(painel())).toEqual(expect.arrayContaining(['absolute', 'top-full', 'left-0', 'right-0', 'z-20']));
+    expect(classes(painel()).some(c => c.startsWith('shadow-['))).toBe(true);
+    expect(classes(document.querySelector('form[role=search]'))).toContain('relative');
+  });
+
+  it('Menos filtros fecha o painel com a saída animada', async () => {
+    await abrirComMais();
+    vi.useFakeTimers();
+    try {
+      fireEvent.click(screen.getByRole('button', { name: 'Mais filtros' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Menos filtros' }));
+      expect(classes(painel())).toContain('opacity-0');
+      act(() => { vi.advanceTimersByTime(200); });
+      expect(painel()).toBeNull();
+    } finally { vi.useRealTimers(); }
+  });
+
+  it('Esc fecha o painel; clique fora não fecha', async () => {
+    await abrirComMais();
+    fireEvent.click(screen.getByRole('button', { name: 'Mais filtros' }));
+    fireEvent.mouseDown(document.body);
+    fireEvent.click(document.body);
+    expect(screen.getByRole('button', { name: 'Menos filtros' })).toBeTruthy();
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(screen.getByRole('button', { name: 'Mais filtros' })).toBeTruthy();
+  });
+
+  it('reabrir durante a saída mantém o painel aberto', async () => {
+    await abrirComMais();
+    vi.useFakeTimers();
+    try {
+      fireEvent.click(screen.getByRole('button', { name: 'Mais filtros' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Menos filtros' }));
+      act(() => { vi.advanceTimersByTime(100); });
+      fireEvent.click(screen.getByRole('button', { name: 'Mais filtros' }));
+      act(() => { vi.advanceTimersByTime(200); });
+      expect(painel()).not.toBeNull();
+      expect(classes(painel())).not.toContain('opacity-0');
+    } finally { vi.useRealTimers(); }
+  });
+
+  it('capa dividida fica por cima da seção seguinte (relative z-10)', async () => {
+    await abrirHome(moderno({ hero: { image_url: 'https://x.com/capa.jpg' } } as SiteInfo, { hero_layout: 'split' }), [imovel('R1')]);
+    expect(classes(document.getElementById('topo'))).toEqual(expect.arrayContaining(['relative', 'z-10']));
   });
 
   it('escolher o Collina na barra grande e buscar vai para /imoveis?condominium=…', async () => {
