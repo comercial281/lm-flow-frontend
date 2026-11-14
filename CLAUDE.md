@@ -4765,8 +4765,12 @@ Armadilhas:
 1. **Os outros tipos continuam em `getChannelTypes()`.** Canal antigo de outro
    tipo ainda lê nome e ícone de lá; o recorte é só na tela de criação
    (`NewChannel`). Não apagar os tipos da constante.
-2. **Não tem metade de backend.** O servidor continua aceitando criar os outros
-   tipos pela API; só a tela deixou de oferecer.
+2. **Desde 14/11/2026 o servidor também recusa** (backend, auditoria de segurança): criar
+   canal pela API só aceita `whatsapp`, `api` e `web_widget`; o resto volta 422 "Este tipo de
+   canal não está disponível. Conecte um WhatsApp.". As portas de entrada de Instagram,
+   Gmail, Telegram, Line e SMS e o login do Instagram saíram do servidor (nenhum dos 24
+   clientes tinha canal desses). Reabrir um canal desses = PR de backend que devolve as
+   rotas e a conferência de origem (`Webhooks::AuthMode`), não só mostrar o cartão aqui.
 3. **Não é `featureKey` nem `clientToggleKey`.** Os scanners do catálogo de
    funcionalidades não entram nesta história.
 
