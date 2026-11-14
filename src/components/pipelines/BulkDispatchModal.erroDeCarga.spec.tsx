@@ -3,6 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import BulkDispatchModal from './BulkDispatchModal';
+import { broadcastsService } from '@/services/broadcasts/broadcastsService';
 
 const s = vi.hoisted(() => ({ etiquetas: vi.fn(), canais: vi.fn() }));
 vi.mock('@/services/broadcasts/broadcastsService', async orig => {
@@ -64,7 +65,7 @@ describe('BulkDispatchModal · erro de carga', () => {
     expect(screen.queryByText(/^Nenhuma etiqueta/)).toBeNull();
     s.etiquetas.mockResolvedValueOnce({ data: [{ id: 1, title: 'quente', color: '#f00' }] });
     await userEvent.click(screen.getByRole('button', { name: 'Tentar de novo' }));
-    expect(await screen.findByRole('button', { name: /quente/ })).toBeInTheDocument();
+    expect(await screen.findByRole('checkbox', { name: /quente/ })).toBeInTheDocument();
   });
 
   it('Tentar de novo duas vezes seguidas não duplica as etiquetas', async () => {
@@ -74,7 +75,7 @@ describe('BulkDispatchModal · erro de carga', () => {
     const botao = await screen.findByRole('button', { name: 'Tentar de novo' });
     s.etiquetas.mockResolvedValue({ data: [{ id: 1, title: 'quente', color: '#f00' }] });
     await userEvent.dblClick(botao);
-    expect(await screen.findAllByRole('button', { name: /quente/ })).toHaveLength(1);
+    expect(await screen.findAllByRole('checkbox', { name: /quente/ })).toHaveLength(1);
   });
 
   it('canais oficiais que falham mostram o erro e Tentar de novo recupera', async () => {
@@ -90,6 +91,38 @@ describe('BulkDispatchModal · erro de carga', () => {
     await userEvent.click(screen.getByRole('radio', { name: /WhatsApp oficial/ }));
     await userEvent.click(await screen.findByRole('button', { name: 'Próximo' }));
     expect(await screen.findByRole('group', { name: 'Modelo aprovado' })).toBeInTheDocument();
+  });
+});
+
+describe('BulkDispatchModal · etiqueta com busca', () => {
+  it('pede as etiquetas com a contagem de leads', async () => {
+    s.etiquetas.mockResolvedValue({ data: [] });
+    abrir();
+    await waitFor(() => expect(s.etiquetas).toHaveBeenCalledWith({ withCounts: true }));
+  });
+
+  it('busca, marca e a contagem sai com a etiqueta; sem o "Criar etiqueta"', async () => {
+    s.etiquetas.mockResolvedValue({
+      data: [
+        { id: 1, title: 'quente', color: '#f00', category: 'own', contacts_count: 12 },
+        { id: 2, title: 'frio', color: '#00f', category: 'own', contacts_count: 4 },
+      ],
+    });
+    abrir();
+    await escolherPorEtiqueta();
+    const busca = await screen.findByRole('textbox', { name: 'Etiquetas' });
+    expect(screen.getByText('12 leads')).toBeInTheDocument();
+    await userEvent.type(busca, 'que');
+    expect(screen.queryByRole('checkbox', { name: /frio/ })).toBeNull();
+    await userEvent.click(screen.getByRole('checkbox', { name: /quente/ }));
+    expect(screen.getByText('1 marcada')).toBeInTheDocument();
+    await waitFor(() =>
+      expect(vi.mocked(broadcastsService.audiencePreviewFull).mock.calls.some(c => JSON.stringify(c[1]).includes('"labels":["quente"]'))).toBe(true),
+    );
+    await userEvent.clear(busca);
+    await userEvent.type(busca, 'nadaaver');
+    expect(screen.getByText('Nenhuma etiqueta com esse nome.')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Criar etiqueta/ })).toBeNull();
   });
 });
 

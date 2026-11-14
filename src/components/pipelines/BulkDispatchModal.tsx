@@ -280,7 +280,7 @@ export default function BulkDispatchModal({
     const vez = ++ultimaCargaEtiquetas.current;
     setErroEtiquetas(false);
     labelsService
-      .getLabels()
+      .getLabels({ withCounts: true })
       .then(res => {
         if (vez === ultimaCargaEtiquetas.current) setAvailableLabels(Array.isArray(res.data) ? (res.data as LabelType[]) : []);
       })
@@ -670,9 +670,7 @@ export default function BulkDispatchModal({
             erroEtiquetas={erroEtiquetas}
             aoTentarEtiquetas={carregarEtiquetas}
             etiquetasMarcadas={selectedLabels}
-            aoMarcarEtiqueta={titulo =>
-              setSelectedLabels(prev => (prev.includes(titulo) ? prev.filter(t => t !== titulo) : [...prev, titulo]))
-            }
+            aoMudarEtiquetas={setSelectedLabels}
             leadsEscolhidos={contactIds.length}
             aoAbrirLeads={() => setPainelDeLeads(true)}
             previa={audiencePreview}

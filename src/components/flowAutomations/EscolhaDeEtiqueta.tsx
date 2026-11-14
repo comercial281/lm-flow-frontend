@@ -234,7 +234,7 @@ export function EscolhaDeEtiqueta({
           </div>
         )}
         {semResultado && semCriar ? (
-          <p className="px-2.5 py-2 text-xs text-muted-foreground">Nenhuma etiqueta com esse nome.</p>
+          <EmptyState tamanho="compacto" title="Nenhuma etiqueta com esse nome." className="m-2 p-3 text-xs" />
         ) : semResultado ? (
           <button
             type="button"

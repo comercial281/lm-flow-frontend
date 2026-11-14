@@ -13,6 +13,7 @@ import Carregando from '@/components/base/Carregando';
 import BotoesDeEscolha from '@/components/base/BotoesDeEscolha';
 import { Seletor } from '@/components/base/Seletor';
 import { CampoDaJanela, GrupoDaJanela } from '@/components/base/janela';
+import { EscolhaDeEtiqueta } from '@/components/flowAutomations/EscolhaDeEtiqueta';
 import { numero, plural, telefone } from '@/lib/formato';
 import { cn } from '@/lib/utils';
 import type { PipelineStage } from '@/types/analytics';
@@ -81,7 +82,7 @@ interface Props {
   erroEtiquetas: boolean;
   aoTentarEtiquetas: () => void;
   etiquetasMarcadas: string[];
-  aoMarcarEtiqueta: (titulo: string) => void;
+  aoMudarEtiquetas: (titulos: string[]) => void;
   /** "Lista de leads": quantos estão marcados no painel e como abrir o painel. */
   leadsEscolhidos: number;
   aoAbrirLeads: () => void;
@@ -251,32 +252,19 @@ export default function PassoQuemRecebe(p: Props) {
         )}
 
         {p.audienceMode === 'tag' && (
-          <CampoDaJanela rotulo="Etiquetas" ajuda="Recebe quem tem qualquer uma das etiquetas marcadas.">
+          <CampoDaJanela rotulo="Etiquetas" htmlFor="disparo-etiquetas" ajuda="Recebe quem tem qualquer uma das etiquetas marcadas.">
             {p.erroEtiquetas ? (
               <EmptyState tipo="erro" tamanho="compacto" aoTentarDeNovo={p.aoTentarEtiquetas} className="p-3" />
-            ) : p.etiquetas.length === 0 ? (
-              <EmptyState tamanho="compacto" title="Nenhuma etiqueta cadastrada ainda." className="p-3" />
             ) : (
-              <div className="flex flex-wrap gap-1.5">
-                {p.etiquetas.map(l => {
-                  const active = p.etiquetasMarcadas.includes(l.title);
-                  const color = l.color || '#7c3aed';
-                  return (
-                    <button
-                      key={l.title}
-                      type="button"
-                      aria-pressed={active}
-                      onClick={() => p.aoMarcarEtiqueta(l.title)}
-                      className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium border transition-colors ${
-                        active ? 'text-white' : 'text-foreground hover:bg-muted'
-                      }`}
-                      style={active ? { backgroundColor: color, borderColor: color } : { borderColor: `${color}66` }}
-                    >
-                      {l.title}
-                    </button>
-                  );
-                })}
-              </div>
+              <EscolhaDeEtiqueta
+                modo="varias"
+                semCriar
+                semNome
+                idBusca="disparo-etiquetas"
+                etiquetas={p.etiquetas}
+                escolhidas={p.etiquetasMarcadas}
+                aoMudar={p.aoMudarEtiquetas}
+              />
             )}
           </CampoDaJanela>
         )}
