@@ -151,7 +151,11 @@ export default function HeroImagePicker({ open, onClose, onPick, currentProperty
                 <EmptyState tipo="semResultado" tamanho="compacto" title="Nenhum imóvel bate com a busca." />
               )
             ) : (
-              <div className="grid max-h-[60vh] grid-cols-2 gap-3 overflow-y-auto pr-1 sm:grid-cols-3">
+              // `auto-rows-max` não sai: a janela da casa também é grid com altura
+              // limitada, e sem ele o Chrome espreme cada cartão (overflow-hidden,
+              // altura mínima 0) para caber em 60vh em vez de rolar. Com muitos
+              // imóveis cada cartão virava uma linha de 14 px.
+              <div className="grid max-h-[60vh] auto-rows-max grid-cols-2 gap-3 overflow-y-auto pr-1 sm:grid-cols-3">
                 {filtered.map(p => (
                   <button key={p.id} type="button" onClick={() => openProperty(p)}
                     className={`group overflow-hidden rounded-lg border text-left transition-colors hover:border-primary ${p.id === currentPropertyId ? 'border-primary ring-1 ring-primary' : 'border-border'}`}>
@@ -186,7 +190,7 @@ export default function HeroImagePicker({ open, onClose, onPick, currentProperty
           ) : photos.length === 0 ? (
             <EmptyState tamanho="compacto" title="Este imóvel não tem foto publicada." />
           ) : (
-            <div className="grid max-h-[60vh] grid-cols-2 gap-3 overflow-y-auto pr-1 sm:grid-cols-3">
+            <div className="grid max-h-[60vh] auto-rows-max grid-cols-2 gap-3 overflow-y-auto pr-1 sm:grid-cols-3">
               {photos.map(ph => {
                 const isCurrent = selected.id === currentPropertyId && ph.id === currentPhotoId;
                 return (

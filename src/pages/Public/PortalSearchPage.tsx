@@ -1,9 +1,9 @@
 import { type CSSProperties } from 'react';
 import { useTenantDoSite } from '@/features/siteBuilder/public/useTenantDoSite';
 import {
-  I, Ic, OrdenarPor, PortalFooter, PortalHeader, PropertyCard, PropertyRow, Select, type PortalTab,
+  OrdenarPor, PortalFooter, PortalHeader, PropertyCard, PropertyRow, Select, type PortalTab,
 } from './portalShared';
-import CampoDeLugar from './CampoDeLugar';
+import CampoDeLugar, { EXEMPLO_DA_CAIXA, ROTULO_DA_CAIXA } from './CampoDeLugar';
 import PaginaManutencao from './PaginaManutencao';
 import PaginaNaoEncontrada from './PaginaNaoEncontrada';
 import { caminhoDoSite } from '@/features/siteBuilder/public/dominioDoSite';
@@ -86,7 +86,9 @@ export default function PortalSearchPage() {
               ))}
             </div>}
 
+            {/* Uma caixa de texto só (decisão do Tony em 13/11): o campo de lugar também aceita o código. */}
             <CampoDeLugar className="mb-2" items={items} tab={filters.tab} texto={textoDoLugar}
+              rotulo={ROTULO_DA_CAIXA} placeholder={EXEMPLO_DA_CAIXA}
               onTexto={setTextoDoLugar} onEscolher={escolherLugar} onConfirmar={confirmarLugar} onLimpar={limparLugar} />
 
             <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
@@ -104,14 +106,6 @@ export default function PortalSearchPage() {
               {filters.tab !== 'rent' && (
                 <Select value={filters.stage ?? ''} onChange={v => update({ stage: v })} label="Fase" options={FASES_DO_PUBLICO.map(x => [x.valor, x.rotulo])} />
               )}
-            </div>
-
-            <div className="mt-2">
-              <div className="relative">
-                <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400"><Ic d={I.search} s={17} /></span>
-                <input value={filters.code} onChange={e => update({ code: e.target.value }, true)} placeholder="Buscar por código do imóvel"
-                  className="w-full rounded-xl border border-black/[0.08] bg-white py-3 pl-10 pr-3 text-[14px] outline-none focus:border-[var(--brand)]" />
-              </div>
             </div>
           </div>
         </div>
