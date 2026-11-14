@@ -11479,3 +11479,15 @@ Pedido do Tony: o lead chegava no WhatsApp sem o link do imóvel que estava vend
 - **O servidor lê as duas frases** (`Whatsapp::SiteReferral`): a do imóvel já era lida (em qualquer posição, então o link na frente não atrapalha); a "Vim pelo site X" vira lead do site (origem Site, card no destino de venda do site, Só campanha, gatilho da IA "Veio do site, LP ou portal") quando X é domínio ATIVO do cliente ou o nome de um site ativo dele. Mudou a frase aqui, muda a expressão lá.
 - As **chamadas do Início com destino WhatsApp** (Personalizar › chamadas livres) mandam a mesma frase do site, não mais só o título da chamada (decisão do Tony, 13/11).
 - Fora, de propósito: as frases de Financiamento e Anuncie seguem como estavam (não são reconhecidas como lead do site).
+
+## Verificação em duas etapas (desde 2026-11-14)
+
+O card de Segurança do Perfil existia (herdado do Evolution) e chamava rotas que o servidor não tinha: quem clicava em ativar levava erro. Agora o servidor tem (backend, seção de mesmo nome) e a tela segue o que ele diz. Decisão do Tony: e-mail e aplicativo, aplicativo obrigatório na Equipe, botão de baixar os códigos reserva.
+
+- **Login** (`MfaVerification`): depois da senha, o servidor devolve `mfa_required` + `temp_token` e a tela pede o código. Pelo e-mail, o código já saiu no login (o primeiro reenvio espera 60 s); o reenvio vai pelo passe do meio (`POST /mfa/resend`), nunca pela rota do Perfil (sem sessão ela dava 401). Quem usa o aplicativo tem "Perdi o celular: usar um código reserva" (o mesmo campo aceita `xxxx-xxxx`). Código errado volta **422** com `attempts_remaining` (a conta trava em 10 erros, 423): nunca 401, que derruba a tela.
+- **Confiar neste navegador por 30 dias:** caixinha no código. O passe (`mfa_trust_token`) fica no `localStorage` por e-mail (`src/features/auth/mfaTrust.ts`) e vai sozinho no próximo login. Quem decide é o servidor: trocar a senha, desligar ou religar derruba. Navegador sem armazenamento (o do WhatsApp) só pede o código de novo.
+- **Perfil, Segurança** (`TwoFactorSetup`): escolha entre E-mail (padrão, não instala nada) e Aplicativo; na Equipe com a obrigação ligada (`mfa_app_required`), só Aplicativo. O QR Code é desenhado na tela a partir do `provisioning_uri` (`qrcode.react`), nunca HTML vindo do servidor. Códigos reserva aparecem uma vez, com **Baixar** (arquivo .txt) e **Copiar** lado a lado no mesmo grupo. Ligado: mostra o método; no e-mail, "Trocar para o aplicativo" na própria linha; no aplicativo, quantos códigos reserva sobram e "Gerar novos". Obrigada (`mfa_required`): sem Desligar, com a frase "Obrigatória na sua conta".
+- **Equipe, ficha da pessoa, bloco Acesso:** "Zerar verificação" (ao lado de Copiar link), só pro admin, só quando a pessoa tem a verificação ligada (`mfa_enabled` vem na lista da Equipe), nunca na própria ficha. Confirma antes; a pessoa recebe e-mail dizendo quem zerou. No painel raiz não tem botão ainda (lá só o dono zera, pelo servidor).
+- O nome na tela é sempre **Verificação em duas etapas** (login e Perfil).
+
+Não reabrir sem o dono pedir.

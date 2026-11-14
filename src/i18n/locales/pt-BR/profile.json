@@ -165,36 +165,39 @@
     "updateError": "Não foi possível salvar as configurações de áudio"
   },
   "twoFactor": {
-    "title": "Autenticação de Dois Fatores",
-    "description": "Adicione uma camada extra de segurança à sua conta",
+    "title": "Verificação em duas etapas",
+    "description": "Além da senha, um código no login. Quem descobrir a sua senha não entra sem ele.",
     "status": {
       "title": "Status",
       "enabled": "Ativo",
       "configured": "Configurado e ativo",
-      "pending": "Configuração pendente"
+      "pending": "Configuração pendente",
+      "configuredTotp": "O login pede o código do aplicativo do seu celular.",
+      "configuredEmail": "O login pede o código que chega no seu e-mail.",
+      "requiredNoDisable": "Obrigatória na sua conta: não dá para desligar."
     },
     "methods": {
-      "totp": "Aplicativo autenticador",
-      "email": "E-mail"
+      "totp": "Pelo aplicativo",
+      "email": "Pelo e-mail"
     },
     "groups": {
       "method": "Método",
       "qr": "Código QR",
       "manual": "Sem câmera",
       "verify": "Confirmação",
-      "backup": "Códigos de reserva"
+      "backup": "Códigos reserva"
     },
     "setup": {
-      "title": "Ativar autenticação de dois fatores",
-      "description": "Escolha o método de autenticação e confirme sua senha para continuar.",
-      "methodSelection": "Método de autenticação",
+      "title": "Ativar a verificação em duas etapas",
+      "description": "Escolha como você quer receber o código do login.",
+      "methodSelection": "Como receber o código",
       "totp": {
         "title": "Aplicativo autenticador",
-        "description": "Use um aplicativo como Google Authenticator ou Authy"
+        "description": "Google Authenticator, Microsoft Authenticator ou 1Password. O mais seguro."
       },
       "email": {
         "title": "E-mail",
-        "description": "Receba códigos de verificação por e-mail"
+        "description": "O código chega no seu e-mail de login. Não precisa instalar nada."
       },
       "currentPassword": "Senha atual",
       "currentPasswordPlaceholder": "Digite sua senha atual",
@@ -205,21 +208,21 @@
       }
     },
     "configure": {
-      "title": "Configure seu aplicativo autenticador",
-      "description": "Escaneie o código QR abaixo com seu aplicativo autenticador ou insira a chave manualmente.",
+      "title": "Ligue o aplicativo",
+      "description": "Abra o aplicativo autenticador, toque em adicionar conta e aponte a câmera para o QR Code.",
       "qrCodeLoading": "Gerando o código QR...",
       "qrCodeError": "Se o problema persistir, use a chave manual abaixo",
       "manualKey": "Chave manual",
-      "manualKeyDescription": "Use esta chave se não conseguir escanear o código QR",
+      "manualKeyDescription": "Sem câmera: digite esta chave no aplicativo.",
       "actions": {
         "cancel": "Cancelar",
-        "configured": "Já configurei"
+        "configured": "Já adicionei"
       }
     },
     "verify": {
-      "title": "Verificar configuração",
-      "descriptionTotp": "Digite o código de 6 dígitos do seu aplicativo autenticador.",
-      "descriptionEmail": "Digite o código de 6 dígitos enviado para seu e-mail.",
+      "title": "Confirme o código",
+      "descriptionTotp": "Digite o código de 6 dígitos que apareceu no aplicativo.",
+      "descriptionEmail": "Digite o código de 6 dígitos que mandamos para o seu e-mail.",
       "codeLabel": "Código de verificação",
       "codePlaceholder": "000000",
       "resendEmail": "Reenviar código",
@@ -230,50 +233,55 @@
       },
       "errors": {
         "invalidCode": "Código de verificação inválido",
-        "attemptsRemaining": "Código inválido. {{attempts}} tentativas restantes"
+        "attemptsRemaining": "Código inválido. Restam {{attempts}} tentativas antes de travar por 15 minutos."
       }
     },
     "backupCodes": {
-      "title": "Códigos de reserva",
-      "description": "Guarde estes códigos em um local seguro. Cada código pode ser usado apenas uma vez para fazer login caso você perca acesso ao seu dispositivo.",
-      "warning": "Estes códigos não serão mostrados de novo. Salve-os agora.",
-      "copyAll": "Copiar todos os códigos",
-      "complete": "Concluir configuração",
-      "remaining": "{{count}} códigos restantes",
-      "regenerate": "Regenerar",
+      "title": "Códigos reserva",
+      "description": "Se você perder o celular, cada código entra uma vez no lugar do código do aplicativo.",
+      "warning": "Estes códigos não aparecem de novo. Baixe ou copie agora e guarde fora do celular.",
+      "copyAll": "Copiar",
+      "complete": "Guardei, concluir",
+      "remaining": "{{count}} códigos sem uso",
+      "regenerate": "Gerar novos",
       "regenerated": "Novos códigos de reserva gerados",
-      "regenerateDescription": "Gerar novos códigos invalida os anteriores. Guarde os novos em lugar seguro."
+      "regenerateDescription": "Gerar novos invalida os antigos",
+      "download": "Baixar"
     },
     "disable": {
-      "title": "Desativar Autenticação de Dois Fatores",
-      "description": "Tem certeza que deseja desativar? Sua conta ficará menos segura.",
-      "warning": "Remover a autenticação de dois fatores tornará sua conta mais vulnerável a acessos não autorizados.",
+      "title": "Desligar a verificação em duas etapas",
+      "description": "O login volta a pedir só a senha. Você recebe um e-mail avisando.",
+      "warning": "Sem a verificação, quem descobrir a sua senha entra na sua conta.",
       "passwordLabel": "Confirme sua senha",
       "passwordPlaceholder": "Digite sua senha",
       "actions": {
         "cancel": "Cancelar",
-        "disable": "Desativar",
-        "disabling": "Desativando..."
+        "disable": "Desligar",
+        "disabling": "Desligando..."
       }
     },
     "notifications": {
-      "enabled": "Autenticação de dois fatores ativada com sucesso!",
-      "disabled": "Autenticação de dois fatores desativada",
-      "emailCodeSent": "Código de verificação enviado para seu e-mail",
-      "emailCodeResent": "Novo código enviado para seu e-mail",
-      "emailCodeError": "Erro ao enviar código",
-      "emailCodeRateLimit": "Por favor, aguarde antes de solicitar um novo código",
+      "enabled": "Verificação em duas etapas ligada.",
+      "disabled": "Verificação em duas etapas desligada.",
+      "emailCodeSent": "Mandamos o código para o seu e-mail.",
+      "emailCodeResent": "Mandamos um código novo para o seu e-mail.",
+      "emailCodeError": "Não consegui mandar o código. Tente de novo.",
+      "emailCodeRateLimit": "Espere um minuto para pedir outro código.",
       "passwordRequired": "Por favor, insira sua senha",
       "passwordIncorrect": "Senha incorreta",
-      "enableError": "Erro ao ativar autenticação de dois fatores",
-      "disableError": "Erro ao desativar autenticação de dois fatores",
-      "backupCodesError": "Erro ao gerar novos códigos de reserva"
+      "enableError": "Não consegui ativar. Tente de novo.",
+      "disableError": "Não consegui desligar. Tente de novo.",
+      "backupCodesError": "Não consegui gerar os códigos. Tente de novo."
     },
     "actions": {
-      "enable": "Ativar Autenticação de Dois Fatores",
-      "disable": "Desativar Autenticação de Dois Fatores"
+      "enable": "Ativar",
+      "disable": "Desligar",
+      "switchToApp": "Trocar para o aplicativo"
     },
-    "info": "A autenticação de dois fatores adiciona uma camada extra de segurança exigindo um código adicional além da sua senha ao fazer login."
+    "info": "Com a verificação ligada, o login pede um código depois da senha: o que chega no seu e-mail ou o do aplicativo autenticador do celular.",
+    "requiredEmail": "Na sua conta a verificação é obrigatória. Enquanto você não ativa, o código do login vai para o seu e-mail.",
+    "requiredApp": "Na Equipe Leal Mídia a verificação é obrigatória e pelo aplicativo. Enquanto você não ativa, o código do login vai para o seu e-mail.",
+    "appRequired": "Na Equipe Leal Mídia a verificação é pelo aplicativo autenticador."
   },
   "common": {
     "cancel": "Cancelar",

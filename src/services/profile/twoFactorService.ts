@@ -12,13 +12,14 @@ class TwoFactorService {
     const response = await authApi.post(endpoint);
     const data = extractData<any>(response);
 
-    if (method === 'totp') {
-      return {
-        ...data,
-        qr_code: data.qr_code_url || data.qr_code,
-      };
-    }
+    // Aplicativo: o servidor manda o segredo e o endereço `otpauth://`; o QR Code é
+    // desenhado na tela (nunca HTML vindo do servidor).
     return data;
+  }
+
+  /** Zera a verificação de outra pessoa (perdeu o celular). Só admin; o servidor confere. */
+  async resetForUser(userId: string): Promise<void> {
+    await authApi.post(`/users/${userId}/reset_mfa`);
   }
 
   async verify(code: string, method: 'totp' | 'email', setup?: boolean): Promise<VerifyResponse> {

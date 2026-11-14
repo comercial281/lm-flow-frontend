@@ -25,7 +25,7 @@ interface AuthContextType {
   ) => Promise<void>;
   logout: () => void;
   refreshUser: () => Promise<void>;
-  verifyMfaCode: (code: string) => Promise<void>;
+  verifyMfaCode: (code: string, trustDevice?: boolean) => Promise<void>;
   clearMfaState: () => void;
   setMfaRequired: (data: MfaState) => void;
 }
@@ -125,17 +125,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setMfaState(null);
   };
 
-  const verifyMfaCode = async (code: string) => {
+  const verifyMfaCode = async (code: string, trustDevice = false) => {
     if (!mfaState) {
       throw new Error('No MFA session active');
     }
 
+    // Sem o "carregando" global: ele faz a rota pública redesenhar a tela do
+    // código e perder o estado dela (tentativas, caixinha de confiar).
     try {
-      setLoading(true);
       const { response } = await verifyMfa({
         email: mfaState.email,
         code,
         tempToken: mfaState.tempToken,
+        trustDevice,
       });
 
       const userData = response.data.user;
@@ -148,8 +150,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } catch (error) {
       console.error('Erro na verificação MFA:', error);
       throw error;
-    } finally {
-      setLoading(false);
     }
   };
 

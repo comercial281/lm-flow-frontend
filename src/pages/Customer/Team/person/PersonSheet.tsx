@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import {
-  BadgeCheck, Link2, Loader2, MessageCircle, Plus, ShieldCheck, Smartphone, Star, Trash2, Undo2, UserCheck, UserRound, UserX, X,
+  BadgeCheck, KeyRound, Link2, Loader2, MessageCircle, Plus, ShieldCheck, Smartphone, Star, Trash2, Undo2, UserCheck, UserRound, UserX, X,
 } from 'lucide-react';
 import {
   Badge, Button, Input, Label, Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle,
@@ -26,6 +26,7 @@ import { useIsSuperAdmin } from '@/hooks/useIsSuperAdmin';
 import { useConfirmacao } from '@/hooks/useConfirmacao';
 import { useAuthStore } from '@/store/authStore';
 import { usersService } from '@/services/users';
+import { twoFactorService } from '@/services/profile/twoFactorService';
 import InboxMembersService from '@/services/channels/inboxMembersService';
 import numbersService from '@/services/numbers/numbersService';
 import { apiErrorMessage } from '@/utils/apiHelpers';
@@ -130,6 +131,9 @@ export default function PersonSheet({
   // Um booleano, e não o `viewer`: ele é um objeto novo a cada render quando
   // quem vê é a Leal Mídia, e o memo nunca guardaria nada.
   const isAdminViewer = viewerIsAdmin(viewer, isSuper);
+  // Zerar a verificação em duas etapas de quem perdeu o celular: só admin, nunca
+  // a própria (o servidor confere de novo).
+  const canResetMfa = !!member.mfa_enabled && isAdminViewer && String(member.id) !== String(currentUser?.id ?? '');
   const cargoOptions = useMemo(
     () => assignableCargoOptions(roles, { viewerIsAdmin: isAdminViewer, currentKey: initialCargoKey }),
     [roles, isAdminViewer, initialCargoKey],
@@ -242,6 +246,29 @@ export default function PersonSheet({
       onChanged();
     } catch (e) {
       toast.error(apiErrorMessage(e, 'Não consegui gerar o link de acesso.'));
+    }
+  };
+
+  // Perdeu o celular do aplicativo: o admin zera e a pessoa entra só com a senha
+  // (ou com o código no e-mail, se for obrigada). Ela recebe um e-mail dizendo quem zerou.
+  const zerarVerificacao = async () => {
+    const ok = await confirmar({
+      titulo: `Zerar a verificação em duas etapas de ${member.name}?`,
+      descricao: 'Use quando a pessoa perdeu o celular do aplicativo e os códigos reserva. '
+        + 'O próximo login pede só a senha (ou o código no e-mail, se a verificação for obrigada nesta conta). '
+        + 'Ela recebe um e-mail dizendo que você zerou.',
+      rotuloDaAcao: 'Zerar',
+    });
+    if (!ok) return;
+    setSaving(true);
+    try {
+      await twoFactorService.resetForUser(String(member.id));
+      toast.success(`Verificação de ${member.name} zerada.`);
+      onChanged();
+    } catch (e) {
+      toast.error(apiErrorMessage(e, 'Não consegui zerar a verificação.'));
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -528,7 +555,7 @@ export default function PersonSheet({
               <div className={`text-sm font-medium ${TONE_CLASS[status.tone]}`}>{status.label}</div>
               {status.detail && <div className="text-xs text-muted-foreground">{status.detail}</div>}
             </div>
-            {(canCopy || canSend) && (
+            {(canCopy || canSend || canResetMfa) && (
               <div className="flex flex-wrap gap-2">
                 {canCopy && (
                   <Button variant="outline" size="sm" className="gap-1.5" onClick={copiarLink} disabled={saving}>
@@ -541,6 +568,11 @@ export default function PersonSheet({
                       ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
                       : <MessageCircle className="h-4 w-4" aria-hidden="true" />}
                     {member.last_seen_at || member.access_link_until ? 'Reenviar link' : 'Enviar link de acesso'}
+                  </Button>
+                )}
+                {canResetMfa && (
+                  <Button variant="outline" size="sm" className="gap-1.5" onClick={zerarVerificacao} disabled={saving}>
+                    <KeyRound className="h-4 w-4" aria-hidden="true" /> Zerar verificação
                   </Button>
                 )}
               </div>

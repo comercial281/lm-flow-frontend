@@ -14,7 +14,7 @@ import { useAuthStore } from '@/store/authStore';
 import { useRecaptcha } from '@/hooks/useRecaptcha';
 import { useLanguage } from '@/hooks/useLanguage';
 import MfaVerification from '@/components/auth/MfaVerification';
-import { twoFactorService } from '@/services/profile/twoFactorService';
+import { resendMfaCode } from '@/services/auth/authService';
 import { motion, AnimatePresence } from 'framer-motion';
 
 import { useForm, Controller } from 'react-hook-form';
@@ -260,15 +260,16 @@ export const Auth: React.FC = () => {
     setIsLoading(false);
   };
 
-  const handleMfaVerification = async (code: string) => {
-    await verifyMfaCode(code);
+  const handleMfaVerification = async (code: string, trustDevice: boolean) => {
+    await verifyMfaCode(code, trustDevice);
     const returnUrl = safeReturnUrl(new URLSearchParams(location.search).get('returnUrl'));
     if (returnUrl) window.location.href = returnUrl;
     else navigate('/', { replace: true });
   };
 
+  // No meio do login não há sessão: o reenvio vai com o passe do meio.
   const handleMfaResendEmailCode = async () => {
-    if (mfaState?.method === 'email') await twoFactorService.sendEmailCode();
+    if (mfaState?.method === 'email') await resendMfaCode(mfaState.tempToken);
   };
 
   // ── MFA screen ──

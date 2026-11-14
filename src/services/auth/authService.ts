@@ -15,6 +15,7 @@ import {
   PasswordChangeData,
 } from '@/types/auth';
 import { useAuthStore } from '@/store/authStore';
+import { guardarConfianca, lerConfianca } from '@/features/auth/mfaTrust';
 
 const processApiResponse = (response: any): LoginResponse => {
   const loginData = extractData<LoginData>(response);
@@ -44,7 +45,9 @@ const processApiResponse = (response: any): LoginResponse => {
 export const login = async (
   data: LoginRequest,
 ): Promise<{ response: LoginResponse; requiresMfa?: boolean; mfaData?: unknown }> => {
-  const response = await apiAuth.post('/auth/login', data);
+  // Navegador confiado na verificação em duas etapas: com o passe válido, a senha basta.
+  const mfaTrust = data.mfa_trust_token ?? lerConfianca(data.email);
+  const response = await apiAuth.post('/auth/login', mfaTrust ? { ...data, mfa_trust_token: mfaTrust } : data);
 
   const responseData = extractData<{
     mfa_required?: boolean;
@@ -163,18 +166,26 @@ export const verifyMfa = async (data: {
   email: string;
   code: string;
   tempToken: string;
+  trustDevice?: boolean;
 }): Promise<{ response: LoginResponse }> => {
   const response = await apiAuth.post('/mfa/verify', {
-    email: data.email,
     code: data.code,
     temp_token: data.tempToken,
+    trust_device: !!data.trustDevice,
   });
 
   const processedResponse = processApiResponse(response);
+  const passe = extractData<{ mfa_trust_token?: string }>(response)?.mfa_trust_token;
+  if (passe) guardarConfianca(data.email, passe);
 
   return {
     response: processedResponse,
   };
+};
+
+// Novo código no e-mail, no meio do login (sem sessão: vale o passe do meio).
+export const resendMfaCode = async (tempToken: string): Promise<void> => {
+  await apiAuth.post('/mfa/resend', { temp_token: tempToken });
 };
 
 // New functions for accounts and profile management
