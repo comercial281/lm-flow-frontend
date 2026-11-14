@@ -323,6 +323,47 @@ describe('Início do Moderno', () => {
     expect(screen.getByRole('button', { name: 'Mais filtros' })).toBeTruthy();
   });
 
+  it('painel abrindo fora da tela (Tela cheia): a página rola até ele aparecer', async () => {
+    await abrirComMais();
+    const rolar = vi.fn();
+    const original = HTMLElement.prototype.scrollIntoView;
+    const rect = HTMLElement.prototype.getBoundingClientRect;
+    HTMLElement.prototype.scrollIntoView = rolar;
+    HTMLElement.prototype.getBoundingClientRect = function () {
+      return this.hasAttribute('data-campos-da-busca-mais')
+        ? ({ top: window.innerHeight - 20, bottom: window.innerHeight + 200 } as DOMRect)
+        : rect.call(this);
+    };
+    try {
+      fireEvent.click(screen.getByRole('button', { name: 'Mais filtros' }));
+      expect(rolar).toHaveBeenCalledWith(expect.objectContaining({ block: 'nearest' }));
+    } finally {
+      HTMLElement.prototype.scrollIntoView = original;
+      HTMLElement.prototype.getBoundingClientRect = rect;
+    }
+  });
+
+  it('painel cabendo na tela: a página não rola', async () => {
+    await abrirComMais();
+    const rolar = vi.fn();
+    const original = HTMLElement.prototype.scrollIntoView;
+    HTMLElement.prototype.scrollIntoView = rolar;
+    try {
+      fireEvent.click(screen.getByRole('button', { name: 'Mais filtros' }));
+      expect(rolar).not.toHaveBeenCalled();
+    } finally { HTMLElement.prototype.scrollIntoView = original; }
+  });
+
+  it('Esc com o foco num filtro do painel devolve o foco ao botão, e o painel fica inerte na saída', async () => {
+    await abrirComMais();
+    fireEvent.click(screen.getByRole('button', { name: 'Mais filtros' }));
+    const area = screen.getByLabelText('Área');
+    area.focus();
+    fireEvent.keyDown(area, { key: 'Escape' });
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Mais filtros' }));
+    expect(painel()!.hasAttribute('inert')).toBe(true);
+  });
+
   it('reabrir durante a saída mantém o painel aberto', async () => {
     await abrirComMais();
     vi.useFakeTimers();

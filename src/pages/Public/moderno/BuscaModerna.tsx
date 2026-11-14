@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { I, Ic, ListaDoSite } from '../portalShared';
 import type { AbaId } from '@/features/siteBuilder/public/homeConfig';
 import CampoDeLugar from '../CampoDeLugar';
@@ -80,11 +80,26 @@ export default function BuscaModerna({ busca, abas, dividida = false }: { busca:
   const comAbas = abas.length > 1;
   const n = primeira.length;
   const painel = usePainelComSaida(abertos);
+  const botaoMais = useRef<HTMLButtonElement>(null);
+  const painelRef = useRef<HTMLDivElement>(null);
 
-  // Esc fecha o painel (clique fora não fecha: decisão do Tony em 13/11).
+  // Com a capa em Tela cheia a busca fica no pé da tela: o painel abriria fora dela. Rola só o que falta.
+  useEffect(() => {
+    const el = painelRef.current;
+    if (!abertos || !el || el.getBoundingClientRect().bottom <= window.innerHeight) return;
+    const semAnimacao = typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    el.scrollIntoView({ block: 'nearest', behavior: semAnimacao ? 'auto' : 'smooth' });
+  }, [abertos]);
+
+  // Esc fecha o painel (clique fora não fecha: decisão do Tony em 13/11). Se o foco
+  // estava num filtro do painel, ele volta pro botão (o painel some e o foco se perderia).
   useEffect(() => {
     if (!abertos) return;
-    const aoTeclar = (e: KeyboardEvent) => { if (e.key === 'Escape') alternarMais(); };
+    const aoTeclar = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      if (painelRef.current?.contains(document.activeElement)) botaoMais.current?.focus();
+      alternarMais();
+    };
     document.addEventListener('keydown', aoTeclar);
     return () => document.removeEventListener('keydown', aoTeclar);
   }, [abertos, alternarMais]);
@@ -137,7 +152,7 @@ export default function BuscaModerna({ busca, abas, dividida = false }: { busca:
           ) : <span />}
           {mais.length > 0 && (
             <button
-              type="button" onClick={alternarMais} aria-expanded={abertos}
+              ref={botaoMais} type="button" onClick={alternarMais} aria-expanded={abertos}
               className="rounded-full px-3.5 py-1.5 text-[13px] font-semibold text-[var(--m-muted)] transition-colors hover:text-[var(--m-head)]"
             >
               {abertos ? 'Menos filtros' : 'Mais filtros'}
@@ -177,9 +192,9 @@ export default function BuscaModerna({ busca, abas, dividida = false }: { busca:
           Entra por @starting-style (navegador sem suporte só mostra) e sai pelo `saindo`. */}
       {painel.montado && mais.length > 0 && (
         <div
-          data-campos-da-busca-mais aria-hidden={painel.saindo || undefined}
+          ref={painelRef} data-campos-da-busca-mais inert={painel.saindo}
           className={juntar(
-            'absolute left-0 right-0 top-full z-20 mt-2 grid grid-cols-1 gap-2 rounded-[22px] bg-[var(--m-surface)] p-2.5 sm:grid-cols-3 lg:grid-cols-4',
+            'absolute left-0 right-0 top-full z-20 mt-2 scroll-mb-6 grid grid-cols-1 gap-2 rounded-[22px] bg-[var(--m-surface)] p-2.5 sm:grid-cols-3 lg:grid-cols-4',
             'shadow-[0_28px_60px_-20px_rgba(8,10,22,0.55)]',
             'transition-[opacity,translate] duration-200 ease-out motion-reduce:transition-none starting:opacity-0 starting:-translate-y-2',
             painel.saindo && 'pointer-events-none -translate-y-2 opacity-0',
