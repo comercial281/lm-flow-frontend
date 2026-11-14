@@ -11488,3 +11488,4 @@ O Tony achou a parede de etiquetas do Disparo ("Enviar para" › "Por etiqueta")
 - **Disparo não cria etiqueta:** busca sem resultado mostra "Nenhuma etiqueta com esse nome." e o Enter não faz nada. Conta sem etiqueta: "Nenhuma etiqueta cadastrada ainda.".
 - **As etiquetas vêm com a contagem** (`getLabels({ withCounts: true })`), como no construtor.
 - A regra de quem recebe não mudou: casa pelo título, "qualquer uma das marcadas". Erro de carga segue com Tentar de novo.
+- **O "N leads" da linha não é o público do disparo** (decisão do Tony, 14/11: fica assim). Ele conta a etiqueta no contato, na conta inteira; o disparo conta este funil, etiqueta no contato ou na conversa, com telefone e depois das travas. O número que vale é o "Vai para N" embaixo. Se alguém estranhar a diferença, a saída é contar pelo servidor com a mesma regra (`LabelMatch`), não esconder o "Vai para".
