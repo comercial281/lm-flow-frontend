@@ -1,5 +1,5 @@
 import { useId, type ReactNode } from 'react';
-import { I, Ic, MarcaDoSite, linkDoWhatsApp, onlyDigits, tokensDoSite, type SiteInfo } from '../portalShared';
+import { I, Ic, MarcaDoSite, onlyDigits, tokensDoSite, useLinkDoWhatsApp, type SiteInfo } from '../portalShared';
 import { BrPhoneInput } from '@/components/shared';
 import { TEXTO_ENVIO_NA_PREVIA } from '@/features/siteBuilder/public/previa';
 import { logoNaSuperficie, resolverAparencia, textoSobre } from '@/features/siteBuilder/public/aparenciaConfig';
@@ -39,8 +39,9 @@ function telefoneLegivel(digitos: string): string {
 }
 
 /** O que o painel mostra: WhatsApp, telefone e e-mail do site (os do topo e do rodapé). */
-function contatosDoSite(site: SiteInfo, wa?: string | null) {
-  return { waHref: linkDoWhatsApp(wa), telefone: site.contact?.phone?.trim(), email: site.contact?.email?.trim() };
+function useContatosDoSite(site: SiteInfo, wa?: string | null) {
+  const link = useLinkDoWhatsApp(site);
+  return { waHref: wa ? link : null, telefone: site.contact?.phone?.trim(), email: site.contact?.email?.trim() };
 }
 
 function LinhaDoPainel({ href, icone, externo, children }: { href: string; icone: string; externo?: boolean; children: ReactNode }) {
@@ -59,7 +60,7 @@ function LinhaDoPainel({ href, icone, externo, children }: { href: string; icone
 }
 
 function Painel({ site, wa }: { site: SiteInfo; wa?: string | null }) {
-  const { waHref, telefone, email } = contatosDoSite(site, wa);
+  const { waHref, telefone, email } = useContatosDoSite(site, wa);
 
   const brand = tokensDoSite(site).brand;
   const logo = logoNaSuperficie(site.branding?.logo_url, resolverAparencia(site.appearance), 'marca', brand);
@@ -143,9 +144,9 @@ function Formulario({ c }: { c: PropsDaCaptura }) {
 }
 
 export default function CapturaModerna({ site, wa, captura }: Props) {
+  const { waHref, telefone, email } = useContatosDoSite(site, wa);
   if (!captura.ligada) return null;
   const modo = resolverAparencia(site.appearance).heading_highlight;
-  const { waHref, telefone, email } = contatosDoSite(site, wa);
   const comPainel = !!(waHref || telefone || email);
   return (
     <section id="contato" className={BLOCO}>

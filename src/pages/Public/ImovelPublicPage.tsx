@@ -21,6 +21,7 @@ import { I, Ic } from './ficha/iconesDaFicha';
 import { derivadosDaFicha, useFichaDoImovel } from './ficha/useFichaDoImovel';
 import { resolverAparencia } from '@/features/siteBuilder/public/aparenciaConfig';
 import FichaModerna from './moderno/FichaModerna';
+import { MensagemDoWhatsAppContext } from './whatsappDoSite';
 
 /* ────────────────────────────────────────────────────────────────────────────
    Portal Imobiliário — PÁGINA DO IMÓVEL (Produto A). Mesma pegada "Editorial
@@ -44,8 +45,18 @@ export default function ImovelPublicPage() {
 }
 
 
+// Todo botão de WhatsApp da ficha (o dela, topo, rodapé e flutuante, nos dois
+// modelos) manda a frase com o link do imóvel (ver whatsappDoSite.ts).
 function FichaDoImovel() {
   const f = useFichaDoImovel();
+  return (
+    <MensagemDoWhatsAppContext.Provider value={f.mensagemWa}>
+      <CorpoDaFicha f={f} />
+    </MensagemDoWhatsAppContext.Provider>
+  );
+}
+
+function CorpoDaFicha({ f }: { f: ReturnType<typeof useFichaDoImovel> }) {
   const {
     tenant, ctx, state, site, prop, ficha, manutencao, active, setActive, lightbox, setLightbox, suggestions,
     fontHrefs, cssVars, fundo, wa, abas, waHref, mostraBook, contato,

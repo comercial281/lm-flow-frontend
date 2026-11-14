@@ -38,7 +38,8 @@ import { resolverHome } from '@/features/siteBuilder/public/homeConfig';
    regex do atributo exato: (1) o "LM Flow" do crédito do rodapé virou link
    pro site do LM Flow; (2) acessibilidade do menu do topo: os `nav` ganharam
    `aria-label="Menu principal"` e o botão do menu do celular ganhou
-   `aria-controls="menu-do-celular"`. (As variáveis novas da raiz
+   `aria-controls="menu-do-celular"`; (3) 13/11/2026: o link do WhatsApp
+   ganhou a frase (`?text=…`, ver whatsappDoSite.ts). (As variáveis novas da raiz
    e o `var(--solid)` não aparecem nestes trechos: moram na raiz da página e nos
    cartões/botões, fora do topo, rodapé e capa.)
 
@@ -128,7 +129,9 @@ const tirarCredito = (h: string) => h.replace(/feito com <a href="https:\/\/lmfl
 const tirarAcessibilidadeDoMenu = (h: string) => h
   .replace(/<nav aria-label="Menu principal" class="/g, '<nav class="')
   .replace(/ aria-expanded="(true|false)" aria-controls="menu-do-celular"/g, ' aria-expanded="$1"');
-const normalizar = (h: string) => tirarAcessibilidadeDoMenu(tirarCredito(h));
+/** (3) Frase do WhatsApp (decidida em 13/11/2026): só o `?text=` do wa.me. */
+const tirarTextoDoWhatsApp = (h: string) => h.replace(/(href="https:\/\/wa\.me\/\d+)\?text=[^"]*"/g, '$1"');
+const normalizar = (h: string) => tirarTextoDoWhatsApp(tirarAcessibilidadeDoMenu(tirarCredito(h)));
 
 /** Só regrava no código de ANTES do C3 e com a confirmação explícita; senão falha. */
 const COMMIT_ANTIGO = 'c72c0c39';
@@ -164,9 +167,14 @@ describe('site sem appearance: topo, faixa de cima, rodapé e capa de antes do C
     }
   });
 
-  it('as diferenças normalizadas são só o crédito e os atributos do menu, e estão mesmo lá', async () => {
+  it('as diferenças normalizadas são só o crédito, os atributos do menu e a frase do WhatsApp, e estão mesmo lá', async () => {
     const antes = JSON.parse(readFileSync(FIXTURES, 'utf8')) as Record<string, string>;
-    const agora = await capturar();
+    const comFrase = await capturar();
+    // (3) a frase está em todo WhatsApp que o fixture tinha; tirada, sobram (1) e (2).
+    for (const k of Object.keys(antes).filter(x => antes[x].includes('href="https://wa.me/'))) {
+      expect(comFrase[k], k).toMatch(/href="https:\/\/wa\.me\/\d+\?text=Ol%C3%A1!%20Vim%20pelo%20site%20/);
+    }
+    const agora = Object.fromEntries(Object.entries(comFrase).map(([k, h]) => [k, tirarTextoDoWhatsApp(h)]));
     expect(antes.rodape).toContain('feito com LM Flow.');
     expect(agora.rodape).toContain('feito com <a href="https://lmflow.com.br"');
     const mudaram = Object.keys(antes).filter(k => agora[k] !== antes[k]);

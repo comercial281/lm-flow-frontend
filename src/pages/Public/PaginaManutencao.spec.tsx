@@ -128,7 +128,9 @@ describe('site em manutenção: as páginas viram a página Em manutenção', ()
 
     expect(await screen.findByRole('heading', { level: 1, name: TEXTO_MANUTENCAO })).toBeInTheDocument();
     expect(screen.getByText('Enquanto isso, fale com a gente:')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /Falar no WhatsApp/ }).getAttribute('href')).toBe('https://wa.me/5511987654321');
+    const zap = new URL(screen.getByRole('link', { name: /Falar no WhatsApp/ }).getAttribute('href')!);
+    expect(`${zap.origin}${zap.pathname}`).toBe('https://wa.me/5511987654321');
+    expect(zap.searchParams.get('text')).toBe('Olá! Vim pelo site Imob Teste e quero saber mais sobre os imóveis disponíveis.');
     expect(screen.getByRole('link', { name: /\(11\) 3333-4444/ }).getAttribute('href')).toBe('tel:1133334444');
     expect(screen.getByRole('link', { name: /contato@imob\.com\.br/ }).getAttribute('href')).toBe('mailto:contato@imob.com.br');
     expect(screen.getByText('Imob Teste')).toBeInTheDocument();
@@ -253,7 +255,7 @@ describe('ficha do imóvel em manutenção', () => {
     const raiz = screen.getAllByRole('link', { name: 'Imob Teste' });
     expect(raiz.length).toBe(2);
     raiz.forEach(l => expect(l.getAttribute('href')).toBe('/portal/imob'));
-    const whatsapps = screen.getAllByRole('link', { name: /WhatsApp/ }).map(l => l.getAttribute('href'));
+    const whatsapps = screen.getAllByRole('link', { name: /WhatsApp/ }).map(l => l.getAttribute('href')?.split('?')[0]);
     expect(whatsapps).toContain('https://wa.me/5511987654321');
 
     // Sem abas, menu de páginas, blog, busca nem "voltar aos imóveis".
