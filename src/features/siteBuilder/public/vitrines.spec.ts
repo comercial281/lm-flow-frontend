@@ -233,4 +233,14 @@ describe('chamadas', () => {
     const comZap = chamadasVisiveis(base({ home } as Partial<SiteInfo>), LMFLOW);
     expect(comZap.find(x => x.title === 'Zap')?.to).toMatch(/^https:\/\/wa\.me\/5511999990000/);
   });
+  // 13/11/2026: a chamada com destino WhatsApp manda a frase do site (o servidor
+  // reconhece como lead do site), não só o título dela.
+  it('livre com WhatsApp: frase "Vim pelo site" (nome fora do domínio, o endereço no domínio)', () => {
+    const home = { callouts: { custom: [{ title: 'Zap', text: null, button: null, dest_type: 'whatsapp', dest_value: null }] } };
+    const texto = (ctx: typeof LMFLOW) => new URL(chamadasVisiveis(base({ home, name: 'Moeda Forte' } as Partial<SiteInfo>), ctx)
+      .find(x => x.title === 'Zap')!.to).searchParams.get('text');
+    expect(texto(LMFLOW)).toBe('Olá! Vim pelo site Moeda Forte e quero saber mais sobre os imóveis disponíveis.');
+    expect(texto({ ...LMFLOW, dominio: true }))
+      .toBe(`Olá! Vim pelo site ${window.location.host} e quero saber mais sobre os imóveis disponíveis.`);
+  });
 });
