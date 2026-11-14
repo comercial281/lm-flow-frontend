@@ -58,3 +58,13 @@
 - [ ] **Step 3:** trocar as pílulas pelo componente; `getLabels({ withCounts: true })`.
 - [ ] **Step 4:** `pnpm vitest run src/components/pipelines` e `pnpm build` → verdes.
 - [ ] **Step 5:** seção no `CLAUDE.md`, commit.
+
+### Task 3 (backend `claude/disparo-contagem-etiquetas`): `Broadcasts::LabelCounts` + rota
+- Create `app/services/broadcasts/label_counts.rb`: `LabelCounts.new(pipeline_id:, owner_user_id: nil).call → Hash{String=>Integer}`.
+- Modify `broadcasts_controller.rb` (ação `label_counts`, permissão `broadcasts.create`, `OWN_ACTIONS`), `config/routes.rb` (`get :label_counts`).
+- Specs: `spec/services/broadcasts/label_counts_spec.rb` (contato, conversa por título e por id, um por contato, sem telefone fora, outro funil fora, dono) e request (exige funil; corretor só os dele).
+
+### Task 4 (frontend): Disparo usa a contagem do funil
+- `broadcastsService.labelCounts(pipelineId)`; `BulkDispatchModal` junta no `availableLabels` (`contacts_count`), `getLabels()` sem `withCounts`.
+- `EscolhaDeEtiqueta`: `contacts_count` ausente → sem número na linha.
+- Specs: modal mostra "40 leads" vindo da contagem do funil; contagem falhou → sem "0 leads".
