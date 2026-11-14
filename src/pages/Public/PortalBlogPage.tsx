@@ -9,6 +9,8 @@ import {
 import PaginaManutencao from './PaginaManutencao';
 import { usePortalTracking } from './usePortalTracking';
 import { useIconeDaAba } from '@/features/siteBuilder/public/useIconeDaAba';
+import CascaModerna from './moderno/CascaModerna';
+import BlogModerno from './moderno/BlogModerno';
 
 /* ────────────────────────────────────────────────────────────────────────────
    Portal Imobiliário — BLOG (listagem de artigos publicados) (Produto A).
@@ -68,7 +70,7 @@ function ArticleCard({ tenant, a }: { tenant: string; a: PortalArticleSummary })
 
 export default function PortalBlogPage() {
   const tenant = useTenantDoSite();
-  const { state, site, fontHrefs, abas, cssVars, fundo, manutencao } = usePortalData(tenant);
+  const { state, site, fontHrefs, abas, cssVars, fundo, manutencao, aparencia } = usePortalData(tenant);
   const { pathname } = useLocation();
   // Em manutenção nada de rastreamento nem visita: a página é a de manutenção.
   usePortalTracking(state === 'ok' && !manutencao ? site : null, tenant, { kind: 'blog', path: pathname });
@@ -109,6 +111,15 @@ export default function PortalBlogPage() {
   }
 
   const hasMore = articles.length < total;
+
+  // Moderno: outro desenho, com os mesmos artigos e a mesma paginação.
+  if (aparencia.style === 'modern') {
+    return (
+      <CascaModerna nome="blog" site={site} tenant={tenant!} abas={abas} fontHrefs={fontHrefs} cssVars={cssVars} fundo={fundo}>
+        <BlogModerno tenant={tenant!} articles={articles} loading={loading} hasMore={hasMore} carregarMais={() => setPage(p => p + 1)} />
+      </CascaModerna>
+    );
+  }
 
   return (
     <div style={cssVars as CSSProperties} data-fundo={fundo} className="min-h-screen bg-[var(--paper)] text-[var(--ink)] antialiased">

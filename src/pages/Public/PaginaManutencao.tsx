@@ -60,6 +60,49 @@ export default function PaginaManutencao({ site }: { site: SiteInfo }) {
   // A caixa é o `--card`: no fundo escuro, a logo clara (se houver).
   const logo = logoNaSuperficie(site.branding?.logo_url, aparencia, 'fundo').url;
 
+  // Moderno: a mesma página no fundo, no cartão e no tipo do Moderno.
+  if (aparencia.style === 'modern') {
+    return (
+      <div data-pagina-moderna="manutencao" style={cssVars} data-fundo={fundo} className="flex min-h-screen flex-col items-center justify-center bg-[var(--m-ground)] px-4 py-16 text-[var(--m-text)] antialiased">
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        {fontHrefs.map(h => <link key={h} href={h} rel="stylesheet" />)}
+        <main className="w-full max-w-xl rounded-[28px] border border-[var(--m-line)] bg-[var(--m-surface)] px-6 py-12 text-center shadow-[0_20px_40px_-28px_rgba(8,10,22,0.35)] sm:px-12">
+          {logo ? (
+            <img src={logo} alt={site.name || 'Logo'} className="mx-auto h-16 w-auto max-w-[260px] object-contain" />
+          ) : (
+            <p className="font-[var(--display)] text-2xl font-semibold tracking-tight text-[var(--m-head)]">{site.name || 'Imóveis'}</p>
+          )}
+          <h1 className="mt-8 font-[var(--display)] text-[clamp(24px,3vw,32px)] font-semibold leading-snug tracking-[-0.02em] text-[var(--m-head)] [text-wrap:balance]">
+            {TEXTO_MANUTENCAO}
+          </h1>
+          {temContato && (
+            <section className="mt-10 border-t border-[var(--m-line)] pt-8">
+              <p className="text-[15px]">Enquanto isso, fale com a gente:</p>
+              <div className="mt-5 flex flex-col items-center gap-3">
+                {waHref && (
+                  <a href={waHref} target="_blank" rel="noreferrer"
+                    className="inline-flex items-center gap-2 rounded-full bg-[#1FAF5A] px-6 py-3 text-[15px] font-semibold text-white">
+                    <Ic d={I.wa} s={18} /> Falar no WhatsApp
+                  </a>
+                )}
+                {phone && (
+                  <a href={`tel:${onlyDigits(phone)}`} className="inline-flex items-center gap-2 text-[15px] font-medium text-[var(--m-head)]">
+                    <Ic d={I.phone} s={16} /> {phone}
+                  </a>
+                )}
+                {email && (
+                  <a href={`mailto:${email}`} className="inline-flex items-center gap-2 break-all text-[15px] font-medium text-[var(--m-head)]">
+                    <Ic d={I.mail} s={16} /> {email}
+                  </a>
+                )}
+              </div>
+            </section>
+          )}
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div style={cssVars} data-fundo={fundo} className="flex min-h-screen flex-col items-center justify-center bg-[var(--paper)] px-4 py-16 text-[var(--ink)] antialiased">
       <link rel="preconnect" href="https://fonts.googleapis.com" />
