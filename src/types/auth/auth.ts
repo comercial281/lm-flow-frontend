@@ -5,6 +5,8 @@ export interface LoginRequest {
   email: string;
   password: string;
   recaptcha_token?: string;
+  /** Navegador confiado na verificação em duas etapas (30 dias). Ver mfaTrust.ts. */
+  mfa_trust_token?: string;
 }
 
 export interface UserType {
@@ -123,6 +125,11 @@ export interface UserResponse {
   availability?: 'online' | 'offline' | 'busy';
   auto_offline?: boolean;
   mfa_enabled?: boolean;
+  /** Verificação em duas etapas (vem do servidor, Auth::Mfa.payload). */
+  mfa_method?: 'totp' | 'email' | null;
+  mfa_required?: boolean;
+  mfa_app_required?: boolean;
+  mfa_backup_codes_left?: number;
   unconfirmed_email?: string | null;
   created_at?: string;
   custom_attributes?: Record<string, unknown>;

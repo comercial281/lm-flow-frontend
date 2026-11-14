@@ -85,6 +85,8 @@ export interface TeamAccessMember {
   last_seen_at?: string | null;
   /** Até quando o link de acesso enviado vale (ISO); nulo = sem link pendente. */
   access_link_until?: string | null;
+  /** Verificação em duas etapas ligada (o admin pode zerar na ficha). */
+  mfa_enabled?: boolean;
 
   /* Quem foi DESATIVADO continua na lista, com o selo *Inativo* e o botão
      *Reativar* — é desta tela que sai a volta. Os campos vêm do mesmo serviço

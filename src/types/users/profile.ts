@@ -49,8 +49,12 @@ export interface EnableTwoFactorResponse {
 }
 
 export interface VerifyResponse {
-  success: boolean;
-  message: string;
+  success?: boolean;
+  message?: string;
+  enabled?: boolean;
+  method?: 'totp' | 'email';
+  /** Só na ativação pelo aplicativo: os 10 códigos reserva, mostrados uma vez. */
+  backup_codes?: string[];
 }
 
 export interface BackupCodesResponse {
