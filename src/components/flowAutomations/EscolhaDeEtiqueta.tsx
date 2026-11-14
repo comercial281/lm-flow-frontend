@@ -23,6 +23,12 @@ export interface EscolhaDeEtiquetaProps {
   ordem?: 'nome' | 'mais_leads';
   /** Chamado depois de criar a etiqueta (o pai recarrega o catálogo). */
   aoCriar?: (titulo: string) => Promise<void> | void;
+  /** Só escolhe, não cria (Disparo): some o "Criar etiqueta" e o Enter sem resultado não faz nada. */
+  semCriar?: boolean;
+  /** Já está dentro de um campo com o rótulo "Etiquetas" (CampoDaJanela): não repete o nome. */
+  semNome?: boolean;
+  /** Id da busca, pra o rótulo de fora apontar pra ela. */
+  idBusca?: string;
 }
 
 interface Linha {
@@ -45,8 +51,19 @@ const paraLinha = (l: Label): Linha => ({
   leads: l.contacts_count ?? 0,
 });
 
-export function EscolhaDeEtiqueta({ modo, escolhidas, aoMudar, etiquetas, ordem = 'nome', aoCriar }: EscolhaDeEtiquetaProps) {
-  const idBusca = useId();
+export function EscolhaDeEtiqueta({
+  modo,
+  escolhidas,
+  aoMudar,
+  etiquetas,
+  ordem = 'nome',
+  aoCriar,
+  semCriar = false,
+  semNome = false,
+  idBusca: idBuscaDeFora,
+}: EscolhaDeEtiquetaProps) {
+  const idProprio = useId();
+  const idBusca = idBuscaDeFora ?? idProprio;
   const [busca, setBusca] = useState('');
   const [sistemaAberto, setSistemaAberto] = useState(false);
   const [criando, setCriando] = useState(false);
@@ -171,8 +188,8 @@ export function EscolhaDeEtiqueta({ modo, escolhidas, aoMudar, etiquetas, ordem 
 
   return (
     <div className="space-y-1.5">
-      <div className="flex items-center justify-between">
-        <CampoLabel className="text-xs" htmlFor={idBusca}>{modo === 'uma' ? 'Etiqueta' : 'Etiquetas'}</CampoLabel>
+      <div className={cn('flex items-center', semNome ? 'justify-end' : 'justify-between')}>
+        {!semNome && <CampoLabel className="text-xs" htmlFor={idBusca}>{modo === 'uma' ? 'Etiqueta' : 'Etiquetas'}</CampoLabel>}
         <span className="text-xs text-muted-foreground">
           {textoMarcadas(escolhidas.length)}
           {modo === 'varias' && escolhidas.length > 0 && (
@@ -195,14 +212,16 @@ export function EscolhaDeEtiqueta({ modo, escolhidas, aoMudar, etiquetas, ordem 
           onKeyDown={e => {
             if (e.key === 'Enter') {
               e.preventDefault();
-              if (semResultado) void criar();
+              if (semResultado) {
+                if (!semCriar) void criar();
+              }
               else if (q) {
                 const primeira = [...equipeLivre, ...sistemaLivre][0];
                 if (primeira) alternar(primeira.titulo);
               }
             }
           }}
-          placeholder="Buscar ou criar etiqueta"
+          placeholder={semCriar ? 'Buscar etiqueta' : 'Buscar ou criar etiqueta'}
           autoComplete="off"
           className="h-9 w-full rounded-md border border-border bg-background pl-7 pr-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         />
@@ -214,7 +233,9 @@ export function EscolhaDeEtiqueta({ modo, escolhidas, aoMudar, etiquetas, ordem 
             {marcadas.map(linha)}
           </div>
         )}
-        {semResultado ? (
+        {semResultado && semCriar ? (
+          <p className="px-2.5 py-2 text-xs text-muted-foreground">Nenhuma etiqueta com esse nome.</p>
+        ) : semResultado ? (
           <button
             type="button"
             onClick={() => void criar()}
@@ -250,7 +271,11 @@ export function EscolhaDeEtiqueta({ modo, escolhidas, aoMudar, etiquetas, ordem 
               <p className="px-2.5 py-2 text-xs text-muted-foreground">Em conta grande, as outras aparecem quando você digita.</p>
             )}
             {q === '' && !contaGrande && marcadas.length === 0 && equipeLivre.length === 0 && sistemaLivre.length === 0 && (
-              <EmptyState tamanho="compacto" title="Nenhuma etiqueta ainda. Digite um nome pra criar." className="m-2 p-3 text-xs" />
+              <EmptyState
+                tamanho="compacto"
+                title={semCriar ? 'Nenhuma etiqueta cadastrada ainda.' : 'Nenhuma etiqueta ainda. Digite um nome pra criar.'}
+                className="m-2 p-3 text-xs"
+              />
             )}
           </>
         )}
