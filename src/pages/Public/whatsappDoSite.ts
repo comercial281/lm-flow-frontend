@@ -17,7 +17,7 @@
 // ARMADILHA: o portalShared importa daqui. Não importar nada dele em tempo de
 // execução (só tipo), senão vira importação circular.
 import { createContext, useContext, useMemo } from 'react';
-import { useCtxDoSite } from '@/features/siteBuilder/public/useTenantDoSite';
+import { SiteDoDominioContext } from '@/features/siteBuilder/public/useTenantDoSite';
 import type { SiteInfo } from './portalShared';
 
 export function mensagemDoImovel(link: string, code: string, title: string): string {
@@ -48,9 +48,9 @@ export function linkDoWhatsAppCom(wa: string | null | undefined, texto: string):
 export const MensagemDoWhatsAppContext = createContext<string | null>(null);
 
 /** Link de todo botão de WhatsApp do site (topo, rodapé, flutuante, blog, manutenção). */
-export function useLinkDoWhatsApp(site: SiteInfo, tenant: string): string | null {
+export function useLinkDoWhatsApp(site: SiteInfo): string | null {
   const daPagina = useContext(MensagemDoWhatsAppContext);
-  const { dominio } = useCtxDoSite(tenant);
+  const dominio = !!useContext(SiteDoDominioContext);
   const wa = site.contact?.whatsapp;
   const name = site.name;
   return useMemo(() => {

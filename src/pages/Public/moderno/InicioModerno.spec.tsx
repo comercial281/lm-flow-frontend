@@ -550,7 +550,9 @@ describe('Início do Moderno: "Não achou?"', () => {
     expect(within(sec).getByRole('radiogroup', { name: 'O que você procura' })).toBeInTheDocument();
     fireEvent.click(within(sec).getByLabelText('Quero alugar'));
     expect(within(sec).getByLabelText('Quero alugar')).toBeChecked();
-    expect(within(sec).getByRole('link', { name: /\(11\) 98765-4321/ })).toHaveAttribute('href', 'https://wa.me/5511987654321');
+    const zap = new URL(within(sec).getByRole('link', { name: /\(11\) 98765-4321/ }).getAttribute('href')!);
+    expect(`${zap.origin}${zap.pathname}`).toBe('https://wa.me/5511987654321');
+    expect(zap.searchParams.get('text')).toMatch(/^Olá! Vim pelo site .+ e quero saber mais sobre os imóveis disponíveis\.$/);
     expect(within(sec).getByRole('link', { name: /\(11\) 3333-4444/ })).toHaveAttribute('href', 'tel:1133334444');
     expect(within(sec).getByRole('link', { name: /contato@imob\.com\.br/ })).toHaveAttribute('href', 'mailto:contato@imob.com.br');
   });

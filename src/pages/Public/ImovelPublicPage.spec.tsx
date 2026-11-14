@@ -63,6 +63,30 @@ const pediuParecidos = (f: ReturnType<typeof vi.fn>) => f.mock.calls.some(([u]) 
 afterEach(() => { vi.unstubAllGlobals(); });
 
 describe('ImovelPublicPage', () => {
+  // 13/11/2026: todo botão de WhatsApp da ficha (o da ficha, topo, rodapé e
+  // flutuante) leva o link do imóvel na primeira linha e a frase de sempre.
+  describe('WhatsApp leva o link do imóvel', () => {
+    const textos = () => screen.getAllByRole('link').map(a => a.getAttribute('href') ?? '')
+      .filter(h => h.startsWith('https://wa.me/'))
+      .map(h => new URL(h).searchParams.get('text'));
+    const esperado = `${window.location.origin}/imovel/imob/C1\n\nOlá! Tenho interesse no imóvel C1 — Casa no Cambuí.`;
+
+    it.each([['Clássico', {}], ['Moderno', { appearance: { style: 'modern' } }]])('%s', async (_n, aparencia) => {
+      await abrirFicha({ contact: { whatsapp: '5511988887777' }, ...aparencia } as SiteInfo);
+      await screen.findAllByText('Apartamento parecido'); // Você também pode gostar chega depois
+      const t = textos();
+      const daFicha = t.filter(x => !x?.includes('imóvel C2'));
+      expect(daFicha.length).toBeGreaterThan(1);
+      expect(new Set(daFicha)).toEqual(new Set([esperado]));
+      // cartão do parecido (Você também pode gostar): o link DELE
+      const doCartao = t.filter(x => x?.includes('imóvel C2'));
+      expect(doCartao.length).toBeGreaterThan(0);
+      for (const x of doCartao) {
+        expect(x).toMatch(new RegExp(`^${window.location.origin}/\\S*C2\\n\\nOlá! Tenho interesse no imóvel C2 — Apartamento parecido\\.$`));
+      }
+    });
+  });
+
   it('descrição com **trecho** mostra negrito, sem os asteriscos (Moeda Forte)', async () => {
     await abrirFicha({}, { description: 'Casa **reformada** e ampla.\n\nAceita **<b>FGTS</b>**' });
 

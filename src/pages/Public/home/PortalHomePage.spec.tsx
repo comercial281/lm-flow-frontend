@@ -13,6 +13,22 @@ import { abrirHome, empreendimento, imovel } from './servidorDeTeste';
 afterEach(() => { vi.unstubAllGlobals(); });
 
 describe('PortalHomePage por blocos', () => {
+  // 13/11/2026: o WhatsApp da página inicial abria vazio. Agora diz de onde a
+  // pessoa veio (sem domínio próprio, o nome do site), e o cartão do imóvel
+  // leva o link dele (testado no Você também pode gostar da ficha).
+  describe('WhatsApp', () => {
+    const textos = () => screen.getAllByRole('link').map(a => a.getAttribute('href') ?? '')
+      .filter(h => h.startsWith('https://wa.me/'))
+      .map(h => new URL(h).searchParams.get('text') ?? '');
+
+    it.each([['Clássico', {}], ['Moderno', { appearance: { style: 'modern' } }]])('%s: topo e rodapé dizem que veio do site', async (_n, aparencia) => {
+      await abrirHome({ contact: { whatsapp: '5511988887777' }, ...aparencia } as SiteInfo, [imovel('R1')]);
+      const doSite = textos().filter(t => !t.includes('Tenho interesse'));
+      expect(doSite.length).toBeGreaterThan(0);
+      expect(new Set(doSite)).toEqual(new Set(['Olá! Vim pelo site Imob Teste e quero saber mais sobre os imóveis disponíveis.']));
+    });
+  });
+
   it('site que nunca abriu o Personalizar: capa de fábrica, vitrines de fábrica e só as abas com imóvel', async () => {
     await abrirHome({}, [imovel('R1', { featured: true, title: 'Casa destaque' }), empreendimento('E1', { title: 'Torre Nova' })]);
 

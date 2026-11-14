@@ -11467,3 +11467,14 @@ Pedido do Tony (Moeda Forte): as fotos baixadas do site antigo já vieram com o 
 4. Na Moeda Forte as 4.062 fotos com o logo antigo foram marcadas por script (lista fechada, achada por comparação com o logo), e a marca do site foi religada depois.
 
 Não reabrir sem o dono pedir.
+
+## WhatsApp do site: link do imóvel e frase das outras páginas (13/11/2026, backend "Vim pelo site")
+
+Pedido do Tony: o lead chegava no WhatsApp sem o link do imóvel que estava vendo, e o botão da página inicial abria a conversa vazia.
+
+- **Ficha do imóvel:** todo botão de WhatsApp da página (o da ficha, o do topo, o do rodapé e o flutuante, no Clássico e no Moderno) manda o **link do imóvel na primeira linha**, uma linha em branco e "Olá! Tenho interesse no imóvel 205 — Apartamento…". O cartão de imóvel (vitrines, busca, Você também pode gostar) faz o mesmo com o link DAQUELE imóvel.
+- **Outras páginas** (início, busca, blog, páginas, manutenção): "Olá! Vim pelo site www.dominio.com.br e quero saber mais sobre os imóveis disponíveis." Sem domínio próprio (site no endereço do LM Flow), vai o **nome do site**.
+- O link e o domínio saem do **endereço aberto na hora** (`location.origin` + caminho, sem a query: `?finalidade=` e `?previa=` não vão pro lead). Nunca de domínio gravado: o cliente troca de domínio e a mensagem acompanha sem ninguém mexer.
+- Onde mora: `src/pages/Public/whatsappDoSite.ts` (frases, `useLinkDoWhatsApp`, `MensagemDoWhatsAppContext`). A ficha provê a frase dela pelo contexto; sem provedor, vale a do site. O `linkDoWhatsApp` antigo (só o número) saiu.
+- **O servidor lê as duas frases** (`Whatsapp::SiteReferral`): a do imóvel já era lida (em qualquer posição, então o link na frente não atrapalha); a "Vim pelo site X" vira lead do site (origem Site, card no destino de venda do site, Só campanha, gatilho da IA "Veio do site, LP ou portal") quando X é domínio ATIVO do cliente ou o nome de um site ativo dele. Mudou a frase aqui, muda a expressão lá.
+- Fora, de propósito: as frases de Financiamento e Anuncie seguem como estavam (não são reconhecidas como lead do site).

@@ -3,7 +3,7 @@ import { Link, useParams, useLocation } from 'react-router-dom';
 import { useCtxDoSite, useTenantDoSite } from '@/features/siteBuilder/public/useTenantDoSite';
 import { caminhoDoSite } from '@/features/siteBuilder/public/dominioDoSite';
 import {
-  Ic, I, PortalFooter, PortalHeader, PropertyCard, fetchArticle, onlyDigits, usePortalData,
+  Ic, I, PortalFooter, PortalHeader, PropertyCard, fetchArticle, useLinkDoWhatsApp, usePortalData,
   type PortalArticleFull,
 } from './portalShared';
 import PaginaManutencao from './PaginaManutencao';
@@ -68,7 +68,7 @@ export default function PortalArticlePage() {
   }, [article, site.name]);
 
   const wa = site.contact?.whatsapp;
-  const waHref = wa ? `https://wa.me/${onlyDigits(wa)}` : null;
+  const waHref = useLinkDoWhatsApp(site);
 
   if (state === 'loading') {
     return <div data-carregando className="flex min-h-screen items-center justify-center text-neutral-400" style={{ fontFamily: 'system-ui' }}>Carregando…</div>;

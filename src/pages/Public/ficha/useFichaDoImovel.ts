@@ -15,6 +15,7 @@ import { usePortalTracking } from '../usePortalTracking';
 import { useIconeDaAba } from '@/features/siteBuilder/public/useIconeDaAba';
 import { FINALIDADE_PARAM, finalidadeDoImovel, finalidadeInicial, type Finalidade } from '../finalidade';
 import { consultaDoMapa } from '../mapaDoImovelPublico';
+import { enderecoDaPagina, linkDoWhatsAppCom, mensagemDoImovel } from '../whatsappDoSite';
 import { rotuloTipo } from '@/features/siteBuilder/public/tiposDeImovel';
 import { resolverFicha } from '@/features/siteBuilder/public/fichaConfig';
 import {
@@ -58,7 +59,6 @@ export interface PropertyDTO extends CamposDaFicha {
 
 const API = import.meta.env.VITE_API_URL as string;
 
-function onlyDigits(s?: string | null) { return (s || '').replace(/\D/g, ''); }
 function brl(n?: number | null) { return typeof n === 'number' ? n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }) : null; }
 function setMeta(name: string, content: string) {
   let el = document.head.querySelector<HTMLMetaElement>(`meta[name="${name}"]`);
@@ -285,10 +285,13 @@ export function useFichaDoImovel() {
     const ligadas = resolverHome(site.home).search.tabs;
     return (['sale', 'rent', 'launch'] as AbaId[]).filter(k => ligadas[k]);
   }, [site]);
-  const waHref = useMemo(() => {
-    if (!wa || !prop) return null;
-    return `https://wa.me/${onlyDigits(wa)}?text=${encodeURIComponent(`Olá! Tenho interesse no imóvel ${prop.code} — ${prop.title}.`)}`;
-  }, [wa, prop]);
+  // Link do imóvel na primeira linha: o endereço aberto agora (domínio que
+  // estiver no ar), sem a query. Topo, rodapé e flutuante leem a mesma frase
+  // pelo MensagemDoWhatsAppContext (ver whatsappDoSite.ts).
+  const mensagemWa = useMemo(() => (prop
+    ? mensagemDoImovel(enderecoDaPagina(window.location.origin, pathname), prop.code, prop.title)
+    : null), [prop, pathname]);
+  const waHref = useMemo(() => (mensagemWa ? linkDoWhatsAppCom(wa, mensagemWa) : null), [wa, mensagemWa]);
 
   const mostraBook = !!prop && resolverFicha(site.property_page).development.book_button
     && prop.listing_kind === 'development' && prop.has_book === true;
@@ -336,7 +339,7 @@ export function useFichaDoImovel() {
   return {
     code, tenant, ctx, state, site, prop, ficha, manutencao,
     active, setActive, lightbox, setLightbox, suggestions,
-    fontHrefs, cssVars, fundo, wa, abas, waHref, mostraBook, contato,
+    fontHrefs, cssVars, fundo, wa, abas, waHref, mensagemWa, mostraBook, contato,
   };
 }
 

@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import {
-  CreditoDoRodape, I, Ic, LinkDoMenuEl, MarcaDoSite, linkDoWhatsApp, linksDoRodapeDeAntes, linksDoRodapeDoMenu,
-  ICONE_DA_REDE, onlyDigits, socialEntries, tokensDoSite, usePublishedArticlesExist, type PropsDaMoldura,
+  CreditoDoRodape, I, Ic, LinkDoMenuEl, MarcaDoSite, linksDoRodapeDeAntes, linksDoRodapeDoMenu,
+  ICONE_DA_REDE, onlyDigits, socialEntries, tokensDoSite, useLinkDoWhatsApp, usePublishedArticlesExist, type PropsDaMoldura,
 } from '../portalShared';
 import { TituloComDestaque } from '../TituloComDestaque';
 import { DESTAQUE_SOBRE_A_COR } from './destaqueModerno';
@@ -37,7 +37,7 @@ export default function RodapeModerno({ site, tenant, onHome = false, abas }: Pr
   const brand = tokensDoSite(site).brand;
   const logo = logoNaSuperficie(site.branding?.logo_url, ap, 'marca', brand);
   const frase = ap.footer_text ?? TEXTO_RODAPE_FABRICA;
-  const waHref = linkDoWhatsApp(site.contact?.whatsapp);
+  const waHref = useLinkDoWhatsApp(site);
   const redes = socialEntries(site);
   const compacto = ap.footer_layout === 'compact';
   const personalizado = menuPersonalizado(site);

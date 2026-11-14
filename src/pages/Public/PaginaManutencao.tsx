@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { I, Ic, linkDoWhatsApp, onlyDigits, tokensDoSite, type SiteInfo } from './portalShared';
+import { I, Ic, onlyDigits, useLinkDoWhatsApp, tokensDoSite, type SiteInfo } from './portalShared';
 import { logoNaSuperficie } from '@/features/siteBuilder/public/aparenciaConfig';
 
 /* ────────────────────────────────────────────────────────────────────────────
@@ -53,7 +53,7 @@ export default function PaginaManutencao({ site }: { site: SiteInfo }) {
   const { fontHrefs, cssVars, fundo, aparencia } = tokensDoSite(site);
   useAbaEmManutencao(tituloEmManutencao(site.name));
 
-  const waHref = linkDoWhatsApp(site.contact?.whatsapp);
+  const waHref = useLinkDoWhatsApp(site);
   const phone = site.contact?.phone?.trim();
   const email = site.contact?.email?.trim();
   const temContato = !!(waHref || phone || email);

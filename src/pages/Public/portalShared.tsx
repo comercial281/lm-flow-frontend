@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties, type MouseEve
 import { Link } from 'react-router-dom';
 import { fetchAllPortalProperties } from './portalProperties';
 import { imovelHref } from './finalidade';
+import { enderecoDaPagina, linkDoWhatsAppCom, mensagemDoImovel, useLinkDoWhatsApp } from './whatsappDoSite';
 import { ehAba, itensDoMenu, menuPersonalizado, NOME_DE_FABRICA, type LinkDoMenu } from '@/features/siteBuilder/public/menuConfig';
 import { caminhoDoSite, type CtxDoSite } from '@/features/siteBuilder/public/dominioDoSite';
 import { linhaDoCreci } from '@/features/siteBuilder/public/creci';
@@ -263,10 +264,8 @@ export function tokensDoSite(site: SiteInfo) {
   return { brand, accent, fontStack, fontHrefs, cssVars, fundo, aparencia };
 }
 
-/** Link do botão verde do WhatsApp (o número vem gravado só com dígitos e o 55). */
-export function linkDoWhatsApp(wa?: string | null): string | null {
-  return wa ? `https://wa.me/${onlyDigits(wa)}` : null;
-}
+/** Link do botão verde do WhatsApp, com a frase da página (ver whatsappDoSite.ts). */
+export { useLinkDoWhatsApp };
 
 /* ── Hook de dados do portal (site + imóveis + tokens derivados) ──────────── */
 export function usePortalData(tenant?: string) {
@@ -372,6 +371,7 @@ export interface PropsDoCartao {
 
 /** O que o cartão e a linha mostram: os dois formatos dizem a mesma coisa. */
 export function dadosDoCartao({ p, wa, tab }: PropsDoCartao, ctx: CtxDoSite) {
+  const href = imovelHref(ctx, p.code, tab, p.site_path);
   // Empreendimento mostra a fase (e a entrega) no lugar de "Destaque" e, se for
   // exclusivo, os dois selos. Na revenda Exclusivo vence Destaque.
   const dev = p.listing_kind === 'development';
@@ -387,8 +387,9 @@ export function dadosDoCartao({ p, wa, tab }: PropsDoCartao, ctx: CtxDoSite) {
     selos,
     typeLabel: rotuloTipo(p.property_type),
     local: [p.address?.neighborhood, p.address?.city].filter(Boolean).join(', '),
-    waLink: wa ? `https://wa.me/${onlyDigits(wa)}?text=${encodeURIComponent(`Olá! Tenho interesse no imóvel ${p.code} (${p.title}).`)}` : null,
-    href: imovelHref(ctx, p.code, tab, p.site_path),
+    // O link do imóvel na primeira linha, sem a query (ver whatsappDoSite.ts).
+    waLink: linkDoWhatsAppCom(wa, mensagemDoImovel(enderecoDaPagina(window.location.origin, href.split('?')[0]), p.code, p.title)),
+    href,
   };
 }
 
@@ -809,7 +810,7 @@ const juntar = (...cls: string[]) => cls.filter(Boolean).join(' ');
  */
 function TopoEmManutencao({ site, tenant }: PropsDaMoldura) {
   const ctx = useCtxDoSite(tenant);
-  const waHref = linkDoWhatsApp(site.contact?.whatsapp);
+  const waHref = useLinkDoWhatsApp(site);
   const ap = resolverAparencia(site.appearance);
   const roupa = roupaDoTopo(ap, false);
   const logo = logoNaSuperficie(site.branding?.logo_url, ap, roupa.superficie, tokensDoSite(site).brand);
@@ -832,7 +833,7 @@ function TopoEmManutencao({ site, tenant }: PropsDaMoldura) {
 /** Rodapé do site em manutenção: o logo (leva pra raiz) e o WhatsApp. */
 function RodapeEmManutencao({ site, tenant }: PropsDaMoldura) {
   const ctx = useCtxDoSite(tenant);
-  const waHref = linkDoWhatsApp(site.contact?.whatsapp);
+  const waHref = useLinkDoWhatsApp(site);
   const logo = logoNaSuperficie(site.branding?.logo_url, resolverAparencia(site.appearance), 'fundo');
   return (
     <footer className="border-t border-black/[0.06] bg-white">
@@ -975,8 +976,7 @@ function TopoCompleto({ site, tenant, onHome = false, abas }: PropsDaMoldura) {
   const { menuOpen, setMenuOpen, botaoDoMenu } = useMenuDoCelular();
   // Só na home: antes de rolar, o cabeçalho flutua sobre a capa.
   const scrolled = useRolouNaHome(onHome);
-  const wa = site.contact?.whatsapp;
-  const waHref = wa ? `https://wa.me/${onlyDigits(wa)}` : null;
+  const waHref = useLinkDoWhatsApp(site);
   const hasBlog = usePublishedArticlesExist(tenant);
   const ctx = useCtxDoSite(tenant);
   const ap = resolverAparencia(site.appearance);
@@ -1162,8 +1162,7 @@ export function CreditoDoRodape({ nome, creci }: { nome?: string; creci?: string
  * de verdade."). No fundo escuro a logo é a clara, quando existe.
  */
 function RodapeCompleto({ site, tenant, onHome = false, abas }: PropsDaMoldura) {
-  const wa = site.contact?.whatsapp;
-  const waHref = wa ? `https://wa.me/${onlyDigits(wa)}` : null;
+  const waHref = useLinkDoWhatsApp(site);
   const hasBlog = usePublishedArticlesExist(tenant);
   const ctx = useCtxDoSite(tenant);
   const ap = resolverAparencia(site.appearance);

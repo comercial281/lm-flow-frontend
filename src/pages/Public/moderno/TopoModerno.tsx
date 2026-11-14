@@ -2,7 +2,7 @@ import type { CSSProperties } from 'react';
 import { Link } from 'react-router-dom';
 import {
   BotaoWhatsApp, FaixaDePrevia, I, Ic, LinkDoMenuEl, MarcaDoSite, MenuDoCelular, PortalTopBar,
-  linkDoWhatsApp, tokensDoSite, useMenuDoCelular, usePublishedArticlesExist, useRolouNaHome,
+  tokensDoSite, useLinkDoWhatsApp, useMenuDoCelular, usePublishedArticlesExist, useRolouNaHome,
   type PropsDaMoldura, type RoupaDoMenuDoCelular,
 } from '../portalShared';
 import PortalTranslate from '../PortalTranslate';
@@ -118,7 +118,7 @@ export default function TopoModerno({ site, tenant, onHome = false, abas }: Prop
   const ctx = useCtxDoSite(tenant);
   const ap = resolverAparencia(site.appearance);
   const nav = itensDoMenu(site, abas, hasBlog, { ctx, onHome });
-  const waHref = linkDoWhatsApp(site.contact?.whatsapp);
+  const waHref = useLinkDoWhatsApp(site);
 
   const sobreACapa = topoSobreACapa(ap, onHome);
   // Menu do celular aberto é sempre sólido: texto branco sobre a foto some.
