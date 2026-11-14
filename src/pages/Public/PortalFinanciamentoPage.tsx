@@ -7,6 +7,8 @@ import {
 import PaginaManutencao from './PaginaManutencao';
 import { usePortalTracking } from './usePortalTracking';
 import { useIconeDaAba } from '@/features/siteBuilder/public/useIconeDaAba';
+import CascaModerna from './moderno/CascaModerna';
+import FinanciamentoModerno from './moderno/FinanciamentoModerno';
 
 /* ────────────────────────────────────────────────────────────────────────────
    Portal Imobiliário — SIMULE SEU FINANCIAMENTO
@@ -63,7 +65,7 @@ function BankBadge({ bank }: { bank: PortalBank }) {
 
 export default function PortalFinanciamentoPage() {
   const tenant = useTenantDoSite();
-  const { state, site, fontHrefs, wa, abas, cssVars, fundo, manutencao } = usePortalData(tenant);
+  const { state, site, fontHrefs, wa, abas, cssVars, fundo, manutencao, aparencia } = usePortalData(tenant);
   const { pathname } = useLocation();
   // Em manutenção nada de rastreamento nem visita: a página é a de manutenção.
   usePortalTracking(state === 'ok' && !manutencao ? site : null, tenant, { kind: 'financing', path: pathname });
@@ -83,6 +85,15 @@ export default function PortalFinanciamentoPage() {
   const waHref = wa
     ? `https://wa.me/${onlyDigits(wa)}?text=${encodeURIComponent('Olá! Quero tirar dúvidas sobre o financiamento do imóvel.')}`
     : null;
+
+  // Moderno: outro desenho, com os mesmos bancos e o mesmo WhatsApp.
+  if (aparencia.style === 'modern') {
+    return (
+      <CascaModerna nome="financiamento" site={site} tenant={tenant!} abas={abas} fontHrefs={fontHrefs} cssVars={cssVars} fundo={fundo}>
+        <FinanciamentoModerno page={page} banks={banks} waHref={waHref} />
+      </CascaModerna>
+    );
+  }
 
   return (
     <div style={cssVars} data-fundo={fundo} className="min-h-screen bg-[var(--paper)] text-[var(--ink)] antialiased">

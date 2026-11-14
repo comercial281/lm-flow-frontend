@@ -11,6 +11,7 @@ import {
 import { Secao, Secoes } from '@/components/base/Secao';
 import { CLASSE_DO_CAMPO, CampoTexto } from '@/components/base/Campo';
 import type { FormProps } from './tipos';
+import { AJUDA_DO_DESTAQUE } from '@/features/siteBuilder/public/destaqueNoTitulo';
 
 // Teto do servidor (Sites::HomeConfig::MAX_CUSTOM_CALLOUTS).
 const MAX_LIVRES = 3;
@@ -238,7 +239,7 @@ function CamposDeTexto({ idBase, titulo, texto: valorTexto, botao, dicas, mudar 
   return (
     <div className="grid gap-5 sm:grid-cols-2">
       <CampoTexto id={`${idBase}-titulo`} rotulo="Título" maxLength={60} valor={titulo} placeholder={dicas.title}
-        aoMudar={v => mudar('title', v)} />
+        ajuda={AJUDA_DO_DESTAQUE} aoMudar={v => mudar('title', v)} />
       <CampoTexto id={`${idBase}-botao`} rotulo="Botão" maxLength={40} valor={botao} placeholder={dicas.button}
         aoMudar={v => mudar('button', v)} />
       <CampoTexto id={`${idBase}-texto`} rotulo="Texto" maxLength={200} valor={valorTexto} placeholder={dicas.text}

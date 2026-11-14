@@ -37,6 +37,25 @@ describe('TelaModelo', () => {
     expect(within(cartao('Popular')).getByRole('button', { name: 'Usar este modelo' })).toBeTruthy();
   });
 
+  it('o Moderno é o quarto cartão: usar grava o estilo moderno e mostra "Em uso"', async () => {
+    const espiao = vi.fn();
+    render(<Montar espiao={espiao} />);
+    await userEvent.click(within(cartao('Moderno')).getByRole('button', { name: 'Usar este modelo' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Usar este modelo' }));
+    const patch = espiao.mock.calls[0][0];
+    expect(patch.appearance.style).toBe('modern');
+    expect(patch.appearance.heading_highlight).toBe('accent');
+    expect(within(cartao('Moderno')).getByText('Em uso')).toBeTruthy();
+  });
+
+  it('voltar do Moderno pro Clássico grava o estilo clássico', async () => {
+    const espiao = vi.fn();
+    render(<Montar espiao={espiao} inicial={{ appearance: { ...APARENCIA_FABRICA, style: 'modern' } }} />);
+    await userEvent.click(within(cartao('Clássico')).getByRole('button', { name: 'Usar este modelo' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Usar este modelo' }));
+    expect(espiao.mock.calls[0][0].appearance.style).toBe('classic');
+  });
+
   it('confirmar grava font_family, appearance, home e listing de uma vez, e avisa', async () => {
     const espiao = vi.fn();
     render(<Montar espiao={espiao} />);

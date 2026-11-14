@@ -373,6 +373,7 @@ const CAIXINHA_CRUA = /type=\{?["']checkbox["']\}?|['"]@evoapi\/design-system\/c
 export const CAIXINHA_CRUA_PERMITIDA = new Set([
   'src/components/ui/ds.tsx',
   'src/pages/Public/PortalAnunciePage.tsx',
+  'src/pages/Public/moderno/AnuncieModerno.tsx',
 ]);
 export const contaCaixinhaCrua = rel =>
   rel.startsWith('src/') &&

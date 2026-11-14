@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buscarNoIndice, indiceDeLugar, sugestoesDeLugar, type GrupoDeLugar } from './sugestoesDeLugar';
+import { abaDoCodigo, buscarNoIndice, indiceDeLugar, sugestoesDeLugar, type GrupoDeLugar } from './sugestoesDeLugar';
 import type { PortalProperty } from './filtros';
 
 const ORDEM: GrupoDeLugar[] = ['condominium', 'neighborhood', 'city'];
@@ -90,5 +90,56 @@ describe('indiceDeLugar', () => {
     // O teto folgado (500 ms) segura a volta ao caminho lento sem falhar com a máquina carregada.
     expect(performance.now() - inicio).toBeLessThan(500);
     expect(buscarNoIndice(indice, 'con')).toHaveLength(8);
+  });
+});
+
+/* A regra única de "é código?" da caixa de busca (capa do Moderno, capa do Clássico com o
+   lugar ligado e página de Imóveis): o texto igual ao código de um imóvel publicado. */
+describe('abaDoCodigo', () => {
+  const cat: PortalProperty[] = [
+    imovel('AP0632', { city: 'Campinas' }),
+    imovel('L77', { transaction_type: 'rent', city: 'Campinas' }),
+  ];
+
+  it('código igual (sem maiúscula, acento nem espaço sobrando) devolve a aba de agora', () => {
+    expect(abaDoCodigo(cat, 'AP0632', 'sale', ['sale', 'rent'])).toBe('sale');
+    expect(abaDoCodigo(cat, '  ap0632 ', 'sale', ['sale', 'rent'])).toBe('sale');
+  });
+
+  it('nome de lugar, texto com espaço e texto vazio não são código', () => {
+    expect(abaDoCodigo(cat, 'Centro', 'sale', ['sale', 'rent'])).toBeNull();
+    expect(abaDoCodigo(cat, 'Campinas', 'sale', ['sale', 'rent'])).toBeNull();
+    expect(abaDoCodigo(cat, 'Vila 2', 'sale', ['sale', 'rent'])).toBeNull();
+    expect(abaDoCodigo(cat, '', 'sale', ['sale', 'rent'])).toBeNull();
+    expect(abaDoCodigo(cat, '   ', 'sale', ['sale', 'rent'])).toBeNull();
+  });
+
+  it('pedaço de código (com número, sem espaço, dentro de algum código publicado) também é código', () => {
+    expect(abaDoCodigo(cat, 'AP06', 'sale', ['sale', 'rent'])).toBe('sale');
+    expect(abaDoCodigo(cat, 'ap06', 'sale', ['sale', 'rent'])).toBe('sale');
+    // Pedaço sem número não é código (seria nome de lugar): "AP" fica como texto.
+    expect(abaDoCodigo(cat, 'AP', 'sale', ['sale', 'rent'])).toBeNull();
+    // Com número mas em nenhum código publicado: texto.
+    expect(abaDoCodigo(cat, 'ZZ9', 'sale', ['sale', 'rent'])).toBeNull();
+  });
+
+  it('pedaço de código: fica na aba de agora; todos os imóveis numa outra aba só, vai pra ela', () => {
+    const misto: PortalProperty[] = [
+      imovel('AP0632', { city: 'Campinas' }),
+      imovel('AP0701', { transaction_type: 'rent' }),
+      imovel('L77', { transaction_type: 'rent' }),
+      imovel('L78', { transaction_type: 'rent' }),
+    ];
+    expect(abaDoCodigo(misto, 'AP0', 'sale', ['sale', 'rent'])).toBe('sale');
+    expect(abaDoCodigo(misto, 'AP0', 'rent', ['sale', 'rent'])).toBe('rent');
+    expect(abaDoCodigo(misto, 'L7', 'sale', ['sale', 'rent'])).toBe('rent');
+  });
+
+  it('código de outra aba devolve a aba dele (entre as do site)', () => {
+    expect(abaDoCodigo(cat, 'l77', 'sale', ['sale', 'rent'])).toBe('rent');
+  });
+
+  it('a aba dele não está entre as do site: fica na de agora (o código ainda vale)', () => {
+    expect(abaDoCodigo(cat, 'l77', 'sale', ['sale'])).toBe('sale');
   });
 });

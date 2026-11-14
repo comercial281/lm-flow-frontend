@@ -19,6 +19,33 @@ const COR_DESTAQUE_PADRAO = '#C9A24B';
 function Miniatura({ id, principal, destaque }: { id: ModeloDoSiteId; principal: string; destaque: string }) {
   const { appearance: ap } = aplicarModelo(id, { font_family: null, appearance: APARENCIA_FABRICA, home: HOME_FABRICA, listing: LISTA_FABRICA });
   const cores = CORES_DO_FUNDO[ap.background];
+  // Moderno: capa de ponta a ponta com o topo em pílula, cartões de foto inteira e rodapé em bloco.
+  if (ap.style === 'modern') {
+    return (
+      <div data-testid="miniatura" aria-hidden className="overflow-hidden rounded-lg border border-border" style={{ background: '#F4F5F8' }}>
+        <div className="relative h-20" style={{ background: `linear-gradient(200deg, ${principal}99, #0E1016E6), linear-gradient(135deg, #9fb7c9, #6f8aa0)` }}>
+          <span className="absolute inset-x-2 top-1.5 flex h-4 items-center justify-between rounded-full bg-white/25 px-2">
+            <span className="h-1.5 w-6 rounded-sm bg-white/90" />
+            <span className="h-2 w-5 rounded-full" style={{ background: '#1FAF5A' }} />
+          </span>
+          <span className="absolute bottom-3 left-2 flex flex-col gap-1">
+            <span className="h-1.5 w-16 rounded-sm bg-white/90" />
+            <span className="h-1.5 w-10 rounded-sm" style={{ background: destaque }} />
+          </span>
+        </div>
+        <div className="grid grid-cols-3 gap-1.5 p-2">
+          {[0, 1, 2].map(i => (
+            <div key={i} className="flex h-10 flex-col justify-end gap-0.5 overflow-hidden rounded-md p-1"
+              style={{ background: `linear-gradient(180deg, ${principal}66, #0E1016)` }}>
+              <span className="h-1 w-4/5 rounded-sm bg-white/85" />
+              <span className="h-1 w-2/5 rounded-sm" style={{ background: i === 0 ? destaque : 'rgba(255,255,255,0.6)' }} />
+            </div>
+          ))}
+        </div>
+        <div className="mx-2 mb-2 h-4 rounded-md" style={{ background: principal }} />
+      </div>
+    );
+  }
   const topoNaCor = ap.header_style === 'brand';
   const dividida = ap.hero_layout === 'split';
   const grande = ap.card_style === 'large';
@@ -139,7 +166,7 @@ export default function TelaModelo({ siteForm, setF, urlDoSite, noAr = false, ao
 
   return (
     <>
-      <div className="grid gap-5 md:grid-cols-3">
+      <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
         {MODELOS_DO_SITE.map(m => (
           <Card key={m.id} role="group" aria-label={m.nome}
             className="gap-4 p-4">

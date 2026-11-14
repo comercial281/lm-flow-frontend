@@ -15,13 +15,11 @@ export const MODELOS_DO_SITE: ModeloDoSite[] = [
   { id: 'classico', nome: 'Clássico', frase: 'Capa com foto, topo transparente e cartões em grade. O visual de sempre.' },
   { id: 'editorial', nome: 'Editorial', frase: 'Fundo escuro, título em fonte com serifa, capa dividida e cartões grandes.' },
   { id: 'popular', nome: 'Popular', frase: 'Topo na cor da marca, capa dividida e o passo a passo de como comprar.' },
+  { id: 'moderno', nome: 'Moderno', frase: 'Capa de ponta a ponta, cartões de foto inteira e rodapé em bloco. Visual atual, fonte única.' },
 ];
 
-/** Ids aceitos pelo `?modelo=` da prévia: os cartões da tela mais o Moderno (cartão ainda escondido). */
-export const MODELOS_DA_PREVIA: ModeloDoSite[] = [
-  ...MODELOS_DO_SITE,
-  { id: 'moderno', nome: 'Moderno', frase: 'Capa em cartão, cartões de foto inteira e rodapé em bloco. Visual atual, fonte única.' },
-];
+/** Ids aceitos pelo `?modelo=` da prévia: os mesmos cartões da tela (o Moderno virou cartão na parte c). */
+export const MODELOS_DA_PREVIA: ModeloDoSite[] = MODELOS_DO_SITE;
 
 export interface EstadoDoVisual {
   font_family: string | null;
@@ -120,7 +118,9 @@ export function modeloAtual(atual: EstadoDoVisual): ModeloDoSiteId | null {
   const achado = (Object.keys(RECEITAS) as ModeloDoSiteId[]).find(id => {
     const r = RECEITAS[id];
     return atual.font_family === r.font_family
-      && (Object.keys(r.appearance) as (keyof Receita['appearance'])[]).every(k => atual.appearance[k] === r.appearance[k])
+      // O Destaque nos títulos é ajuste fino dentro do Moderno: trocar ele não muda o modelo.
+      && (Object.keys(r.appearance) as (keyof Receita['appearance'])[]).filter(k => k !== 'heading_highlight')
+        .every(k => atual.appearance[k] === r.appearance[k])
       && atual.listing.card_layout === r.card_layout
       && atual.home.callouts.layout === r.callouts
       && atual.home.steps.enabled === r.passos

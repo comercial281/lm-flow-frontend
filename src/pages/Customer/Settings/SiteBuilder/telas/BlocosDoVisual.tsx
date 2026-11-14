@@ -3,12 +3,13 @@ import { siteBuilderService } from '@/services/siteBuilder/siteBuilderService';
 import {
   CORES_DO_FUNDO, FILTRO_FABRICA, FILTRO_MAXIMO, TETO_TEXTO_RODAPE, TEXTO_RODAPE_FABRICA, contarCaracteres, cortarCaracteres,
   filtroDaCapa, textoSobre,
-  type Aparencia, type AlturaDaCapa, type EstiloDoTopo, type FaixaDeCima, type Fundo, type LayoutDoRodape, type PosicaoDoLogo,
+  type Aparencia, type AlturaDaCapa, type DestaqueDosTitulos, type EstiloDoTopo, type FaixaDeCima, type Fundo, type LayoutDoRodape, type PosicaoDoLogo,
 } from '@/features/siteBuilder/public/aparenciaConfig';
 import { cn } from '@/lib/utils';
 import { Secao } from '@/components/base/Secao';
 import { CampoTextoLongo } from '@/components/base/Campo';
 import EnvioDeImagem from '../ui/EnvioDeImagem';
+import { AJUDA_DO_DESTAQUE } from '@/features/siteBuilder/public/destaqueNoTitulo';
 
 // Os blocos da Aparência que mexem no visual do site (C3): fundo, topo, faixa
 // de cima, altura e filtro do banner e rodapé. Cada um troca UMA chave de
@@ -335,11 +336,43 @@ export function BlocoRodape({ ap, mudar }: PropsDoBloco) {
         rows={3}
         placeholder={TEXTO_RODAPE_FABRICA}
         classeDoControle="resize-none"
-        ajuda={`${contarCaracteres(texto)} de ${TETO_TEXTO_RODAPE} caracteres. Em branco, o site mostra a frase de sempre: “${TEXTO_RODAPE_FABRICA}”`}
+        ajuda={`${contarCaracteres(texto)} de ${TETO_TEXTO_RODAPE} caracteres. Em branco, o site mostra a frase de sempre: “${TEXTO_RODAPE_FABRICA}” ${AJUDA_DO_DESTAQUE}`}
         valor={texto}
         /* Sem `maxLength`: ele conta unidade UTF-16 e travaria antes dos 200 com emoji. */
         aoMudar={v => mudar({ footer_text: v === '' ? null : cortarCaracteres(v, TETO_TEXTO_RODAPE) })}
       />
+    </Secao>
+  );
+}
+
+/* ── Destaque nos títulos (só no Moderno) ───────────────────────────────── */
+
+/**
+ * Como sai o trecho entre asteriscos nos títulos do Início e na frase do
+ * rodapé (spec 6.1). Só o Moderno usa: no Clássico o asterisco some e o texto
+ * fica normal, por isso a tela só mostra o bloco com o Moderno.
+ */
+export function BlocoDestaqueNosTitulos({ ap, mudar, corDeDestaque }: PropsDoBloco & { corDeDestaque: string }) {
+  const titulo = (trecho: ReactNode) => (
+    <span className="flex h-full w-full items-center px-3 text-[13px] font-semibold leading-tight" style={{ background: CORES_DO_FUNDO.light.paper, color: '#17140F' }}>
+      <span>O imóvel certo pra sua {trecho}</span>
+    </span>
+  );
+  const desenhos: Record<DestaqueDosTitulos, ReactNode> = {
+    accent: titulo(<span style={{ backgroundImage: `linear-gradient(${corDeDestaque}, ${corDeDestaque})`, backgroundRepeat: 'no-repeat', backgroundSize: '100% 0.14em', backgroundPosition: '0 94%' }}>próxima fase.</span>),
+    italic: titulo(<span style={{ fontFamily: 'Georgia, serif', fontStyle: 'italic', fontWeight: 400 }}>próxima fase.</span>),
+    none: titulo(<span>próxima fase.</span>),
+  };
+  return (
+    <Secao
+      titulo="Destaque nos títulos"
+      descricao="Nos títulos da página inicial e na frase do rodapé, a palavra que você colocar entre asteriscos ganha destaque. Ex.: O imóvel certo pra sua *próxima fase.*"
+    >
+      <Miniaturas rotulo="Destaque nos títulos" valor={ap.heading_highlight} mudar={heading_highlight => mudar({ heading_highlight })} opcoes={[
+        { valor: 'accent', nome: 'Cor de destaque', frase: 'Sublinhado na cor de destaque; sobre foto ou cor, o texto na cor de destaque.', desenho: desenhos.accent },
+        { valor: 'italic', nome: 'Itálico', frase: 'Fonte com serifa, em itálico.', desenho: desenhos.italic },
+        { valor: 'none', nome: 'Nenhum', frase: 'O trecho sai igual ao resto do título.', desenho: desenhos.none },
+      ]} />
     </Secao>
   );
 }

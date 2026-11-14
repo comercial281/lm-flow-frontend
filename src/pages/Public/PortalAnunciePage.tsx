@@ -1,16 +1,12 @@
-import { useMemo, useState, type FormEvent } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useTenantDoSite } from '@/features/siteBuilder/public/useTenantDoSite';
-import { TEXTO_ENVIO_NA_PREVIA, cabecalhosDoSite, ehPrevia, envioFoiPrevia } from '@/features/siteBuilder/public/previa';
-import { ehPreviaDoModelo } from '@/features/siteBuilder/public/previaDoModelo';
-import { TEXTO_FALHA_DE_ENVIO, textoDoErroDeEnvio } from '@/features/siteBuilder/public/limiteDeEnvios';
+import { TEXTO_ENVIO_NA_PREVIA } from '@/features/siteBuilder/public/previa';
 import { BrPhoneInput } from '@/components/shared';
-import { isValidBrPhone } from '@/lib/brPhone';
-import {
-  API, I, Ic, PROPERTY_TYPE_LABEL, PortalFooter, PortalHeader, Select, onlyDigits, usePortalData,
-} from './portalShared';
+import { I, Ic, PortalFooter, PortalHeader, Select, usePortalData } from './portalShared';
 import PaginaManutencao from './PaginaManutencao';
-import { rotuloTipo } from '@/features/siteBuilder/public/tiposDeImovel';
+import { FINALIDADES, NEGOCIOS, useFichaDoAnuncie } from './anuncie/useFichaDoAnuncie';
+import CascaModerna from './moderno/CascaModerna';
+import AnuncieModerno from './moderno/AnuncieModerno';
 import { usePortalTracking } from './usePortalTracking';
 import { useIconeDaAba } from '@/features/siteBuilder/public/useIconeDaAba';
 
@@ -27,9 +23,6 @@ import { useIconeDaAba } from '@/features/siteBuilder/public/useIconeDaAba';
    de compra. O endereço é PRÓPRIO (`/site/anuncie`), e não um "modo" do
    formulário de contato, justamente porque aquele cria as três coisas.
 ──────────────────────────────────────────────────────────────────────────── */
-
-const FINALIDADES = ['Residencial', 'Comercial', 'Rural'];
-const NEGOCIOS = ['Venda', 'Locação', 'Venda e locação'];
 
 /** Campo de texto simples, no visual dos demais formulários do portal. */
 function Field({
@@ -70,52 +63,21 @@ function Check({ label, checked, onChange }: { label: string; checked: boolean; 
 
 export default function PortalAnunciePage() {
   const tenant = useTenantDoSite();
-  const { state, site, fontHrefs, wa, abas, cssVars, fundo, manutencao } = usePortalData(tenant);
+  const { state, site, fontHrefs, wa, abas, cssVars, fundo, manutencao, aparencia } = usePortalData(tenant);
   const { pathname } = useLocation();
   // Em manutenção nada de rastreamento nem visita: a página é a de manutenção.
   usePortalTracking(state === 'ok' && !manutencao ? site : null, tenant, { kind: 'listing', path: pathname });
   useIconeDaAba(site.branding?.favicon_url);
 
-  const [step, setStep] = useState<1 | 2>(1);
-  const [sent, setSent] = useState(false);
-  // Envio feito na prévia: o servidor não criou nada, e a tela não finge que criou.
-  const [enviadoNaPrevia, setEnviadoNaPrevia] = useState(false);
-  const [sending, setSending] = useState(false);
-  // Frase do envio que falhou (null = sem erro). No limite de envios é a do servidor.
-  const [failed, setFailed] = useState<string | null>(null);
-
-  // Passo 1 — o imóvel
-  const [finalidade, setFinalidade] = useState('');
-  const [tipo, setTipo] = useState('');
-  const [negocio, setNegocio] = useState('');
-  const [condominioNome, setCondominioNome] = useState('');
-  const [condominioValor, setCondominioValor] = useState('');
-  const [aceitaFinanciamento, setAceitaFinanciamento] = useState(false);
-  const [endereco, setEndereco] = useState('');
-  const [areaTotal, setAreaTotal] = useState('');
-  const [areaUtil, setAreaUtil] = useState('');
-  const [dormitorios, setDormitorios] = useState('');
-  const [suites, setSuites] = useState('');
-  const [vagasCobertas, setVagasCobertas] = useState('');
-  const [vagasDescobertas, setVagasDescobertas] = useState('');
-  const [valorPretendido, setValorPretendido] = useState('');
-  const [caracteristicas, setCaracteristicas] = useState('');
-
-  // Passo 2 — quem está oferecendo
-  const [nome, setNome] = useState('');
-  const [telefone, setTelefone] = useState('');
-  const [telefoneErr, setTelefoneErr] = useState(false);
-  const [email, setEmail] = useState('');
-
-  const tipoOptions = useMemo(
-    // Sem rótulos repetidos (Cobertura, Terreno… aparecem com duas chaves).
-    () => Object.entries(PROPERTY_TYPE_LABEL).filter(([, l], i, a) => a.findIndex(x => x[1] === l) === i).map(([v, l]) => [v, l] as [string, string]),
-    [],
-  );
-
-  const page = site.anuncie;
-  const waText = page?.whatsapp_text || 'Olá! Quero anunciar meu imóvel com vocês.';
-  const waHref = wa ? `https://wa.me/${onlyDigits(wa)}?text=${encodeURIComponent(waText)}` : null;
+  const ficha = useFichaDoAnuncie(tenant, site, wa);
+  const {
+    step, setStep, sent, enviadoNaPrevia, sending, failed, goToOwner, submit, tipoOptions, page, waHref,
+    finalidade, setFinalidade, tipo, setTipo, negocio, setNegocio, condominioNome, setCondominioNome,
+    condominioValor, setCondominioValor, aceitaFinanciamento, setAceitaFinanciamento, endereco, setEndereco,
+    areaTotal, setAreaTotal, areaUtil, setAreaUtil, dormitorios, setDormitorios, suites, setSuites,
+    vagasCobertas, setVagasCobertas, vagasDescobertas, setVagasDescobertas, valorPretendido, setValorPretendido,
+    caracteristicas, setCaracteristicas, nome, setNome, telefone, setTelefone, telefoneErr, setTelefoneErr, email, setEmail,
+  } = ficha;
 
   if (state === 'loading') {
     return <div data-carregando className="flex min-h-screen items-center justify-center text-neutral-400" style={{ fontFamily: 'system-ui' }}>Carregando…</div>;
@@ -126,66 +88,14 @@ export default function PortalAnunciePage() {
     return <div className="flex min-h-screen items-center justify-center px-6 text-center text-neutral-500" style={{ fontFamily: 'system-ui' }}>Portal indisponível.</div>;
   }
 
-  const goToOwner = (e: FormEvent) => {
-    e.preventDefault();
-    setStep(2);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  const submit = async (e: FormEvent) => {
-    e.preventDefault();
-    if (!tenant || !nome.trim()) return;
-    if (!isValidBrPhone(telefone)) { setTelefoneErr(true); return; }
-    // Prévia do modelo: o servidor não sabe dela, então nada é enviado.
-    if (ehPreviaDoModelo(site)) {
-      setFailed(null);
-      setEnviadoNaPrevia(true);
-      setSent(true);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      return;
-    }
-
-    setSending(true);
-    setFailed(null);
-    try {
-      const res = await fetch(`${API}/api/public/v1/site/anuncie`, {
-        method: 'POST',
-        headers: cabecalhosDoSite(tenant, { 'Content-Type': 'application/json' }),
-        body: JSON.stringify({
-          lead: {
-            name: nome.trim(), phone: telefone, email: email.trim() || null,
-            source: 'site',
-            form_data: {
-              finalidade, tipo: tipo ? rotuloTipo(tipo) : '', negocio,
-              endereco, condominio_nome: condominioNome, condominio_valor: condominioValor,
-              area_total: areaTotal, area_util: areaUtil,
-              dormitorios, suites,
-              vagas_cobertas: vagasCobertas, vagas_descobertas: vagasDescobertas,
-              aceita_financiamento: aceitaFinanciamento,
-              valor_pretendido: valorPretendido,
-              caracteristicas,
-              proprietario_nome: nome.trim(),
-              proprietario_telefone: telefone,
-              proprietario_email: email.trim(),
-            },
-          },
-        }),
-      });
-      if (!res.ok) {
-        setFailed(await textoDoErroDeEnvio(res, TEXTO_FALHA_DE_ENVIO));
-        return;
-      }
-      setEnviadoNaPrevia(ehPrevia(site) || (await envioFoiPrevia(res)));
-      setSent(true);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    } catch {
-      // A ficha é longa: some com ela e a pessoa não preenche de novo. O erro
-      // aparece e o botão volta, com tudo o que ela escreveu no lugar.
-      setFailed(TEXTO_FALHA_DE_ENVIO);
-    } finally {
-      setSending(false);
-    }
-  };
+  // Moderno: outro desenho, com a mesma ficha (passos, validação, prévia e envio).
+  if (aparencia.style === 'modern') {
+    return (
+      <CascaModerna nome="anuncie" site={site} tenant={tenant!} abas={abas} fontHrefs={fontHrefs} cssVars={cssVars} fundo={fundo}>
+        <AnuncieModerno ficha={ficha} site={site} />
+      </CascaModerna>
+    );
+  }
 
   return (
     <div style={cssVars} data-fundo={fundo} className="min-h-screen bg-[var(--paper)] text-[var(--ink)] antialiased">
